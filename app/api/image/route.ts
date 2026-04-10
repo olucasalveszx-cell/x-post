@@ -1,141 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
 
-function buildAiPrompt(prompt: string): string {
-  return `${prompt}, dramatic cinematic lighting, dark moody atmosphere, editorial photography style, high detail, 4k, no text overlays`;
-}
+export const maxDuration = 45;
 
-function buildGeminiPrompt(prompt: string): string {
-  return `${prompt}, hyper-dynamic composition, extreme cinematic lighting with strong shadows and highlights, vibrant color grading, motion blur, dramatic low angle or bird's eye view, ultra-detailed textures, editorial magazine cover quality, moody dark background, emotional intensity, photorealistic 8k, no text, no watermarks`;
-}
+type ImageStyle = "realista" | "cinematico" | "stock" | "cartoon" | "anime" | "abstrato";
 
-async function searchPexels(query: string, page: number): Promise<any[]> {
-  const res = await fetch(
-    `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=portrait&per_page=15&page=${page}`,
-    { headers: { Authorization: process.env.PEXELS_API_KEY! } }
-  );
-  if (!res.ok) throw new Error(`Pexels HTTP ${res.status}`);
-  const data = await res.json();
-  return data.photos ?? [];
-}
+const STYLE_PROMPTS: Record<ImageStyle, string> = {
+  realista:   "ultra-realistic photography, natural lighting, shallow depth of field, sharp focus, 8k DSLR photo, photojournalism quality, authentic emotion, no text",
+  cinematico: "cinematic still, dramatic moody lighting, film grain, anamorphic lens flare, dark atmospheric, hyper-detailed, IMAX quality, vibrant color grading, no text",
+  stock:      "professional stock photography, clean bright studio lighting, corporate editorial style, high-key lighting, sharp and polished, Getty Images quality, no text",
+  cartoon:    "vibrant cartoon illustration, bold outlines, flat colors with cel shading, Disney/Pixar style, expressive characters, clean vector art, no text",
+  anime:      "anime illustration style, manga aesthetic, studio Ghibli quality, detailed linework, vivid colors, dramatic sky, Japanese animation, no text",
+  abstrato:   "abstract digital art, geometric shapes, neon color palette, fluid dynamics, futuristic data visualization, award-winning generative art, no text",
+};
 
-async function fromPexels(prompt: string) {
-  if (!process.env.PEXELS_API_KEY) throw new Error("PEXELS_API_KEY não configurada");
+async function fromGemini(prompt: string, style: ImageStyle) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
-  // Extract a clean short query (keep accented chars for Pexels — it handles them)
-  const query = prompt
-    .split(/[,.|]/)[0]
-    .replace(/<[^>]+>/g, "")     // strip HTML
-    .replace(/[^\w\sÀ-ÿ]/g, "") // keep letters (including accented) and spaces
-    .trim()
-    .split(/\s+/)
-    .slice(0, 5)
-    .join(" ");
+  const stylePrompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.cinematico;
+  const fullPrompt = `${prompt}. Style: ${stylePrompt}. Dark moody background, portrait orientation, high contrast, no watermarks, no text overlays.`;
 
-  const finalQuery = query.length >= 3 ? query : "technology business";
-
-  // Try a random page 1-3, fallback to page 1 if empty
-  const page = Math.ceil(Math.random() * 3);
-  let photos = await searchPexels(finalQuery, page);
-  if (!photos.length && page !== 1) {
-    photos = await searchPexels(finalQuery, 1);
-  }
-  // Last resort: broad fallback query
-  if (!photos.length) {
-    photos = await searchPexels("business technology", 1);
-  }
-  if (!photos.length) throw new Error(`Pexels: sem resultados para "${finalQuery}"`);
-
-  const photo = photos[Math.floor(Math.random() * photos.length)];
-  const url = photo.src?.large2x ?? photo.src?.original;
-  if (!url) throw new Error("Pexels: URL não encontrada");
-  console.log(`[image] Pexels OK: "${finalQuery}" (pág ${page})`);
-  return { imageUrl: url, source: "pexels" };
-}
-
-async function fromImagen3(prompt: string) {
-  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY não configurada");
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${process.env.GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${key}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      instances: [{ prompt: buildGeminiPrompt(prompt) }],
-      parameters: { sampleCount: 1, aspectRatio: "3:4", personGeneration: "allow_adult", safetyFilterLevel: "block_some" },
-    }),
-    signal: AbortSignal.timeout(30000),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`Imagen 3: ${data.error?.message ?? JSON.stringify(data).slice(0, 100)}`);
-  const prediction = data.predictions?.[0];
-  if (!prediction?.bytesBase64Encoded) throw new Error("Imagen 3: sem imagem na resposta");
-  console.log("[image] Imagen 3 OK ✓");
-  return { imageUrl: `data:${prediction.mimeType ?? "image/png"};base64,${prediction.bytesBase64Encoded}`, source: "imagen3" };
-}
-
-async function fromGeminiFlash(prompt: string) {
-  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY não configurada");
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${process.env.GEMINI_API_KEY}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: buildGeminiPrompt(prompt) }] }],
+      contents: [{ parts: [{ text: fullPrompt }] }],
       generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
     }),
-    signal: AbortSignal.timeout(25000),
+    signal: AbortSignal.timeout(40000),
   });
+
   const data = await res.json();
-  if (!res.ok) throw new Error(`Gemini Flash: ${data.error?.message ?? JSON.stringify(data).slice(0, 100)}`);
+  if (!res.ok) throw new Error(`Gemini: ${data.error?.message ?? JSON.stringify(data).slice(0, 120)}`);
+
   const parts = data.candidates?.[0]?.content?.parts ?? [];
   const imagePart = parts.find((p: any) => p.inlineData);
-  if (!imagePart?.inlineData) throw new Error("Gemini Flash: sem imagem na resposta");
-  const { data: b64, mimeType } = imagePart.inlineData;
-  console.log("[image] Gemini Flash OK ✓");
-  return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini-flash" };
-}
+  if (!imagePart?.inlineData) throw new Error("Gemini: sem imagem na resposta");
 
-async function fromDallE(prompt: string) {
-  if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
-  const res = await fetch("https://api.openai.com/v1/images/generations", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-    body: JSON.stringify({
-      model: "dall-e-3",
-      prompt: buildAiPrompt(prompt),
-      n: 1,
-      size: "1024x1792", // retrato, mais próximo de 4:5
-      quality: "standard",
-      response_format: "url",
-    }),
-    signal: AbortSignal.timeout(30000),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`DALL-E 3: ${data.error?.message ?? JSON.stringify(data).slice(0, 100)}`);
-  const url = data.data?.[0]?.url;
-  if (!url) throw new Error("DALL-E 3: sem URL na resposta");
-  console.log("[image] DALL-E 3 OK ✓");
-  return { imageUrl: url, source: "dalle3" };
+  const { data: b64, mimeType } = imagePart.inlineData;
+  return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini" };
 }
 
 export async function POST(req: NextRequest) {
-  const { prompt, source = "pexels" } = await req.json();
+  const { prompt, imageStyle = "cinematico" } = await req.json();
+
+  if (!prompt) return NextResponse.json({ error: "prompt obrigatório" }, { status: 400 });
 
   try {
-    if (source === "imagen3")     return NextResponse.json(await fromImagen3(prompt));
-    if (source === "gemini")      return NextResponse.json(await fromGeminiFlash(prompt));
-    if (source === "dalle3")      return NextResponse.json(await fromDallE(prompt));
-    return NextResponse.json(await fromPexels(prompt)); // "pexels" (padrão)
+    const result = await fromGemini(prompt, imageStyle as ImageStyle);
+    return NextResponse.json(result);
   } catch (err: any) {
-    console.error(`[image] ${source} falhou:`, err.message);
-    // Fallback automático para Pexels se IA falhar
-    if (source !== "pexels" && process.env.PEXELS_API_KEY) {
-      try {
-        console.log("[image] Fallback → Pexels");
-        return NextResponse.json(await fromPexels(prompt));
-      } catch (fb: any) {
-        console.error("[image] Pexels fallback falhou:", fb.message);
-      }
-    }
+    console.error("[image] Gemini falhou:", err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
