@@ -172,7 +172,7 @@ export default function EditorPage() {
         setCurrentIndex(i);
         await new Promise((r) => setTimeout(r, 300));
 
-        const el = document.getElementById(`slide-render-${slides[i].id}`);
+        const el = document.getElementById(`slide-export-${slides[i].id}`);
         if (!el) continue;
 
         const canvas = await html2canvas(el, {
@@ -368,6 +368,15 @@ export default function EditorPage() {
           </button>
         </div>
       )}
+
+      {/* Container oculto fora da tela — renderiza slides em scale=1 para exportação correta */}
+      <div style={{ position: "fixed", top: -99999, left: -99999, zIndex: -1, pointerEvents: "none" }}>
+        {slides.map((slide) => (
+          <div key={`export-${slide.id}`} id={`slide-export-${slide.id}`} style={{ width: SLIDE_W, height: SLIDE_H }}>
+            <SlideCanvas slide={slide} onUpdate={() => {}} scale={1} />
+          </div>
+        ))}
+      </div>
 
       {showPublish && (
         <PublishModal
