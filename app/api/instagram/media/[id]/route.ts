@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { store } from "../route";
+import { store } from "@/lib/media-store";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const entry = store.get(params.id);
