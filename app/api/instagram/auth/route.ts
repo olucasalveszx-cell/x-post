@@ -22,8 +22,7 @@ export async function GET() {
     `?client_id=${appId}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&scope=${scope}` +
-    `&response_type=code` +
-    `&display=popup`;
+    `&response_type=code`;
 
   return NextResponse.redirect(oauthUrl);
 }
