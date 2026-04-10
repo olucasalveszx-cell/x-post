@@ -199,11 +199,14 @@ export default function EditorPage() {
   };
 
   const [mobilePanel, setMobilePanel] = useState<"side" | "slides" | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [displayScale, setDisplayScale] = useState(560 / SLIDE_H);
 
   useEffect(() => {
     const update = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
       if (!canvasContainerRef.current) return;
       const { width, height } = canvasContainerRef.current.getBoundingClientRect();
       const pad = 32;
@@ -265,25 +268,32 @@ export default function EditorPage() {
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Overlay mobile */}
-        {mobilePanel && (
-          <div className="md:hidden fixed inset-0 bg-black/60 z-30" onClick={() => setMobilePanel(null)} />
+        {isMobile && mobilePanel && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 30 }} onClick={() => setMobilePanel(null)} />
         )}
 
-        {/* Painel esquerdo — fixo no desktop, gaveta no mobile */}
-        <div className={`
-          fixed md:relative inset-y-0 left-0 z-40 w-80
-          bg-[#080808] border-r border-[#161616] flex flex-col
-          transition-transform duration-300
-          ${mobilePanel === "side" ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
-        `}>
-          <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-[#161616]">
-            <span className="text-sm font-medium text-gray-300">Gerar / Traduzir</span>
-            <button onClick={() => setMobilePanel(null)}><X size={18} className="text-gray-400" /></button>
+        {/* Painel esquerdo */}
+        {isMobile ? (
+          <div style={{
+            position: "fixed", top: 0, left: 0, bottom: 0, width: 320, zIndex: 40,
+            background: "#080808", borderRight: "1px solid #161616",
+            display: "flex", flexDirection: "column",
+            transform: mobilePanel === "side" ? "translateX(0)" : "translateX(-100%)",
+            transition: "transform 0.3s",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid #161616" }}>
+              <span style={{ fontSize: 14, color: "#d1d5db" }}>Gerar / Traduzir</span>
+              <button onClick={() => setMobilePanel(null)}><X size={18} color="#9ca3af" /></button>
+            </div>
+            <div style={{ flex: 1, overflow: "hidden" }}>
+              <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} />
+            </div>
           </div>
-          <div className="flex-1 overflow-hidden">
-            <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} />
+        ) : (
+          <div style={{ width: 320, background: "#080808", borderRight: "1px solid #161616", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <SidePanel onGenerate={handleGenerate} />
           </div>
-        </div>
+        )}
 
         {/* Área principal */}
         <div className="flex flex-col flex-1 overflow-hidden min-w-0">
@@ -304,70 +314,60 @@ export default function EditorPage() {
           />
 
           <div ref={canvasContainerRef} className="flex-1 overflow-auto flex items-center justify-center bg-[#0a0a0a] p-4">
-            <div
-              ref={canvasRef}
-              style={{ width: DISPLAY_W, height: DISPLAY_H, position: "relative" }}
-              className="shadow-2xl rounded overflow-hidden"
-            >
+            <div ref={canvasRef} style={{ width: DISPLAY_W, height: DISPLAY_H, position: "relative" }} className="shadow-2xl rounded overflow-hidden">
               {slides.map((slide, i) => (
-                <div
-                  key={slide.id}
-                  id={`slide-render-${slide.id}`}
-                  style={{ display: i === currentIndex ? "block" : "none", width: SLIDE_W, height: SLIDE_H }}
-                >
-                  <SlideCanvas
-                    slide={slide}
-                    onUpdate={updateSlide}
-                    scale={displayScale}
-                    onSelectElement={(el) => setSelectedElementId(el?.id ?? null)}
-                  />
+                <div key={slide.id} id={`slide-render-${slide.id}`} style={{ display: i === currentIndex ? "block" : "none", width: SLIDE_W, height: SLIDE_H }}>
+                  <SlideCanvas slide={slide} onUpdate={updateSlide} scale={displayScale} onSelectElement={(el) => setSelectedElementId(el?.id ?? null)} />
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Painel direito — fixo no desktop, gaveta no mobile */}
-        <div className={`
-          fixed md:relative inset-y-0 right-0 z-40 w-32
-          bg-[#080808] border-l border-[#161616] flex flex-col
-          transition-transform duration-300
-          ${mobilePanel === "slides" ? "translate-x-0" : "translate-x-full md:translate-x-0"}
-        `}>
-          <div className="md:hidden flex items-center justify-between px-3 py-3 border-b border-[#161616]">
-            <span className="text-xs font-medium text-gray-300">Slides</span>
-            <button onClick={() => setMobilePanel(null)}><X size={16} className="text-gray-400" /></button>
+        {/* Painel direito */}
+        {isMobile ? (
+          <div style={{
+            position: "fixed", top: 0, right: 0, bottom: 0, width: 128, zIndex: 40,
+            background: "#080808", borderLeft: "1px solid #161616",
+            display: "flex", flexDirection: "column",
+            transform: mobilePanel === "slides" ? "translateX(0)" : "translateX(100%)",
+            transition: "transform 0.3s",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", borderBottom: "1px solid #161616" }}>
+              <span style={{ fontSize: 12, color: "#d1d5db" }}>Slides</span>
+              <button onClick={() => setMobilePanel(null)}><X size={16} color="#9ca3af" /></button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              <SlidePanel slides={slides} currentIndex={currentIndex} onSelect={(i) => { setCurrentIndex(i); setMobilePanel(null); }} />
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto">
-            <SlidePanel slides={slides} currentIndex={currentIndex} onSelect={(i) => { setCurrentIndex(i); setMobilePanel(null); }} />
+        ) : (
+          <div style={{ width: 128, background: "#080808", borderLeft: "1px solid #161616", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+            <SlidePanel slides={slides} currentIndex={currentIndex} onSelect={setCurrentIndex} />
           </div>
-        </div>
+        )}
       </div>
 
       {/* Barra inferior mobile */}
-      <div className="md:hidden flex border-t border-[#161616] bg-[#080808] z-20">
-        <button
-          onClick={() => setMobilePanel(mobilePanel === "side" ? null : "side")}
-          className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors ${mobilePanel === "side" ? "text-brand-400" : "text-gray-500"}`}
-        >
-          <Sparkles size={18} />
-          IA
-        </button>
-        <button
-          onClick={() => setMobilePanel(mobilePanel === "slides" ? null : "slides")}
-          className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors ${mobilePanel === "slides" ? "text-brand-400" : "text-gray-500"}`}
-        >
-          <Layers size={18} />
-          Slides
-        </button>
-        <button
-          onClick={() => setShowPublish(true)}
-          className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-gray-500"
-        >
-          <User size={18} />
-          Publicar
-        </button>
-      </div>
+      {isMobile && (
+        <div style={{ display: "flex", borderTop: "1px solid #161616", background: "#080808", zIndex: 20 }}>
+          <button onClick={() => setMobilePanel(mobilePanel === "side" ? null : "side")}
+            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: mobilePanel === "side" ? "#a855f7" : "#6b7280" }}>
+            <Sparkles size={18} />
+            IA
+          </button>
+          <button onClick={() => setMobilePanel(mobilePanel === "slides" ? null : "slides")}
+            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: mobilePanel === "slides" ? "#a855f7" : "#6b7280" }}>
+            <Layers size={18} />
+            Slides
+          </button>
+          <button onClick={() => setShowPublish(true)}
+            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: "#6b7280" }}>
+            <User size={18} />
+            Publicar
+          </button>
+        </div>
+      )}
 
       {showPublish && (
         <PublishModal
