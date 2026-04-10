@@ -4,6 +4,10 @@ function buildAiPrompt(prompt: string): string {
   return `${prompt}, dramatic cinematic lighting, dark moody atmosphere, editorial photography style, high detail, 4k, no text overlays`;
 }
 
+function buildGeminiPrompt(prompt: string): string {
+  return `${prompt}, hyper-dynamic composition, extreme cinematic lighting with strong shadows and highlights, vibrant color grading, motion blur, dramatic low angle or bird's eye view, ultra-detailed textures, editorial magazine cover quality, moody dark background, emotional intensity, photorealistic 8k, no text, no watermarks`;
+}
+
 async function searchPexels(query: string, page: number): Promise<any[]> {
   const res = await fetch(
     `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=portrait&per_page=15&page=${page}`,
@@ -55,7 +59,7 @@ async function fromImagen3(prompt: string) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      instances: [{ prompt: buildAiPrompt(prompt) }],
+      instances: [{ prompt: buildGeminiPrompt(prompt) }],
       parameters: { sampleCount: 1, aspectRatio: "3:4", personGeneration: "allow_adult", safetyFilterLevel: "block_some" },
     }),
     signal: AbortSignal.timeout(30000),
@@ -75,7 +79,7 @@ async function fromGeminiFlash(prompt: string) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: buildAiPrompt(prompt) }] }],
+      contents: [{ parts: [{ text: buildGeminiPrompt(prompt) }] }],
       generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
     }),
     signal: AbortSignal.timeout(25000),
