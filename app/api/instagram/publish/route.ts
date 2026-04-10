@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const maxDuration = 60;
+
 const GRAPH = "https://graph.facebook.com/v20.0";
 
 async function uploadCarouselItem(igAccountId: string, imageUrl: string, token: string): Promise<string> {
@@ -16,6 +18,27 @@ async function uploadCarouselItem(igAccountId: string, imageUrl: string, token: 
   const data = await res.json();
   if (!data.id) throw new Error(`Erro ao fazer upload: ${JSON.stringify(data.error ?? data)}`);
   return data.id;
+}
+
+// Aguarda até o container estar FINISHED (pronto para publicar)
+async function waitUntilReady(mediaId: string, token: string, maxWaitMs = 30000): Promise<void> {
+  const interval = 2000;
+  const maxAttempts = Math.ceil(maxWaitMs / interval);
+
+  for (let i = 0; i < maxAttempts; i++) {
+    const res = await fetch(
+      `${GRAPH}/${mediaId}?fields=status_code&access_token=${token}`
+    );
+    const data = await res.json();
+    const status: string = data.status_code ?? "";
+    console.log(`[publish] media ${mediaId} status: ${status} (tentativa ${i + 1})`);
+
+    if (status === "FINISHED") return;
+    if (status === "ERROR") throw new Error(`Mídia ${mediaId} falhou no processamento`);
+
+    await new Promise((r) => setTimeout(r, interval));
+  }
+  throw new Error(`Timeout aguardando processamento da mídia ${mediaId}`);
 }
 
 async function createCarousel(igAccountId: string, childIds: string[], caption: string, token: string): Promise<string> {
@@ -59,23 +82,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "O carrossel precisa ter entre 2 e 10 imagens" }, { status: 400 });
     }
 
-    // 1. Upload de cada imagem como item do carrossel
+    // 1. Upload de cada imagem
     console.log(`[publish] Fazendo upload de ${imageUrls.length} imagens...`);
     const childIds: string[] = [];
-
     for (let i = 0; i < imageUrls.length; i++) {
-      const url = imageUrls[i];
-      // Aceita URLs públicas ou URLs do nosso servidor
-      const id = await uploadCarouselItem(igAccountId, url, igToken);
+      const id = await uploadCarouselItem(igAccountId, imageUrls[i], igToken);
       childIds.push(id);
       console.log(`[publish] Imagem ${i + 1}/${imageUrls.length} enviada: ${id}`);
     }
 
-    // 2. Cria container do carrossel
+    // 2. Aguarda todas as mídias ficarem prontas
+    console.log("[publish] Aguardando processamento das mídias...");
+    await Promise.all(childIds.map((id) => waitUntilReady(id, igToken)));
+    console.log("[publish] Todas as mídias prontas!");
+
+    // 3. Cria container do carrossel
     console.log("[publish] Criando container do carrossel...");
     const carouselId = await createCarousel(igAccountId, childIds, caption ?? "", igToken);
 
-    // 3. Publica
+    // 4. Aguarda o carrossel ficar pronto
+    await waitUntilReady(carouselId, igToken);
+
+    // 5. Publica
     console.log("[publish] Publicando...");
     const postId = await publishCarousel(igAccountId, carouselId, igToken);
 
