@@ -118,8 +118,9 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
 
     const generated: GeneratedContent = JSON.parse(jsonMatch[0]);
     return NextResponse.json(generated);
-  } catch (err) {
+  } catch (err: any) {
     console.error("[generate]", err);
-    return NextResponse.json({ error: "Erro ao gerar conteúdo" }, { status: 500 });
+    const msg = err?.message ?? err?.error?.message ?? "Erro desconhecido";
+    return NextResponse.json({ error: `Erro ao gerar: ${msg}` }, { status: 500 });
   }
 }

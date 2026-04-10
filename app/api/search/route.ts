@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
     }));
 
     return NextResponse.json({ results });
-  } catch (err) {
+  } catch (err: any) {
     console.error("[search]", err);
-    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
+    return NextResponse.json({ error: `Busca falhou: ${err?.message ?? "erro interno"}` }, { status: 500 });
   }
 }
