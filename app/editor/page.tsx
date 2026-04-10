@@ -164,36 +164,52 @@ export default function EditorPage() {
 
   const handleExport = async () => {
     setExporting(true);
+    // Sobe para scale=1 para capturar em resolução real
+    setDisplayScale(1);
+    await new Promise((r) => setTimeout(r, 400));
     try {
       const html2canvas = (await import("html2canvas")).default;
-      const urls: string[] = [];
 
       for (let i = 0; i < slides.length; i++) {
         setCurrentIndex(i);
-        await new Promise((r) => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 350));
 
-        const el = document.getElementById(`slide-export-${slides[i].id}`);
+        const el = document.getElementById(`slide-render-${slides[i].id}`);
         if (!el) continue;
 
-        const canvas = await html2canvas(el, {
+        // Captura o filho direto (o SlideCanvas em scale=1)
+        const inner = el.firstElementChild as HTMLElement | null;
+        const target = inner ?? el;
+
+        const canvas = await html2canvas(target, {
           width: SLIDE_W,
           height: SLIDE_H,
           scale: 1,
           useCORS: true,
+          allowTaint: true,
           backgroundColor: slides[i].backgroundColor,
+          logging: false,
         });
 
         const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
-        urls.push(dataUrl);
-
         const a = document.createElement("a");
         a.href = dataUrl;
         a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
         a.click();
+        await new Promise((r) => setTimeout(r, 200));
       }
     } catch (err) {
       console.error("Erro ao exportar:", err);
     } finally {
+      // Restaura o scale original
+      const update = () => {
+        if (!canvasContainerRef.current) return;
+        const { width, height } = canvasContainerRef.current.getBoundingClientRect();
+        const pad = 32;
+        const s = Math.min((width - pad) / SLIDE_W, (height - pad) / SLIDE_H, 560 / SLIDE_H);
+        setDisplayScale(s);
+      };
+      update();
       setExporting(false);
     }
   };
@@ -368,15 +384,6 @@ export default function EditorPage() {
           </button>
         </div>
       )}
-
-      {/* Container oculto fora da tela — renderiza slides em scale=1 para exportação correta */}
-      <div style={{ position: "fixed", top: -99999, left: -99999, zIndex: -1, pointerEvents: "none" }}>
-        {slides.map((slide) => (
-          <div key={`export-${slide.id}`} id={`slide-export-${slide.id}`} style={{ width: SLIDE_W, height: SLIDE_H }}>
-            <SlideCanvas slide={slide} onUpdate={() => {}} scale={1} />
-          </div>
-        ))}
-      </div>
 
       {showPublish && (
         <PublishModal
