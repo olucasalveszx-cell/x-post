@@ -156,7 +156,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     }
   };
 
-  // Modo: baixa imagens + abre Instagram para editar manualmente
+  // Modo: compartilha direto via Web Share API → abre Instagram nativo
   const handlePublishManual = async () => {
     setStatus("exporting");
     setMessage("");
@@ -165,24 +165,44 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       const dataUrls = await exportSlides();
       setProgress(80);
 
-      // Baixa cada imagem
-      for (let i = 0; i < dataUrls.length; i++) {
-        const a = document.createElement("a");
-        a.href = dataUrls[i];
-        a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
-        a.click();
-        await new Promise((r) => setTimeout(r, 200));
+      // Converte dataURLs em Files
+      const files: File[] = dataUrls.map((url, i) => {
+        const arr = url.split(",");
+        const mime = arr[0].match(/:(.*?);/)?.[1] ?? "image/jpeg";
+        const bstr = atob(arr[1]);
+        const u8 = new Uint8Array(bstr.length);
+        for (let j = 0; j < bstr.length; j++) u8[j] = bstr.charCodeAt(j);
+        return new File([u8], `slide-${String(i + 1).padStart(2, "0")}.jpg`, { type: mime });
+      });
+
+      setProgress(90);
+
+      // Web Share API — abre share sheet nativo (Instagram, WhatsApp, etc)
+      const canShare = typeof navigator.share === "function" && navigator.canShare?.({ files });
+      if (canShare) {
+        await navigator.share({ files, title: "X-Post Carrossel" });
+        setProgress(100);
+        setStatus("success");
+        setMessage("Imagens enviadas para o Instagram!");
+      } else {
+        // Fallback: baixa os arquivos
+        for (let i = 0; i < dataUrls.length; i++) {
+          const a = document.createElement("a");
+          a.href = dataUrls[i];
+          a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
+          a.click();
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        setProgress(100);
+        setStatus("success");
+        setMessage("Imagens baixadas! Abra o Instagram para publicar.");
       }
-
-      setProgress(100);
-      setStatus("success");
-      setMessage("Imagens baixadas! Agora publique no Instagram.");
-
-      // Abre Instagram após 800ms
-      setTimeout(() => {
-        window.open("https://www.instagram.com", "_blank");
-      }, 800);
     } catch (err: any) {
+      if ((err as any)?.name === "AbortError") {
+        // Usuário fechou o share sheet — não é erro
+        setStatus("idle");
+        return;
+      }
       setStatus("error");
       setMessage(err.message ?? "Erro ao exportar");
     }
@@ -365,7 +385,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white mb-0.5">Editar no Instagram</p>
-                  <p className="text-xs text-gray-400">Baixa as imagens e abre o Instagram. Você posta manualmente com música nativa, localização, tags e mais.</p>
+                  <p className="text-xs text-gray-400">Envia direto para o Instagram sem baixar. Você escolhe música, legenda, localização e tags no próprio app.</p>
                   {selectedTrack && <p className="text-xs text-brand-400 mt-1">Recomendado — adiciona música nativa do Instagram</p>}
                 </div>
                 <div className={`w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 ml-auto ${publishMode === "manual" ? "border-brand-500 bg-brand-500" : "border-[#444]"}`} />
@@ -493,28 +513,27 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
               {status === "success" && publishMode === "manual" && (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-2 rounded-lg p-3 text-sm bg-green-900/30 border border-green-800/50 text-green-300">
-                    <CheckCircle size={14} className="shrink-0" />{slides.length} imagens baixadas!
+                    <CheckCircle size={14} className="shrink-0" />{message}
                   </div>
-                  <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-4 flex flex-col gap-2">
-                    <p className="text-sm font-medium text-white">Próximos passos no Instagram:</p>
-                    <ol className="flex flex-col gap-1.5">
-                      {[
-                        "Abra o Instagram",
-                        "Toque em + (nova publicação)",
-                        "Selecione as imagens na ordem certa",
-                        selectedTrack ? `Adicione a música: "${selectedTrack.title}"` : "Adicione música, localização e tags",
-                        "Escreva a legenda e publique",
-                      ].map((s, i) => (
-                        <li key={i} className="flex items-start gap-2 text-xs text-gray-400">
-                          <span className="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>{s}
-                        </li>
-                      ))}
-                    </ol>
-                    <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm mt-1">
-                      <Instagram size={15} />Abrir Instagram
-                    </a>
-                  </div>
+                  {selectedTrack && (
+                    <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-3 flex flex-col gap-2">
+                      <p className="text-xs font-medium text-white flex items-center gap-1.5">
+                        <Music size={12} className="text-brand-400" /> No Instagram, adicione a música:
+                      </p>
+                      <div className="flex items-center gap-2.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={selectedTrack.cover} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs text-white truncate font-medium">{selectedTrack.title}</p>
+                          <p className="text-[10px] text-gray-400">{selectedTrack.artist}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm">
+                    <Instagram size={15} />Abrir Instagram
+                  </a>
                 </div>
               )}
 
@@ -522,8 +541,8 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 <button onClick={handleAction}
                   disabled={isLoading || (publishMode === "api" && (!account || (postType === "carousel" && slides.length < 2)))}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : publishMode === "api" ? <Upload size={16} /> : <Download size={16} />}
-                  {isLoading ? statusLabel : publishMode === "api" ? "Publicar Agora" : "Baixar e Abrir Instagram"}
+                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : publishMode === "api" ? <Upload size={16} /> : <Instagram size={16} />}
+                  {isLoading ? statusLabel : publishMode === "api" ? "Publicar Agora" : "Enviar para o Instagram"}
                 </button>
               )}
             </>
