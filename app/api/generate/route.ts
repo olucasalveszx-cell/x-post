@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { GenerateRequest, GeneratedContent, WritingStyle } from "@/types";
 
+export const maxDuration = 60;
+
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const styleInstructions: Record<WritingStyle, string> = {
@@ -103,8 +105,8 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
 }`;
 
     const message = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 4096,
+      model: "claude-3-5-haiku-20241022",
+      max_tokens: 2048,
       messages: [{ role: "user", content: prompt }],
     });
 
