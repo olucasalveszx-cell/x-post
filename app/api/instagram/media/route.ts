@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { store, cleanup } from "@/lib/media-store";
+
+// Singleton global para sobreviver hot-reload
+if (!(globalThis as any).__mediaStore) {
+  (globalThis as any).__mediaStore = new Map<string, { b64: string; mime: string; exp: number }>();
+}
+const store: Map<string, { b64: string; mime: string; exp: number }> = (globalThis as any).__mediaStore;
+
+function cleanup() {
+  const now = Date.now();
+  for (const [k, v] of store.entries()) {
+    if (v.exp < now) store.delete(k);
+  }
+}
 
 export async function POST(req: NextRequest) {
   cleanup();

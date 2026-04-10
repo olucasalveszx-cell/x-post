@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { store } from "@/lib/media-store";
+
+const store = (globalThis as any).__mediaStore as Map<string, { b64: string; mime: string; exp: number }>;
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const entry = store.get(params.id);
+  const entry = store?.get(params.id);
   if (!entry || entry.exp < Date.now()) {
     return new NextResponse("Not found", { status: 404 });
   }
