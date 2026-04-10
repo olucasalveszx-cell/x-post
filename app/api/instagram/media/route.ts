@@ -9,9 +9,7 @@ const store: Map<string, { b64: string; mime: string; exp: number }> = (globalTh
 
 function cleanup() {
   const now = Date.now();
-  for (const [k, v] of store.entries()) {
-    if (v.exp < now) store.delete(k);
-  }
+  store.forEach((v, k) => { if (v.exp < now) store.delete(k); });
 }
 
 export async function POST(req: NextRequest) {
