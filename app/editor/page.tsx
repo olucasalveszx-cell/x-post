@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuid } from "uuid";
 import { Download, ArrowLeft, User, LogIn, Sparkles, Layers, X } from "lucide-react";
 import Link from "next/link";
-import { Slide } from "@/types";
+import { Slide, SlideElement } from "@/types";
 import SidePanel from "@/components/Generator/SidePanel";
 import SlideCanvas from "@/components/Editor/SlideCanvas";
 import Toolbar from "@/components/Editor/Toolbar";
@@ -17,19 +17,188 @@ interface IGAccount {
   username: string;
 }
 
-const SLIDE_W = 1080;
-const SLIDE_H = 1350;
+// ── Formatos disponíveis ──────────────────────────────────────
+const FORMATS = [
+  { label: "1:1",  width: 1080, height: 1080 },
+  { label: "4:5",  width: 1080, height: 1350 },
+  { label: "9:16", width: 1080, height: 1920 },
+  { label: "16:9", width: 1920, height: 1080 },
+] as const;
+type Format = typeof FORMATS[number];
 
-const newBlankSlide = (): Slide => ({
-  id: uuid(),
-  backgroundColor: "#1a0533",
-  elements: [],
-  width: SLIDE_W,
-  height: SLIDE_H,
-});
+// ── Canvas 2D renderer (sem html2canvas) ─────────────────────
+function loadImg(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
 
+type Run = { text: string; color?: string };
+
+function parseRuns(html: string): Run[] {
+  const runs: Run[] = [];
+  const parts = html.split(/(<span[^>]*>[\s\S]*?<\/span>)/gi);
+  for (const part of parts) {
+    const m = part.match(/<span[^>]*style="[^"]*color:\s*([^;"]+)[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+    if (m) {
+      runs.push({ text: m[2], color: m[1].trim() });
+    } else {
+      const text = part.replace(/<[^>]+>/g, "");
+      if (text) runs.push({ text });
+    }
+  }
+  return runs;
+}
+
+function applyGradientOverlay(ctx: CanvasRenderingContext2D, css: string, W: number, H: number) {
+  try {
+    let x0 = 0, y0 = H, x1 = 0, y1 = 0;
+    if (/to bottom/.test(css))   { x0 = 0; y0 = 0;  x1 = 0; y1 = H; }
+    else if (/to right/.test(css)) { x0 = 0; y0 = 0; x1 = W; y1 = 0; }
+    else if (/135deg/.test(css))  { x0 = 0; y0 = 0;  x1 = W; y1 = H; }
+    // default: to top
+
+    const grad = ctx.createLinearGradient(x0, y0, x1, y1);
+    const re = /(rgba?\([^)]+\)|#[\da-f]+)\s+([\d.]+)%/gi;
+    let m: RegExpExecArray | null;
+    let has = false;
+    while ((m = re.exec(css)) !== null) {
+      grad.addColorStop(parseFloat(m[2]) / 100, m[1]);
+      has = true;
+    }
+    if (has) { ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H); }
+  } catch {}
+}
+
+function drawTextEl(ctx: CanvasRenderingContext2D, el: SlideElement) {
+  const s = el.style as any;
+  const fontSize: number = s?.fontSize ?? 20;
+  const fontWeight: string = s?.fontWeight ?? "normal";
+  const fontFamily: string = s?.fontFamily ?? "sans-serif";
+  const defaultColor: string = s?.color ?? "#ffffff";
+  const textAlign: CanvasTextAlign = (s?.textAlign ?? "left") as CanvasTextAlign;
+  const lineHeight: number = fontSize * (s?.lineHeight ?? 1.4);
+  const pad = 4;
+  const maxW = el.width - pad * 2;
+
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+  ctx.textBaseline = "top";
+
+  const runs = parseRuns(el.content ?? "");
+
+  type Word = { text: string; color: string };
+  const tokens: (Word | "newline")[] = [];
+  for (const run of runs) {
+    const parts = run.text.split(/(\n)/);
+    for (const part of parts) {
+      if (part === "\n") { tokens.push("newline"); continue; }
+      const words = part.split(/(\s+)/);
+      for (const w of words) {
+        if (w) tokens.push({ text: w, color: run.color ?? defaultColor });
+      }
+    }
+  }
+
+  type Line = { segs: Word[]; width: number };
+  const lines: Line[] = [];
+  let segs: Word[] = [];
+  let lineW = 0;
+
+  const flush = () => { if (segs.length) { lines.push({ segs: [...segs], width: lineW }); segs = []; lineW = 0; } };
+
+  for (const tok of tokens) {
+    if (tok === "newline") { flush(); continue; }
+    const isSpace = /^\s+$/.test(tok.text);
+    const w = ctx.measureText(tok.text).width;
+    if (lineW + w > maxW && lineW > 0 && !isSpace) flush();
+    if (!isSpace || lineW > 0) { segs.push(tok); lineW += w; }
+  }
+  flush();
+
+  let y = el.y + pad;
+  for (const line of lines) {
+    if (y > el.y + el.height) break;
+    let x = el.x + pad;
+    if (textAlign === "center") x = el.x + el.width / 2 - line.width / 2;
+    if (textAlign === "right")  x = el.x + el.width - pad - line.width;
+    for (const seg of line.segs) {
+      ctx.fillStyle = seg.color;
+      ctx.fillText(seg.text, x, y);
+      x += ctx.measureText(seg.text).width;
+    }
+    y += lineHeight;
+  }
+}
+
+async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
+  const W = slide.width;
+  const H = slide.height;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+
+  // Fundo
+  ctx.fillStyle = slide.backgroundColor ?? "#000000";
+  ctx.fillRect(0, 0, W, H);
+
+  // Imagem de fundo
+  if (slide.backgroundImageUrl) {
+    try {
+      const img = await loadImg(slide.backgroundImageUrl);
+      const scale = Math.max(W / img.width, H / img.height);
+      const sw = img.width * scale;
+      const sh = img.height * scale;
+      ctx.drawImage(img, (W - sw) / 2, 0, sw, sh);
+    } catch {}
+    const gradCss = slide.backgroundGradient
+      ?? "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.75) 35%, rgba(0,0,0,0.35) 65%, rgba(0,0,0,0.15) 100%)";
+    applyGradientOverlay(ctx, gradCss, W, H);
+  }
+
+  // Elementos
+  for (const el of slide.elements) {
+    ctx.save();
+    ctx.globalAlpha = el.opacity ?? 1;
+    if (el.type === "text") {
+      drawTextEl(ctx, el);
+    } else if (el.type === "image" && el.src) {
+      try {
+        const img = await loadImg(el.src);
+        ctx.drawImage(img, el.x, el.y, el.width, el.height);
+      } catch {}
+    } else if (el.type === "shape") {
+      const s = el.style as any;
+      ctx.fillStyle = s?.fill ?? "#a855f7";
+      ctx.fillRect(el.x, el.y, el.width, el.height);
+    }
+    ctx.restore();
+  }
+
+  return canvas;
+}
+
+// ── Componente principal ──────────────────────────────────────
 export default function EditorPage() {
-  const [slides, setSlides] = useState<Slide[]>([newBlankSlide()]);
+  const [format, setFormat] = useState<Format>(FORMATS[1]); // 4:5 padrão
+  const SLIDE_W = format.width;
+  const SLIDE_H = format.height;
+
+  const newBlankSlide = useCallback((): Slide => ({
+    id: uuid(),
+    backgroundColor: "#1a0533",
+    elements: [],
+    width: SLIDE_W,
+    height: SLIDE_H,
+  }), [SLIDE_W, SLIDE_H]);
+
+  const [slides, setSlides] = useState<Slide[]>(() => [{
+    id: uuid(), backgroundColor: "#1a0533", elements: [], width: 1080, height: 1350,
+  }]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showPublish, setShowPublish] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -39,13 +208,11 @@ export default function EditorPage() {
   const [canRedo, setCanRedo] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // Histórico para undo/redo
-  const historyRef = useRef<Slide[][]>([[newBlankSlide()]]);
+  const historyRef = useRef<Slide[][]>([[{ id: uuid(), backgroundColor: "#1a0533", elements: [], width: 1080, height: 1350 }]]);
   const historyIndexRef = useRef(0);
   const slidesRef = useRef<Slide[]>(slides);
   const historyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Deriva sempre do slide atual — nunca fica stale
   const currentSlide = slides[currentIndex];
   const selectedElement = selectedElementId
     ? currentSlide?.elements.find((el) => el.id === selectedElementId) ?? null
@@ -76,7 +243,6 @@ export default function EditorPage() {
     setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
   }, []);
 
-  // Atalhos de teclado
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
@@ -86,7 +252,6 @@ export default function EditorPage() {
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo]);
 
-  // Lê token do Instagram vindo do OAuth callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const success = params.get("ig_success");
@@ -106,26 +271,19 @@ export default function EditorPage() {
         const pages = params.get("pages") ?? "nenhuma";
         alert(`Conta Instagram Business não encontrada.\n\nPáginas do Facebook encontradas: ${pages}\n\nVerifique se você é ADMIN da página e se o Instagram Business está conectado a ela.`);
       } else {
-        const msgs: Record<string, string> = {
-          cancelled: "Login cancelado",
-          token: "Erro ao obter token de acesso",
-        };
+        const msgs: Record<string, string> = { cancelled: "Login cancelado", token: "Erro ao obter token de acesso" };
         alert(msgs[error] ?? `Erro: ${error}`);
       }
       window.history.replaceState({}, "", "/editor");
     }
 
-    // Restaura conta salva no localStorage
     const saved = localStorage.getItem("ig_account");
     if (saved && !success) {
       try { setIgAccount(JSON.parse(saved)); } catch {}
     }
   }, []);
 
-  const handleIGLogin = () => {
-    window.location.href = "/api/instagram/auth";
-  };
-
+  const handleIGLogin = () => { window.location.href = "/api/instagram/auth"; };
 
   const updateSlide = useCallback((updated: Slide) => {
     setSlides((prev) => {
@@ -133,20 +291,14 @@ export default function EditorPage() {
       slidesRef.current = next;
       return next;
     });
-    // Debounce history push — avoids flooding during drag
     if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
-    historyTimerRef.current = setTimeout(() => {
-      pushHistory(slidesRef.current);
-    }, 500);
+    historyTimerRef.current = setTimeout(() => { pushHistory(slidesRef.current); }, 500);
   }, [pushHistory]);
 
-  const addSlide = () => {
+  const addSlide = useCallback(() => {
     const slide = newBlankSlide();
-    setSlides((prev) => {
-      setCurrentIndex(prev.length);
-      return [...prev, slide];
-    });
-  };
+    setSlides((prev) => { setCurrentIndex(prev.length); return [...prev, slide]; });
+  }, [newBlankSlide]);
 
   const deleteSlide = () => {
     if (slides.length <= 1) return;
@@ -162,54 +314,28 @@ export default function EditorPage() {
     pushHistory(generated);
   };
 
+  const handleFormatChange = (f: Format) => {
+    setFormat(f);
+    setSlides((prev) => prev.map((s) => ({ ...s, width: f.width, height: f.height })));
+  };
+
+  // ── Export via Canvas 2D — sem html2canvas ────────────────
   const handleExport = async () => {
     setExporting(true);
-    // Sobe para scale=1 para capturar em resolução real
-    setDisplayScale(1);
-    await new Promise((r) => setTimeout(r, 400));
     try {
-      const html2canvas = (await import("html2canvas")).default;
-
       for (let i = 0; i < slides.length; i++) {
-        setCurrentIndex(i);
-        await new Promise((r) => setTimeout(r, 350));
-
-        const el = document.getElementById(`slide-render-${slides[i].id}`);
-        if (!el) continue;
-
-        // Captura o filho direto (o SlideCanvas em scale=1)
-        const inner = el.firstElementChild as HTMLElement | null;
-        const target = inner ?? el;
-
-        const canvas = await html2canvas(target, {
-          width: SLIDE_W,
-          height: SLIDE_H,
-          scale: 1,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: slides[i].backgroundColor,
-          logging: false,
-        });
-
+        const canvas = await renderSlide(slides[i]);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
         const a = document.createElement("a");
         a.href = dataUrl;
         a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
         a.click();
-        await new Promise((r) => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 150));
       }
     } catch (err) {
       console.error("Erro ao exportar:", err);
+      alert("Erro ao exportar. Tente novamente.");
     } finally {
-      // Restaura o scale original
-      const update = () => {
-        if (!canvasContainerRef.current) return;
-        const { width, height } = canvasContainerRef.current.getBoundingClientRect();
-        const pad = 32;
-        const s = Math.min((width - pad) / SLIDE_W, (height - pad) / SLIDE_H, 560 / SLIDE_H);
-        setDisplayScale(s);
-      };
-      update();
       setExporting(false);
     }
   };
@@ -217,7 +343,7 @@ export default function EditorPage() {
   const [mobilePanel, setMobilePanel] = useState<"side" | "slides" | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const [displayScale, setDisplayScale] = useState(560 / SLIDE_H);
+  const [displayScale, setDisplayScale] = useState(560 / 1350);
 
   useEffect(() => {
     const update = () => {
@@ -232,7 +358,7 @@ export default function EditorPage() {
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
-  }, []);
+  }, [SLIDE_W, SLIDE_H]);
 
   const DISPLAY_W = SLIDE_W * displayScale;
   const DISPLAY_H = SLIDE_H * displayScale;
@@ -263,18 +389,14 @@ export default function EditorPage() {
           </button>
 
           {igAccount ? (
-            <button
-              onClick={() => setShowPublish(true)}
-              className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium"
-            >
+            <button onClick={() => setShowPublish(true)}
+              className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium">
               <User size={14} />
               <span className="hidden md:inline">@{igAccount.username}</span>
             </button>
           ) : (
-            <button
-              onClick={handleIGLogin}
-              className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium"
-            >
+            <button onClick={handleIGLogin}
+              className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium">
               <LogIn size={14} />
               <span className="hidden md:inline">Login Instagram</span>
             </button>
@@ -283,20 +405,13 @@ export default function EditorPage() {
       </header>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Overlay mobile */}
         {isMobile && mobilePanel && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 30 }} onClick={() => setMobilePanel(null)} />
         )}
 
         {/* Painel esquerdo */}
         {isMobile ? (
-          <div style={{
-            position: "fixed", top: 0, left: 0, bottom: 0, width: 320, zIndex: 40,
-            background: "#080808", borderRight: "1px solid #161616",
-            display: "flex", flexDirection: "column",
-            transform: mobilePanel === "side" ? "translateX(0)" : "translateX(-100%)",
-            transition: "transform 0.3s",
-          }}>
+          <div style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 320, zIndex: 40, background: "#080808", borderRight: "1px solid #161616", display: "flex", flexDirection: "column", transform: mobilePanel === "side" ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.3s" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid #161616" }}>
               <span style={{ fontSize: 14, color: "#d1d5db" }}>Gerar / Traduzir</span>
               <button onClick={() => setMobilePanel(null)}><X size={18} color="#9ca3af" /></button>
@@ -327,6 +442,11 @@ export default function EditorPage() {
             onRedo={redo}
             canUndo={canUndo}
             canRedo={canRedo}
+            format={format.label}
+            onFormatChange={(label) => {
+              const f = FORMATS.find((f) => f.label === label);
+              if (f) handleFormatChange(f);
+            }}
           />
 
           <div ref={canvasContainerRef} className="flex-1 overflow-auto flex items-center justify-center bg-[#0a0a0a] p-4">
@@ -342,13 +462,7 @@ export default function EditorPage() {
 
         {/* Painel direito */}
         {isMobile ? (
-          <div style={{
-            position: "fixed", top: 0, right: 0, bottom: 0, width: 128, zIndex: 40,
-            background: "#080808", borderLeft: "1px solid #161616",
-            display: "flex", flexDirection: "column",
-            transform: mobilePanel === "slides" ? "translateX(0)" : "translateX(100%)",
-            transition: "transform 0.3s",
-          }}>
+          <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: 128, zIndex: 40, background: "#080808", borderLeft: "1px solid #161616", display: "flex", flexDirection: "column", transform: mobilePanel === "slides" ? "translateX(0)" : "translateX(100%)", transition: "transform 0.3s" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", borderBottom: "1px solid #161616" }}>
               <span style={{ fontSize: 12, color: "#d1d5db" }}>Slides</span>
               <button onClick={() => setMobilePanel(null)}><X size={16} color="#9ca3af" /></button>
@@ -369,18 +483,15 @@ export default function EditorPage() {
         <div style={{ display: "flex", borderTop: "1px solid #161616", background: "#080808", zIndex: 20 }}>
           <button onClick={() => setMobilePanel(mobilePanel === "side" ? null : "side")}
             style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: mobilePanel === "side" ? "#a855f7" : "#6b7280" }}>
-            <Sparkles size={18} />
-            IA
+            <Sparkles size={18} />IA
           </button>
           <button onClick={() => setMobilePanel(mobilePanel === "slides" ? null : "slides")}
             style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: mobilePanel === "slides" ? "#a855f7" : "#6b7280" }}>
-            <Layers size={18} />
-            Slides
+            <Layers size={18} />Slides
           </button>
           <button onClick={() => setShowPublish(true)}
             style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: "#6b7280" }}>
-            <User size={18} />
-            Publicar
+            <User size={18} />Publicar
           </button>
         </div>
       )}

@@ -19,6 +19,9 @@ const FONTS = [
   { label: "Monospace",   value: "monospace" },
 ];
 
+const FORMATS = ["1:1", "4:5", "9:16", "16:9"] as const;
+type FormatLabel = typeof FORMATS[number];
+
 interface Props {
   slide: Slide;
   onUpdate: (slide: Slide) => void;
@@ -33,12 +36,15 @@ interface Props {
   onRedo?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
+  format?: FormatLabel;
+  onFormatChange?: (f: FormatLabel) => void;
 }
 
 export default function Toolbar({
   slide, onUpdate, onAddSlide, onDeleteSlide,
   slideIndex, totalSlides, onPrev, onNext,
   selectedElement, onUndo, onRedo, canUndo, canRedo,
+  format = "4:5", onFormatChange,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -148,6 +154,18 @@ export default function Toolbar({
         </button>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
+
+        <div className="w-px h-6 bg-[#2a2a2a]" />
+
+        {/* Formato */}
+        <div className="flex items-center gap-1 bg-[#111] border border-[#222] rounded-lg p-0.5">
+          {FORMATS.map((f) => (
+            <button key={f} onClick={() => onFormatChange?.(f)}
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${format === f ? "bg-brand-600 text-white" : "text-gray-500 hover:text-gray-300"}`}>
+              {f}
+            </button>
+          ))}
+        </div>
 
         <div className="w-px h-6 bg-[#2a2a2a]" />
 
