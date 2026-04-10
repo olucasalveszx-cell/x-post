@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import { GenerateRequest, GeneratedContent, WritingStyle } from "@/types";
 
 export const maxDuration = 60;
@@ -52,16 +51,11 @@ export async function POST(req: NextRequest) {
     const { topic, searchResults, slideCount, writingStyle = "viral" } = body;
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    console.log("[generate] ANTHROPIC_API_KEY presente:", !!apiKey, "primeiros chars:", apiKey?.slice(0, 10));
+    console.log("[generate] key presente:", !!apiKey, "prefix:", apiKey?.slice(0, 14));
 
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "ANTHROPIC_API_KEY não configurada no Vercel" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "ANTHROPIC_API_KEY não configurada no Vercel" }, { status: 500 });
     }
-
-    const client = new Anthropic({ apiKey });
 
     const sourcesText = searchResults
       .map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}\nFonte: ${r.link}`)
@@ -107,14 +101,30 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
   ]
 }`;
 
-    const message = await client.messages.create({
-      model: "claude-3-5-haiku-20241022",
-      max_tokens: 2048,
-      messages: [{ role: "user", content: prompt }],
+    // Fetch direto — sem SDK
+    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-3-haiku-20240307",
+        max_tokens: 2048,
+        messages: [{ role: "user", content: prompt }],
+      }),
     });
 
-    const rawText =
-      message.content[0].type === "text" ? message.content[0].text : "";
+    const anthropicData = await anthropicRes.json();
+    console.log("[generate] anthropic status:", anthropicRes.status, "error:", anthropicData.error);
+
+    if (!anthropicRes.ok) {
+      const errMsg = anthropicData?.error?.message ?? anthropicRes.statusText;
+      return NextResponse.json({ error: `API Anthropic: ${errMsg}` }, { status: 500 });
+    }
+
+    const rawText: string = anthropicData.content?.[0]?.text ?? "";
 
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
@@ -124,8 +134,8 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
     const generated: GeneratedContent = JSON.parse(jsonMatch[0]);
     return NextResponse.json(generated);
   } catch (err: any) {
-    console.error("[generate]", err);
-    const msg = err?.message ?? err?.error?.message ?? "Erro desconhecido";
+    console.error("[generate] catch:", err);
+    const msg = err?.message ?? "Erro desconhecido";
     return NextResponse.json({ error: `Erro ao gerar: ${msg}` }, { status: 500 });
   }
 }
