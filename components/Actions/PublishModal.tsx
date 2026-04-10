@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Music, Search, Play, Pause, ChevronRight, ChevronLeft } from "lucide-react";
+import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Music, Search, Play, Pause, ChevronRight, ChevronLeft, Upload, Pencil, Download } from "lucide-react";
 import { renderSlide } from "@/lib/render-slide";
 
 interface IGAccount {
@@ -27,11 +27,13 @@ interface Props {
   onLoginClick: () => void;
 }
 
-type Step = "music" | "caption" | "publish";
+type Step = "music" | "caption" | "mode" | "publish";
+type PublishMode = "api" | "manual";
 
 export default function PublishModal({ slides, account, onClose, onLoginClick }: Props) {
   const [step, setStep] = useState<Step>("music");
   const [caption, setCaption] = useState("");
+  const [publishMode, setPublishMode] = useState<PublishMode>("api");
   const [status, setStatus] = useState<"idle" | "exporting" | "uploading" | "publishing" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState(0);
@@ -46,7 +48,6 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Busca automática ao digitar
   useEffect(() => {
     if (!musicQuery.trim()) { setTracks([]); return; }
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -78,12 +79,8 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
 
   const selectTrack = (track: Track) => {
     setSelectedTrack(track);
-    // Adiciona menção da música na legenda
     const mention = `\n\n🎵 ${track.title} — ${track.artist}`;
-    setCaption((prev) => {
-      if (prev.includes(mention.trim())) return prev;
-      return prev + mention;
-    });
+    setCaption((prev) => prev.includes(mention.trim()) ? prev : prev + mention);
   };
 
   const clearTrack = () => {
@@ -124,12 +121,12 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     return publicUrls;
   };
 
-  const handlePublish = async () => {
+  // Modo: upload direto via API
+  const handlePublishApi = async () => {
     if (!account) return;
     setStatus("exporting");
     setMessage("");
     setProgress(0);
-
     try {
       const dataUrls = await exportSlides();
       if (dataUrls.length < 2) throw new Error("O carrossel precisa ter pelo menos 2 slides");
@@ -144,7 +141,6 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageUrls: publicUrls, caption, igToken: account.token, igAccountId: account.accountId }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
@@ -158,14 +154,59 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     }
   };
 
+  // Modo: baixa imagens + abre Instagram para editar manualmente
+  const handlePublishManual = async () => {
+    setStatus("exporting");
+    setMessage("");
+    setProgress(0);
+    try {
+      const dataUrls = await exportSlides();
+      setProgress(80);
+
+      // Baixa cada imagem
+      for (let i = 0; i < dataUrls.length; i++) {
+        const a = document.createElement("a");
+        a.href = dataUrls[i];
+        a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
+        a.click();
+        await new Promise((r) => setTimeout(r, 200));
+      }
+
+      setProgress(100);
+      setStatus("success");
+      setMessage("Imagens baixadas! Agora publique no Instagram.");
+
+      // Abre Instagram após 800ms
+      setTimeout(() => {
+        window.open("https://www.instagram.com", "_blank");
+      }, 800);
+    } catch (err: any) {
+      setStatus("error");
+      setMessage(err.message ?? "Erro ao exportar");
+    }
+  };
+
+  const handleAction = () => {
+    if (publishMode === "api") handlePublishApi();
+    else handlePublishManual();
+  };
+
   const isLoading = ["exporting", "uploading", "publishing"].includes(status);
-  const statusLabel = { exporting: "Exportando slides...", uploading: "Enviando imagens...", publishing: "Publicando no Instagram..." }[status as string] ?? "";
+  const statusLabel = {
+    exporting: "Exportando slides...",
+    uploading: "Enviando imagens...",
+    publishing: "Publicando no Instagram...",
+  }[status as string] ?? "";
 
   const STEPS: { key: Step; label: string }[] = [
-    { key: "music", label: "Música" },
+    { key: "music",   label: "Música" },
     { key: "caption", label: "Legenda" },
+    { key: "mode",    label: "Modo" },
     { key: "publish", label: "Publicar" },
   ];
+
+  const nextStep: Record<Step, Step | null> = { music: "caption", caption: "mode", mode: "publish", publish: null };
+  const prevStep: Record<Step, Step | null> = { music: null, caption: "music", mode: "caption", publish: "mode" };
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -184,10 +225,10 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
         <div className="flex border-b border-[#2a2a2a] shrink-0">
           {STEPS.map((s, i) => (
             <button key={s.key} onClick={() => setStep(s.key)}
-              className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${step === s.key ? "text-white" : "text-gray-500 hover:text-gray-300"}`}>
-              <span className={`inline-flex items-center gap-1.5`}>
-                <span className={`w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold ${step === s.key ? "bg-brand-600 text-white" : "bg-[#2a2a2a] text-gray-500"}`}>{i + 1}</span>
-                {s.label}
+              className={`flex-1 py-2.5 text-xs font-medium transition-colors relative ${step === s.key ? "text-white" : "text-gray-500 hover:text-gray-300"}`}>
+              <span className="inline-flex items-center justify-center gap-1">
+                <span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-bold ${step === s.key ? "bg-brand-600 text-white" : "bg-[#2a2a2a] text-gray-500"}`}>{i + 1}</span>
+                <span className="hidden sm:inline">{s.label}</span>
               </span>
               {step === s.key && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500" />}
             </button>
@@ -200,25 +241,15 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
           {/* ── Step 1: Música ── */}
           {step === "music" && (
             <>
-              <div>
-                <p className="text-sm text-gray-400 mb-3">Escolha uma música para inspirar sua legenda:</p>
-
-                {/* Campo de busca */}
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input
-                    type="text"
-                    value={musicQuery}
-                    onChange={(e) => setMusicQuery(e.target.value)}
-                    placeholder="Buscar artista ou música..."
-                    className="w-full bg-[#111] border border-[#333] rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600"
-                    autoFocus
-                  />
-                  {searching && <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 animate-spin" />}
-                </div>
+              <p className="text-sm text-gray-400">Escolha uma música para adicionar ao post:</p>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input type="text" value={musicQuery} onChange={(e) => setMusicQuery(e.target.value)}
+                  placeholder="Buscar artista ou música..."
+                  className="w-full bg-[#111] border border-[#333] rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600" autoFocus />
+                {searching && <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 animate-spin" />}
               </div>
 
-              {/* Selecionada */}
               {selectedTrack && (
                 <div className="flex items-center gap-3 bg-brand-500/10 border border-brand-500/30 rounded-xl p-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -231,12 +262,10 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 </div>
               )}
 
-              {/* Lista de resultados */}
               {tracks.length > 0 && (
                 <div className="flex flex-col gap-1.5">
                   {tracks.map((track) => (
-                    <div key={track.id}
-                      onClick={() => selectTrack(track)}
+                    <div key={track.id} onClick={() => selectTrack(track)}
                       className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-colors border ${selectedTrack?.id === track.id ? "border-brand-500/50 bg-brand-500/10" : "border-transparent hover:bg-[#222]"}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={track.cover} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
@@ -244,8 +273,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                         <p className="text-sm text-white truncate">{track.title}</p>
                         <p className="text-xs text-gray-400 truncate">{track.artist} · {track.album}</p>
                       </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); togglePlay(track); }}
+                      <button onClick={(e) => { e.stopPropagation(); togglePlay(track); }}
                         className="w-8 h-8 rounded-full bg-[#333] hover:bg-brand-600 flex items-center justify-center shrink-0 transition-colors">
                         {playingId === track.id ? <Pause size={13} /> : <Play size={13} />}
                       </button>
@@ -256,8 +284,8 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
 
               {!musicQuery && !selectedTrack && (
                 <p className="text-xs text-gray-600 text-center py-4">
-                  A música selecionada será adicionada na legenda do post.<br />
-                  <span className="text-gray-700">(Instagram não suporta música em carrosséis via API)</span>
+                  Pule esta etapa se não quiser música.<br />
+                  <span className="text-gray-700">Preview de 30s via Deezer.</span>
                 </p>
               )}
             </>
@@ -274,41 +302,73 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
               )}
               <div>
                 <label className="text-sm text-gray-400 mb-1 block">Legenda</label>
-                <textarea
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
+                <textarea value={caption} onChange={(e) => setCaption(e.target.value)}
                   placeholder="Digite a legenda, hashtags..."
                   rows={5}
                   className="w-full bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600 resize-none"
-                  autoFocus
-                />
+                  autoFocus />
                 <p className="text-xs text-gray-600 mt-1">{caption.length} caracteres</p>
               </div>
             </>
           )}
 
-          {/* ── Step 3: Publicar ── */}
+          {/* ── Step 3: Modo de publicação ── */}
+          {step === "mode" && (
+            <>
+              <p className="text-sm text-gray-400">Como você quer publicar?</p>
+
+              <button onClick={() => setPublishMode("api")}
+                className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all text-left ${publishMode === "api" ? "border-brand-500 bg-brand-500/10" : "border-[#2a2a2a] hover:border-[#444]"}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${publishMode === "api" ? "bg-brand-600" : "bg-[#222]"}`}>
+                  <Upload size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white mb-0.5">Upload direto</p>
+                  <p className="text-xs text-gray-400">Publica automaticamente via API. Rápido, sem abrir o Instagram. Música é adicionada na legenda.</p>
+                </div>
+                <div className={`w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 ml-auto ${publishMode === "api" ? "border-brand-500 bg-brand-500" : "border-[#444]"}`} />
+              </button>
+
+              <button onClick={() => setPublishMode("manual")}
+                className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all text-left ${publishMode === "manual" ? "border-brand-500 bg-brand-500/10" : "border-[#2a2a2a] hover:border-[#444]"}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${publishMode === "manual" ? "bg-brand-600" : "bg-[#222]"}`}>
+                  <Pencil size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white mb-0.5">Editar no Instagram</p>
+                  <p className="text-xs text-gray-400">Baixa as imagens e abre o Instagram. Você posta manualmente com música nativa, localização, tags e mais.</p>
+                  {selectedTrack && <p className="text-xs text-brand-400 mt-1">Recomendado — adiciona música nativa do Instagram</p>}
+                </div>
+                <div className={`w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 ml-auto ${publishMode === "manual" ? "border-brand-500 bg-brand-500" : "border-[#444]"}`} />
+              </button>
+            </>
+          )}
+
+          {/* ── Step 4: Publicar ── */}
           {step === "publish" && (
             <>
-              {account ? (
-                <div className="flex items-center gap-3 bg-green-900/20 border border-green-800/40 rounded-xl p-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                    <User size={16} />
+              {/* Conta */}
+              {publishMode === "api" && (
+                account ? (
+                  <div className="flex items-center gap-3 bg-green-900/20 border border-green-800/40 rounded-xl p-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <User size={16} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">@{account.username}</p>
+                      <p className="text-xs text-green-400">Conta conectada</p>
+                    </div>
+                    <button onClick={onLoginClick} className="text-xs text-gray-500 hover:text-white underline">Trocar</button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white">@{account.username}</p>
-                    <p className="text-xs text-green-400">Conta conectada</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm text-gray-400">Conecte sua conta Instagram:</p>
+                    <button onClick={onLoginClick}
+                      className="flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm">
+                      <LogIn size={16} />Login com Instagram
+                    </button>
                   </div>
-                  <button onClick={onLoginClick} className="text-xs text-gray-500 hover:text-white underline">Trocar</button>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm text-gray-400">Conecte sua conta Instagram:</p>
-                  <button onClick={onLoginClick}
-                    className="flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm">
-                    <LogIn size={16} />Login com Instagram
-                  </button>
-                </div>
+                )
               )}
 
               {/* Resumo */}
@@ -317,10 +377,14 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                   <span className="text-gray-500">Slides</span>
                   <span className="text-white font-medium">{slides.length}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Modo</span>
+                  <span className="text-white font-medium">{publishMode === "api" ? "Upload direto" : "Editar no Instagram"}</span>
+                </div>
                 {selectedTrack && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Música</span>
-                    <span className="text-brand-400 truncate ml-2 text-right max-w-[60%]">{selectedTrack.title}</span>
+                    <span className="text-brand-400 truncate ml-2 text-right max-w-[55%]">{selectedTrack.title}</span>
                   </div>
                 )}
                 {caption && (
@@ -331,8 +395,8 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 )}
               </div>
 
-              {slides.length < 2 && (
-                <p className="text-yellow-500 text-xs">Mínimo de 2 slides para carrossel</p>
+              {slides.length < 2 && publishMode === "api" && (
+                <p className="text-yellow-500 text-xs">Mínimo de 2 slides para carrossel via API</p>
               )}
 
               {isLoading && (
@@ -345,29 +409,21 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
               )}
 
               {/* Erro */}
-              {status === "error" && message && (
+              {status === "error" && (
                 <div className="flex items-start gap-2 rounded-lg p-3 text-sm bg-red-900/30 border border-red-800/50 text-red-300">
-                  <AlertCircle size={14} className="mt-0.5 shrink-0" />
-                  {message}
+                  <AlertCircle size={14} className="mt-0.5 shrink-0" />{message}
                 </div>
               )}
 
-              {/* Sucesso + fluxo híbrido de música */}
-              {status === "success" && (
+              {/* Sucesso — upload direto */}
+              {status === "success" && publishMode === "api" && (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-2 rounded-lg p-3 text-sm bg-green-900/30 border border-green-800/50 text-green-300">
-                    <CheckCircle size={14} className="shrink-0" />
-                    Carrossel publicado com sucesso!
+                    <CheckCircle size={14} className="shrink-0" />Carrossel publicado com sucesso!
                   </div>
-
                   {selectedTrack && (
                     <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-4 flex flex-col gap-3">
-                      <div className="flex items-center gap-2">
-                        <Music size={15} className="text-brand-400 shrink-0" />
-                        <p className="text-sm font-medium text-white">Adicionar música ao post</p>
-                      </div>
-
-                      {/* Track selecionada */}
+                      <p className="text-sm font-medium text-white flex items-center gap-2"><Music size={14} className="text-brand-400" />Adicionar música ao post</p>
                       <div className="flex items-center gap-3 bg-[#1a1a1a] rounded-lg p-2.5">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={selectedTrack.cover} alt="" className="w-9 h-9 rounded object-cover" />
@@ -376,57 +432,65 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                           <p className="text-xs text-gray-400">{selectedTrack.artist}</p>
                         </div>
                       </div>
-
-                      {/* Passos */}
-                      <ol className="flex flex-col gap-2">
-                        {[
-                          "Abra o post no Instagram",
-                          'Toque nos "..." (3 pontinhos) no canto',
-                          'Selecione "Editar"',
-                          'Toque no ícone de música 🎵',
-                          `Busque "${selectedTrack.title}" de ${selectedTrack.artist}`,
-                          "Salve",
-                        ].map((step, i) => (
+                      <ol className="flex flex-col gap-1.5">
+                        {[`Abra o post no Instagram`, `Toque nos "..." no canto`, `Selecione "Editar"`, `Toque no ícone de música 🎵`, `Busque "${selectedTrack.title}"`, "Salve"].map((s, i) => (
                           <li key={i} className="flex items-start gap-2 text-xs text-gray-400">
-                            <span className="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-                            {step}
+                            <span className="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>{s}
                           </li>
                         ))}
                       </ol>
-
-                      {/* Botão abrir post */}
                       {permalink && (
                         <a href={permalink} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm transition-all">
-                          <Instagram size={15} /> Abrir post no Instagram
+                          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm">
+                          <Instagram size={15} />Abrir post no Instagram
                         </a>
                       )}
                     </div>
                   )}
-
                   {!selectedTrack && permalink && (
                     <a href={permalink} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm transition-all">
-                      <Instagram size={15} /> Ver post no Instagram
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm">
+                      <Instagram size={15} />Ver post no Instagram
                     </a>
                   )}
                 </div>
               )}
 
-              {status === "idle" && (
-                <p className="text-[11px] text-gray-600 flex items-center gap-1">
-                  <ExternalLink size={10} />
-                  Para publicar, o app precisa estar acessível publicamente
-                </p>
+              {/* Sucesso — manual */}
+              {status === "success" && publishMode === "manual" && (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2 rounded-lg p-3 text-sm bg-green-900/30 border border-green-800/50 text-green-300">
+                    <CheckCircle size={14} className="shrink-0" />{slides.length} imagens baixadas!
+                  </div>
+                  <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-4 flex flex-col gap-2">
+                    <p className="text-sm font-medium text-white">Próximos passos no Instagram:</p>
+                    <ol className="flex flex-col gap-1.5">
+                      {[
+                        "Abra o Instagram",
+                        "Toque em + (nova publicação)",
+                        "Selecione as imagens na ordem certa",
+                        selectedTrack ? `Adicione a música: "${selectedTrack.title}"` : "Adicione música, localização e tags",
+                        "Escreva a legenda e publique",
+                      ].map((s, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs text-gray-400">
+                          <span className="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>{s}
+                        </li>
+                      ))}
+                    </ol>
+                    <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm mt-1">
+                      <Instagram size={15} />Abrir Instagram
+                    </a>
+                  </div>
+                </div>
               )}
 
               {status !== "success" && (
-                <button
-                  onClick={handlePublish}
-                  disabled={!account || isLoading || slides.length < 2}
+                <button onClick={handleAction}
+                  disabled={isLoading || (publishMode === "api" && (!account || slides.length < 2))}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Instagram size={16} />}
-                  {isLoading ? statusLabel : "Publicar Agora"}
+                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : publishMode === "api" ? <Upload size={16} /> : <Download size={16} />}
+                  {isLoading ? statusLabel : publishMode === "api" ? "Publicar Agora" : "Baixar e Abrir Instagram"}
                 </button>
               )}
             </>
@@ -436,16 +500,16 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
         {/* Footer navegação */}
         {status !== "success" && (
           <div className="flex gap-2 p-4 border-t border-[#2a2a2a] shrink-0">
-            {step !== "music" && (
-              <button onClick={() => setStep(step === "publish" ? "caption" : "music")}
+            {prevStep[step] && (
+              <button onClick={() => setStep(prevStep[step]!)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#222] hover:bg-[#2a2a2a] text-sm text-gray-300">
-                <ChevronLeft size={15} /> Voltar
+                <ChevronLeft size={15} />Voltar
               </button>
             )}
-            {step !== "publish" && (
-              <button onClick={() => setStep(step === "music" ? "caption" : "publish")}
+            {nextStep[step] && (
+              <button onClick={() => setStep(nextStep[step]!)}
                 className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-sm font-medium">
-                Próximo <ChevronRight size={15} />
+                Próximo<ChevronRight size={15} />
               </button>
             )}
           </div>
