@@ -68,9 +68,24 @@ async function publishCarousel(igAccountId: string, carouselId: string, token: s
   return data.id;
 }
 
+async function uploadStory(igAccountId: string, imageUrl: string, token: string): Promise<string> {
+  const res = await fetch(`${GRAPH}/${igAccountId}/media`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      image_url: imageUrl,
+      media_type: "STORIES",
+      access_token: token,
+    }),
+  });
+  const data = await res.json();
+  if (!data.id) throw new Error(`Erro ao criar story: ${JSON.stringify(data.error ?? data)}`);
+  return data.id;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrls, caption, igToken, igAccountId } = await req.json();
+    const { imageUrls, caption, igToken, igAccountId, postType = "carousel" } = await req.json();
 
     if (!igToken || !igAccountId) {
       return NextResponse.json({ error: "Conta Instagram não conectada" }, { status: 400 });
@@ -78,11 +93,33 @@ export async function POST(req: NextRequest) {
     if (!imageUrls?.length) {
       return NextResponse.json({ error: "Nenhuma imagem para publicar" }, { status: 400 });
     }
+
+    // ── Stories ──────────────────────────────────────────────
+    if (postType === "stories") {
+      console.log(`[publish] Publicando ${imageUrls.length} story(ies)...`);
+      const postIds: string[] = [];
+
+      for (let i = 0; i < imageUrls.length; i++) {
+        const mediaId = await uploadStory(igAccountId, imageUrls[i], igToken);
+        await waitUntilReady(mediaId, igToken);
+        const postId = await publishCarousel(igAccountId, mediaId, igToken);
+        postIds.push(postId);
+        console.log(`[publish] Story ${i + 1}/${imageUrls.length} publicado: ${postId}`);
+      }
+
+      return NextResponse.json({
+        success: true,
+        postId: postIds[0],
+        permalink: "",
+        message: `${postIds.length} story${postIds.length > 1 ? "s" : ""} publicado${postIds.length > 1 ? "s" : ""} com sucesso!`,
+      });
+    }
+
+    // ── Carrossel (Feed) ─────────────────────────────────────
     if (imageUrls.length < 2 || imageUrls.length > 10) {
       return NextResponse.json({ error: "O carrossel precisa ter entre 2 e 10 imagens" }, { status: 400 });
     }
 
-    // 1. Upload de cada imagem
     console.log(`[publish] Fazendo upload de ${imageUrls.length} imagens...`);
     const childIds: string[] = [];
     for (let i = 0; i < imageUrls.length; i++) {
@@ -91,25 +128,16 @@ export async function POST(req: NextRequest) {
       console.log(`[publish] Imagem ${i + 1}/${imageUrls.length} enviada: ${id}`);
     }
 
-    // 2. Aguarda todas as mídias ficarem prontas
-    console.log("[publish] Aguardando processamento das mídias...");
+    console.log("[publish] Aguardando processamento...");
     await Promise.all(childIds.map((id) => waitUntilReady(id, igToken)));
-    console.log("[publish] Todas as mídias prontas!");
 
-    // 3. Cria container do carrossel
-    console.log("[publish] Criando container do carrossel...");
+    console.log("[publish] Criando carrossel...");
     const carouselId = await createCarousel(igAccountId, childIds, caption ?? "", igToken);
-
-    // 4. Aguarda o carrossel ficar pronto
     await waitUntilReady(carouselId, igToken);
 
-    // 5. Publica
     console.log("[publish] Publicando...");
     const postId = await publishCarousel(igAccountId, carouselId, igToken);
 
-    console.log(`[publish] Publicado! Post ID: ${postId}`);
-
-    // Busca permalink do post
     let permalink = "";
     try {
       const permRes = await fetch(`${GRAPH}/${postId}?fields=permalink&access_token=${igToken}`);
@@ -117,12 +145,9 @@ export async function POST(req: NextRequest) {
       permalink = permData.permalink ?? "";
     } catch {}
 
-    return NextResponse.json({
-      success: true,
-      postId,
-      permalink,
-      message: `Carrossel publicado com sucesso!`,
-    });
+    console.log(`[publish] Publicado! Post ID: ${postId}`);
+    return NextResponse.json({ success: true, postId, permalink, message: "Carrossel publicado com sucesso!" });
+
   } catch (err: any) {
     console.error("[publish]", err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });

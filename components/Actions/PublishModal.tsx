@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Music, Search, Play, Pause, ChevronRight, ChevronLeft, Upload, Pencil, Download } from "lucide-react";
+import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Music, Search, Play, Pause, ChevronRight, ChevronLeft, Upload, Pencil, Download, LayoutGrid, BookImage } from "lucide-react";
 import { renderSlide } from "@/lib/render-slide";
 
 interface IGAccount {
@@ -29,11 +29,13 @@ interface Props {
 
 type Step = "music" | "caption" | "mode" | "publish";
 type PublishMode = "api" | "manual";
+type PostType = "carousel" | "stories";
 
 export default function PublishModal({ slides, account, onClose, onLoginClick }: Props) {
   const [step, setStep] = useState<Step>("music");
   const [caption, setCaption] = useState("");
   const [publishMode, setPublishMode] = useState<PublishMode>("api");
+  const [postType, setPostType] = useState<PostType>("carousel");
   const [status, setStatus] = useState<"idle" | "exporting" | "uploading" | "publishing" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState(0);
@@ -139,7 +141,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       const res = await fetch("/api/instagram/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrls: publicUrls, caption, igToken: account.token, igAccountId: account.accountId }),
+        body: JSON.stringify({ imageUrls: publicUrls, caption, igToken: account.token, igAccountId: account.accountId, postType }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -315,6 +317,33 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
           {/* ── Step 3: Modo de publicação ── */}
           {step === "mode" && (
             <>
+              {/* Tipo de post */}
+              <div>
+                <p className="text-sm text-gray-400 mb-2">Tipo de post:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => setPostType("carousel")}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${postType === "carousel" ? "border-brand-500 bg-brand-500/10" : "border-[#2a2a2a] hover:border-[#444]"}`}>
+                    <LayoutGrid size={20} className={postType === "carousel" ? "text-brand-400" : "text-gray-500"} />
+                    <div className="text-center">
+                      <p className="text-xs font-semibold text-white">Carrossel</p>
+                      <p className="text-[10px] text-gray-500">Feed · até 10 slides</p>
+                    </div>
+                  </button>
+                  <button onClick={() => setPostType("stories")}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${postType === "stories" ? "border-brand-500 bg-brand-500/10" : "border-[#2a2a2a] hover:border-[#444]"}`}>
+                    <BookImage size={20} className={postType === "stories" ? "text-brand-400" : "text-gray-500"} />
+                    <div className="text-center">
+                      <p className="text-xs font-semibold text-white">Stories</p>
+                      <p className="text-[10px] text-gray-500">1 story por slide</p>
+                    </div>
+                  </button>
+                </div>
+                {postType === "stories" && (
+                  <p className="text-[10px] text-yellow-500/80 mt-1.5">Recomendado: use formato 9:16 para stories</p>
+                )}
+              </div>
+
+              <div className="w-full h-px bg-[#2a2a2a]" />
               <p className="text-sm text-gray-400">Como você quer publicar?</p>
 
               <button onClick={() => setPublishMode("api")}
@@ -378,6 +407,10 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                   <span className="text-white font-medium">{slides.length}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-gray-500">Tipo</span>
+                  <span className="text-white font-medium">{postType === "carousel" ? "Carrossel (Feed)" : "Stories"}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-gray-500">Modo</span>
                   <span className="text-white font-medium">{publishMode === "api" ? "Upload direto" : "Editar no Instagram"}</span>
                 </div>
@@ -395,8 +428,8 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 )}
               </div>
 
-              {slides.length < 2 && publishMode === "api" && (
-                <p className="text-yellow-500 text-xs">Mínimo de 2 slides para carrossel via API</p>
+              {slides.length < 2 && publishMode === "api" && postType === "carousel" && (
+                <p className="text-yellow-500 text-xs">Mínimo de 2 slides para carrossel</p>
               )}
 
               {isLoading && (
@@ -419,7 +452,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
               {status === "success" && publishMode === "api" && (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-2 rounded-lg p-3 text-sm bg-green-900/30 border border-green-800/50 text-green-300">
-                    <CheckCircle size={14} className="shrink-0" />Carrossel publicado com sucesso!
+                    <CheckCircle size={14} className="shrink-0" />{message}
                   </div>
                   {selectedTrack && (
                     <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-4 flex flex-col gap-3">
@@ -487,7 +520,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
 
               {status !== "success" && (
                 <button onClick={handleAction}
-                  disabled={isLoading || (publishMode === "api" && (!account || slides.length < 2))}
+                  disabled={isLoading || (publishMode === "api" && (!account || (postType === "carousel" && slides.length < 2)))}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all">
                   {isLoading ? <Loader2 size={16} className="animate-spin" /> : publishMode === "api" ? <Upload size={16} /> : <Download size={16} />}
                   {isLoading ? statusLabel : publishMode === "api" ? "Publicar Agora" : "Baixar e Abrir Instagram"}
