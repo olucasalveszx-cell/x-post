@@ -4,8 +4,6 @@ import { GenerateRequest, GeneratedContent, WritingStyle } from "@/types";
 
 export const maxDuration = 60;
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 const styleInstructions: Record<WritingStyle, string> = {
   viral: `
 - Títulos CURTOS, em MAIÚSCULAS, chocantes e que param o scroll (máx 7 palavras)
@@ -53,12 +51,17 @@ export async function POST(req: NextRequest) {
     const body: GenerateRequest = await req.json();
     const { topic, searchResults, slideCount, writingStyle = "viral" } = body;
 
-    if (!process.env.ANTHROPIC_API_KEY) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    console.log("[generate] ANTHROPIC_API_KEY presente:", !!apiKey, "primeiros chars:", apiKey?.slice(0, 10));
+
+    if (!apiKey) {
       return NextResponse.json(
-        { error: "ANTHROPIC_API_KEY não configurada no .env.local" },
+        { error: "ANTHROPIC_API_KEY não configurada no Vercel" },
         { status: 500 }
       );
     }
+
+    const client = new Anthropic({ apiKey });
 
     const sourcesText = searchResults
       .map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}\nFonte: ${r.link}`)
