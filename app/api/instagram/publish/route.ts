@@ -108,10 +108,20 @@ export async function POST(req: NextRequest) {
     const postId = await publishCarousel(igAccountId, carouselId, igToken);
 
     console.log(`[publish] Publicado! Post ID: ${postId}`);
+
+    // Busca permalink do post
+    let permalink = "";
+    try {
+      const permRes = await fetch(`${GRAPH}/${postId}?fields=permalink&access_token=${igToken}`);
+      const permData = await permRes.json();
+      permalink = permData.permalink ?? "";
+    } catch {}
+
     return NextResponse.json({
       success: true,
       postId,
-      message: `Carrossel publicado com sucesso! (ID: ${postId})`,
+      permalink,
+      message: `Carrossel publicado com sucesso!`,
     });
   } catch (err: any) {
     console.error("[publish]", err.message);

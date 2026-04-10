@@ -35,6 +35,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
   const [status, setStatus] = useState<"idle" | "exporting" | "uploading" | "publishing" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState(0);
+  const [permalink, setPermalink] = useState("");
 
   // Música
   const [musicQuery, setMusicQuery] = useState("");
@@ -150,6 +151,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       setProgress(100);
       setStatus("success");
       setMessage(data.message);
+      setPermalink(data.permalink ?? "");
     } catch (err: any) {
       setStatus("error");
       setMessage(err.message ?? "Erro ao publicar");
@@ -342,10 +344,72 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 </div>
               )}
 
-              {message && (
-                <div className={`flex items-start gap-2 rounded-lg p-3 text-sm ${status === "success" ? "bg-green-900/30 border border-green-800/50 text-green-300" : "bg-red-900/30 border border-red-800/50 text-red-300"}`}>
-                  {status === "success" ? <CheckCircle size={14} className="mt-0.5 shrink-0" /> : <AlertCircle size={14} className="mt-0.5 shrink-0" />}
+              {/* Erro */}
+              {status === "error" && message && (
+                <div className="flex items-start gap-2 rounded-lg p-3 text-sm bg-red-900/30 border border-red-800/50 text-red-300">
+                  <AlertCircle size={14} className="mt-0.5 shrink-0" />
                   {message}
+                </div>
+              )}
+
+              {/* Sucesso + fluxo híbrido de música */}
+              {status === "success" && (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2 rounded-lg p-3 text-sm bg-green-900/30 border border-green-800/50 text-green-300">
+                    <CheckCircle size={14} className="shrink-0" />
+                    Carrossel publicado com sucesso!
+                  </div>
+
+                  {selectedTrack && (
+                    <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-4 flex flex-col gap-3">
+                      <div className="flex items-center gap-2">
+                        <Music size={15} className="text-brand-400 shrink-0" />
+                        <p className="text-sm font-medium text-white">Adicionar música ao post</p>
+                      </div>
+
+                      {/* Track selecionada */}
+                      <div className="flex items-center gap-3 bg-[#1a1a1a] rounded-lg p-2.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={selectedTrack.cover} alt="" className="w-9 h-9 rounded object-cover" />
+                        <div className="min-w-0">
+                          <p className="text-sm text-white truncate">{selectedTrack.title}</p>
+                          <p className="text-xs text-gray-400">{selectedTrack.artist}</p>
+                        </div>
+                      </div>
+
+                      {/* Passos */}
+                      <ol className="flex flex-col gap-2">
+                        {[
+                          "Abra o post no Instagram",
+                          'Toque nos "..." (3 pontinhos) no canto',
+                          'Selecione "Editar"',
+                          'Toque no ícone de música 🎵',
+                          `Busque "${selectedTrack.title}" de ${selectedTrack.artist}`,
+                          "Salve",
+                        ].map((step, i) => (
+                          <li key={i} className="flex items-start gap-2 text-xs text-gray-400">
+                            <span className="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                            {step}
+                          </li>
+                        ))}
+                      </ol>
+
+                      {/* Botão abrir post */}
+                      {permalink && (
+                        <a href={permalink} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm transition-all">
+                          <Instagram size={15} /> Abrir post no Instagram
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  {!selectedTrack && permalink && (
+                    <a href={permalink} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm transition-all">
+                      <Instagram size={15} /> Ver post no Instagram
+                    </a>
+                  )}
                 </div>
               )}
 
@@ -356,13 +420,15 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 </p>
               )}
 
-              <button
-                onClick={handlePublish}
-                disabled={!account || isLoading || status === "success" || slides.length < 2}
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                {isLoading ? <Loader2 size={16} className="animate-spin" /> : status === "success" ? <CheckCircle size={16} /> : <Instagram size={16} />}
-                {isLoading ? statusLabel : status === "success" ? "Publicado!" : "Publicar Agora"}
-              </button>
+              {status !== "success" && (
+                <button
+                  onClick={handlePublish}
+                  disabled={!account || isLoading || slides.length < 2}
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Instagram size={16} />}
+                  {isLoading ? statusLabel : "Publicar Agora"}
+                </button>
+              )}
             </>
           )}
         </div>
