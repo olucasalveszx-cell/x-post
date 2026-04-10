@@ -285,7 +285,7 @@ export default function EditorPage() {
               <span style={{ fontSize: 14, color: "#d1d5db" }}>Gerar / Traduzir</span>
               <button onClick={() => setMobilePanel(null)}><X size={18} color="#9ca3af" /></button>
             </div>
-            <div style={{ flex: 1, overflowY: "auto" }}>
+            <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
               <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} />
             </div>
           </div>
