@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 
+export const maxDuration = 30;
+
 export async function POST(req: NextRequest) {
   try {
     const origin = req.headers.get("origin") ?? "https://xpostzone.com";
