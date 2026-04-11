@@ -19,11 +19,66 @@ const STYLE_PROMPTS: Record<ImageStyle, string> = {
   abstrato:   "abstract digital art, geometric shapes, neon color palette, fluid dynamics, futuristic data visualization, award-winning generative art, no text",
 };
 
-// Tenta vários modelos de imagem Gemini em ordem
+// ── Together AI (FLUX.1) ────────────────────────────────────
+async function fromTogether(prompt: string, style: ImageStyle) {
+  const key = process.env.TOGETHER_API_KEY;
+  if (!key) throw new Error("TOGETHER_API_KEY não configurada");
+
+  const stylePrompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.cinematico;
+  const fullPrompt = `${prompt}. ${stylePrompt}. Portrait 4:5, dark moody background, high contrast, dramatic lighting, no text, no watermarks, no logos.`;
+
+  const res = await fetch("https://api.together.ai/v1/images/generations", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "black-forest-labs/FLUX.1-schnell-Free",
+      prompt: fullPrompt,
+      width: 832,
+      height: 1040,
+      steps: 4,
+      n: 1,
+      response_format: "b64_json",
+    }),
+    signal: AbortSignal.timeout(40000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message ?? `Together HTTP ${res.status}`);
+
+  const b64 = data.data?.[0]?.b64_json;
+  if (!b64) throw new Error("Together: sem imagem na resposta");
+
+  console.log("[image] Together AI OK");
+  return { imageUrl: `data:image/jpeg;base64,${b64}`, source: "together" };
+}
+
+// ── Pollinations.ai (FLUX — 100% gratuito, sem API key) ────
+async function fromPollinations(prompt: string, style: ImageStyle) {
+  const stylePrompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.cinematico;
+  const fullPrompt = `${prompt}. ${stylePrompt}. Portrait orientation, dark moody background, high contrast, dramatic lighting, no text, no watermarks.`;
+  const seed = Math.floor(Math.random() * 999999);
+
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=864&height=1080&model=flux&nologo=true&seed=${seed}&enhance=true`;
+
+  const res = await fetch(url, { signal: AbortSignal.timeout(40000) });
+  if (!res.ok) throw new Error(`Pollinations HTTP ${res.status}`);
+
+  const buffer = await res.arrayBuffer();
+  const b64 = Buffer.from(buffer).toString("base64");
+  const mimeType = res.headers.get("content-type") || "image/jpeg";
+
+  console.log("[image] Pollinations OK");
+  return { imageUrl: `data:${mimeType};base64,${b64}`, source: "pollinations" };
+}
+
+// ── Gemini (requer billing no GCP) ────────────────────────
 const GEMINI_MODELS = [
   "gemini-2.5-flash-image",
   "gemini-3.1-flash-image-preview",
-  "gemini-2.0-flash-exp-image-generation",
+  "gemini-3-pro-image-preview",
 ];
 
 async function fromGemini(prompt: string, style: ImageStyle) {
@@ -31,7 +86,7 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
   const stylePrompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.cinematico;
-  const fullPrompt = `${prompt}. Style: ${stylePrompt}. Portrait orientation 4:5, dark moody background, high contrast, dramatic lighting, cinematic composition, no watermarks, no text overlays, no logos. Generate exactly what is described in the prompt — be literal and specific.`;
+  const fullPrompt = `${prompt}. Style: ${stylePrompt}. Portrait orientation 4:5, dark moody background, high contrast, dramatic lighting, cinematic composition, no watermarks, no text overlays, no logos.`;
 
   let lastErr = "";
   for (const model of GEMINI_MODELS) {
@@ -42,7 +97,7 @@ async function fromGemini(prompt: string, style: ImageStyle) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: fullPrompt }] }],
-          generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
         }),
         signal: AbortSignal.timeout(40000),
       });
@@ -72,6 +127,7 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   throw new Error(`Gemini indisponível: ${lastErr}`);
 }
 
+// ── Stability AI ───────────────────────────────────────────
 async function fromStability(prompt: string, style: ImageStyle) {
   const key = process.env.STABILITY_API_KEY;
   if (!key) throw new Error("STABILITY_API_KEY não configurada");
@@ -98,6 +154,7 @@ async function fromStability(prompt: string, style: ImageStyle) {
   return { imageUrl: `data:image/jpeg;base64,${data.image}`, source: "stability" };
 }
 
+// ── Pexels (fallback final) ────────────────────────────────
 async function fromPexels(prompt: string) {
   const key = process.env.PEXELS_API_KEY;
   if (!key) throw new Error("PEXELS_API_KEY não configurada");
@@ -122,13 +179,14 @@ async function fromPexels(prompt: string) {
   return { imageUrl: photo.src?.large2x ?? photo.src?.original, source: "pexels" };
 }
 
+// ── Handler principal ──────────────────────────────────────
 export async function POST(req: NextRequest) {
   const { prompt, imageStyle = "cinematico", customerId, activationToken } = await req.json();
   if (!prompt) return NextResponse.json({ error: "prompt obrigatório" }, { status: 400 });
 
   let isPro = false;
 
-  // 1. Sessão Google (mais seguro — verificado server-side)
+  // 1. Sessão Google (server-side)
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
   if (email) {
@@ -143,12 +201,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 2. Fallback: customerId Stripe no client (sem login Google)
-  if (!isPro && customerId) {
-    isPro = await hasActiveSubscription(customerId);
-  }
+  // 2. Fallback: customerId Stripe
+  if (!isPro && customerId) isPro = await hasActiveSubscription(customerId);
 
-  // 3. Fallback: token Kirvano no client
+  // 3. Fallback: token Kirvano
   if (!isPro && activationToken) {
     const { valid } = verifyToken(activationToken);
     isPro = valid;
@@ -157,30 +213,40 @@ export async function POST(req: NextRequest) {
   if (!isPro) {
     // Plano gratuito → Pexels
     try {
-      const result = await fromPexels(prompt);
-      return NextResponse.json({ ...result, plan: "free" });
+      return NextResponse.json({ ...await fromPexels(prompt), plan: "free" });
     } catch (err: any) {
       return NextResponse.json({ error: err.message }, { status: 500 });
     }
   }
 
-  // Plano Pro → Stability AI → Gemini → Pexels
+  // Plano Pro → Together AI → Pollinations → Gemini → Pexels
+  const errors: string[] = [];
+
   try {
-    const result = await fromStability(prompt, imageStyle as ImageStyle);
-    return NextResponse.json({ ...result, plan: "pro" });
-  } catch (stabilityErr: any) {
-    console.error("[image] Stability falhou, tentando Gemini:", stabilityErr.message);
-    try {
-      const result = await fromGemini(prompt, imageStyle as ImageStyle);
-      return NextResponse.json({ ...result, plan: "pro" });
-    } catch (geminiErr: any) {
-      console.error("[image] Gemini falhou, tentando Pexels:", geminiErr.message);
-      try {
-        const result = await fromPexels(prompt);
-        return NextResponse.json({ ...result, plan: "pro_fallback" });
-      } catch (pexelsErr: any) {
-        return NextResponse.json({ error: stabilityErr.message }, { status: 500 });
-      }
-    }
+    return NextResponse.json({ ...await fromTogether(prompt, imageStyle as ImageStyle), plan: "pro" });
+  } catch (e: any) {
+    errors.push(`Together: ${e.message}`);
+    console.error("[image] Together falhou:", e.message);
+  }
+
+  try {
+    return NextResponse.json({ ...await fromPollinations(prompt, imageStyle as ImageStyle), plan: "pro" });
+  } catch (e: any) {
+    errors.push(`Pollinations: ${e.message}`);
+    console.error("[image] Pollinations falhou:", e.message);
+  }
+
+  try {
+    return NextResponse.json({ ...await fromGemini(prompt, imageStyle as ImageStyle), plan: "pro" });
+  } catch (e: any) {
+    errors.push(`Gemini: ${e.message}`);
+    console.error("[image] Gemini falhou:", e.message);
+  }
+
+  try {
+    return NextResponse.json({ ...await fromPexels(prompt), plan: "pro_fallback" });
+  } catch (e: any) {
+    errors.push(`Pexels: ${e.message}`);
+    return NextResponse.json({ error: errors.join(" | ") }, { status: 500 });
   }
 }

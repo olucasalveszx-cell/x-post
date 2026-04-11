@@ -64,6 +64,25 @@ body {
   z-index: 10;
 }
 
+/* Esconder scrollbar em toolbars */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Resize handle maior no mobile */
+@media (max-width: 768px) {
+  .resize-handle {
+    width: 16px;
+    height: 16px;
+    bottom: -8px;
+    right: -8px;
+  }
+}
+
 /* Marquee infinito */
 @keyframes scroll-left {
   0%   { transform: translateX(0); }

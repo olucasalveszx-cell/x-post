@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuid } from "uuid";
-import { Download, ArrowLeft, User, LogIn, Sparkles, Layers, X } from "lucide-react";
+import { Download, ArrowLeft, User, LogIn, Sparkles, Layers, X, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { Slide } from "@/types";
 import { renderSlide } from "@/lib/render-slide";
@@ -12,6 +12,8 @@ import SlideCanvas from "@/components/Editor/SlideCanvas";
 import Toolbar from "@/components/Editor/Toolbar";
 import SlidePanel from "@/components/Editor/SlidePanel";
 import PublishModal from "@/components/Actions/PublishModal";
+import AIAssistant from "@/components/AIAssistant";
+import SubscriptionGate from "@/components/SubscriptionGate";
 
 interface IGAccount {
   token: string;
@@ -47,6 +49,7 @@ export default function EditorPage() {
   }]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showPublish, setShowPublish] = useState(false);
+  const [showAI, setShowAI] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [igAccount, setIgAccount] = useState<IGAccount | null>(null);
@@ -210,6 +213,7 @@ export default function EditorPage() {
   const DISPLAY_H = SLIDE_H * displayScale;
 
   return (
+    <SubscriptionGate>
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between px-3 md:px-5 py-2 md:py-3 bg-[#070707] border-b border-[#161616] z-10">
@@ -226,6 +230,13 @@ export default function EditorPage() {
 
         <div className="flex items-center gap-1.5 md:gap-2">
           <AuthButton />
+          <button
+            onClick={() => setShowAI(true)}
+            className="flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-purple-700 bg-purple-900/30 hover:bg-purple-800/40 text-purple-300 transition-colors"
+          >
+            <MessageCircle size={14} />
+            <span className="hidden md:inline">Zora IA</span>
+          </button>
           <button
             onClick={handleExport}
             disabled={exporting}
@@ -336,6 +347,10 @@ export default function EditorPage() {
             style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: mobilePanel === "slides" ? "#a855f7" : "#6b7280" }}>
             <Layers size={18} />Slides
           </button>
+          <button onClick={() => setShowAI(true)}
+            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: "#a855f7" }}>
+            <MessageCircle size={18} />Zora
+          </button>
           <button onClick={() => setShowPublish(true)}
             style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: "#6b7280" }}>
             <User size={18} />Publicar
@@ -351,6 +366,9 @@ export default function EditorPage() {
           onLoginClick={handleIGLogin}
         />
       )}
+
+      <AIAssistant open={showAI} onClose={() => setShowAI(false)} />
     </div>
+    </SubscriptionGate>
   );
 }

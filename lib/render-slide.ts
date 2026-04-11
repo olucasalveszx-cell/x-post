@@ -144,6 +144,73 @@ export async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
       const s = el.style as any;
       ctx.fillStyle = s?.fill ?? "#a855f7";
       ctx.fillRect(el.x, el.y, el.width, el.height);
+    } else if (el.type === "profile") {
+      const avatarD = el.height * 0.72;
+      const avatarR = avatarD / 2;
+      const gapX = el.height * 0.18;
+      const ax = el.x + avatarR;
+      const ay = el.y + el.height / 2;
+
+      // Avatar
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ax, ay, avatarR, 0, Math.PI * 2);
+      ctx.fillStyle = "#333";
+      ctx.fill();
+      ctx.clip();
+      if (el.src) {
+        try {
+          const img = await loadImg(el.src);
+          ctx.drawImage(img, el.x, el.y + (el.height - avatarD) / 2, avatarD, avatarD);
+        } catch {}
+      }
+      ctx.restore();
+
+      // Borda do avatar
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ax, ay, avatarR, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      ctx.lineWidth = el.height * 0.025;
+      ctx.stroke();
+      ctx.restore();
+
+      // Nome
+      const textX = el.x + avatarD + gapX;
+      const nameSize = el.height * 0.28;
+      const handleSize = el.height * 0.22;
+      ctx.save();
+      ctx.font = `bold ${nameSize}px sans-serif`;
+      ctx.fillStyle = "#ffffff";
+      ctx.textBaseline = "middle";
+      const nameY = ay - nameSize * 0.4;
+      ctx.fillText(el.profileName ?? "", textX, nameY);
+
+      // Verificado
+      if (el.profileVerified) {
+        const nameW = ctx.measureText(el.profileName ?? "").width;
+        const bSize = nameSize * 0.9;
+        const bx = textX + nameW + bSize * 0.3;
+        const by = nameY - bSize / 2;
+        ctx.beginPath();
+        ctx.arc(bx + bSize / 2, by + bSize / 2, bSize / 2, 0, Math.PI * 2);
+        ctx.fillStyle = "#1d9bf0";
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = bSize * 0.15;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(bx + bSize * 0.25, by + bSize * 0.5);
+        ctx.lineTo(bx + bSize * 0.45, by + bSize * 0.7);
+        ctx.lineTo(bx + bSize * 0.75, by + bSize * 0.3);
+        ctx.stroke();
+      }
+
+      // Handle
+      ctx.font = `${handleSize}px sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.fillText(`@${el.profileHandle ?? ""}`, textX, ay + nameSize * 0.55);
+      ctx.restore();
     }
     ctx.restore();
   }

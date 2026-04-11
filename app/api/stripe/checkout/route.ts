@@ -3,19 +3,34 @@ import { stripe } from "@/lib/stripe";
 
 export const maxDuration = 30;
 
+const PLAN_PRICE: Record<string, string | undefined> = {
+  weekly:  process.env.STRIPE_PRICE_WEEKLY,
+  monthly: process.env.STRIPE_PRICE_MONTHLY ?? process.env.STRIPE_PRICE_ID,
+  annual:  process.env.STRIPE_PRICE_ANNUAL,
+};
+
 export async function POST(req: NextRequest) {
   try {
+    const body = await req.json().catch(() => ({}));
+    const plan: string = body.plan ?? "monthly";
     const origin = req.headers.get("origin") ?? "https://xpostzone.com";
 
-    console.log("[checkout] STRIPE_PRICE_ID:", process.env.STRIPE_PRICE_ID);
-    console.log("[checkout] origin:", origin);
+    const priceId = PLAN_PRICE[plan];
+    if (!priceId) {
+      return NextResponse.json(
+        { error: `Price ID para o plano "${plan}" não configurado. Adicione STRIPE_PRICE_${plan.toUpperCase()} no .env.` },
+        { status: 500 }
+      );
+    }
+
+    console.log("[checkout] plan:", plan, "priceId:", priceId);
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       locale: "pt-BR",
-      line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/editor`,
+      cancel_url:  `${origin}/#pricing`,
       payment_method_types: ["card"],
     });
 

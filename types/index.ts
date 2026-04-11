@@ -11,7 +11,7 @@ export interface Slide {
 
 export interface SlideElement {
   id: string;
-  type: "text" | "image" | "shape";
+  type: "text" | "image" | "shape" | "profile";
   x: number;
   y: number;
   width: number;
@@ -23,6 +23,10 @@ export interface SlideElement {
   gradient?: string | null;
   clipInset?: { top: number; right: number; bottom: number; left: number };
   zIndex?: number;
+  // Perfil
+  profileName?: string;
+  profileHandle?: string;
+  profileVerified?: boolean;
 }
 
 export interface TextStyle {

@@ -85,28 +85,42 @@ export default function GeneratorPanel({ onGenerate }: Props) {
     return generated.slides.map((gs, i) => {
       const bg = gs.colorScheme.background;
       const accent = gs.colorScheme.accent;
+      const isLast = i === generated.slides.length - 1;
       const elements = [];
 
+      // Número do slide — canto superior esquerdo, discreto
       elements.push({
         id: uuid(), type: "text" as const,
-        x: 60, y: 60, width: 200, height: 40,
+        x: 64, y: 72, width: 120, height: 44,
         content: String(i + 1).padStart(2, "0"),
-        style: { fontSize: 20, fontWeight: "bold" as const, fontFamily: "sans-serif", color: accent, textAlign: "left" as const, lineHeight: 1 },
+        style: { fontSize: 22, fontWeight: "bold" as const, fontFamily: "sans-serif", color: accent, textAlign: "left" as const, lineHeight: 1 },
       });
 
+      // Título — grande, impactante, bottom-heavy
       elements.push({
         id: uuid(), type: "text" as const,
-        x: 60, y: SLIDE_H - 500, width: SLIDE_W - 120, height: 320,
+        x: 64, y: SLIDE_H - 520, width: SLIDE_W - 128, height: 340,
         content: applyAccent(gs.title, accent),
-        style: { fontSize: 80, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: "left" as const, lineHeight: 1.05 },
+        style: { fontSize: 92, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: "left" as const, lineHeight: 1.0 },
       });
 
+      // Corpo — compacto, logo abaixo do título
       elements.push({
         id: uuid(), type: "text" as const,
-        x: 60, y: SLIDE_H - 175, width: SLIDE_W - 120, height: 130,
+        x: 64, y: SLIDE_H - 172, width: SLIDE_W - 128, height: 108,
         content: gs.body,
-        style: { fontSize: 28, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.70)", textAlign: "left" as const, lineHeight: 1.45 },
+        style: { fontSize: 26, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.65)", textAlign: "left" as const, lineHeight: 1.45 },
       });
+
+      // CTA no último slide
+      if (isLast && gs.callToAction) {
+        elements.push({
+          id: uuid(), type: "text" as const,
+          x: 64, y: SLIDE_H - 64, width: SLIDE_W - 128, height: 48,
+          content: `<span style="color:${accent}">${gs.callToAction}</span>`,
+          style: { fontSize: 24, fontWeight: "bold" as const, fontFamily: "sans-serif", color: accent, textAlign: "left" as const, lineHeight: 1 },
+        });
+      }
 
       const imagePrompt = gs.imagePrompt || topic;
       return {
@@ -114,6 +128,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         backgroundColor: bg,
         backgroundImageUrl: undefined,
         backgroundImageLoading: true,
+        backgroundGradient: "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.80) 40%, rgba(0,0,0,0.30) 70%, rgba(0,0,0,0.10) 100%)",
         elements,
         width: SLIDE_W,
         height: SLIDE_H,

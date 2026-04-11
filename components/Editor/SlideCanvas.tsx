@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback } from "react";
 import { Slide, SlideElement } from "@/types";
-import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw } from "lucide-react";
+import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2 } from "lucide-react";
 
 interface Props {
   slide: Slide;
@@ -33,9 +33,11 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const [ctxMenu, setCtxMenu] = useState<CtxMenu>(null);
   const [bgCtxMenu, setBgCtxMenu] = useState<BgCtxMenu>(null);
   const [cropId, setCropId] = useState<string | null>(null);
+  const [generatingBg, setGeneratingBg] = useState(false);
   const dragRef = useRef<DragState>(null);
   const resizeRef = useRef<ResizeState>(null);
   const cropRef = useRef<CropState>(null);
+  const menuDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -121,6 +123,131 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     window.addEventListener("mouseup", onUp);
   };
 
+  // ── Touch: arrastar + pinch-to-zoom ───────────────────────
+  const handleTouchStart = (e: React.TouchEvent, el: SlideElement) => {
+    if (cropId === el.id) return;
+    e.stopPropagation();
+
+    setSelectedId(el.id);
+    onSelectElement?.(el);
+
+    // Dois dedos → escalar (pinch-to-zoom)
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const startDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const origW = el.width;
+      const origH = el.height;
+
+      const onMove = (te: TouchEvent) => {
+        if (te.touches.length < 2) return;
+        te.preventDefault();
+        const a = te.touches[0];
+        const b = te.touches[1];
+        const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+        const ratio = dist / startDist;
+        updateElement(el.id, {
+          width: Math.max(60, origW * ratio),
+          height: Math.max(40, origH * ratio),
+        });
+      };
+      const onEnd = () => {
+        window.removeEventListener("touchmove", onMove);
+        window.removeEventListener("touchend", onEnd);
+      };
+      window.addEventListener("touchmove", onMove, { passive: false });
+      window.addEventListener("touchend", onEnd);
+      return;
+    }
+
+    // Um dedo → arrastar
+    const touch = e.touches[0];
+    const startX = touch.clientX;
+    const startY = touch.clientY;
+    let dragging = false;
+
+    const onMove = (te: TouchEvent) => {
+      if (te.touches.length >= 2) return; // ignorar se virou pinch
+      const t = te.touches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if (!dragging && Math.sqrt(dx * dx + dy * dy) > 6) {
+        dragging = true;
+        dragRef.current = { elementId: el.id, startX, startY, origX: el.x, origY: el.y };
+      }
+      if (dragging && dragRef.current) {
+        te.preventDefault();
+        updateElement(dragRef.current.elementId, {
+          x: dragRef.current.origX + dx / scale,
+          y: dragRef.current.origY + dy / scale,
+        });
+      }
+    };
+    const onEnd = () => {
+      if (!dragging && el.type === "text") setEditingId(el.id);
+      dragging = false;
+      dragRef.current = null;
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+    };
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
+  };
+
+  // ── Touch: resize ──────────────────────────────────────────
+  const handleResizeTouchStart = (e: React.TouchEvent, el: SlideElement) => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    resizeRef.current = { elementId: el.id, startX: touch.clientX, startY: touch.clientY, origW: el.width, origH: el.height };
+    const onMove = (te: TouchEvent) => {
+      if (!resizeRef.current) return;
+      te.preventDefault();
+      const t = te.touches[0];
+      updateElement(resizeRef.current.elementId, {
+        width: Math.max(60, resizeRef.current.origW + (t.clientX - resizeRef.current.startX) / scale),
+        height: Math.max(40, resizeRef.current.origH + (t.clientY - resizeRef.current.startY) / scale),
+      });
+    };
+    const onEnd = () => {
+      resizeRef.current = null;
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+    };
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
+  };
+
+  // ── Touch: crop handles ────────────────────────────────────
+  const handleCropTouchStart = (e: React.TouchEvent, el: SlideElement, handle: string) => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const clip = el.clipInset ?? { top: 0, right: 0, bottom: 0, left: 0 };
+    cropRef.current = { elementId: el.id, startX: touch.clientX, startY: touch.clientY, handle, origClip: { ...clip } };
+    const onMove = (te: TouchEvent) => {
+      if (!cropRef.current) return;
+      te.preventDefault();
+      const t = te.touches[0];
+      const dx = (t.clientX - cropRef.current.startX) / scale;
+      const dy = (t.clientY - cropRef.current.startY) / scale;
+      const c = { ...cropRef.current.origClip };
+      const pxToPercW = (px: number) => (px / el.width) * 100;
+      const pxToPercH = (px: number) => (px / el.height) * 100;
+      if (handle === "top")    c.top    = Math.max(0, Math.min(80, c.top + pxToPercH(dy)));
+      if (handle === "bottom") c.bottom = Math.max(0, Math.min(80, c.bottom - pxToPercH(dy)));
+      if (handle === "left")   c.left   = Math.max(0, Math.min(80, c.left + pxToPercW(dx)));
+      if (handle === "right")  c.right  = Math.max(0, Math.min(80, c.right - pxToPercW(dx)));
+      updateElement(cropRef.current.elementId, { clipInset: c });
+    };
+    const onEnd = () => {
+      cropRef.current = null;
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+    };
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
+  };
+
   // ── Context menu ───────────────────────────────────────────
   const handleContextMenu = (e: React.MouseEvent, el: SlideElement) => {
     if (el.type !== "image") return;
@@ -134,6 +261,40 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const closeCtx = () => setCtxMenu(null);
   const closeBgCtx = () => setBgCtxMenu(null);
 
+  // ── Arrastar menus de contexto ─────────────────────────────
+  const startMenuDrag = (
+    e: React.MouseEvent | React.TouchEvent,
+    getPos: () => { x: number; y: number },
+    setPos: (x: number, y: number) => void,
+  ) => {
+    e.stopPropagation();
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    const { x, y } = getPos();
+    menuDragRef.current = { startX: clientX, startY: clientY, origX: x, origY: y };
+
+    const onMove = (ev: MouseEvent | TouchEvent) => {
+      if (!menuDragRef.current) return;
+      const cx = "touches" in ev ? (ev as TouchEvent).touches[0].clientX : (ev as MouseEvent).clientX;
+      const cy = "touches" in ev ? (ev as TouchEvent).touches[0].clientY : (ev as MouseEvent).clientY;
+      setPos(
+        menuDragRef.current.origX + (cx - menuDragRef.current.startX) / scale,
+        menuDragRef.current.origY + (cy - menuDragRef.current.startY) / scale,
+      );
+    };
+    const onUp = () => {
+      menuDragRef.current = null;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onUp);
+  };
+
   const handleBgContextMenu = (e: React.MouseEvent) => {
     if (!slide.backgroundImageUrl) return;
     e.preventDefault();
@@ -145,6 +306,29 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const removeBg = () => {
     onUpdate({ ...slide, backgroundImageUrl: undefined, backgroundGradient: undefined });
     closeBgCtx();
+  };
+
+  const generateBg = async () => {
+    closeBgCtx();
+    const texts = slide.elements
+      .filter((e) => e.type === "text")
+      .map((e) => (e.content ?? "").replace(/<[^>]+>/g, "").trim())
+      .filter(Boolean)
+      .join(". ");
+    const prompt = texts || "modern dark cinematic professional background";
+    setGeneratingBg(true);
+    try {
+      const customerId = localStorage.getItem("xpz_customer_id") ?? undefined;
+      const activationToken = localStorage.getItem("xpz_activation_token") ?? undefined;
+      const res = await fetch("/api/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, imageStyle: "cinematico", customerId, activationToken }),
+      });
+      const data = await res.json();
+      if (data.imageUrl) onUpdate({ ...slide, backgroundImageUrl: data.imageUrl });
+    } catch {}
+    finally { setGeneratingBg(false); }
   };
 
   const setBgGradient = (gradient: string) => {
@@ -267,13 +451,26 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         const clip = el.clipInset;
         const clipPath = clip ? `inset(${clip.top}% ${clip.right}% ${clip.bottom}% ${clip.left}%)` : undefined;
         const isCropping = cropId === el.id;
+        const isSelected = selectedId === el.id;
+
+        // Tamanhos escalonados: N px na tela independente do zoom do canvas
+        const S = 1 / scale;
+        const hW = Math.round(70 * S);   // largura do handle de crop (70px na tela)
+        const hT = Math.round(22 * S);   // espessura do handle de crop (22px na tela)
+        const rS = Math.round(22 * S);   // tamanho do handle de resize (22px na tela)
+        const oW = Math.round(2.5 * S);  // espessura da borda de seleção (2.5px na tela)
 
         return (
           <div
             key={el.id}
-            className={`slide-element ${selectedId === el.id ? "selected" : ""}`}
-            style={{ left: el.x, top: el.y, width: el.width, height: el.height, opacity: el.opacity ?? 1, zIndex: el.zIndex }}
+            className="slide-element"
+            style={{
+              left: el.x, top: el.y, width: el.width, height: el.height,
+              opacity: el.opacity ?? 1, zIndex: el.zIndex, touchAction: "none",
+              ...(isSelected ? { outline: `${oW}px solid #a855f7`, outlineOffset: `${Math.round(2 * S)}px` } : {}),
+            }}
             onMouseDown={(e) => handleMouseDown(e, el)}
+            onTouchStart={(e) => handleTouchStart(e, el)}
             onContextMenu={(e) => handleContextMenu(e, el)}
           >
             {/* Texto */}
@@ -297,26 +494,33 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                 {/* Degradê sobre a imagem */}
                 {el.gradient && <div className="absolute inset-0 pointer-events-none" style={{ background: el.gradient }} />}
 
-                {/* Handles de corte */}
+                {/* Handles de corte — tamanho escalonado para mobile */}
                 {isCropping && (
                   <>
-                    {/* Bordas de corte visual */}
-                    <div className="absolute inset-0 border-2 border-dashed border-yellow-400 pointer-events-none" />
-                    {/* Handle topo */}
-                    <div className="absolute left-0 right-0 flex justify-center" style={{ top: `${clip?.top ?? 0}%` }}>
-                      <div className="w-12 h-3 bg-yellow-400 rounded-full cursor-ns-resize" onMouseDown={(e) => { e.stopPropagation(); handleCropDown(e, el, "top"); }} />
+                    <div className="absolute inset-0 pointer-events-none" style={{ border: `${Math.round(2 * S)}px dashed #facc15` }} />
+                    {/* Topo */}
+                    <div style={{ position: "absolute", left: 0, right: 0, display: "flex", justifyContent: "center", top: `${clip?.top ?? 0}%`, transform: "translateY(-50%)", zIndex: 10 }}>
+                      <div style={{ width: hW, height: hT, background: "#facc15", borderRadius: 9999, cursor: "ns-resize" }}
+                        onMouseDown={(e) => { e.stopPropagation(); handleCropDown(e, el, "top"); }}
+                        onTouchStart={(e) => { e.stopPropagation(); handleCropTouchStart(e, el, "top"); }} />
                     </div>
-                    {/* Handle baixo */}
-                    <div className="absolute left-0 right-0 flex justify-center" style={{ bottom: `${clip?.bottom ?? 0}%` }}>
-                      <div className="w-12 h-3 bg-yellow-400 rounded-full cursor-ns-resize" onMouseDown={(e) => { e.stopPropagation(); handleCropDown(e, el, "bottom"); }} />
+                    {/* Baixo */}
+                    <div style={{ position: "absolute", left: 0, right: 0, display: "flex", justifyContent: "center", bottom: `${clip?.bottom ?? 0}%`, transform: "translateY(50%)", zIndex: 10 }}>
+                      <div style={{ width: hW, height: hT, background: "#facc15", borderRadius: 9999, cursor: "ns-resize" }}
+                        onMouseDown={(e) => { e.stopPropagation(); handleCropDown(e, el, "bottom"); }}
+                        onTouchStart={(e) => { e.stopPropagation(); handleCropTouchStart(e, el, "bottom"); }} />
                     </div>
-                    {/* Handle esquerda */}
-                    <div className="absolute top-0 bottom-0 flex items-center" style={{ left: `${clip?.left ?? 0}%` }}>
-                      <div className="w-3 h-12 bg-yellow-400 rounded-full cursor-ew-resize" onMouseDown={(e) => { e.stopPropagation(); handleCropDown(e, el, "left"); }} />
+                    {/* Esquerda */}
+                    <div style={{ position: "absolute", top: 0, bottom: 0, display: "flex", alignItems: "center", left: `${clip?.left ?? 0}%`, transform: "translateX(-50%)", zIndex: 10 }}>
+                      <div style={{ width: hT, height: hW, background: "#facc15", borderRadius: 9999, cursor: "ew-resize" }}
+                        onMouseDown={(e) => { e.stopPropagation(); handleCropDown(e, el, "left"); }}
+                        onTouchStart={(e) => { e.stopPropagation(); handleCropTouchStart(e, el, "left"); }} />
                     </div>
-                    {/* Handle direita */}
-                    <div className="absolute top-0 bottom-0 flex items-center" style={{ right: `${clip?.right ?? 0}%` }}>
-                      <div className="w-3 h-12 bg-yellow-400 rounded-full cursor-ew-resize" onMouseDown={(e) => { e.stopPropagation(); handleCropDown(e, el, "right"); }} />
+                    {/* Direita */}
+                    <div style={{ position: "absolute", top: 0, bottom: 0, display: "flex", alignItems: "center", right: `${clip?.right ?? 0}%`, transform: "translateX(50%)", zIndex: 10 }}>
+                      <div style={{ width: hT, height: hW, background: "#facc15", borderRadius: 9999, cursor: "ew-resize" }}
+                        onMouseDown={(e) => { e.stopPropagation(); handleCropDown(e, el, "right"); }}
+                        onTouchStart={(e) => { e.stopPropagation(); handleCropTouchStart(e, el, "right"); }} />
                     </div>
                   </>
                 )}
@@ -328,33 +532,74 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               <div className="w-full h-full" style={{ backgroundColor: (el.style as any)?.fill ?? "#a855f7", borderRadius: (el.style as any)?.borderRadius ?? 0, border: `${(el.style as any)?.strokeWidth ?? 0}px solid ${(el.style as any)?.stroke ?? "transparent"}` }} />
             )}
 
-            {/* Handle resize */}
-            {selectedId === el.id && !isCropping && (
-              <div className="resize-handle" onMouseDown={(e) => { e.stopPropagation(); handleResizeDown(e, el); }} />
+            {/* Perfil */}
+            {el.type === "profile" && (
+              <div className="w-full h-full flex items-center" style={{ gap: el.height * 0.18 }}>
+                {/* Avatar circular */}
+                <div style={{ width: el.height * 0.72, height: el.height * 0.72, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `${el.height * 0.025}px solid rgba(255,255,255,0.25)`, background: "#333" }}>
+                  {el.src && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={el.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
+                  )}
+                </div>
+                {/* Textos */}
+                <div style={{ display: "flex", flexDirection: "column", gap: el.height * 0.05 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: el.height * 0.1 }}>
+                    <span style={{ fontSize: el.height * 0.28, fontWeight: 700, color: "#fff", lineHeight: 1, whiteSpace: "nowrap" }}>
+                      {el.profileName || "Seu nome"}
+                    </span>
+                    {el.profileVerified && (
+                      <svg width={el.height * 0.26} height={el.height * 0.26} viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="12" fill="#1d9bf0" />
+                        <path d="M6 12l4 4 8-8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <span style={{ fontSize: el.height * 0.22, color: "rgba(255,255,255,0.55)", lineHeight: 1, whiteSpace: "nowrap" }}>
+                    @{el.profileHandle || "seuhandle"}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Handle resize — escalonado para mobile */}
+            {isSelected && !isCropping && (
+              <div
+                style={{ position: "absolute", width: rS, height: rS, background: "#a855f7", border: `${Math.max(1, Math.round(1.5 * S))}px solid white`, borderRadius: "50%", cursor: "se-resize", bottom: -Math.round(rS / 2), right: -Math.round(rS / 2), zIndex: 10, touchAction: "none" }}
+                onMouseDown={(e) => { e.stopPropagation(); handleResizeDown(e, el); }}
+                onTouchStart={(e) => { e.stopPropagation(); handleResizeTouchStart(e, el); }}
+              />
             )}
           </div>
         );
       })}
 
-      {/* Context menu */}
+      {/* Context menu — scale invertido para aparecer no tamanho real na tela */}
       {ctxMenu && (
         <div
-          className="absolute z-[100] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1 min-w-[200px]"
-          style={{ left: Math.min(ctxMenu.x, slide.width - 220), top: Math.min(ctxMenu.y, slide.height - 320) }}
+          className="absolute z-[100] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1.5 min-w-[260px]"
+          style={{
+            left: Math.min(ctxMenu.x, slide.width - 290 / scale),
+            top: Math.min(ctxMenu.y, slide.height - 430 / scale),
+            transform: `scale(${1 / scale})`,
+            transformOrigin: "top left",
+          }}
           onClick={(e) => e.stopPropagation()}
           onContextMenu={(e) => e.preventDefault()}
         >
-          {/* Header */}
-          <div className="px-3 py-2 border-b border-[#2a2a2a] flex items-center gap-2">
-            <ImageIcon size={13} className="text-brand-400" />
-            <span className="text-xs font-semibold text-gray-300">Editar imagem</span>
+          {/* Header — arrastar menu */}
+          <div className="px-4 py-2.5 border-b border-[#2a2a2a] flex items-center gap-2 cursor-move select-none"
+            onMouseDown={(e) => startMenuDrag(e, () => ({ x: ctxMenu!.x, y: ctxMenu!.y }), (x, y) => setCtxMenu(m => m ? { ...m, x, y } : null))}
+            onTouchStart={(e) => startMenuDrag(e, () => ({ x: ctxMenu!.x, y: ctxMenu!.y }), (x, y) => setCtxMenu(m => m ? { ...m, x, y } : null))}>
+            <ImageIcon size={15} className="text-brand-400" />
+            <span className="text-sm font-semibold text-gray-300">Editar imagem</span>
           </div>
 
           {/* Transparência */}
-          <div className="px-3 py-2 border-b border-[#2a2a2a]">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-400 flex items-center gap-1"><Blend size={12} /> Transparência</span>
-              <span className="text-xs text-white">{Math.round((1 - (ctxMenu.el.opacity ?? 1)) * 100)}%</span>
+          <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-sm text-gray-400 flex items-center gap-1.5"><Blend size={14} /> Transparência</span>
+              <span className="text-sm text-white font-medium">{Math.round((1 - (ctxMenu.el.opacity ?? 1)) * 100)}%</span>
             </div>
             <input type="range" min={0} max={100} value={Math.round((1 - (ctxMenu.el.opacity ?? 1)) * 100)}
               onChange={(e) => { updateElement(ctxMenu.el.id, { opacity: 1 - Number(e.target.value) / 100 }); setCtxMenu({ ...ctxMenu, el: { ...ctxMenu.el, opacity: 1 - Number(e.target.value) / 100 } }); }}
@@ -362,13 +607,13 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           </div>
 
           {/* Degradê */}
-          <div className="px-3 py-2 border-b border-[#2a2a2a]">
-            <p className="text-xs text-gray-400 mb-1.5 flex items-center gap-1"><Layers size={12} /> Degradê</p>
-            <div className="grid grid-cols-3 gap-1">
+          <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
+            <p className="text-sm text-gray-400 mb-2 flex items-center gap-1.5"><Layers size={14} /> Degradê</p>
+            <div className="grid grid-cols-3 gap-1.5">
               {GRADIENTS.map((g) => (
                 <button key={g.label}
                   onClick={() => { updateElement(ctxMenu.el.id, { gradient: g.value || null }); setCtxMenu({ ...ctxMenu, el: { ...ctxMenu.el, gradient: g.value || null } }); }}
-                  className={`text-[10px] py-1 px-1.5 rounded border transition-colors ${ctxMenu.el.gradient === (g.value || null) ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
+                  className={`text-xs py-1.5 px-2 rounded border transition-colors ${ctxMenu.el.gradient === (g.value || null) ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
                   {g.label}
                 </button>
               ))}
@@ -377,57 +622,64 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
           {/* Cortar */}
           <button onClick={() => enterCrop(ctxMenu.el)}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
-            <Scissors size={13} className="text-yellow-400" /> Cortar imagem
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            <Scissors size={15} className="text-yellow-400" /> Cortar imagem
           </button>
 
           {/* Camadas */}
           <div className="border-b border-[#2a2a2a]">
             <button onClick={() => bringForward(ctxMenu.el)}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
-              <ArrowUp size={13} className="text-blue-400" /> Trazer à frente
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
+              <ArrowUp size={15} className="text-blue-400" /> Trazer à frente
             </button>
             <button onClick={() => sendBackward(ctxMenu.el)}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
-              <ArrowDown size={13} className="text-blue-400" /> Enviar para trás
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
+              <ArrowDown size={15} className="text-blue-400" /> Enviar para trás
             </button>
           </div>
 
           {/* Definir como fundo */}
           <button onClick={() => setAsBackground(ctxMenu.el)}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
-            <Maximize2 size={13} className="text-green-400" /> Definir como fundo do slide
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            <Maximize2 size={15} className="text-green-400" /> Definir como fundo do slide
           </button>
 
           {/* Fechar */}
-          <button onClick={closeCtx} className="w-full px-3 py-1.5 text-xs text-gray-600 hover:text-gray-400 transition-colors">
+          <button onClick={closeCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
             Fechar
           </button>
         </div>
       )}
 
-      {/* Background context menu */}
+      {/* Background context menu — scale invertido */}
       {bgCtxMenu && (
         <div
-          className="absolute z-[100] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1 min-w-[210px]"
-          style={{ left: Math.min(bgCtxMenu.x, slide.width - 230), top: Math.min(bgCtxMenu.y, slide.height - 340) }}
+          className="absolute z-[100] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1.5 min-w-[260px]"
+          style={{
+            left: Math.min(bgCtxMenu.x, slide.width - 290 / scale),
+            top: Math.min(bgCtxMenu.y, slide.height - 370 / scale),
+            transform: `scale(${1 / scale})`,
+            transformOrigin: "top left",
+          }}
           onClick={(e) => e.stopPropagation()}
           onContextMenu={(e) => e.preventDefault()}
         >
-          {/* Header */}
-          <div className="px-3 py-2 border-b border-[#2a2a2a] flex items-center gap-2">
-            <ImageIcon size={13} className="text-brand-400" />
-            <span className="text-xs font-semibold text-gray-300">Imagem de fundo</span>
+          {/* Header — arrastar menu */}
+          <div className="px-4 py-2.5 border-b border-[#2a2a2a] flex items-center gap-2 cursor-move select-none"
+            onMouseDown={(e) => startMenuDrag(e, () => ({ x: bgCtxMenu!.x, y: bgCtxMenu!.y }), (x, y) => setBgCtxMenu(m => m ? { ...m, x, y } : null))}
+            onTouchStart={(e) => startMenuDrag(e, () => ({ x: bgCtxMenu!.x, y: bgCtxMenu!.y }), (x, y) => setBgCtxMenu(m => m ? { ...m, x, y } : null))}>
+            <ImageIcon size={15} className="text-brand-400" />
+            <span className="text-sm font-semibold text-gray-300">Imagem de fundo</span>
           </div>
 
           {/* Degradê */}
-          <div className="px-3 py-2 border-b border-[#2a2a2a]">
-            <p className="text-xs text-gray-400 mb-1.5 flex items-center gap-1"><Layers size={12} /> Degradê</p>
-            <div className="grid grid-cols-3 gap-1">
+          <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
+            <p className="text-sm text-gray-400 mb-2 flex items-center gap-1.5"><Layers size={14} /> Degradê</p>
+            <div className="grid grid-cols-3 gap-1.5">
               {GRADIENTS.map((g) => (
                 <button key={g.label}
                   onClick={() => setBgGradient(g.value)}
-                  className={`text-[10px] py-1 px-1.5 rounded border transition-colors ${
+                  className={`text-xs py-1.5 px-2 rounded border transition-colors ${
                     (slide.backgroundGradient ?? "") === g.value
                       ? "border-brand-500 bg-brand-500/20 text-white"
                       : "border-[#333] text-gray-400 hover:border-[#555]"
@@ -438,22 +690,36 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             </div>
           </div>
 
+          {/* Gerar nova imagem IA */}
+          <button onClick={generateBg}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            <Wand2 size={15} /> Gerar nova imagem IA
+          </button>
+
           {/* Trocar imagem */}
           <button onClick={() => bgFileInputRef.current?.click()}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
-            <RefreshCw size={13} className="text-blue-400" /> Trocar imagem
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            <RefreshCw size={15} className="text-blue-400" /> Trocar imagem
           </button>
 
           {/* Remover fundo */}
           <button onClick={removeBg}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
-            <X size={13} /> Remover fundo
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            <X size={15} /> Remover fundo
           </button>
 
           {/* Fechar */}
-          <button onClick={closeBgCtx} className="w-full px-3 py-1.5 text-xs text-gray-600 hover:text-gray-400 transition-colors">
+          <button onClick={closeBgCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
             Fechar
           </button>
+        </div>
+      )}
+
+      {/* Loading overlay ao gerar fundo */}
+      {generatingBg && (
+        <div className="absolute inset-0 z-[200] flex flex-col items-center justify-center" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}>
+          <div className="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mb-3" />
+          <span className="text-sm text-gray-300 font-medium">Gerando imagem...</span>
         </div>
       )}
     </div>
