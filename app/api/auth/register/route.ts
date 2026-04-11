@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { redisGet, redisSet } from "@/lib/redis";
+import { redisGet, redisSet, redisListAdd } from "@/lib/redis";
 import { hashPassword } from "@/lib/password";
 
 export async function POST(req: NextRequest) {
@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
   };
 
   await redisSet(key, JSON.stringify(user));
+  await redisListAdd("users:list", emailNorm);
 
   return NextResponse.json({ ok: true });
 }

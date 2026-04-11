@@ -20,3 +20,13 @@ export const redisGet = (key: string): Promise<string | null> =>
 
 export const redisSet = (key: string, value: string): Promise<void> =>
   call(["SET", key, value]);
+
+/** Adiciona item ao fim de uma lista (sem duplicatas via LREM + RPUSH) */
+export async function redisListAdd(key: string, value: string): Promise<void> {
+  await call(["LREM", key, "0", value]);
+  await call(["RPUSH", key, value]);
+}
+
+/** Retorna todos os itens da lista */
+export const redisListAll = (key: string): Promise<string[]> =>
+  call(["LRANGE", key, "0", "-1"]);
