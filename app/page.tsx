@@ -10,7 +10,7 @@ export default function LandingPage() {
       <header className="flex items-center justify-between px-8 py-5 z-10">
         <div className="flex items-center gap-2">
           <Instagram size={22} className="text-brand-500" />
-          <span className="font-bold text-lg tracking-tight">X-Post</span>
+          <span className="font-bold text-lg tracking-tight">XPost Zone</span>
           <span className="text-xs text-gray-600 ml-1">by AI</span>
         </div>
         <Link

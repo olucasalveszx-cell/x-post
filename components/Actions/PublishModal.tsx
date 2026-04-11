@@ -180,7 +180,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       // Web Share API — abre share sheet nativo (Instagram, WhatsApp, etc)
       const canShare = typeof navigator.share === "function" && navigator.canShare?.({ files });
       if (canShare) {
-        await navigator.share({ files, title: "X-Post Carrossel" });
+        await navigator.share({ files, title: "XPost Zone Carrossel" });
         setProgress(100);
         setStatus("success");
         setMessage("Imagens enviadas para o Instagram!");

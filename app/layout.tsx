@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "X-Post — Criador de Carrosséis para Instagram",
+  title: "XPost Zone — Criador de Carrosséis para Instagram",
   description: "Crie carrosséis para Instagram com IA, baseado em dados reais da web.",
   icons: {
     icon: "/logo.png.png",
