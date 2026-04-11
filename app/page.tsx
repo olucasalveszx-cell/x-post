@@ -59,12 +59,30 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Marquee de imagens */}
-      <section className="w-full py-4 relative">
+      {/* Marquee de slides */}
+      <section className="w-full py-12 relative overflow-hidden">
+        {/* Título da seção */}
+        <div className="text-center mb-8 px-6">
+          <p className="text-xs text-gray-600 uppercase tracking-widest font-semibold mb-2">Resultados reais</p>
+          <h2 className="text-2xl md:text-3xl font-bold">
+            Veja o que você vai conseguir criar{" "}
+            <span className="text-brand-500">com XPost Zone</span>
+          </h2>
+        </div>
+
         {/* Fade nas bordas */}
-        <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-[#050505] to-transparent z-10 pointer-events-none" />
-        <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#050505] to-transparent z-10 pointer-events-none" />
+        <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#050505] to-transparent z-10 pointer-events-none" />
+        <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#050505] to-transparent z-10 pointer-events-none" />
+
         <MarqueeImages />
+
+        {/* Badge inferior */}
+        <div className="flex justify-center mt-8 px-6">
+          <div className="flex items-center gap-2.5 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-xs text-gray-500">
+            <Sparkles size={12} className="text-brand-400" />
+            Carrosséis gerados com IA · novos estilos adicionados constantemente
+          </div>
+        </div>
       </section>
 
       {/* CTA final */}
