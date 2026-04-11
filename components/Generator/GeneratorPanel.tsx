@@ -182,6 +182,44 @@ export default function GeneratorPanel({ onGenerate }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Badge Pro / Upgrade */}
+      {isPro ? (
+        <div className="flex items-center justify-between bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
+          <span className="flex items-center gap-1.5 text-xs text-yellow-400 font-medium">
+            <Crown size={12} /> Plano Pro ativo
+          </span>
+          <button
+            onClick={async () => {
+              if (!customerId) return;
+              const res = await fetch("/api/stripe/portal", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ customerId }),
+              });
+              const { url } = await res.json();
+              window.location.href = url;
+            }}
+            className="text-[11px] text-yellow-500/70 hover:text-yellow-400 underline transition-colors"
+          >
+            Gerenciar assinatura
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2">
+          <span className="text-xs text-gray-500">Plano Grátis · imagens Pexels</span>
+          <button
+            onClick={async () => {
+              const res = await fetch("/api/stripe/checkout", { method: "POST" });
+              const { url } = await res.json();
+              window.location.href = url;
+            }}
+            className="text-[11px] text-brand-400 hover:text-brand-300 underline transition-colors"
+          >
+            Upgrade Pro
+          </button>
+        </div>
+      )}
+
       <div>
         <h2 className="text-lg font-bold mb-1 flex items-center gap-2">
           <Sparkles size={18} className="text-brand-500" />
