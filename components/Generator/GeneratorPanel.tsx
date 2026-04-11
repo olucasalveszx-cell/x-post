@@ -47,8 +47,17 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   const [imageProgress, setImageProgress] = useState(0);
   const [isPro, setIsPro] = useState(false);
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [activationToken, setActivationToken] = useState<string | null>(null);
 
   useEffect(() => {
+    // Token Kirvano
+    const token = localStorage.getItem("xpz_activation_token");
+    if (token) {
+      setActivationToken(token);
+      setIsPro(true);
+      return;
+    }
+    // Assinatura Stripe
     const cid = localStorage.getItem("xpz_customer_id");
     if (!cid) return;
     setCustomerId(cid);
@@ -119,7 +128,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
           const res = await fetch("/api/image", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt, imageStyle, customerId }),
+            body: JSON.stringify({ prompt, imageStyle, customerId, activationToken }),
           });
           const data = await res.json();
           done++;
@@ -221,12 +230,14 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       ) : (
         <div className="flex items-center justify-between bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2">
           <span className="text-xs text-gray-500">Plano Grátis · imagens Pexels</span>
-          <button
-            onClick={goToCheckout}
-            className="text-[11px] text-brand-400 hover:text-brand-300 underline transition-colors"
-          >
-            Upgrade Pro
-          </button>
+          <div className="flex items-center gap-2">
+            <a href="/ativar" className="text-[11px] text-gray-500 hover:text-gray-300 underline transition-colors">
+              Já comprou?
+            </a>
+            <button onClick={goToCheckout} className="text-[11px] text-brand-400 hover:text-brand-300 underline transition-colors">
+              Upgrade Pro
+            </button>
+          </div>
         </div>
       )}
 

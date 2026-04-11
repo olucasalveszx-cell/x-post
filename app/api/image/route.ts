@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasActiveSubscription } from "@/lib/stripe";
+import { verifyToken } from "@/lib/activation";
 
 export const maxDuration = 45;
 
@@ -92,11 +93,17 @@ async function fromPexels(prompt: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const { prompt, imageStyle = "cinematico", customerId } = await req.json();
+  const { prompt, imageStyle = "cinematico", customerId, activationToken } = await req.json();
   if (!prompt) return NextResponse.json({ error: "prompt obrigatório" }, { status: 400 });
 
-  // Verifica assinatura ativa para usar Gemini IA
-  const isPro = customerId ? await hasActiveSubscription(customerId) : false;
+  // Verifica Pro via Stripe ou via token Kirvano
+  let isPro = false;
+  if (customerId) {
+    isPro = await hasActiveSubscription(customerId);
+  } else if (activationToken) {
+    const { valid } = verifyToken(activationToken);
+    isPro = valid;
+  }
 
   if (!isPro) {
     // Plano gratuito → Pexels
