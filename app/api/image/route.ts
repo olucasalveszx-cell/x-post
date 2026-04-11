@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { hasActiveSubscription } from "@/lib/stripe";
 import { verifyToken } from "@/lib/activation";
+import { isEmailActive } from "@/lib/kv";
+import { stripe } from "@/lib/stripe";
 
 export const maxDuration = 45;
 
@@ -96,11 +100,30 @@ export async function POST(req: NextRequest) {
   const { prompt, imageStyle = "cinematico", customerId, activationToken } = await req.json();
   if (!prompt) return NextResponse.json({ error: "prompt obrigatório" }, { status: 400 });
 
-  // Verifica Pro via Stripe ou via token Kirvano
   let isPro = false;
-  if (customerId) {
+
+  // 1. Sessão Google (mais seguro — verificado server-side)
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email;
+  if (email) {
+    const kirvano = await isEmailActive(email).catch(() => false);
+    if (kirvano) {
+      isPro = true;
+    } else {
+      const customers = await stripe.customers.list({ email, limit: 1 });
+      if (customers.data.length > 0) {
+        isPro = await hasActiveSubscription(customers.data[0].id);
+      }
+    }
+  }
+
+  // 2. Fallback: customerId Stripe no client (sem login Google)
+  if (!isPro && customerId) {
     isPro = await hasActiveSubscription(customerId);
-  } else if (activationToken) {
+  }
+
+  // 3. Fallback: token Kirvano no client
+  if (!isPro && activationToken) {
     const { valid } = verifyToken(activationToken);
     isPro = valid;
   }

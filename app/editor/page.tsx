@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Slide } from "@/types";
 import { renderSlide } from "@/lib/render-slide";
 import SidePanel from "@/components/Generator/SidePanel";
+import AuthButton from "@/components/AuthButton";
 import SlideCanvas from "@/components/Editor/SlideCanvas";
 import Toolbar from "@/components/Editor/Toolbar";
 import SlidePanel from "@/components/Editor/SlidePanel";
@@ -224,6 +225,7 @@ export default function EditorPage() {
         </div>
 
         <div className="flex items-center gap-1.5 md:gap-2">
+          <AuthButton />
           <button
             onClick={handleExport}
             disabled={exporting}

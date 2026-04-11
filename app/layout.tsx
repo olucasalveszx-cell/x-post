@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "XPost Zone — Criador de Carrosséis para Instagram",
@@ -20,7 +21,7 @@ export default function RootLayout({
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased"><Providers>{children}</Providers></body>
     </html>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, Search, Loader2, AlertCircle, Image, Wand2, Crown, Zap } from "lucide-react";
+import { useSession, signIn } from "next-auth/react";
+import { Sparkles, Search, Loader2, AlertCircle, Image, Wand2, Crown, Zap, LogIn } from "lucide-react";
 import { GeneratedContent, SearchResult, Slide, WritingStyle } from "@/types";
 import { v4 as uuid } from "uuid";
 
@@ -45,19 +46,24 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   const [error, setError] = useState("");
   const [sources, setSources] = useState<SearchResult[]>([]);
   const [imageProgress, setImageProgress] = useState(0);
+  const { data: session } = useSession();
   const [isPro, setIsPro] = useState(false);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [activationToken, setActivationToken] = useState<string | null>(null);
 
   useEffect(() => {
-    // Token Kirvano
-    const token = localStorage.getItem("xpz_activation_token");
-    if (token) {
-      setActivationToken(token);
-      setIsPro(true);
+    // Se logado com Google, verifica pelo email da sessão
+    if (session?.user?.email) {
+      fetch(`/api/stripe/verify?email=${encodeURIComponent(session.user.email)}`)
+        .then((r) => r.json())
+        .then((d) => setIsPro(d.active ?? false))
+        .catch(() => {});
       return;
     }
-    // Assinatura Stripe
+    // Fallback: token Kirvano no localStorage
+    const token = localStorage.getItem("xpz_activation_token");
+    if (token) { setActivationToken(token); setIsPro(true); return; }
+    // Fallback: customerId Stripe no localStorage
     const cid = localStorage.getItem("xpz_customer_id");
     if (!cid) return;
     setCustomerId(cid);
@@ -65,7 +71,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       .then((r) => r.json())
       .then((d) => setIsPro(d.active ?? false))
       .catch(() => {});
-  }, []);
+  }, [session]);
 
   const writingStyleOptions: { value: WritingStyle; label: string; desc: string }[] = [
     { value: "viral",        label: "⚡ Viral",        desc: "Chocante, para o scroll" },
@@ -205,11 +211,16 @@ export default function GeneratorPanel({ onGenerate }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Badge Pro / Upgrade */}
-      {isPro ? (
+      {/* Badge login / Pro / Free */}
+      {!session?.user ? (
+        <button onClick={() => signIn("google")}
+          className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition-colors">
+          <LogIn size={14} /> Entrar com Google para gerar
+        </button>
+      ) : isPro ? (
         <div className="flex items-center justify-between bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
           <span className="flex items-center gap-1.5 text-xs text-yellow-400 font-medium">
-            <Crown size={12} /> Plano Pro ativo
+            <Crown size={12} /> Pro · {session.user.name?.split(" ")[0]}
           </span>
           <button
             onClick={async () => {
@@ -229,15 +240,10 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         </div>
       ) : (
         <div className="flex items-center justify-between bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2">
-          <span className="text-xs text-gray-500">Plano Grátis · imagens Pexels</span>
-          <div className="flex items-center gap-2">
-            <a href="/ativar" className="text-[11px] text-gray-500 hover:text-gray-300 underline transition-colors">
-              Já comprou?
-            </a>
-            <button onClick={goToCheckout} className="text-[11px] text-brand-400 hover:text-brand-300 underline transition-colors">
-              Upgrade Pro
-            </button>
-          </div>
+          <span className="text-xs text-gray-500">Grátis · {session.user.name?.split(" ")[0]}</span>
+          <button onClick={goToCheckout} className="text-[11px] text-brand-400 hover:text-brand-300 underline transition-colors">
+            Upgrade Pro
+          </button>
         </div>
       )}
 
