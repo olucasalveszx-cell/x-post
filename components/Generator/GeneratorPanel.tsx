@@ -180,6 +180,20 @@ export default function GeneratorPanel({ onGenerate }: Props) {
 
   const isLoading = ["searching", "generating", "images"].includes(status);
 
+  const goToCheckout = async () => {
+    try {
+      const res = await fetch("/api/stripe/checkout", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        alert("Erro ao abrir checkout: " + (data.error ?? res.status));
+        return;
+      }
+      window.location.href = data.url;
+    } catch (e: any) {
+      alert("Erro: " + e.message);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {/* Badge Pro / Upgrade */}
@@ -208,11 +222,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         <div className="flex items-center justify-between bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2">
           <span className="text-xs text-gray-500">Plano Grátis · imagens Pexels</span>
           <button
-            onClick={async () => {
-              const res = await fetch("/api/stripe/checkout", { method: "POST" });
-              const { url } = await res.json();
-              window.location.href = url;
-            }}
+            onClick={goToCheckout}
             className="text-[11px] text-brand-400 hover:text-brand-300 underline transition-colors"
           >
             Upgrade Pro
@@ -275,11 +285,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         </div>
         {!isPro && (
           <button
-            onClick={async () => {
-              const res = await fetch("/api/stripe/checkout", { method: "POST" });
-              const { url } = await res.json();
-              window.location.href = url;
-            }}
+            onClick={goToCheckout}
             className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 text-xs font-medium transition-colors"
           >
             <Zap size={12} /> Fazer upgrade para imagens IA · Pro
@@ -326,7 +332,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
           <Image size={13} />
           {isPro
             ? <>Imagens geradas com Gemini IA · estilo {IMAGE_STYLES.find(s => s.value === imageStyle)?.label}</>
-            : <>Imagens do Pexels · <button onClick={async () => { const r = await fetch("/api/stripe/checkout", { method: "POST" }); const { url } = await r.json(); window.location.href = url; }} className="text-yellow-400 underline">upgrade para IA</button></>
+            : <>Imagens do Pexels · <button onClick={goToCheckout} className="text-yellow-400 underline">upgrade para IA</button></>
           }
         </div>
       )}
