@@ -27,7 +27,7 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
   const stylePrompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.cinematico;
-  const fullPrompt = `${prompt}. Style: ${stylePrompt}. Dark moody background, portrait orientation, high contrast, no watermarks, no text overlays.`;
+  const fullPrompt = `${prompt}. Style: ${stylePrompt}. Portrait orientation 4:5, dark moody background, high contrast, dramatic lighting, cinematic composition, no watermarks, no text overlays, no logos. Generate exactly what is described in the prompt — be literal and specific.`;
 
   let lastErr = "";
   for (const model of GEMINI_MODELS) {

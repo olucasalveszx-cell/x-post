@@ -83,6 +83,14 @@ REGRA CRÍTICA PARA TÍTULO:
 - Exemplo: "SEU [CHURRASCO] PODE ESTAR ERRADO" ou "A [CIÊNCIA] EXPLICA TUDO"
 - O título deve ter máx 6 palavras no total
 
+REGRA CRÍTICA PARA imagePrompt:
+- Cada slide DEVE ter um imagePrompt ÚNICO e ESPECÍFICO que descreve visualmente o conteúdo daquele slide
+- O imagePrompt deve ser em INGLÊS, detalhado como um prompt de IA de imagem (Midjourney/Stable Diffusion)
+- Descreva: quem aparece, o que está acontecendo, ambiente, iluminação, emoção, estilo
+- Exemplo para slide sobre Neymar na Copa: "Neymar Jr holding World Cup trophy, Brazilian soccer player, gold FIFA World Cup 2026, stadium crowd background, golden confetti, emotional celebration, cinematic lighting, photorealistic, 8k"
+- Exemplo para slide sobre marketing: "businessman looking at holographic social media analytics dashboard, neon lights, dark office background, futuristic, high contrast, dramatic lighting"
+- NUNCA use prompts genéricos. Cada prompt deve ser único e diretamente ligado ao conteúdo do slide
+
 Responda APENAS com JSON válido (sem markdown, sem comentários):
 {
   "topic": "${topic}",
@@ -91,7 +99,7 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
       "title": "TÍTULO COM [PALAVRA] DESTACADA",
       "body": "1-2 frases curtas e diretas com dados reais",
       "callToAction": "apenas no último slide, senão omita este campo",
-      "imagePrompt": "close-up portrait of person directly related to the topic, dramatic cinematic lighting, dark moody background, editorial magazine style, intense emotional expression, high contrast",
+      "imagePrompt": "descrição visual detalhada e específica do conteúdo deste slide em inglês, cinematic lighting, dark moody background, high contrast, photorealistic",
       "colorScheme": {
         "background": "#0a0a0a",
         "text": "#ffffff",
