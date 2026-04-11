@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ADMIN_COOKIE } from "@/lib/adminAuth";
+import { ADMIN_COOKIE } from "@/lib/adminCookie";
 
 // Middleware leve: só verifica se o cookie existe.
 // A validação completa da assinatura acontece nas API routes e na page (server component).

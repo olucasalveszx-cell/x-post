@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
+export { ADMIN_COOKIE } from "@/lib/adminCookie";
 
 const SECRET = () => process.env.NEXTAUTH_SECRET!;
 
@@ -49,4 +50,3 @@ export function verifyAdminToken(token: string): boolean {
   }
 }
 
-export const ADMIN_COOKIE = "xpz_admin";
