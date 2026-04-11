@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle, Loader2, Sparkles } from "lucide-react";
 
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
@@ -71,5 +71,17 @@ export default function SuccessPage() {
         Criar meu primeiro carrossel Pro
       </button>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <Loader2 size={32} className="animate-spin text-brand-500" />
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }
