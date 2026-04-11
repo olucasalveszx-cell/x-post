@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { hasActiveSubscription } from "@/lib/stripe";
 
 export const maxDuration = 45;
 
@@ -91,18 +92,31 @@ async function fromPexels(prompt: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const { prompt, imageStyle = "cinematico" } = await req.json();
+  const { prompt, imageStyle = "cinematico", customerId } = await req.json();
   if (!prompt) return NextResponse.json({ error: "prompt obrigatório" }, { status: 400 });
 
-  // Tenta Gemini primeiro, fallback para Pexels
+  // Verifica assinatura ativa para usar Gemini IA
+  const isPro = customerId ? await hasActiveSubscription(customerId) : false;
+
+  if (!isPro) {
+    // Plano gratuito → Pexels
+    try {
+      const result = await fromPexels(prompt);
+      return NextResponse.json({ ...result, plan: "free" });
+    } catch (err: any) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+  }
+
+  // Plano Pro → Gemini com fallback para Pexels
   try {
     const result = await fromGemini(prompt, imageStyle as ImageStyle);
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, plan: "pro" });
   } catch (geminiErr: any) {
     console.error("[image] Gemini falhou, tentando Pexels:", geminiErr.message);
     try {
       const result = await fromPexels(prompt);
-      return NextResponse.json(result);
+      return NextResponse.json({ ...result, plan: "pro_fallback" });
     } catch (pexelsErr: any) {
       console.error("[image] Pexels também falhou:", pexelsErr.message);
       return NextResponse.json({ error: geminiErr.message }, { status: 500 });

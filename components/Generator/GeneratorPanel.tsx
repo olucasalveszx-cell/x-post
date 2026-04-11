@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Sparkles, Search, Loader2, AlertCircle, Image, Wand2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Sparkles, Search, Loader2, AlertCircle, Image, Wand2, Crown, Zap } from "lucide-react";
 import { GeneratedContent, SearchResult, Slide, WritingStyle } from "@/types";
 import { v4 as uuid } from "uuid";
 
@@ -45,6 +45,18 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   const [error, setError] = useState("");
   const [sources, setSources] = useState<SearchResult[]>([]);
   const [imageProgress, setImageProgress] = useState(0);
+  const [isPro, setIsPro] = useState(false);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const cid = localStorage.getItem("xpz_customer_id");
+    if (!cid) return;
+    setCustomerId(cid);
+    fetch(`/api/stripe/verify?customer_id=${cid}`)
+      .then((r) => r.json())
+      .then((d) => setIsPro(d.active ?? false))
+      .catch(() => {});
+  }, []);
 
   const writingStyleOptions: { value: WritingStyle; label: string; desc: string }[] = [
     { value: "viral",        label: "⚡ Viral",        desc: "Chocante, para o scroll" },
@@ -107,7 +119,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
           const res = await fetch("/api/image", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt, imageStyle }),
+            body: JSON.stringify({ prompt, imageStyle, customerId }),
           });
           const data = await res.json();
           done++;
@@ -206,19 +218,35 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       <div>
         <label className="text-sm text-gray-400 mb-2 block flex items-center gap-1.5">
           <Wand2 size={13} className="text-brand-400" /> Estilo das imagens
-          <span className="text-[10px] text-brand-400 ml-1">· Gemini IA</span>
+          {isPro
+            ? <span className="text-[10px] text-yellow-400 ml-1 flex items-center gap-0.5"><Crown size={10} /> Pro · Gemini IA</span>
+            : <span className="text-[10px] text-gray-500 ml-1">· Pexels (grátis)</span>
+          }
         </label>
         <div className="grid grid-cols-2 gap-1.5">
           {IMAGE_STYLES.map((opt) => (
             <button key={opt.value} onClick={() => setImageStyle(opt.value)}
-              className={`flex flex-col items-start gap-0.5 px-3 py-2 rounded-lg border text-left transition-colors ${
+              className={`flex flex-col items-start gap-0.5 px-3 py-2 rounded-lg border text-left transition-colors relative ${
                 imageStyle === opt.value ? "border-brand-500 bg-brand-500/10" : "border-[#1e1e1e] bg-[#0f0f0f] hover:border-[#333]"
-              }`}>
+              } ${!isPro ? "opacity-60" : ""}`}>
               <span className="text-xs font-semibold text-white">{opt.emoji} {opt.label}</span>
               <span className="text-[10px] text-gray-500">{opt.desc}</span>
+              {!isPro && <Crown size={9} className="absolute top-2 right-2 text-yellow-500/60" />}
             </button>
           ))}
         </div>
+        {!isPro && (
+          <button
+            onClick={async () => {
+              const res = await fetch("/api/stripe/checkout", { method: "POST" });
+              const { url } = await res.json();
+              window.location.href = url;
+            }}
+            className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 text-xs font-medium transition-colors"
+          >
+            <Zap size={12} /> Fazer upgrade para imagens IA · Pro
+          </button>
+        )}
       </div>
 
       {/* Estilo de escrita */}
@@ -258,7 +286,10 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       {status === "done" && (
         <div className="flex items-center gap-2 bg-brand-500/10 border border-brand-500/20 rounded-lg p-3 text-xs text-brand-400">
           <Image size={13} />
-          Imagens geradas com Gemini · estilo {IMAGE_STYLES.find(s => s.value === imageStyle)?.label}
+          {isPro
+            ? <>Imagens geradas com Gemini IA · estilo {IMAGE_STYLES.find(s => s.value === imageStyle)?.label}</>
+            : <>Imagens do Pexels · <button onClick={async () => { const r = await fetch("/api/stripe/checkout", { method: "POST" }); const { url } = await r.json(); window.location.href = url; }} className="text-yellow-400 underline">upgrade para IA</button></>
+          }
         </div>
       )}
 
