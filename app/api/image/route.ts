@@ -72,6 +72,32 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   throw new Error(`Gemini indisponível: ${lastErr}`);
 }
 
+async function fromStability(prompt: string, style: ImageStyle) {
+  const key = process.env.STABILITY_API_KEY;
+  if (!key) throw new Error("STABILITY_API_KEY não configurada");
+
+  const stylePrompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.cinematico;
+  const fullPrompt = `${prompt}. ${stylePrompt}. Portrait orientation, dark moody background, high contrast, dramatic lighting, no text, no watermarks.`;
+
+  const form = new FormData();
+  form.append("prompt", fullPrompt);
+  form.append("aspect_ratio", "4:5");
+  form.append("output_format", "jpeg");
+
+  const res = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
+    body: form,
+    signal: AbortSignal.timeout(35000),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.image) throw new Error(data.message ?? `Stability HTTP ${res.status}`);
+
+  console.log("[image] Stability AI OK");
+  return { imageUrl: `data:image/jpeg;base64,${data.image}`, source: "stability" };
+}
+
 async function fromPexels(prompt: string) {
   const key = process.env.PEXELS_API_KEY;
   if (!key) throw new Error("PEXELS_API_KEY não configurada");
@@ -138,18 +164,23 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Plano Pro → Gemini com fallback para Pexels
+  // Plano Pro → Stability AI → Gemini → Pexels
   try {
-    const result = await fromGemini(prompt, imageStyle as ImageStyle);
+    const result = await fromStability(prompt, imageStyle as ImageStyle);
     return NextResponse.json({ ...result, plan: "pro" });
-  } catch (geminiErr: any) {
-    console.error("[image] Gemini falhou, tentando Pexels:", geminiErr.message);
+  } catch (stabilityErr: any) {
+    console.error("[image] Stability falhou, tentando Gemini:", stabilityErr.message);
     try {
-      const result = await fromPexels(prompt);
-      return NextResponse.json({ ...result, plan: "pro_fallback" });
-    } catch (pexelsErr: any) {
-      console.error("[image] Pexels também falhou:", pexelsErr.message);
-      return NextResponse.json({ error: geminiErr.message }, { status: 500 });
+      const result = await fromGemini(prompt, imageStyle as ImageStyle);
+      return NextResponse.json({ ...result, plan: "pro" });
+    } catch (geminiErr: any) {
+      console.error("[image] Gemini falhou, tentando Pexels:", geminiErr.message);
+      try {
+        const result = await fromPexels(prompt);
+        return NextResponse.json({ ...result, plan: "pro_fallback" });
+      } catch (pexelsErr: any) {
+        return NextResponse.json({ error: stabilityErr.message }, { status: 500 });
+      }
     }
   }
 }
