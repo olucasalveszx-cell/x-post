@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { Sparkles, Search, Loader2, AlertCircle, Image, Wand2, Crown, Zap, LogIn } from "lucide-react";
+import LoginModal from "@/components/LoginModal";
 import { GeneratedContent, SearchResult, Slide, WritingStyle } from "@/types";
 import { v4 as uuid } from "uuid";
 
@@ -48,6 +49,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   const [imageProgress, setImageProgress] = useState(0);
   const { data: session } = useSession();
   const [isPro, setIsPro] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [activationToken, setActivationToken] = useState<string | null>(null);
 
@@ -228,9 +230,9 @@ export default function GeneratorPanel({ onGenerate }: Props) {
     <div className="flex flex-col gap-4">
       {/* Badge login / Pro / Free */}
       {!session?.user ? (
-        <button onClick={() => signIn("google")}
+        <button onClick={() => setLoginOpen(true)}
           className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition-colors">
-          <LogIn size={14} /> Entrar com Google para gerar
+          <LogIn size={14} /> Entrar para gerar
         </button>
       ) : isPro ? (
         <div className="flex items-center justify-between bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
@@ -392,6 +394,8 @@ export default function GeneratorPanel({ onGenerate }: Props) {
           </div>
         </div>
       )}
+
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
     </div>
   );
 }

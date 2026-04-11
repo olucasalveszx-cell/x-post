@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Loader2, Lock, ArrowRight, Check } from "lucide-react";
+import LoginModal from "@/components/LoginModal";
 
 const PLANS = [
   { key: "weekly",  label: "Semanal",  price: "19,93", period: "semana" },
@@ -17,6 +18,7 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
   const [checking, setChecking] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [loginOpen, setLoginOpen] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -91,7 +93,7 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
         </button>
         <span className="font-black text-sm tracking-tight">XPost Zone</span>
         {!session?.user ? (
-          <button onClick={() => signIn("google")} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+          <button onClick={() => setLoginOpen(true)} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
             Já tenho conta
           </button>
         ) : (
@@ -173,11 +175,13 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
         {!session?.user && (
           <p className="mt-6 text-xs text-gray-600">
             Já assinou?{" "}
-            <button onClick={() => signIn("google")} className="text-purple-400 hover:text-purple-300 underline transition-colors">
-              Entrar com Google
+            <button onClick={() => setLoginOpen(true)} className="text-purple-400 hover:text-purple-300 underline transition-colors">
+              Entrar
             </button>
           </p>
         )}
+
+        <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
       </div>
     </div>
   );

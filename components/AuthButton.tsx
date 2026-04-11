@@ -1,6 +1,9 @@
 "use client";
-import { signIn, signOut, useSession } from "next-auth/react";
+
+import { useState } from "react";
+import { signOut, useSession } from "next-auth/react";
 import { LogIn, LogOut, Crown } from "lucide-react";
+import LoginModal from "@/components/LoginModal";
 
 interface Props {
   isPro?: boolean;
@@ -8,6 +11,7 @@ interface Props {
 
 export default function AuthButton({ isPro }: Props) {
   const { data: session, status } = useSession();
+  const [loginOpen, setLoginOpen] = useState(false);
 
   if (status === "loading") return null;
 
@@ -38,12 +42,15 @@ export default function AuthButton({ isPro }: Props) {
   }
 
   return (
-    <button
-      onClick={() => signIn("google")}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-gray-300 transition-colors"
-    >
-      <LogIn size={13} />
-      Entrar com Google
-    </button>
+    <>
+      <button
+        onClick={() => setLoginOpen(true)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-gray-300 transition-colors"
+      >
+        <LogIn size={13} />
+        Entrar
+      </button>
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+    </>
   );
 }
