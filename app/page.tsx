@@ -126,12 +126,9 @@ export default function LandingPage() {
       {/* ── HEADER ─────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 flex items-center justify-between px-5 md:px-10 py-3.5 border-b border-white/5"
         style={{ background: "rgba(6,6,6,0.92)", backdropFilter: "blur(12px)" }}>
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)" }}>
-            <Instagram size={15} color="white" />
-          </div>
-          <span className="font-black tracking-tight text-[15px]">XPost Zone</span>
+        <div className="flex items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="XPost Zone" className="h-10 w-auto object-contain" />
         </div>
         <nav className="hidden md:flex items-center gap-6 text-sm text-gray-400">
           <button onClick={scrollToPricing} className="hover:text-white transition-colors">Preços</button>

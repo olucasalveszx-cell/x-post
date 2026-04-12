@@ -271,10 +271,9 @@ export default function EditorPage() {
           <Link href="/" className="text-gray-500 hover:text-white transition-colors">
             <ArrowLeft size={18} />
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png.png" alt="XPost Zone" className="h-7 w-7 md:h-8 md:w-8 object-contain" />
-            <span className="font-black text-lg md:text-xl tracking-widest uppercase" style={{ fontFamily: "'Bebas Neue', 'Impact', sans-serif", letterSpacing: "0.15em" }}>XPOST ZONE</span>
+            <img src="/logo.png" alt="XPost Zone" className="h-10 w-auto md:h-12 object-contain" />
           </div>
         </div>
 

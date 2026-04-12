@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   title: "XPost Zone — Criador de Carrosséis para Instagram",
   description: "Crie carrosséis para Instagram com IA, baseado em dados reais da web.",
   icons: {
-    icon: "/logo.png.png",
-    apple: "/logo.png.png",
+    icon: "/logo.png",
+    apple: "/logo.png",
   },
 };
 
