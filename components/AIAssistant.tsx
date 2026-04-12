@@ -187,7 +187,10 @@ export default function AIAssistant({ open, onClose }: Props) {
   /* ── TTS com voz feminina ── */
   const speak = useCallback((text: string, onDone?: () => void) => {
     if (!ttsEnabled || !window.speechSynthesis) { onDone?.(); return; }
-    cancelSpeech();
+
+    // Para qualquer fala anterior
+    window.speechSynthesis.cancel();
+    setSpeaking(false);
 
     const clean = cleanForSpeech(text);
     if (!clean) { onDone?.(); return; }
@@ -198,20 +201,32 @@ export default function AIAssistant({ open, onClose }: Props) {
       utt.rate = 0.95;
       utt.pitch = 1.4;
 
-      // Prioridade: vozes femininas conhecidas (Windows: Maria, macOS: Luciana, Chrome: Google)
+      // Prioridade: vozes femininas (Windows: Maria, macOS: Luciana, Chrome: Google)
       const FEMALE = ["maria", "luciana", "francisca", "vitória", "vitoria", "google português do brasil", "google portuguese brazil"];
       const voice =
         voices.find(v => v.lang === "pt-BR" && FEMALE.some(n => v.name.toLowerCase().includes(n))) ||
         voices.find(v => v.lang === "pt-BR" && v.name.toLowerCase().includes("female")) ||
         voices.find(v => (v.lang === "pt-BR" || v.lang === "pt-br") && !v.name.toLowerCase().includes("daniel")) ||
         voices.find(v => v.lang.startsWith("pt") && !v.name.toLowerCase().includes("daniel")) ||
-        voices.find(v => v.lang === "pt-BR");
+        voices.find(v => v.lang === "pt-BR") ||
+        null; // sem voz → usa padrão do sistema
 
       if (voice) utt.voice = voice;
       utt.onstart = () => setSpeaking(true);
       utt.onend   = () => { setSpeaking(false); onDone?.(); };
-      utt.onerror = () => { setSpeaking(false); onDone?.(); };
-      window.speechSynthesis.speak(utt);
+      utt.onerror = (ev) => {
+        // "interrupted" é normal quando cancel() é chamado — não é erro
+        if ((ev as any).error !== "interrupted") setSpeaking(false);
+        onDone?.();
+      };
+
+      // Bug do Chrome: speak() logo após cancel() trava silenciosamente.
+      // Pequeno delay garante que o cancel foi processado.
+      setTimeout(() => {
+        // Bug do Chrome: speechSynthesis pausa quando aba perde foco — resume antes
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+        window.speechSynthesis.speak(utt);
+      }, 80);
     };
 
     // Vozes podem não estar carregadas ainda — aguarda se necessário
@@ -219,12 +234,13 @@ export default function AIAssistant({ open, onClose }: Props) {
     if (voices.length > 0) {
       doSpeak(voices);
     } else {
-      window.speechSynthesis.onvoiceschanged = () => {
+      const handler = () => {
         doSpeak(window.speechSynthesis.getVoices());
-        window.speechSynthesis.onvoiceschanged = null;
+        window.speechSynthesis.removeEventListener("voiceschanged", handler);
       };
+      window.speechSynthesis.addEventListener("voiceschanged", handler);
     }
-  }, [ttsEnabled, cancelSpeech]); // eslint-disable-line
+  }, [ttsEnabled]); // eslint-disable-line
 
   /* ── Enviar mensagem ── */
   const sendMessage = useCallback(async (content: string) => {
