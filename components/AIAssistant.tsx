@@ -96,7 +96,8 @@ export default function AIAssistant({ open, onClose }: Props) {
   const [mounted, setMounted]       = useState(false);
   const [voiceMode, setVoiceMode]   = useState(false);
   const [autoListen, setAutoListen] = useState(false);
-  const [micError, setMicError] = useState<string | null>(null);
+  const [micError, setMicError]   = useState<string | null>(null);
+  const [micStarting, setMicStarting] = useState(false); // entre clique e onstart
 
   const bottomRef      = useRef<HTMLDivElement>(null);
   const inputRef       = useRef<HTMLInputElement>(null);
@@ -141,18 +142,24 @@ export default function AIAssistant({ open, onClose }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  /* ── Cancela TTS e garante reset do estado speaking ── */
+  const cancelSpeech = useCallback(() => {
+    window.speechSynthesis?.cancel();
+    setSpeaking(false); // cancel() pode não disparar onend em todos os browsers
+  }, []);
+
   /* ── Limpar ao fechar ── */
   useEffect(() => {
     if (!open) {
-      window.speechSynthesis?.cancel();
+      cancelSpeech();
       recognitionRef.current?.abort();
-      setListening(false); setSpeaking(false); setAutoListen(false);
+      setListening(false); setMicStarting(false); setAutoListen(false);
     }
-  }, [open]);
+  }, [open, cancelSpeech]);
 
   /* ── Nova conversa ── */
   const clearHistory = useCallback(() => {
-    window.speechSynthesis?.cancel();
+    cancelSpeech();
     recognitionRef.current?.abort();
     setListening(false); setSpeaking(false);
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
@@ -180,7 +187,7 @@ export default function AIAssistant({ open, onClose }: Props) {
   /* ── TTS com voz feminina ── */
   const speak = useCallback((text: string, onDone?: () => void) => {
     if (!ttsEnabled || !window.speechSynthesis) { onDone?.(); return; }
-    window.speechSynthesis.cancel();
+    cancelSpeech();
 
     const clean = cleanForSpeech(text);
     if (!clean) { onDone?.(); return; }
@@ -217,7 +224,7 @@ export default function AIAssistant({ open, onClose }: Props) {
         window.speechSynthesis.onvoiceschanged = null;
       };
     }
-  }, [ttsEnabled]); // eslint-disable-line
+  }, [ttsEnabled, cancelSpeech]); // eslint-disable-line
 
   /* ── Enviar mensagem ── */
   const sendMessage = useCallback(async (content: string) => {
@@ -227,7 +234,7 @@ export default function AIAssistant({ open, onClose }: Props) {
     setMessages(next);
     setInput(""); setTranscript(""); transcriptRef.current = "";
     setLoading(true);
-    window.speechSynthesis?.cancel();
+    cancelSpeech();
 
     try {
       const res = await fetch("/api/assistant", {
@@ -246,33 +253,43 @@ export default function AIAssistant({ open, onClose }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [loading, speak]);
+  }, [loading, speak, cancelSpeech]);
 
   /* ── Reconhecimento de voz ── */
   const startListening = useCallback(() => {
     setMicError(null);
+    setMicStarting(true); // feedback imediato ao clicar
 
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
-      setMicError("Reconhecimento de voz não suportado. Use Google Chrome.");
+      setMicStarting(false);
+      setMicError("Reconhecimento de voz não suportado. Use o Google Chrome.");
       return;
     }
 
-    window.speechSynthesis?.cancel();
+    // Para TTS e garante reset de speaking
+    cancelSpeech();
+
+    // Aborta reconhecimento anterior sem disparar onend antigo
     if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch {}
+      const old = recognitionRef.current;
+      old.onend = null; // desconecta handler para não enviar transcript velho
+      try { old.abort(); } catch {}
+      recognitionRef.current = null;
     }
+
+    // Limpa transcript anterior
+    setTranscript(""); transcriptRef.current = "";
 
     const rec = new SR();
     rec.lang = "pt-BR";
-    rec.continuous = true;      // mantém aberto até o usuário parar
+    rec.continuous = true;      // mantém aberto até o usuário clicar "Parar"
     rec.interimResults = true;
     rec.maxAlternatives = 1;
 
     rec.onstart = () => {
+      setMicStarting(false);
       setListening(true);
-      setTranscript("");
-      transcriptRef.current = "";
       setMicError(null);
     };
 
@@ -290,28 +307,28 @@ export default function AIAssistant({ open, onClose }: Props) {
     };
 
     rec.onend = () => {
+      setMicStarting(false);
       setListening(false);
-      const final = transcriptRef.current.trim();
-      console.log("[Zora] transcript final:", final);
-      if (final) {
-        sendMessage(final);
+      const captured = transcriptRef.current.trim();
+      if (captured) {
+        sendMessage(captured);
       } else {
-        // Não captou nada — avisa o usuário
-        setMicError("Não captei nenhuma fala. Fale mais alto ou mais perto do microfone.");
+        setMicError("Nenhuma fala capturada. Fale mais perto do microfone e tente novamente.");
       }
     };
 
     rec.onerror = (e: any) => {
+      setMicStarting(false);
       setListening(false);
       const code: string = e?.error ?? "";
       const MSGS: Record<string, string> = {
-        "not-allowed":       "🔒 Microfone bloqueado. Clique no cadeado (🔒) na barra de endereço e permita o microfone.",
-        "permission-denied": "🔒 Permissão negada. Permita o microfone nas configurações do navegador.",
-        "no-speech":         "Nenhuma fala detectada. Fale mais perto do microfone e tente novamente.",
-        "audio-capture":     "Microfone não encontrado. Verifique se está conectado.",
-        "network":           "Erro de rede. Verifique sua conexão com a internet.",
-        "aborted":           "", // silencioso
-        "service-not-allowed": "🔒 Serviço de voz bloqueado. Acesse pelo https:// ou permita nas configurações.",
+        "not-allowed":         "Microfone bloqueado. Clique no cadeado da barra de endereço e permita o microfone.",
+        "permission-denied":   "Permissão negada. Permita o microfone nas configurações do navegador.",
+        "no-speech":           "Nenhuma fala detectada. Fale mais alto e tente novamente.",
+        "audio-capture":       "Microfone não encontrado. Verifique se está conectado.",
+        "network":             "Erro de rede no serviço de voz. Verifique sua conexão.",
+        "aborted":             "", // silencioso — usuário parou manualmente
+        "service-not-allowed": "Serviço de voz bloqueado. O site precisa estar em HTTPS.",
       };
       const msg = MSGS[code] ?? (code ? `Erro de microfone (${code}). Recarregue a página.` : "");
       if (msg) setMicError(msg);
@@ -321,15 +338,19 @@ export default function AIAssistant({ open, onClose }: Props) {
     try {
       rec.start();
     } catch (err: any) {
-      setMicError("Não foi possível iniciar. Recarregue a página e tente novamente.");
+      setMicStarting(false);
+      setMicError("Não foi possível iniciar o microfone. Recarregue a página.");
     }
-  }, [sendMessage]);
+  }, [sendMessage, cancelSpeech]);
 
   useEffect(() => { startListenRef.current = startListening; }, [startListening]);
 
   const stopListening = useCallback(() => {
-    recognitionRef.current?.stop();
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+    }
     setListening(false);
+    setMicStarting(false);
   }, []);
 
   const sendPromptToGenerator = (prompt: string) => {
@@ -491,7 +512,7 @@ export default function AIAssistant({ open, onClose }: Props) {
             color: listening ? "#f87171" : speaking ? "#d8b4fe" : loading ? "#a855f7" : "#6b7280",
           }}
         >
-          {listening ? "Ouvindo..." : speaking ? "Falando..." : loading ? "Pensando..." : "Toque para falar"}
+          {listening ? "Ouvindo..." : micStarting ? "Iniciando microfone..." : speaking ? "Falando..." : loading ? "Pensando..." : "Toque para falar"}
         </p>
 
         {/* Transcript / última fala / erro */}
@@ -512,11 +533,13 @@ export default function AIAssistant({ open, onClose }: Props) {
         {/* Botão mic grande */}
         <button
           onClick={listening ? stopListening : startListening}
-          disabled={loading || speaking}
+          disabled={loading || micStarting}
           className="w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-90 disabled:opacity-40 mb-5 z-10"
           style={{
             background: listening
               ? "linear-gradient(135deg,#dc2626,#ef4444)"
+              : micStarting
+              ? "linear-gradient(135deg,#4c1d95,#6d28d9)"
               : "linear-gradient(135deg,#7c3aed,#a855f7)",
             boxShadow: listening
               ? "0 0 32px rgba(239,68,68,0.55)"
@@ -524,7 +547,7 @@ export default function AIAssistant({ open, onClose }: Props) {
             transition: "background 0.3s ease, box-shadow 0.3s ease",
           }}
         >
-          {loading
+          {loading || micStarting
             ? <Loader2 size={26} color="white" className="animate-spin" />
             : listening
             ? <MicOff size={26} color="white" />
@@ -714,7 +737,7 @@ export default function AIAssistant({ open, onClose }: Props) {
 
           <button
             onClick={listening ? stopListening : startListening}
-            disabled={loading}
+            disabled={loading || micStarting}
             className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-medium text-sm transition-all disabled:opacity-40"
             style={{
               background: listening
@@ -724,10 +747,12 @@ export default function AIAssistant({ open, onClose }: Props) {
               boxShadow: listening ? "0 0 20px rgba(239,68,68,0.4)" : "0 0 20px rgba(168,85,247,0.3)",
             }}
           >
-            {listening ? (
+            {micStarting ? (
+              <><Loader2 size={18} className="animate-spin" /> Iniciando microfone...</>
+            ) : listening ? (
               <><MicOff size={18} /> Parar de ouvir</>
             ) : (
-              <><Mic size={18} /> {speaking ? "Reproduzindo resposta..." : "Falar com a Zora"}</>
+              <><Mic size={18} /> {speaking ? "Interromper e falar" : "Falar com a Zora"}</>
             )}
           </button>
         </div>
