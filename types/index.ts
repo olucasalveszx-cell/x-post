@@ -4,6 +4,7 @@ export interface Slide {
   backgroundImageUrl?: string;
   backgroundImageLoading?: boolean;
   backgroundGradient?: string;
+  backgroundCrop?: { top: number; right: number; bottom: number; left: number };
   elements: SlideElement[];
   width: number;
   height: number;

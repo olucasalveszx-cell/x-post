@@ -33,10 +33,12 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const [ctxMenu, setCtxMenu] = useState<CtxMenu>(null);
   const [bgCtxMenu, setBgCtxMenu] = useState<BgCtxMenu>(null);
   const [cropId, setCropId] = useState<string | null>(null);
+  const [isCroppingBg, setIsCroppingBg] = useState(false);
   const [generatingBg, setGeneratingBg] = useState(false);
   const dragRef = useRef<DragState>(null);
   const resizeRef = useRef<ResizeState>(null);
   const cropRef = useRef<CropState>(null);
+  const bgCropRef = useRef<{ startX: number; startY: number; handle: string; origClip: { top: number; right: number; bottom: number; left: number } } | null>(null);
   const menuDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
@@ -303,8 +305,73 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   };
 
   const removeBg = () => {
-    onUpdate({ ...slide, backgroundImageUrl: undefined, backgroundGradient: undefined });
+    onUpdate({ ...slide, backgroundImageUrl: undefined, backgroundGradient: undefined, backgroundCrop: undefined });
     closeBgCtx();
+  };
+
+  const enterBgCrop = () => {
+    closeBgCtx();
+    if (!slide.backgroundCrop) {
+      onUpdate({ ...slide, backgroundCrop: { top: 0, right: 0, bottom: 0, left: 0 } });
+    }
+    setIsCroppingBg(true);
+  };
+
+  const resetBgCrop = () => {
+    onUpdate({ ...slide, backgroundCrop: { top: 0, right: 0, bottom: 0, left: 0 } });
+  };
+
+  const applyBgCrop = () => {
+    setIsCroppingBg(false);
+  };
+
+  // ── Mouse: bg crop handles ─────────────────────────────────
+  const handleBgCropDown = (e: React.MouseEvent, handle: string) => {
+    e.stopPropagation();
+    const clip = slide.backgroundCrop ?? { top: 0, right: 0, bottom: 0, left: 0 };
+    bgCropRef.current = { startX: e.clientX, startY: e.clientY, handle, origClip: { ...clip } };
+    const onMove = (me: MouseEvent) => {
+      if (!bgCropRef.current) return;
+      const dx = (me.clientX - bgCropRef.current.startX) / scale;
+      const dy = (me.clientY - bgCropRef.current.startY) / scale;
+      const c = { ...bgCropRef.current.origClip };
+      const pxW = (px: number) => Math.max(0, Math.min(80, (px / slide.width)  * 100));
+      const pxH = (px: number) => Math.max(0, Math.min(80, (px / slide.height) * 100));
+      if (handle === "top")    c.top    = pxH(c.top    * slide.height / 100 + dy);
+      if (handle === "bottom") c.bottom = pxH(c.bottom * slide.height / 100 - dy);
+      if (handle === "left")   c.left   = pxW(c.left   * slide.width  / 100 + dx);
+      if (handle === "right")  c.right  = pxW(c.right  * slide.width  / 100 - dx);
+      onUpdate({ ...slide, backgroundCrop: c });
+    };
+    const onUp = () => { bgCropRef.current = null; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  // ── Touch: bg crop handles ─────────────────────────────────
+  const handleBgCropTouchStart = (e: React.TouchEvent, handle: string) => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const clip = slide.backgroundCrop ?? { top: 0, right: 0, bottom: 0, left: 0 };
+    bgCropRef.current = { startX: touch.clientX, startY: touch.clientY, handle, origClip: { ...clip } };
+    const onMove = (te: TouchEvent) => {
+      if (!bgCropRef.current) return;
+      te.preventDefault();
+      const t = te.touches[0];
+      const dx = (t.clientX - bgCropRef.current.startX) / scale;
+      const dy = (t.clientY - bgCropRef.current.startY) / scale;
+      const c = { ...bgCropRef.current.origClip };
+      const pxW = (px: number) => Math.max(0, Math.min(80, (px / slide.width)  * 100));
+      const pxH = (px: number) => Math.max(0, Math.min(80, (px / slide.height) * 100));
+      if (handle === "top")    c.top    = pxH(c.top    * slide.height / 100 + dy);
+      if (handle === "bottom") c.bottom = pxH(c.bottom * slide.height / 100 - dy);
+      if (handle === "left")   c.left   = pxW(c.left   * slide.width  / 100 + dx);
+      if (handle === "right")  c.right  = pxW(c.right  * slide.width  / 100 - dx);
+      onUpdate({ ...slide, backgroundCrop: c });
+    };
+    const onUp = () => { bgCropRef.current = null; window.removeEventListener("touchmove", onMove); window.removeEventListener("touchend", onUp); };
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onUp);
   };
 
   const generateBg = async () => {
@@ -395,6 +462,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const handleCanvasClick = () => {
     if (ctxMenu) { closeCtx(); return; }
     if (bgCtxMenu) { closeBgCtx(); return; }
+    if (isCroppingBg) return; // não deseleciona enquanto está cortando o fundo
     setSelectedId(null);
     setEditingId(null);
     setCropId(null);
@@ -416,7 +484,12 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           <img
             src={slide.backgroundImageUrl} alt=""
             className="absolute inset-0 w-full h-full object-cover cursor-context-menu"
-            style={{ objectPosition: "center top" }}
+            style={{
+              objectPosition: "center top",
+              clipPath: slide.backgroundCrop
+                ? `inset(${slide.backgroundCrop.top}% ${slide.backgroundCrop.right}% ${slide.backgroundCrop.bottom}% ${slide.backgroundCrop.left}%)`
+                : undefined,
+            }}
             draggable={false}
             onContextMenu={handleBgContextMenu}
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -425,12 +498,64 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             className="absolute inset-0 pointer-events-none"
             style={{ background: slide.backgroundGradient ?? "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.75) 35%, rgba(0,0,0,0.35) 65%, rgba(0,0,0,0.15) 100%)" }}
           />
+
+          {/* ── Handles de crop do fundo ── */}
+          {isCroppingBg && (() => {
+            const S = 1 / scale;
+            const hW = Math.round(70 * S);
+            const hT = Math.round(22 * S);
+            const clip = slide.backgroundCrop ?? { top: 0, right: 0, bottom: 0, left: 0 };
+            return (
+              <div className="absolute inset-0" style={{ zIndex: 5 }}>
+                {/* Borda tracejada */}
+                <div className="absolute inset-0 pointer-events-none" style={{ border: `${Math.round(2 * S)}px dashed #facc15` }} />
+                {/* Topo */}
+                <div style={{ position: "absolute", left: 0, right: 0, display: "flex", justifyContent: "center", top: `${clip.top}%`, transform: "translateY(-50%)", zIndex: 10 }}>
+                  <div style={{ width: hW, height: hT, background: "#facc15", borderRadius: 9999, cursor: "ns-resize" }}
+                    onMouseDown={(e) => handleBgCropDown(e, "top")}
+                    onTouchStart={(e) => handleBgCropTouchStart(e, "top")} />
+                </div>
+                {/* Baixo */}
+                <div style={{ position: "absolute", left: 0, right: 0, display: "flex", justifyContent: "center", bottom: `${clip.bottom}%`, transform: "translateY(50%)", zIndex: 10 }}>
+                  <div style={{ width: hW, height: hT, background: "#facc15", borderRadius: 9999, cursor: "ns-resize" }}
+                    onMouseDown={(e) => handleBgCropDown(e, "bottom")}
+                    onTouchStart={(e) => handleBgCropTouchStart(e, "bottom")} />
+                </div>
+                {/* Esquerda */}
+                <div style={{ position: "absolute", top: 0, bottom: 0, display: "flex", alignItems: "center", left: `${clip.left}%`, transform: "translateX(-50%)", zIndex: 10 }}>
+                  <div style={{ width: hT, height: hW, background: "#facc15", borderRadius: 9999, cursor: "ew-resize" }}
+                    onMouseDown={(e) => handleBgCropDown(e, "left")}
+                    onTouchStart={(e) => handleBgCropTouchStart(e, "left")} />
+                </div>
+                {/* Direita */}
+                <div style={{ position: "absolute", top: 0, bottom: 0, display: "flex", alignItems: "center", right: `${clip.right}%`, transform: "translateX(50%)", zIndex: 10 }}>
+                  <div style={{ width: hT, height: hW, background: "#facc15", borderRadius: 9999, cursor: "ew-resize" }}
+                    onMouseDown={(e) => handleBgCropDown(e, "right")}
+                    onTouchStart={(e) => handleBgCropTouchStart(e, "right")} />
+                </div>
+              </div>
+            );
+          })()}
         </>
       )}
       {/* Hidden file input for bg image replacement */}
       <input ref={bgFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgFileChange} />
 
-      {/* Botão deletar */}
+      {/* Botões de crop do fundo */}
+      {isCroppingBg && !bgCtxMenu && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 flex gap-2">
+          <button onClick={resetBgCrop}
+            className="bg-[#222] hover:bg-[#333] text-gray-300 rounded-lg px-3 py-2 text-sm font-medium border border-[#444]">
+            Resetar
+          </button>
+          <button onClick={applyBgCrop}
+            className="bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg px-3 py-2 text-sm font-semibold">
+            Aplicar corte
+          </button>
+        </div>
+      )}
+
+      {/* Botão deletar elemento */}
       {selectedId && !ctxMenu && (
         <div className="absolute top-3 right-3 z-50 flex gap-2">
           {cropId === selectedId && (
@@ -702,6 +827,14 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
             <RefreshCw size={15} className="text-blue-400" /> {slide.backgroundImageUrl ? "Trocar imagem" : "Adicionar imagem de fundo"}
           </button>
+
+          {/* Cortar fundo — só quando tem imagem */}
+          {slide.backgroundImageUrl && (
+            <button onClick={enterBgCrop}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-yellow-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+              <Scissors size={15} /> Cortar imagem de fundo
+            </button>
+          )}
 
           {/* Remover fundo — só quando tem imagem */}
           {slide.backgroundImageUrl && (
