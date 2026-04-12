@@ -198,18 +198,33 @@ export default function AIAssistant({ open, onClose }: Props) {
     const doSpeak = (voices: SpeechSynthesisVoice[]) => {
       const utt = new SpeechSynthesisUtterance(clean);
       utt.lang = "pt-BR";
-      utt.rate = 0.95;
-      utt.pitch = 1.4;
+      utt.rate = 1.15;
+      utt.pitch = 1.7;
 
-      // Prioridade: vozes femininas (Windows: Maria, macOS: Luciana, Chrome: Google)
-      const FEMALE = ["maria", "luciana", "francisca", "vitória", "vitoria", "google português do brasil", "google portuguese brazil"];
+      // Prioridade: vozes femininas pt-BR
+      const FEMALE_NAMES = [
+        "maria", "luciana", "francisca", "vitória", "vitoria",
+        "fernanda", "camila", "ana", "isabela",
+        "google português do brasil", "google portuguese brazil",
+        "female", "feminino",
+      ];
+      const MALE_NAMES = ["daniel", "ricardo", "male", "masculino"];
+
+      const isFemale = (v: SpeechSynthesisVoice) =>
+        FEMALE_NAMES.some(n => v.name.toLowerCase().includes(n));
+      const isMale = (v: SpeechSynthesisVoice) =>
+        MALE_NAMES.some(n => v.name.toLowerCase().includes(n));
+
       const voice =
-        voices.find(v => v.lang === "pt-BR" && FEMALE.some(n => v.name.toLowerCase().includes(n))) ||
-        voices.find(v => v.lang === "pt-BR" && v.name.toLowerCase().includes("female")) ||
-        voices.find(v => (v.lang === "pt-BR" || v.lang === "pt-br") && !v.name.toLowerCase().includes("daniel")) ||
-        voices.find(v => v.lang.startsWith("pt") && !v.name.toLowerCase().includes("daniel")) ||
-        voices.find(v => v.lang === "pt-BR") ||
-        null; // sem voz → usa padrão do sistema
+        // 1) voz feminina explícita em pt-BR
+        voices.find(v => (v.lang === "pt-BR" || v.lang === "pt-br") && isFemale(v)) ||
+        // 2) qualquer pt-BR que não seja explicitamente masculina
+        voices.find(v => (v.lang === "pt-BR" || v.lang === "pt-br") && !isMale(v)) ||
+        // 3) qualquer pt
+        voices.find(v => v.lang.startsWith("pt") && !isMale(v)) ||
+        // 4) voz feminina em qualquer idioma como fallback
+        voices.find(v => isFemale(v)) ||
+        null;
 
       if (voice) utt.voice = voice;
       utt.onstart = () => setSpeaking(true);
