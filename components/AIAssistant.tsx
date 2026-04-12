@@ -397,8 +397,8 @@ export default function AIAssistant({ open, onClose }: Props) {
   const voiceContent = (
     <div
       className="fixed inset-0 z-[99999] flex items-end justify-center sm:items-center p-4"
-      style={{ background: "rgba(0,0,0,0.90)", backdropFilter: "blur(20px)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ background: "rgba(0,0,0,0.90)" }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       {/* Gradiente de fundo animado */}
       <style>{`
@@ -418,7 +418,8 @@ export default function AIAssistant({ open, onClose }: Props) {
 
       <div
         className="relative flex flex-col items-center w-full max-w-xs rounded-3xl overflow-hidden shadow-2xl pb-8"
-        style={{ background: "linear-gradient(160deg,#0e0015 0%,#070010 100%)", border: "1px solid #1f0040" }}
+        style={{ background: "linear-gradient(160deg,#0e0015 0%,#070010 100%)", border: "1px solid #1f0040", pointerEvents: "auto" }}
+        onClick={e => e.stopPropagation()}
       >
         {/* Blob de fundo */}
         <div
@@ -603,12 +604,13 @@ export default function AIAssistant({ open, onClose }: Props) {
   const chatContent = (
     <div
       className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ background: "rgba(0,0,0,0.75)" }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="relative flex flex-col w-full max-w-md rounded-2xl overflow-hidden shadow-2xl"
-        style={{ height: 580, background: "#0d0d0d", border: "1px solid #1e1e1e" }}
+        className="relative flex flex-col w-full max-w-md rounded-2xl shadow-2xl"
+        style={{ height: 580, background: "#0d0d0d", border: "1px solid #1e1e1e", overflow: "hidden", pointerEvents: "auto" }}
+        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div
