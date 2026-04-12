@@ -10,12 +10,12 @@ export const maxDuration = 55;
 
 /* ── Paletas ── */
 const THEMES: Record<number, { desc: string; accent: string }> = {
-  0: { desc: "vibrant teal-to-emerald gradient (#00C9FF → #00B894)",           accent: "bright orange-yellow (#FFB300)" },
-  1: { desc: "energetic orange-to-deep-red gradient (#FF6B35 → #c62828)",      accent: "golden yellow (#FFD166)" },
-  2: { desc: "royal purple-to-violet gradient (#667eea → #764ba2)",            accent: "gold (#FFD700)" },
-  3: { desc: "fresh lime-to-emerald gradient (#11998e → #38ef7d)",             accent: "gold (#FFD700)" },
-  4: { desc: "hot-pink-to-magenta gradient (#f953c6 → #b91d73)",              accent: "gold (#FFD700)" },
-  5: { desc: "deep navy-to-midnight-blue gradient (#1a1a2e → #16213e)",       accent: "neon red (#E94560)" },
+  0: { desc: "vibrant teal-to-emerald gradient (#00C9FF to #00B894)",          accent: "bright orange-yellow (#FFB300)" },
+  1: { desc: "energetic orange-to-deep-red gradient (#FF6B35 to #c62828)",     accent: "golden yellow (#FFD166)" },
+  2: { desc: "royal purple-to-violet gradient (#667eea to #764ba2)",           accent: "gold (#FFD700)" },
+  3: { desc: "fresh lime-to-emerald gradient (#11998e to #38ef7d)",            accent: "gold (#FFD700)" },
+  4: { desc: "hot-pink-to-magenta gradient (#f953c6 to #b91d73)",             accent: "gold (#FFD700)" },
+  5: { desc: "deep navy-to-midnight-blue gradient (#1a1a2e to #16213e)",      accent: "neon red (#E94560)" },
 };
 
 function buildPrompt(opts: {
@@ -59,13 +59,39 @@ function buildPrompt(opts: {
   return lines.join(" ");
 }
 
+/* ── DALL-E 3 (1024x1024 square) ── */
+async function fromDallE(prompt: string): Promise<string> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("OPENAI_API_KEY não configurada");
+
+  const res = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "dall-e-3",
+      prompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "hd",
+      response_format: "b64_json",
+    }),
+    signal: AbortSignal.timeout(50000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message ?? `DALL-E HTTP ${res.status}`);
+  const b64 = data.data?.[0]?.b64_json;
+  if (!b64) throw new Error("DALL-E: sem imagem");
+  return `data:image/png;base64,${b64}`;
+}
+
 /* ── Imagen 3 (1:1) ── */
 async function fromImagen3(prompt: string): Promise<string> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${key}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -73,7 +99,7 @@ async function fromImagen3(prompt: string): Promise<string> {
         instances: [{ prompt }],
         parameters: { sampleCount: 1, aspectRatio: "1:1", safetyFilterLevel: "block_few", personGeneration: "allow_adult" },
       }),
-      signal: AbortSignal.timeout(50000),
+      signal: AbortSignal.timeout(45000),
     }
   );
 
@@ -84,13 +110,14 @@ async function fromImagen3(prompt: string): Promise<string> {
   return `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`;
 }
 
-/* ── Gemini texto→imagem ── */
+/* ── Gemini 2.0 Flash texto→imagem ── */
 async function fromGemini(prompt: string): Promise<string> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
+  // Tenta gemini-2.0-flash-exp que suporta geração de imagem
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${key}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -106,23 +133,23 @@ async function fromGemini(prompt: string): Promise<string> {
   if (!res.ok) throw new Error(data.error?.message ?? `Gemini HTTP ${res.status}`);
   const parts = data.candidates?.[0]?.content?.parts ?? [];
   const img = parts.find((p: any) => p.inlineData);
-  if (!img?.inlineData) throw new Error("Gemini: sem imagem");
+  if (!img?.inlineData) throw new Error("Gemini: sem imagem na resposta");
   return `data:${img.inlineData.mimeType};base64,${img.inlineData.data}`;
 }
 
-/* ── Gemini com foto de referência do produto ── */
+/* ── Gemini com foto do produto ── */
 async function fromGeminiWithProduct(prompt: string, refB64: string, refMime: string): Promise<string> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
   const instruction = `You are a professional Brazilian marketing designer.
-Using the product photo in the reference image as the HERO product, create a complete promotional Instagram flyer (square 1:1 format).
+Using the product photo provided as the HERO product, create a complete promotional Instagram flyer (square 1:1 format).
 ${prompt}
 The product from the reference image must be displayed prominently on the right side on a golden 3D podium.
-Maintain the product's visual identity. Make it look like a premium Brazilian social media advertisement.`;
+Make it look like a premium Brazilian social media advertisement.`;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${key}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -176,7 +203,7 @@ export async function POST(req: NextRequest) {
   const prompt = buildPrompt({ productName, price, promoTitle, promoSubtitle, colorPreset, website, instagram, phone });
   const errors: string[] = [];
 
-  /* 1. Com foto do produto → Gemini multimodal (melhor resultado) */
+  /* 1. Com foto do produto → Gemini multimodal */
   if (productPhotoBase64 && productPhotoMime) {
     try {
       const url = await fromGeminiWithProduct(prompt, productPhotoBase64, productPhotoMime);
@@ -188,19 +215,27 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  /* 2. Pro → Imagen3 */
-  if (isPro) {
-    try {
-      const url = await fromImagen3(prompt);
-      console.log("[flyer] Imagen3 OK");
-      return NextResponse.json({ imageUrl: url, source: "imagen3" });
-    } catch (e: any) {
-      errors.push(`Imagen3: ${e.message}`);
-      console.error("[flyer] Imagen3 falhou:", e.message);
-    }
+  /* 2. DALL-E 3 (mais confiável, suporta 1:1 nativo) */
+  try {
+    const url = await fromDallE(prompt);
+    console.log("[flyer] DALL-E 3 OK");
+    return NextResponse.json({ imageUrl: url, source: "dalle3" });
+  } catch (e: any) {
+    errors.push(`DALL-E: ${e.message}`);
+    console.error("[flyer] DALL-E falhou:", e.message);
   }
 
-  /* 3. Gemini texto (fallback universal) */
+  /* 3. Imagen 3 */
+  try {
+    const url = await fromImagen3(prompt);
+    console.log("[flyer] Imagen3 OK");
+    return NextResponse.json({ imageUrl: url, source: "imagen3" });
+  } catch (e: any) {
+    errors.push(`Imagen3: ${e.message}`);
+    console.error("[flyer] Imagen3 falhou:", e.message);
+  }
+
+  /* 4. Gemini texto→imagem */
   try {
     const url = await fromGemini(prompt);
     console.log("[flyer] Gemini OK");
