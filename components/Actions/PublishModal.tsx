@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Music, Search, Play, Pause, ChevronRight, ChevronLeft, Upload, Pencil, Download, LayoutGrid, BookImage } from "lucide-react";
+import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Music, Search, Play, Pause, ChevronRight, ChevronLeft, Upload, Pencil, Download, LayoutGrid, BookImage, Calendar, Clock } from "lucide-react";
 import { renderSlide } from "@/lib/render-slide";
 
 interface IGAccount {
@@ -36,10 +36,12 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
   const [caption, setCaption] = useState("");
   const [publishMode, setPublishMode] = useState<PublishMode>("api");
   const [postType, setPostType] = useState<PostType>("carousel");
-  const [status, setStatus] = useState<"idle" | "exporting" | "uploading" | "publishing" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "exporting" | "uploading" | "publishing" | "scheduling" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState(0);
   const [permalink, setPermalink] = useState("");
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
 
   // Música
   const [musicQuery, setMusicQuery] = useState("");
@@ -208,16 +210,68 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     }
   };
 
+  // Upload para Vercel Blob (URLs públicas para o Instagram)
+  const uploadToBlob = async (dataUrls: string[]): Promise<string[]> => {
+    const urls: string[] = [];
+    for (let i = 0; i < dataUrls.length; i++) {
+      setProgress(40 + Math.round((i / dataUrls.length) * 40));
+      const base64 = dataUrls[i].split(",")[1];
+      const res = await fetch("/api/blob-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, mimeType: "image/jpeg", filename: `carousel-${Date.now()}-${i}.jpg` }),
+      });
+      const data = await res.json();
+      if (!data.url) throw new Error("Falha ao hospedar imagem " + (i + 1));
+      urls.push(data.url);
+    }
+    return urls;
+  };
+
+  const handleSchedule = async () => {
+    if (!account || !scheduledAt) return;
+    setStatus("exporting");
+    setMessage("");
+    setProgress(0);
+    try {
+      const dataUrls = await exportSlides();
+      setStatus("uploading");
+      const blobUrls = await uploadToBlob(dataUrls);
+      setProgress(80);
+      setStatus("scheduling");
+      const res = await fetch("/api/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caption,
+          imageUrls: blobUrls,
+          scheduledAt,
+          igAccountId: account.accountId,
+          igToken: account.token,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setProgress(100);
+      setStatus("success");
+      setMessage(`Post agendado para ${new Date(scheduledAt).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`);
+    } catch (err: any) {
+      setStatus("error");
+      setMessage(err.message ?? "Erro ao agendar");
+    }
+  };
+
   const handleAction = () => {
     if (publishMode === "api") handlePublishApi();
     else handlePublishManual();
   };
 
-  const isLoading = ["exporting", "uploading", "publishing"].includes(status);
+  const isLoading = ["exporting", "uploading", "publishing", "scheduling"].includes(status);
   const statusLabel = {
     exporting: "Exportando slides...",
-    uploading: "Enviando imagens...",
+    uploading: "Enviando para o servidor...",
     publishing: "Publicando no Instagram...",
+    scheduling: "Agendando post...",
   }[status as string] ?? "";
 
   const STEPS: { key: Step; label: string }[] = [
@@ -534,6 +588,43 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                     className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm">
                     <Instagram size={15} />Abrir Instagram
                   </a>
+                </div>
+              )}
+
+              {/* Agendamento (só no modo API com conta conectada) */}
+              {status !== "success" && publishMode === "api" && account && (
+                <div className="flex flex-col gap-2">
+                  {!showSchedule ? (
+                    <button onClick={() => setShowSchedule(true)}
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-[#2a2a2a] hover:border-brand-500/40 bg-[#111] hover:bg-brand-500/5 text-gray-400 hover:text-white text-sm transition-all">
+                      <Calendar size={14} /> Agendar para depois
+                    </button>
+                  ) : (
+                    <div className="flex flex-col gap-2 p-3 rounded-xl border border-brand-500/30 bg-brand-500/5">
+                      <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                        <Clock size={12} className="text-brand-400" /> Escolha data e hora:
+                      </p>
+                      <input
+                        type="datetime-local"
+                        value={scheduledAt}
+                        onChange={(e) => setScheduledAt(e.target.value)}
+                        min={new Date(Date.now() + 11 * 60 * 1000).toISOString().slice(0, 16)}
+                        className="w-full bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setShowSchedule(false)}
+                          className="flex-1 py-2 rounded-lg border border-[#333] text-xs text-gray-400 hover:text-white transition-colors">
+                          Cancelar
+                        </button>
+                        <button onClick={handleSchedule}
+                          disabled={!scheduledAt || isLoading}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium disabled:opacity-40 transition-colors">
+                          {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Calendar size={12} />}
+                          {isLoading ? statusLabel : "Confirmar agendamento"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

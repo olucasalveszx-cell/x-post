@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuid } from "uuid";
-import { Download, ArrowLeft, User, LogIn, Sparkles, Layers, X, MessageCircle } from "lucide-react";
+import { Download, ArrowLeft, User, LogIn, Sparkles, Layers, X, MessageCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { Slide } from "@/types";
 import { renderSlide } from "@/lib/render-slide";
@@ -55,12 +55,62 @@ export default function EditorPage() {
   const [igAccount, setIgAccount] = useState<IGAccount | null>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  const AUTO_SAVE_KEY = "xpz_autosave_slides";
+  const AUTO_SAVE_TS_KEY = "xpz_autosave_ts";
 
   const historyRef = useRef<Slide[][]>([[{ id: uuid(), backgroundColor: "#1a0533", elements: [], width: 1080, height: 1350 }]]);
   const historyIndexRef = useRef(0);
   const slidesRef = useRef<Slide[]>(slides);
   const historyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Auto-save no localStorage ─────────────────────────────
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    // Ignora slides vazios (estado inicial)
+    const isEmpty = slides.length === 1 && slides[0].elements.length === 0 && !slides[0].backgroundImageUrl;
+    if (isEmpty) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      try {
+        localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(slides));
+        localStorage.setItem(AUTO_SAVE_TS_KEY, Date.now().toString());
+      } catch {}
+    }, 1500);
+  }, [slides]);
+
+  // ── Verifica rascunho ao carregar ─────────────────────────
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(AUTO_SAVE_KEY);
+      const ts = localStorage.getItem(AUTO_SAVE_TS_KEY);
+      if (!saved || !ts) return;
+      const parsed: Slide[] = JSON.parse(saved);
+      const hasContent = parsed.some(s => s.elements.length > 0 || s.backgroundImageUrl);
+      if (hasContent) setShowRestoreBanner(true);
+    } catch {}
+  }, []);
+
+  const restoreAutosave = () => {
+    try {
+      const saved = localStorage.getItem(AUTO_SAVE_KEY);
+      if (!saved) return;
+      const parsed: Slide[] = JSON.parse(saved);
+      setSlides(parsed);
+      slidesRef.current = parsed;
+      setCurrentIndex(0);
+      pushHistory(parsed);
+    } catch {}
+    setShowRestoreBanner(false);
+  };
+
+  const dismissAutosave = () => {
+    localStorage.removeItem(AUTO_SAVE_KEY);
+    localStorage.removeItem(AUTO_SAVE_TS_KEY);
+    setShowRestoreBanner(false);
+  };
 
   const currentSlide = slides[currentIndex];
   const selectedElement = selectedElementId
@@ -262,6 +312,26 @@ export default function EditorPage() {
         </div>
       </header>
 
+      {/* Banner de restauração */}
+      {showRestoreBanner && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-brand-600/20 border-b border-brand-500/30 text-sm text-brand-300 shrink-0">
+          <div className="flex items-center gap-2">
+            <RotateCcw size={14} className="shrink-0" />
+            <span>Você tem um carrossel não salvo. Deseja restaurá-lo?</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={restoreAutosave}
+              className="px-3 py-1 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium transition-colors">
+              Restaurar
+            </button>
+            <button onClick={dismissAutosave}
+              className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 text-xs transition-colors">
+              Descartar
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-1 overflow-hidden relative">
         {isMobile && mobilePanel && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 30 }} onClick={() => setMobilePanel(null)} />
@@ -275,12 +345,12 @@ export default function EditorPage() {
               <button onClick={() => setMobilePanel(null)}><X size={18} color="#9ca3af" /></button>
             </div>
             <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-              <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} />
+              <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} currentSlides={slides} />
             </div>
           </div>
         ) : (
           <div style={{ width: 320, background: "#080808", borderRight: "1px solid #161616", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <SidePanel onGenerate={handleGenerate} />
+            <SidePanel onGenerate={handleGenerate} currentSlides={slides} />
           </div>
         )}
 

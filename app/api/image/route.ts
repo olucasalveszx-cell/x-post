@@ -114,6 +114,45 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini" };
 }
 
+// ── Gemini com imagem de referência ──────────────────────────
+async function fromGeminiWithReference(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY não configurada");
+
+  const cfg = STYLES[style] ?? STYLES.cinematico;
+  const styleGuide = `${cfg.prompt}. ${cfg.base}`;
+
+  const textInstruction = `Use this image as a visual reference and style inspiration. Transform it into a stylized Instagram carousel slide background with the following direction: "${prompt}". Apply this style: ${styleGuide}. Portrait orientation 4:5 aspect ratio. Maintain the essence and mood of the reference image but adapt it to a cinematic, high-quality Instagram aesthetic. No text, no watermarks.`;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { inlineData: { mimeType: refMime, data: refBase64 } },
+          { text: textInstruction },
+        ],
+      }],
+      generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+    }),
+    signal: AbortSignal.timeout(45000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message ?? `Gemini HTTP ${res.status}`);
+
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
+  const imagePart = parts.find((p: any) => p.inlineData);
+  if (!imagePart?.inlineData) throw new Error("Gemini: sem imagem na resposta");
+
+  const { data: b64, mimeType } = imagePart.inlineData;
+  console.log("[image] Gemini reference OK");
+  return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini_ref" };
+}
+
 // ── DALL-E 3 ─────────────────────────────────────────────────
 async function fromDallE(prompt: string, style: ImageStyle) {
   const key = process.env.OPENAI_API_KEY;
@@ -242,8 +281,10 @@ async function fromPexels(prompt: string) {
 
 // ── Handler principal ─────────────────────────────────────────
 export async function POST(req: NextRequest) {
-  const { prompt, imageStyle = "cinematico", customerId, activationToken } = await req.json();
+  const { prompt, imageStyle = "cinematico", customerId, activationToken, referenceImageBase64, referenceImageMime } = await req.json();
   if (!prompt) return NextResponse.json({ error: "prompt obrigatório" }, { status: 400 });
+
+  const hasReference = !!(referenceImageBase64 && referenceImageMime);
 
   // Foto Real → busca no Google (disponível para todos, Pro e Free)
   if (imageStyle === "foto_real") {
@@ -294,10 +335,20 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Plano Pro → Imagen 3 → Gemini 2.0 Flash → DALL-E 3 → Pexels
+  // Plano Pro com imagem de referência → Gemini multimodal → fallbacks normais
   const errors: string[] = [];
   const style = imageStyle as ImageStyle;
 
+  if (hasReference) {
+    try {
+      return NextResponse.json({ ...await fromGeminiWithReference(prompt, style, referenceImageBase64, referenceImageMime), plan: "pro_ref" });
+    } catch (e: any) {
+      errors.push(`GeminiRef: ${e.message}`);
+      console.error("[image] GeminiRef falhou:", e.message);
+    }
+  }
+
+  // Plano Pro → Imagen 3 → Gemini 2.0 Flash → DALL-E 3 → Pexels
   try {
     return NextResponse.json({ ...await fromImagen3(prompt, style), plan: "pro" });
   } catch (e: any) {

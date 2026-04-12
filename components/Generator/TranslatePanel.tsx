@@ -37,14 +37,6 @@ export default function TranslatePanel({ onGenerate }: Props) {
       const bg = gs.colorScheme.background;
       const elements = [];
 
-      // Número
-      elements.push({
-        id: uuid(), type: "text" as const,
-        x: 60, y: 60, width: 200, height: 40,
-        content: String(i + 1).padStart(2, "0"),
-        style: { fontSize: 20, fontWeight: "bold" as const, fontFamily: "sans-serif", color: accent, textAlign: "left" as const, lineHeight: 1 },
-      });
-
       // Título com palavra colorida
       elements.push({
         id: uuid(), type: "text" as const,

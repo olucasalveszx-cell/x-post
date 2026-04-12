@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   X, Mic, MicOff, Send, Sparkles, Volume2, VolumeX,
-  Loader2, MessageSquare, PhoneOff, Trash2,
+  Loader2, MessageSquare, PhoneOff, Trash2, Wand2,
 } from "lucide-react";
 
 declare global {
@@ -20,11 +20,29 @@ interface Props { open: boolean; onClose: () => void; }
 const STORAGE_KEY = "zora-chat-history";
 
 const SUGGESTIONS = [
+  "Gerar prompt de carrossel para o editor",
   "Como criar um hook irresistível?",
-  "Estrutura ideal de carrossel viral",
+  "Estrutura de carrossel viral",
   "Dicas de CTA que convertem",
-  "Cores e fontes para carrosséis",
 ];
+
+// Detecta se a mensagem contém um prompt de carrossel estruturado
+function detectCarouselPrompt(text: string): string | null {
+  const hasSlidePattern = /slide\s*\d+\s*[:—\-]/i.test(text);
+  const hasMultipleSlides = (text.match(/slide\s*\d+/gi) ?? []).length >= 3;
+  if (hasSlidePattern && hasMultipleSlides) {
+    // Extrai só a parte do prompt (linhas com Slide X:)
+    const lines = text.split("\n");
+    const promptLines: string[] = [];
+    let capturing = false;
+    for (const line of lines) {
+      if (/slide\s*\d+\s*[:—\-]/i.test(line)) { capturing = true; }
+      if (capturing && line.trim()) promptLines.push(line.trim());
+    }
+    return promptLines.length >= 3 ? promptLines.join("\n") : null;
+  }
+  return null;
+}
 
 const WELCOME: Message = {
   role: "assistant",
@@ -78,6 +96,7 @@ export default function AIAssistant({ open, onClose }: Props) {
   const [mounted, setMounted]       = useState(false);
   const [voiceMode, setVoiceMode]   = useState(false);
   const [autoListen, setAutoListen] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
 
   const bottomRef      = useRef<HTMLDivElement>(null);
   const inputRef       = useRef<HTMLInputElement>(null);
@@ -141,21 +160,64 @@ export default function AIAssistant({ open, onClose }: Props) {
     setInput(""); setTranscript("");
   }, []);
 
-  /* ── TTS ── */
+  /* ── Limpa texto para TTS ── */
+  const cleanForSpeech = (text: string): string => text
+    // Remove emojis (range amplo)
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, "")
+    .replace(/[\u{2600}-\u{27BF}]/gu, "")
+    .replace(/[\u{FE00}-\u{FE0F}]/gu, "")
+    .replace(/[\u{1F900}-\u{1F9FF}]/gu, "")
+    .replace(/[\u{1FA00}-\u{1FA6F}]/gu, "")
+    // Remove markdown
+    .replace(/\*\*/g, "").replace(/\*/g, "").replace(/#+\s/g, "")
+    .replace(/`[^`]*`/g, "").replace(/_{1,2}([^_]*)_{1,2}/g, "$1")
+    // Remove símbolos e emojis simples restantes
+    .replace(/[🔒🎤✓→←↑↓•◦▸▹►]/g, "")
+    // Limpa espaços extras e quebras de linha
+    .replace(/\n+/g, ". ").replace(/\s{2,}/g, " ").trim()
+    .slice(0, 700);
+
+  /* ── TTS com voz feminina ── */
   const speak = useCallback((text: string, onDone?: () => void) => {
     if (!ttsEnabled || !window.speechSynthesis) { onDone?.(); return; }
     window.speechSynthesis.cancel();
-    const clean = text.replace(/\*\*/g, "").replace(/\n/g, " ").slice(0, 600);
-    const utt = new SpeechSynthesisUtterance(clean);
-    utt.lang = "pt-BR"; utt.rate = 1.05; utt.pitch = 1.1;
+
+    const clean = cleanForSpeech(text);
+    if (!clean) { onDone?.(); return; }
+
+    const doSpeak = (voices: SpeechSynthesisVoice[]) => {
+      const utt = new SpeechSynthesisUtterance(clean);
+      utt.lang = "pt-BR";
+      utt.rate = 0.95;
+      utt.pitch = 1.4;
+
+      // Prioridade: vozes femininas conhecidas (Windows: Maria, macOS: Luciana, Chrome: Google)
+      const FEMALE = ["maria", "luciana", "francisca", "vitória", "vitoria", "google português do brasil", "google portuguese brazil"];
+      const voice =
+        voices.find(v => v.lang === "pt-BR" && FEMALE.some(n => v.name.toLowerCase().includes(n))) ||
+        voices.find(v => v.lang === "pt-BR" && v.name.toLowerCase().includes("female")) ||
+        voices.find(v => (v.lang === "pt-BR" || v.lang === "pt-br") && !v.name.toLowerCase().includes("daniel")) ||
+        voices.find(v => v.lang.startsWith("pt") && !v.name.toLowerCase().includes("daniel")) ||
+        voices.find(v => v.lang === "pt-BR");
+
+      if (voice) utt.voice = voice;
+      utt.onstart = () => setSpeaking(true);
+      utt.onend   = () => { setSpeaking(false); onDone?.(); };
+      utt.onerror = () => { setSpeaking(false); onDone?.(); };
+      window.speechSynthesis.speak(utt);
+    };
+
+    // Vozes podem não estar carregadas ainda — aguarda se necessário
     const voices = window.speechSynthesis.getVoices();
-    const ptBr = voices.find(v => v.lang === "pt-BR") || voices.find(v => v.lang.startsWith("pt"));
-    if (ptBr) utt.voice = ptBr;
-    utt.onstart = () => setSpeaking(true);
-    utt.onend   = () => { setSpeaking(false); onDone?.(); };
-    utt.onerror = () => { setSpeaking(false); onDone?.(); };
-    window.speechSynthesis.speak(utt);
-  }, [ttsEnabled]);
+    if (voices.length > 0) {
+      doSpeak(voices);
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        doSpeak(window.speechSynthesis.getVoices());
+        window.speechSynthesis.onvoiceschanged = null;
+      };
+    }
+  }, [ttsEnabled]); // eslint-disable-line
 
   /* ── Enviar mensagem ── */
   const sendMessage = useCallback(async (content: string) => {
@@ -188,28 +250,79 @@ export default function AIAssistant({ open, onClose }: Props) {
 
   /* ── Reconhecimento de voz ── */
   const startListening = useCallback(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { alert("Reconhecimento de voz não suportado. Use Chrome."); return; }
+    setMicError(null);
+
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      setMicError("Reconhecimento de voz não suportado. Use Google Chrome.");
+      return;
+    }
+
     window.speechSynthesis?.cancel();
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+    }
 
     const rec = new SR();
-    rec.lang = "pt-BR"; rec.continuous = false; rec.interimResults = true;
+    rec.lang = "pt-BR";
+    rec.continuous = true;      // mantém aberto até o usuário parar
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
 
-    rec.onstart  = () => { setListening(true); setTranscript(""); transcriptRef.current = ""; };
+    rec.onstart = () => {
+      setListening(true);
+      setTranscript("");
+      transcriptRef.current = "";
+      setMicError(null);
+    };
+
     rec.onresult = (e: any) => {
-      let t = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
-      setTranscript(t); transcriptRef.current = t;
+      let interim = "";
+      let final = "";
+      for (let i = 0; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) final += t;
+        else interim += t;
+      }
+      const combined = final || interim;
+      setTranscript(combined);
+      transcriptRef.current = combined;
     };
-    rec.onend    = () => {
+
+    rec.onend = () => {
       setListening(false);
-      const final = transcriptRef.current;
-      if (final.trim()) sendMessage(final);
+      const final = transcriptRef.current.trim();
+      console.log("[Zora] transcript final:", final);
+      if (final) {
+        sendMessage(final);
+      } else {
+        // Não captou nada — avisa o usuário
+        setMicError("Não captei nenhuma fala. Fale mais alto ou mais perto do microfone.");
+      }
     };
-    rec.onerror  = () => setListening(false);
+
+    rec.onerror = (e: any) => {
+      setListening(false);
+      const code: string = e?.error ?? "";
+      const MSGS: Record<string, string> = {
+        "not-allowed":       "🔒 Microfone bloqueado. Clique no cadeado (🔒) na barra de endereço e permita o microfone.",
+        "permission-denied": "🔒 Permissão negada. Permita o microfone nas configurações do navegador.",
+        "no-speech":         "Nenhuma fala detectada. Fale mais perto do microfone e tente novamente.",
+        "audio-capture":     "Microfone não encontrado. Verifique se está conectado.",
+        "network":           "Erro de rede. Verifique sua conexão com a internet.",
+        "aborted":           "", // silencioso
+        "service-not-allowed": "🔒 Serviço de voz bloqueado. Acesse pelo https:// ou permita nas configurações.",
+      };
+      const msg = MSGS[code] ?? (code ? `Erro de microfone (${code}). Recarregue a página.` : "");
+      if (msg) setMicError(msg);
+    };
 
     recognitionRef.current = rec;
-    rec.start();
+    try {
+      rec.start();
+    } catch (err: any) {
+      setMicError("Não foi possível iniciar. Recarregue a página e tente novamente.");
+    }
   }, [sendMessage]);
 
   useEffect(() => { startListenRef.current = startListening; }, [startListening]);
@@ -218,6 +331,16 @@ export default function AIAssistant({ open, onClose }: Props) {
     recognitionRef.current?.stop();
     setListening(false);
   }, []);
+
+  const sendPromptToGenerator = (prompt: string) => {
+    window.dispatchEvent(new CustomEvent("zora-prompt", { detail: { prompt } }));
+    // Feedback visual — fecha o chat brevemente
+    const toast = document.createElement("div");
+    toast.textContent = "✓ Prompt enviado para o Gerador!";
+    toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#7c3aed;color:white;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999999;pointer-events:none;";
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  };
 
   const renderText = (text: string) =>
     text.split(/(\*\*[^*]+\*\*)|\n/g).map((p, i) => {
@@ -371,15 +494,19 @@ export default function AIAssistant({ open, onClose }: Props) {
           {listening ? "Ouvindo..." : speaking ? "Falando..." : loading ? "Pensando..." : "Toque para falar"}
         </p>
 
-        {/* Transcript / última fala */}
+        {/* Transcript / última fala / erro */}
         <div className="px-6 mb-5 min-h-[36px] flex items-center justify-center z-10">
-          <p className="text-xs text-gray-500 text-center leading-relaxed line-clamp-2">
-            {transcript
-              ? transcript
-              : messages.length > 0
-              ? messages[messages.length - 1].content.slice(0, 80) + (messages[messages.length - 1].content.length > 80 ? "…" : "")
-              : ""}
-          </p>
+          {micError ? (
+            <p className="text-xs text-red-400 text-center leading-relaxed">{micError}</p>
+          ) : (
+            <p className="text-xs text-gray-500 text-center leading-relaxed line-clamp-2">
+              {transcript
+                ? transcript
+                : messages.length > 0
+                ? messages[messages.length - 1].content.slice(0, 80) + (messages[messages.length - 1].content.length > 80 ? "…" : "")
+                : ""}
+            </p>
+          )}
         </div>
 
         {/* Botão mic grande */}
@@ -491,8 +618,10 @@ export default function AIAssistant({ open, onClose }: Props) {
 
         {/* Mensagens */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" style={{ scrollbarWidth: "none" }}>
-          {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+          {messages.map((m, i) => {
+            const detectedPrompt = m.role === "assistant" ? detectCarouselPrompt(m.content) : null;
+            return (
+            <div key={i} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
               <div
                 className="text-sm leading-relaxed max-w-[85%] px-3.5 py-2.5 rounded-2xl"
                 style={{
@@ -504,8 +633,18 @@ export default function AIAssistant({ open, onClose }: Props) {
               >
                 {renderText(m.content)}
               </div>
+              {detectedPrompt && (
+                <button
+                  onClick={() => sendPromptToGenerator(detectedPrompt)}
+                  className="mt-1.5 flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full font-semibold transition-all"
+                  style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white", boxShadow: "0 0 12px rgba(168,85,247,0.4)" }}
+                >
+                  <Wand2 size={11} /> Usar no Gerador
+                </button>
+              )}
             </div>
-          ))}
+            );
+          })}
 
           {loading && (
             <div className="flex justify-start">
@@ -531,6 +670,15 @@ export default function AIAssistant({ open, onClose }: Props) {
           )}
           <div ref={bottomRef} />
         </div>
+
+        {/* Erro de microfone */}
+        {micError && (
+          <div className="mx-4 mb-2 px-3 py-2 rounded-xl text-xs text-red-300 flex items-start gap-2"
+            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)" }}>
+            <span className="shrink-0 mt-0.5">🎤</span>
+            <span>{micError}</span>
+          </div>
+        )}
 
         {/* Transcript ao vivo */}
         {(listening || transcript) && (

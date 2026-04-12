@@ -24,7 +24,7 @@ const styleInstructions: Record<WritingStyle, string> = {
 - Títulos no formato "Como fazer X", "X passos para Y", "O que é X"
 - Linguagem didática e acessível, como se estivesse ensinando
 - Corpo: explique o conceito de forma simples, com exemplos práticos
-- Use progressão lógica entre os slides (passo 1, passo 2...)
+- Use progressão lógica entre os slides, mas NUNCA numere: sem "Passo 1:", "1.", "01" etc.
 - Tom de professor amigável
 - SEM emojis`,
 
@@ -78,6 +78,11 @@ REGRAS GERAIS:
 - Varie os accent colors entre slides (exemplos: #ff6b35, #00d4ff, #ff3366, #ffd700, #7c3aed, #10b981)
 - Background sempre escuro (#0a0a0a, #0d1117, #1a0a2e, #0f1a0f, #1a0000)
 
+REGRA OBRIGATÓRIA — SEM NUMERAÇÃO:
+- NUNCA adicione números, bullets ou prefixos nos títulos ou corpo dos slides
+- Proibido: "1.", "01", "Passo 1:", "• ", "- ", "#1", "Slide 1" ou qualquer variação
+- Os slides devem fluir como peças independentes, não como uma lista numerada
+
 REGRA CRÍTICA PARA TÍTULO:
 - Coloque exatamente UMA palavra-chave entre [colchetes] para destacar em cor de acento
 - Exemplo: "SEU [CHURRASCO] PODE ESTAR ERRADO" ou "A [CIÊNCIA] EXPLICA TUDO"
@@ -86,8 +91,11 @@ REGRA CRÍTICA PARA TÍTULO:
 REGRA CRÍTICA PARA imagePrompt:
 - Cada slide DEVE ter um imagePrompt ÚNICO e ESPECÍFICO que descreve visualmente o conteúdo daquele slide
 - O imagePrompt deve ser em INGLÊS, detalhado como um prompt de IA de imagem (Midjourney/Stable Diffusion)
-- Descreva: quem aparece, o que está acontecendo, ambiente, iluminação, emoção, estilo
-- Exemplo para slide sobre Neymar na Copa: "Neymar Jr holding World Cup trophy, Brazilian soccer player, gold FIFA World Cup 2026, stadium crowd background, golden confetti, emotional celebration, cinematic lighting, photorealistic, 8k"
+- NUNCA mencione nomes de pessoas reais (políticos, atletas, celebridades) no imagePrompt — isso causa bloqueio pela IA geradora
+- Em vez de nomear a pessoa, descreva o CENÁRIO, SÍMBOLO ou EMOÇÃO: "presidential podium with American flag", "soccer stadium golden celebration", "boxing ring dramatic moment"
+- Descreva: ambiente, objetos icônicos, iluminação, emoção, atmosfera — sem rostos ou nomes reais
+- Exemplo para slide sobre eleições americanas: "American flag waving dramatically, presidential podium, crowd in background, powerful spotlight, patriotic atmosphere, cinematic wide shot, 8k"
+- Exemplo para slide sobre Copa do Mundo: "golden FIFA World Cup trophy on pedestal, stadium crowd, confetti falling, green field, intense floodlights, celebration atmosphere, photorealistic"
 - Exemplo para slide sobre marketing: "businessman looking at holographic social media analytics dashboard, neon lights, dark office background, futuristic, high contrast, dramatic lighting"
 - NUNCA use prompts genéricos. Cada prompt deve ser único e diretamente ligado ao conteúdo do slide
 

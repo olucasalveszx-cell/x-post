@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Sparkles, Search, Loader2, AlertCircle, Image, Wand2, Crown, Zap, LogIn } from "lucide-react";
+import { Sparkles, Search, Loader2, AlertCircle, Image, Wand2, Crown, Zap, LogIn, ImagePlus, X, Terminal, Wand } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
+import ImageSearchModal from "@/components/ImageSearchModal";
 import { GeneratedContent, SearchResult, Slide, WritingStyle } from "@/types";
 import { v4 as uuid } from "uuid";
 
@@ -54,6 +55,27 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   const [loginOpen, setLoginOpen] = useState(false);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [activationToken, setActivationToken] = useState<string | null>(null);
+  const [refImageBase64, setRefImageBase64] = useState<string | null>(null);
+  const [refImageMime, setRefImageMime] = useState<string>("image/jpeg");
+  const [refImagePreview, setRefImagePreview] = useState<string | null>(null);
+  const [imageSearchOpen, setImageSearchOpen] = useState(false);
+  const [inputMode, setInputMode] = useState<"topic" | "prompt">("topic");
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [zoraHighlight, setZoraHighlight] = useState(false);
+
+  // Recebe prompts gerados pela Zora
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const prompt = (e as CustomEvent).detail?.prompt;
+      if (!prompt) return;
+      setCustomPrompt(prompt);
+      setInputMode("prompt");
+      setZoraHighlight(true);
+      setTimeout(() => setZoraHighlight(false), 2000);
+    };
+    window.addEventListener("zora-prompt", handler);
+    return () => window.removeEventListener("zora-prompt", handler);
+  }, []);
 
   useEffect(() => {
     // Se logado com Google, verifica pelo email da sessão
@@ -91,14 +113,6 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       const accent = gs.colorScheme.accent;
       const isLast = i === generated.slides.length - 1;
       const elements = [];
-
-      // Número do slide — canto superior esquerdo, discreto
-      elements.push({
-        id: uuid(), type: "text" as const,
-        x: 64, y: 72, width: 120, height: 44,
-        content: String(i + 1).padStart(2, "0"),
-        style: { fontSize: 22, fontWeight: "bold" as const, fontFamily: "sans-serif", color: accent, textAlign: "left" as const, lineHeight: 1 },
-      });
 
       // Título — grande, impactante, bottom-heavy
       elements.push({
@@ -158,7 +172,13 @@ export default function GeneratorPanel({ onGenerate }: Props) {
           const res = await fetch("/api/image", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt, imageStyle, customerId, activationToken }),
+            body: JSON.stringify({
+              prompt,
+              imageStyle,
+              customerId,
+              activationToken,
+              ...(refImageBase64 && imageStyle !== "foto_real" ? { referenceImageBase64: refImageBase64, referenceImageMime: refImageMime } : {}),
+            }),
           });
           const data = await res.json();
           done++;
@@ -178,6 +198,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   };
 
   const handleGenerate = async () => {
+    if (inputMode === "prompt") { handleGenerateFromPrompt(); return; }
     if (!topic.trim()) return;
     setError("");
     setSources([]);
@@ -199,6 +220,36 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic, searchResults: searchData.results, slideCount, writingStyle }),
+      });
+      const genData: GeneratedContent = await genRes.json();
+      if (!genRes.ok) throw new Error((genData as any).error);
+
+      setStatus("images");
+      setImageProgress(0);
+      const slidesWithoutImages = buildSlides(genData);
+      onGenerate(slidesWithoutImages);
+
+      const slidesWithImages = await generateImages(slidesWithoutImages, (done) => setImageProgress(done));
+      onGenerate(slidesWithImages);
+      setStatus("done");
+    } catch (err: any) {
+      setError(err.message ?? "Erro desconhecido");
+      setStatus("error");
+    }
+  };
+
+  const handleGenerateFromPrompt = async () => {
+    if (!customPrompt.trim()) return;
+    setError("");
+    setSources([]);
+    setImageProgress(0);
+
+    try {
+      setStatus("generating");
+      const genRes = await fetch("/api/generate-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customPrompt, slideCount }),
       });
       const genData: GeneratedContent = await genRes.json();
       if (!genRes.ok) throw new Error((genData as any).error);
@@ -276,21 +327,73 @@ export default function GeneratorPanel({ onGenerate }: Props) {
           <Sparkles size={18} className="text-brand-500" />
           Gerar com IA
         </h2>
-        <p className="text-xs text-gray-500">Pesquisa na web + texto + imagens Gemini.</p>
       </div>
 
-      {/* Tópico */}
-      <div>
-        <label className="text-sm text-gray-400 mb-1 block">Tema / Tópico</label>
-        <input
-          type="text"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          placeholder="ex: Marketing digital para pequenas empresas"
-          className="w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600"
-          onKeyDown={(e) => e.key === "Enter" && !isLoading && handleGenerate()}
-        />
+      {/* Toggle Tópico / Prompt Livre */}
+      <div className="flex rounded-xl border border-[#1e1e1e] overflow-hidden">
+        <button
+          onClick={() => setInputMode("topic")}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
+            inputMode === "topic"
+              ? "bg-brand-600 text-white"
+              : "bg-[#0f0f0f] text-gray-500 hover:text-gray-300"
+          }`}
+        >
+          <Search size={12} /> Por Tópico
+        </button>
+        <button
+          onClick={() => setInputMode("prompt")}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
+            inputMode === "prompt"
+              ? "bg-brand-600 text-white"
+              : "bg-[#0f0f0f] text-gray-500 hover:text-gray-300"
+          }`}
+        >
+          <Terminal size={12} /> Prompt Livre
+        </button>
       </div>
+
+      {/* Modo Por Tópico */}
+      {inputMode === "topic" && (
+        <div>
+          <label className="text-sm text-gray-400 mb-1 block">Tema / Tópico</label>
+          <input
+            type="text"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="ex: Marketing digital para pequenas empresas"
+            className="w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600"
+            onKeyDown={(e) => e.key === "Enter" && !isLoading && handleGenerate()}
+          />
+          <p className="text-[10px] text-gray-600 mt-1">A IA pesquisa na web e cria o conteúdo automaticamente.</p>
+        </div>
+      )}
+
+      {/* Modo Prompt Livre */}
+      {inputMode === "prompt" && (
+        <div>
+          <label className="text-sm text-gray-400 mb-1 block flex items-center gap-1.5">
+            <Terminal size={12} className="text-brand-400" /> Seu prompt
+          </label>
+          <textarea
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            placeholder={`Descreva exatamente como quer cada slide. Exemplo:\n\nSlide 1: Título impactante sobre produtividade\nSlide 2: A maioria das pessoas perde 3h por dia em distrações\nSlide 3: Técnica Pomodoro — 25 min foco, 5 min pausa\nSlide 4: Como aplicar no trabalho remoto\nSlide 5: CTA para seguir o perfil`}
+            rows={9}
+            className={`w-full bg-[#0f0f0f] rounded-lg px-3 py-2 text-sm focus:outline-none placeholder:text-gray-600 resize-none font-mono text-xs leading-relaxed transition-all duration-500 ${
+              zoraHighlight
+                ? "border-2 border-purple-500 shadow-[0_0_16px_rgba(168,85,247,0.4)]"
+                : "border border-[#1e1e1e] focus:border-brand-500"
+            }`}
+          />
+          {zoraHighlight && (
+            <p className="text-[11px] text-purple-400 flex items-center gap-1 mt-1">
+              <Wand size={10} /> Prompt gerado pela Zora — pronto para usar!
+            </p>
+          )}
+          <p className="text-[10px] text-gray-600 mt-1">A IA segue seu prompt à risca. Sem pesquisa na web.</p>
+        </div>
+      )}
 
       {/* Quantidade de slides */}
       <div>
@@ -338,8 +441,51 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         )}
       </div>
 
-      {/* Estilo de escrita */}
-      <div>
+      {/* Imagem de referência (Pro) */}
+      {isPro && imageStyle !== "foto_real" && (
+        <div>
+          <label className="text-sm text-gray-400 mb-2 block flex items-center gap-1.5">
+            <ImagePlus size={13} className="text-brand-400" /> Imagem de referência
+            <span className="text-[10px] text-yellow-400 ml-1 flex items-center gap-0.5"><Crown size={10} /> Pro</span>
+          </label>
+
+          {refImagePreview ? (
+            <div className="relative rounded-xl overflow-hidden border border-[#2a2a2a] group">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={refImagePreview} alt="Referência" className="w-full h-28 object-cover" />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                <button
+                  onClick={() => setImageSearchOpen(true)}
+                  className="px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-medium"
+                >
+                  Trocar
+                </button>
+                <button
+                  onClick={() => { setRefImageBase64(null); setRefImagePreview(null); }}
+                  className="p-1.5 rounded-lg bg-black/60 text-white"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-3 py-2">
+                <p className="text-[10px] text-white/70">A IA vai usar esta imagem como base visual</p>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setImageSearchOpen(true)}
+              className="w-full flex flex-col items-center justify-center gap-2 py-5 rounded-xl border border-dashed border-[#2a2a2a] hover:border-brand-500/50 hover:bg-brand-500/5 text-gray-500 hover:text-gray-300 transition-all"
+            >
+              <Search size={18} />
+              <span className="text-xs">Buscar imagem de referência na web</span>
+              <span className="text-[10px] text-gray-600">A IA recria o visual como arte para os slides</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Estilo de escrita — oculto no modo prompt (usuário define o tom no texto) */}
+      {inputMode === "topic" && <div>
         <label className="text-sm text-gray-400 mb-2 block">Estilo de texto</label>
         <div className="flex flex-col gap-1.5">
           {writingStyleOptions.map((opt) => (
@@ -352,16 +498,20 @@ export default function GeneratorPanel({ onGenerate }: Props) {
             </button>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* Botão */}
-      <button onClick={handleGenerate} disabled={!topic.trim() || isLoading}
+      <button
+        onClick={handleGenerate}
+        disabled={(inputMode === "topic" ? !topic.trim() : !customPrompt.trim()) || isLoading}
         className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-        {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+        {isLoading ? <Loader2 size={16} className="animate-spin" /> : inputMode === "prompt" ? <Terminal size={16} /> : <Sparkles size={16} />}
         {status === "searching" && "Pesquisando na web..."}
-        {status === "generating" && "Gerando conteúdo com IA..."}
+        {status === "generating" && "Gerando com IA..."}
         {status === "images" && `Gerando imagens... (${imageProgress}/${slideCount})`}
-        {(status === "idle" || status === "done" || status === "error") && "Gerar Carrossel"}
+        {(status === "idle" || status === "done" || status === "error") && (
+          inputMode === "prompt" ? "Gerar pelo Prompt" : "Gerar Carrossel"
+        )}
       </button>
 
       {/* Progresso imagens */}
@@ -409,6 +559,17 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       )}
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+
+      <ImageSearchModal
+        open={imageSearchOpen}
+        onClose={() => setImageSearchOpen(false)}
+        defaultQuery={topic}
+        onSelect={(b64, mime, previewUrl) => {
+          setRefImageBase64(b64);
+          setRefImageMime(mime);
+          setRefImagePreview(previewUrl);
+        }}
+      />
     </div>
   );
 }

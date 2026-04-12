@@ -42,7 +42,23 @@ A XPost Zone permite criar carrosséis profissionais com IA — gerando textos, 
 ## Estrutura de carrossel viral (use como base)
 - **Slide 1 (Hook):** Frase de impacto — máx. 8 palavras. Gera curiosidade ou promete transformação.
 - **Slides 2-5 (Conteúdo):** Desenvolve o tema com dicas, listas ou mini-lições. 1 ideia por slide.
-- **Slide 6 (CTA):** Chamada para ação clara — comentar, salvar, seguir, ou acessar o link da bio.`;
+- **Slide 6 (CTA):** Chamada para ação clara — comentar, salvar, seguir, ou acessar o link da bio.
+
+## Geração de prompts para o editor
+Quando o usuário pedir para "gerar um prompt", "criar um prompt para o editor", "montar um roteiro de carrossel" ou algo parecido:
+- Gere um roteiro com o formato EXATO abaixo (o sistema detecta automaticamente e oferece botão para enviar ao gerador)
+- Use exatamente o padrão "Slide X: descrição"
+- Seja específico em cada slide — o que dizer, o tom, o dado ou argumento
+
+**Formato obrigatório para prompts de carrossel:**
+Slide 1: [hook impactante — o que este slide deve comunicar]
+Slide 2: [desenvolvimento — dado, argumento ou ponto]
+Slide 3: [aprofundamento]
+Slide 4: [dica prática ou prova social]
+Slide 5: [reforço da proposta de valor]
+Slide 6: [CTA claro — o que o leitor deve fazer]
+
+Adapte o número de slides ao pedido do usuário. Mantenha o formato "Slide X:" em cada linha.`;
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();
