@@ -1,26 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Languages, ShoppingBag, Calendar, FileText } from "lucide-react";
+import { Sparkles, Languages, ShoppingBag, CalendarClock } from "lucide-react";
 import { Slide } from "@/types";
 import GeneratorPanel from "./GeneratorPanel";
 import TranslatePanel from "./TranslatePanel";
 import PromoPanel from "./PromoPanel";
-import CalendarPanel from "@/components/Calendar/CalendarPanel";
-import DraftsPanel from "@/components/Calendar/DraftsPanel";
+import PostsPanel from "@/components/Calendar/PostsPanel";
 
 interface Props {
   onGenerate: (slides: Slide[]) => void;
   currentSlides?: Slide[];
 }
 
-type Tab = "generate" | "promo" | "drafts" | "calendar" | "translate";
+type Tab = "generate" | "promo" | "posts" | "translate";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "generate",  label: "Gerar",      icon: <Sparkles size={12} /> },
   { id: "promo",     label: "Produto",    icon: <ShoppingBag size={12} /> },
-  { id: "drafts",    label: "Salvos",     icon: <FileText size={12} /> },
-  { id: "calendar",  label: "Agenda",     icon: <Calendar size={12} /> },
+  { id: "posts",     label: "Posts",      icon: <CalendarClock size={12} /> },
   { id: "translate", label: "Traduzir",   icon: <Languages size={12} /> },
 ];
 
@@ -51,8 +49,7 @@ export default function SidePanel({ onGenerate, currentSlides = [] }: Props) {
       <div className="flex-1 overflow-y-auto p-4">
         {tab === "generate"  && <GeneratorPanel onGenerate={onGenerate} />}
         {tab === "promo"     && <PromoPanel onGenerate={onGenerate} />}
-        {tab === "drafts"    && <DraftsPanel currentSlides={currentSlides} onLoad={onGenerate} />}
-        {tab === "calendar"  && <CalendarPanel />}
+        {tab === "posts"     && <PostsPanel currentSlides={currentSlides} onLoad={onGenerate} />}
         {tab === "translate" && <TranslatePanel onGenerate={onGenerate} />}
       </div>
     </div>
