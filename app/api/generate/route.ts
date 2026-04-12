@@ -91,6 +91,16 @@ REGRA CRÍTICA PARA imagePrompt:
 - Exemplo para slide sobre marketing: "businessman looking at holographic social media analytics dashboard, neon lights, dark office background, futuristic, high contrast, dramatic lighting"
 - NUNCA use prompts genéricos. Cada prompt deve ser único e diretamente ligado ao conteúdo do slide
 
+REGRA CRÍTICA PARA searchQuery:
+- Campo SEPARADO do imagePrompt, usado para buscar FOTOS REAIS no Google Images
+- Deve ser uma busca curta, objetiva, em português, de 2 a 5 palavras
+- Foque no SUJEITO REAL: nome da pessoa, evento ou produto — sem termos de IA ou fotografia
+- Exemplo para slide sobre Neymar jogando: "Neymar Santos 2025"
+- Exemplo para slide sobre Copa do Mundo: "Copa do Mundo 2026 Brasil"
+- Exemplo para slide sobre marketing digital: "marketing digital estratégia"
+- Exemplo para slide sobre Lula: "Lula presidente 2025"
+- NUNCA inclua palavras como: cinematic, dark, moody, photorealistic, 8k, dramatic, lighting
+
 Responda APENAS com JSON válido (sem markdown, sem comentários):
 {
   "topic": "${topic}",
@@ -100,6 +110,7 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
       "body": "1-2 frases curtas e diretas com dados reais",
       "callToAction": "apenas no último slide, senão omita este campo",
       "imagePrompt": "descrição visual detalhada e específica do conteúdo deste slide em inglês, cinematic lighting, dark moody background, high contrast, photorealistic",
+      "searchQuery": "busca curta e objetiva em português para foto real no Google, ex: Neymar Santos 2025",
       "colorScheme": {
         "background": "#0a0a0a",
         "text": "#ffffff",

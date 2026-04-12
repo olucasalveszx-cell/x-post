@@ -14,18 +14,20 @@ interface Props {
 const SLIDE_W = 1080;
 const SLIDE_H = 1350;
 
-type ImageStyle = "realista" | "cartoon" | "anime" | "stock" | "cinematico" | "abstrato";
+type ImageStyle = "realista" | "cartoon" | "anime" | "stock" | "cinematico" | "abstrato" | "foto_real";
 
-const IMAGE_STYLES: { value: ImageStyle; label: string; desc: string; emoji: string }[] = [
-  { value: "realista",   label: "Realista",    desc: "Fotografia real, HDR",         emoji: "📷" },
-  { value: "cinematico", label: "Cinemático",  desc: "Filme, iluminação dramática",  emoji: "🎬" },
-  { value: "stock",      label: "Stock",       desc: "Profissional, corporativo",    emoji: "💼" },
-  { value: "cartoon",    label: "Cartoon",     desc: "Ilustração animada, colorida", emoji: "🎨" },
-  { value: "anime",      label: "Anime",       desc: "Estilo japonês, mangá",        emoji: "⛩️" },
-  { value: "abstrato",   label: "Abstrato",    desc: "Arte digital, geométrico",     emoji: "🌀" },
+const IMAGE_STYLES: { value: ImageStyle; label: string; desc: string; emoji: string; free?: boolean }[] = [
+  { value: "foto_real",  label: "Foto Real",   desc: "Foto real do Google",            emoji: "🔍", free: true },
+  { value: "realista",   label: "Realista",    desc: "Foto 8K, luz natural, HDR",      emoji: "📷" },
+  { value: "cinematico", label: "Cinemático",  desc: "Filme épico, luz dramática",      emoji: "🎬" },
+  { value: "stock",      label: "Stock",       desc: "Editorial limpo, corporativo",    emoji: "💼" },
+  { value: "cartoon",    label: "Cartoon",     desc: "Disney/Pixar, cores vibrantes",   emoji: "🎨" },
+  { value: "anime",      label: "Anime",       desc: "Ghibli, mangá detalhado",         emoji: "⛩️" },
+  { value: "abstrato",   label: "Abstrato",    desc: "Formas geométricas, neon",        emoji: "🌀" },
 ];
 
 const STYLE_PROMPTS: Record<ImageStyle, string> = {
+  foto_real:  "real photograph from the web",
   realista:   "ultra-realistic photography, natural lighting, shallow depth of field, sharp focus, 8k DSLR photo, photojournalism quality, authentic emotion",
   cinematico: "cinematic still, dramatic moody lighting, film grain, anamorphic lens flare, Blade Runner color grading, dark atmospheric, hyper-detailed, IMAX quality",
   stock:      "professional stock photography, clean bright studio lighting, corporate editorial style, high-key lighting, sharp and polished, Getty Images quality",
@@ -124,7 +126,8 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         });
       }
 
-      const imagePrompt = gs.imagePrompt || topic;
+      const imagePrompt  = gs.imagePrompt  || topic;
+      const searchQuery  = gs.searchQuery  || topic;
       return {
         id: uuid(),
         backgroundColor: bg,
@@ -135,7 +138,8 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         width: SLIDE_W,
         height: SLIDE_H,
         _imagePrompt: imagePrompt,
-      } as Slide & { _imagePrompt: string };
+        _searchQuery:  searchQuery,
+      } as Slide & { _imagePrompt: string; _searchQuery: string };
     });
   };
 
@@ -146,7 +150,10 @@ export default function GeneratorPanel({ onGenerate }: Props) {
     let done = 0;
     const withImages = await Promise.all(
       slides.map(async (slide) => {
-        const prompt = (slide as any)._imagePrompt ?? topic;
+        // Foto Real usa searchQuery (curto, natural); IA usa imagePrompt (descritivo)
+        const prompt = imageStyle === "foto_real"
+          ? ((slide as any)._searchQuery ?? topic)
+          : ((slide as any)._imagePrompt ?? topic);
         try {
           const res = await fetch("/api/image", {
             method: "POST",
@@ -306,16 +313,20 @@ export default function GeneratorPanel({ onGenerate }: Props) {
           }
         </label>
         <div className="grid grid-cols-2 gap-1.5">
-          {IMAGE_STYLES.map((opt) => (
-            <button key={opt.value} onClick={() => setImageStyle(opt.value)}
-              className={`flex flex-col items-start gap-0.5 px-3 py-2 rounded-lg border text-left transition-colors relative ${
-                imageStyle === opt.value ? "border-brand-500 bg-brand-500/10" : "border-[#1e1e1e] bg-[#0f0f0f] hover:border-[#333]"
-              } ${!isPro ? "opacity-60" : ""}`}>
-              <span className="text-xs font-semibold text-white">{opt.emoji} {opt.label}</span>
-              <span className="text-[10px] text-gray-500">{opt.desc}</span>
-              {!isPro && <Crown size={9} className="absolute top-2 right-2 text-yellow-500/60" />}
-            </button>
-          ))}
+          {IMAGE_STYLES.map((opt) => {
+            const locked = !isPro && !opt.free;
+            return (
+              <button key={opt.value} onClick={() => { if (!locked) setImageStyle(opt.value); }}
+                className={`flex flex-col items-start gap-0.5 px-3 py-2 rounded-lg border text-left transition-colors relative ${
+                  imageStyle === opt.value ? "border-brand-500 bg-brand-500/10" : "border-[#1e1e1e] bg-[#0f0f0f] hover:border-[#333]"
+                } ${locked ? "opacity-50 cursor-not-allowed" : ""}`}>
+                <span className="text-xs font-semibold text-white">{opt.emoji} {opt.label}</span>
+                <span className="text-[10px] text-gray-500">{opt.desc}</span>
+                {opt.free && <span className="absolute top-1.5 right-2 text-[9px] text-green-400 font-bold">FREE</span>}
+                {locked && <Crown size={9} className="absolute top-2 right-2 text-yellow-500/60" />}
+              </button>
+            );
+          })}
         </div>
         {!isPro && (
           <button
@@ -364,8 +375,10 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       {status === "done" && (
         <div className="flex items-center gap-2 bg-brand-500/10 border border-brand-500/20 rounded-lg p-3 text-xs text-brand-400">
           <Image size={13} />
-          {isPro
-            ? <>Imagens geradas com Gemini IA · estilo {IMAGE_STYLES.find(s => s.value === imageStyle)?.label}</>
+          {imageStyle === "foto_real"
+            ? <>Fotos reais do Google · busca automática</>
+            : isPro
+            ? <>Imagens geradas com Gemini / DALL-E 3 · estilo {IMAGE_STYLES.find(s => s.value === imageStyle)?.label}</>
             : <>Imagens do Pexels · <button onClick={goToCheckout} className="text-yellow-400 underline">upgrade para IA</button></>
           }
         </div>

@@ -8,181 +8,256 @@ import { stripe } from "@/lib/stripe";
 
 export const maxDuration = 45;
 
-type ImageStyle = "realista" | "cinematico" | "stock" | "cartoon" | "anime" | "abstrato";
+type ImageStyle = "realista" | "cinematico" | "stock" | "cartoon" | "anime" | "abstrato" | "foto_real";
 
-const STYLE_PROMPTS: Record<ImageStyle, string> = {
-  realista:   "ultra-realistic photography, natural lighting, shallow depth of field, sharp focus, 8k DSLR photo, photojournalism quality, authentic emotion, no text",
-  cinematico: "cinematic still, dramatic moody lighting, film grain, anamorphic lens flare, dark atmospheric, hyper-detailed, IMAX quality, vibrant color grading, no text",
-  stock:      "professional stock photography, clean bright studio lighting, corporate editorial style, high-key lighting, sharp and polished, Getty Images quality, no text",
-  cartoon:    "vibrant cartoon illustration, bold outlines, flat colors with cel shading, Disney/Pixar style, expressive characters, clean vector art, no text",
-  anime:      "anime illustration style, manga aesthetic, studio Ghibli quality, detailed linework, vivid colors, dramatic sky, Japanese animation, no text",
-  abstrato:   "abstract digital art, geometric shapes, neon color palette, fluid dynamics, futuristic data visualization, award-winning generative art, no text",
+interface StyleConfig {
+  prompt: string;
+  base: string; // instrução de fundo/composição específica do estilo
+}
+
+const STYLES: Record<ImageStyle, StyleConfig> = {
+  realista: {
+    prompt: `ultra-realistic photography, shot on Canon EOS R5 with 85mm f/1.4 lens, natural golden-hour lighting, shallow depth of field with sharp subject focus, accurate human anatomy with perfectly proportioned limbs and faces, photojournalism quality, rich textures and fine details, true-to-life skin tones, authentic candid emotion, 8K resolution, HDR tonal range`,
+    base: `natural background with soft bokeh, warm color grading, no distortions, no warping, anatomically correct proportions, no text, no watermarks, no logos`,
+  },
+  cinematico: {
+    prompt: `cinematic movie still, shot by Roger Deakins, dramatic three-point lighting with strong shadows and highlights, anamorphic lens compression, film grain texture, epic wide-aspect framing, deep contrast ratio, rich color grading inspired by Blade Runner 2049 and Dune, atmospheric haze and volumetric light rays, hyper-detailed production design, IMAX 70mm film quality`,
+    base: `dark moody background, teal and orange color palette, perfectly composed frame, no distortions, no warping, no text, no watermarks, no logos`,
+  },
+  stock: {
+    prompt: `professional stock photography, clean bright studio environment, soft box high-key lighting from three sides, sharp focus throughout frame, polished corporate editorial aesthetic, confident subjects with natural genuine expressions, perfectly balanced composition following rule of thirds, Getty Images and Shutterstock quality, business professional setting, crisp white or neutral background`,
+    base: `bright clean background, neutral tones, perfectly proportioned figures, no distortions, no warping, no text, no watermarks, no logos`,
+  },
+  cartoon: {
+    prompt: `vibrant 2D cartoon illustration, clean bold outlines, flat colors with subtle cel shading, Disney and Pixar animation quality, expressive simplified character design with large eyes and clear emotions, smooth clean vector curves, balanced color palette with primary and complementary colors, professional illustration composition, charming and friendly visual style`,
+    base: `solid or simple gradient background, clean linework, no photorealism, no 3D rendering artifacts, no distortions, perfectly drawn proportions, no text, no watermarks, no logos`,
+  },
+  anime: {
+    prompt: `high-quality anime illustration, Studio Ghibli and Makoto Shinkai artistic style, detailed clean linework with precise inking, vibrant saturated colors with detailed shading and highlights, expressive character faces with large detailed eyes, dramatic sky with volumetric clouds, detailed environmental storytelling, professional manga-quality artwork, dynamic composition with strong focal point`,
+    base: `anime-style detailed background, rich saturated palette, perfectly drawn anatomy in anime proportion style, clean lines without artifacts, no photorealism, no text, no watermarks, no logos`,
+  },
+  abstrato: {
+    prompt: `premium abstract digital artwork, no human figures, sophisticated geometric and organic shape composition, fluid metallic and neon elements, deep layered visual complexity, award-winning generative art aesthetic, balanced asymmetric composition, rich contrast between dark and luminous elements, futuristic data-visualization inspired design, professional digital fine art quality, vivid color harmony`,
+    base: `deep dark background with glowing elements, multiple color layers with depth, perfectly balanced composition, no faces or people, no text, no watermarks, no logos`,
+  },
+  foto_real: {
+    prompt: `real photograph`,
+    base: `no text, no watermarks, no logos`,
+  },
 };
 
-// ── Together AI (FLUX.1) ────────────────────────────────────
-async function fromTogether(prompt: string, style: ImageStyle) {
-  const key = process.env.TOGETHER_API_KEY;
-  if (!key) throw new Error("TOGETHER_API_KEY não configurada");
+function buildPrompt(subject: string, style: ImageStyle): string {
+  const cfg = STYLES[style] ?? STYLES.cinematico;
+  return `${subject}. ${cfg.prompt}. Portrait orientation 4:5 aspect ratio, single cohesive composition. ${cfg.base}.`;
+}
 
-  const stylePrompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.cinematico;
-  const fullPrompt = `${prompt}. ${stylePrompt}. Portrait 4:5, dark moody background, high contrast, dramatic lighting, no text, no watermarks, no logos.`;
+// ── Imagen 3 (melhor qualidade, via Gemini API key) ───────────
+async function fromImagen3(prompt: string, style: ImageStyle) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
-  const res = await fetch("https://api.together.ai/v1/images/generations", {
+  const fullPrompt = buildPrompt(prompt, style);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${key}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      instances: [{ prompt: fullPrompt }],
+      parameters: {
+        sampleCount: 1,
+        aspectRatio: "3:4",
+        safetyFilterLevel: "block_few",
+        personGeneration: "allow_adult",
+      },
+    }),
+    signal: AbortSignal.timeout(40000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message ?? `Imagen3 HTTP ${res.status}`);
+
+  const pred = data.predictions?.[0];
+  if (!pred?.bytesBase64Encoded) throw new Error("Imagen3: sem imagem na resposta");
+
+  console.log("[image] Imagen 3 OK");
+  return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen3" };
+}
+
+// ── Gemini 2.0 Flash Image Generation (fallback) ─────────────
+async function fromGemini(prompt: string, style: ImageStyle) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY não configurada");
+
+  const fullPrompt = buildPrompt(prompt, style);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: fullPrompt }] }],
+      generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+    }),
+    signal: AbortSignal.timeout(40000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message ?? `Gemini HTTP ${res.status}`);
+
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
+  const imagePart = parts.find((p: any) => p.inlineData);
+  if (!imagePart?.inlineData) throw new Error("Gemini: sem imagem na resposta");
+
+  const { data: b64, mimeType } = imagePart.inlineData;
+  console.log("[image] Gemini 2.0 Flash OK");
+  return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini" };
+}
+
+// ── DALL-E 3 ─────────────────────────────────────────────────
+async function fromDallE(prompt: string, style: ImageStyle) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("OPENAI_API_KEY não configurada");
+
+  const fullPrompt = buildPrompt(prompt, style);
+
+  const res = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "black-forest-labs/FLUX.1-schnell-Free",
+      model: "dall-e-3",
       prompt: fullPrompt,
-      width: 832,
-      height: 1040,
-      steps: 4,
       n: 1,
+      size: "1024x1792",
+      quality: "standard",
       response_format: "b64_json",
     }),
     signal: AbortSignal.timeout(40000),
   });
 
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `Together HTTP ${res.status}`);
+  if (!res.ok) throw new Error(data.error?.message ?? `DALL-E HTTP ${res.status}`);
 
   const b64 = data.data?.[0]?.b64_json;
-  if (!b64) throw new Error("Together: sem imagem na resposta");
+  if (!b64) throw new Error("DALL-E: sem imagem na resposta");
 
-  console.log("[image] Together AI OK");
-  return { imageUrl: `data:image/jpeg;base64,${b64}`, source: "together" };
+  console.log("[image] DALL-E 3 OK");
+  return { imageUrl: `data:image/png;base64,${b64}`, source: "dalle" };
 }
 
-// ── Pollinations.ai (FLUX — 100% gratuito, sem API key) ────
-async function fromPollinations(prompt: string, style: ImageStyle) {
-  const stylePrompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.cinematico;
-  const fullPrompt = `${prompt}. ${stylePrompt}. Portrait orientation, dark moody background, high contrast, dramatic lighting, no text, no watermarks.`;
-  const seed = Math.floor(Math.random() * 999999);
+// ── Google Images via Serper ──────────────────────────────────
+async function fromSerper(prompt: string) {
+  const key = process.env.SERPER_API_KEY;
+  if (!key) throw new Error("SERPER_API_KEY não configurada");
 
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=864&height=1080&model=flux&nologo=true&seed=${seed}&enhance=true`;
+  // Adiciona "foto" para forçar resultados fotográficos reais
+  const query = `${prompt} foto`;
 
-  const res = await fetch(url, { signal: AbortSignal.timeout(40000) });
-  if (!res.ok) throw new Error(`Pollinations HTTP ${res.status}`);
-
-  const buffer = await res.arrayBuffer();
-  const b64 = Buffer.from(buffer).toString("base64");
-  const mimeType = res.headers.get("content-type") || "image/jpeg";
-
-  console.log("[image] Pollinations OK");
-  return { imageUrl: `data:${mimeType};base64,${b64}`, source: "pollinations" };
-}
-
-// ── Gemini (requer billing no GCP) ────────────────────────
-const GEMINI_MODELS = [
-  "gemini-2.5-flash-image",
-  "gemini-3.1-flash-image-preview",
-  "gemini-3-pro-image-preview",
-];
-
-async function fromGemini(prompt: string, style: ImageStyle) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY não configurada");
-
-  const stylePrompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.cinematico;
-  const fullPrompt = `${prompt}. Style: ${stylePrompt}. Portrait orientation 4:5, dark moody background, high contrast, dramatic lighting, cinematic composition, no watermarks, no text overlays, no logos.`;
-
-  let lastErr = "";
-  for (const model of GEMINI_MODELS) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: fullPrompt }] }],
-          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-        }),
-        signal: AbortSignal.timeout(40000),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        lastErr = data.error?.message ?? res.statusText;
-        console.log(`[image] ${model} falhou: ${lastErr}`);
-        continue;
-      }
-
-      const parts = data.candidates?.[0]?.content?.parts ?? [];
-      const imagePart = parts.find((p: any) => p.inlineData);
-      if (!imagePart?.inlineData) {
-        lastErr = `${model}: sem imagem na resposta`;
-        continue;
-      }
-
-      const { data: b64, mimeType } = imagePart.inlineData;
-      console.log(`[image] ${model} OK`);
-      return { imageUrl: `data:${mimeType};base64,${b64}`, source: model };
-    } catch (e: any) {
-      lastErr = e.message;
-      console.log(`[image] ${model} erro: ${e.message}`);
-    }
-  }
-  throw new Error(`Gemini indisponível: ${lastErr}`);
-}
-
-// ── Stability AI ───────────────────────────────────────────
-async function fromStability(prompt: string, style: ImageStyle) {
-  const key = process.env.STABILITY_API_KEY;
-  if (!key) throw new Error("STABILITY_API_KEY não configurada");
-
-  const stylePrompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.cinematico;
-  const fullPrompt = `${prompt}. ${stylePrompt}. Portrait orientation, dark moody background, high contrast, dramatic lighting, no text, no watermarks.`;
-
-  const form = new FormData();
-  form.append("prompt", fullPrompt);
-  form.append("aspect_ratio", "4:5");
-  form.append("output_format", "jpeg");
-
-  const res = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
+  const res = await fetch("https://google.serper.dev/images", {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
-    body: form,
-    signal: AbortSignal.timeout(35000),
+    headers: { "X-API-KEY": key, "Content-Type": "application/json" },
+    body: JSON.stringify({ q: query, gl: "br", hl: "pt", num: 10 }),
+    signal: AbortSignal.timeout(15000),
   });
 
   const data = await res.json();
-  if (!res.ok || !data.image) throw new Error(data.message ?? `Stability HTTP ${res.status}`);
+  if (!res.ok) throw new Error(data.message ?? `Serper HTTP ${res.status}`);
 
-  console.log("[image] Stability AI OK");
-  return { imageUrl: `data:image/jpeg;base64,${data.image}`, source: "stability" };
+  const images: any[] = data.images ?? [];
+  if (!images.length) throw new Error("Serper: sem imagens encontradas");
+
+  // Prefere imagens com boa resolução (≥ 600px), filtra ícones/logos
+  const sorted = images
+    .filter(img => img.imageUrl && img.imageWidth >= 400 && img.imageHeight >= 400)
+    .sort((a, b) => (b.imageWidth * b.imageHeight) - (a.imageWidth * a.imageHeight));
+
+  const candidates = sorted.length > 0 ? sorted : images;
+
+  for (const img of candidates.slice(0, 8)) {
+    if (!img.imageUrl) continue;
+    try {
+      const imgRes = await fetch(img.imageUrl, {
+        signal: AbortSignal.timeout(8000),
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" },
+      });
+      if (!imgRes.ok) continue;
+
+      const ct = imgRes.headers.get("content-type") ?? "";
+      if (!ct.startsWith("image/")) continue;
+
+      const buffer = await imgRes.arrayBuffer();
+      if (buffer.byteLength < 20_000) continue; // descarta ícones pequenos (<20KB)
+
+      const b64 = Buffer.from(buffer).toString("base64");
+      console.log("[image] Serper OK:", img.imageUrl, `${img.imageWidth}x${img.imageHeight}`);
+      return { imageUrl: `data:${ct};base64,${b64}`, source: "serper" };
+    } catch {
+      continue;
+    }
+  }
+  throw new Error("Serper: não foi possível baixar nenhuma imagem válida");
 }
 
-// ── Pexels (fallback final) ────────────────────────────────
+// ── Pexels (fallback final) ───────────────────────────────────
 async function fromPexels(prompt: string) {
   const key = process.env.PEXELS_API_KEY;
   if (!key) throw new Error("PEXELS_API_KEY não configurada");
 
-  const query = prompt.split(/[,.|]/)[0].replace(/<[^>]+>/g, "").replace(/[^\w\sÀ-ÿ]/g, "").trim().split(/\s+/).slice(0, 5).join(" ") || "technology business";
+  const query = prompt
+    .split(/[,.|]/)[0]
+    .replace(/<[^>]+>/g, "")
+    .replace(/[^\w\sÀ-ÿ]/g, "")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 5)
+    .join(" ") || "technology business";
 
   const page = Math.ceil(Math.random() * 3);
   const res = await fetch(
     `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=portrait&per_page=15&page=${page}`,
-    { headers: { Authorization: key } }
+    { headers: { Authorization: key } },
   );
   if (!res.ok) throw new Error(`Pexels HTTP ${res.status}`);
+
   const data = await res.json();
   let photos = data.photos ?? [];
+
   if (!photos.length) {
-    const res2 = await fetch(`https://api.pexels.com/v1/search?query=business&orientation=portrait&per_page=15&page=1`, { headers: { Authorization: key } });
+    const res2 = await fetch(
+      `https://api.pexels.com/v1/search?query=business&orientation=portrait&per_page=15&page=1`,
+      { headers: { Authorization: key } },
+    );
     const d2 = await res2.json();
     photos = d2.photos ?? [];
   }
+
   if (!photos.length) throw new Error("Pexels: sem resultados");
+
   const photo = photos[Math.floor(Math.random() * photos.length)];
   return { imageUrl: photo.src?.large2x ?? photo.src?.original, source: "pexels" };
 }
 
-// ── Handler principal ──────────────────────────────────────
+// ── Handler principal ─────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const { prompt, imageStyle = "cinematico", customerId, activationToken } = await req.json();
   if (!prompt) return NextResponse.json({ error: "prompt obrigatório" }, { status: 400 });
+
+  // Foto Real → busca no Google (disponível para todos, Pro e Free)
+  if (imageStyle === "foto_real") {
+    try {
+      return NextResponse.json({ ...await fromSerper(prompt), plan: "real" });
+    } catch (e: any) {
+      console.error("[image] Serper falhou:", e.message);
+      try {
+        return NextResponse.json({ ...await fromPexels(prompt), plan: "real_fallback" });
+      } catch (e2: any) {
+        return NextResponse.json({ error: e2.message }, { status: 500 });
+      }
+    }
+  }
 
   let isPro = false;
 
@@ -210,8 +285,8 @@ export async function POST(req: NextRequest) {
     isPro = valid;
   }
 
+  // Plano gratuito → Pexels
   if (!isPro) {
-    // Plano gratuito → Pexels
     try {
       return NextResponse.json({ ...await fromPexels(prompt), plan: "free" });
     } catch (err: any) {
@@ -219,28 +294,29 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Plano Pro → Together AI → Pollinations → Gemini → Pexels
+  // Plano Pro → Imagen 3 → Gemini 2.0 Flash → DALL-E 3 → Pexels
   const errors: string[] = [];
+  const style = imageStyle as ImageStyle;
 
   try {
-    return NextResponse.json({ ...await fromTogether(prompt, imageStyle as ImageStyle), plan: "pro" });
+    return NextResponse.json({ ...await fromImagen3(prompt, style), plan: "pro" });
   } catch (e: any) {
-    errors.push(`Together: ${e.message}`);
-    console.error("[image] Together falhou:", e.message);
+    errors.push(`Imagen3: ${e.message}`);
+    console.error("[image] Imagen3 falhou:", e.message);
   }
 
   try {
-    return NextResponse.json({ ...await fromPollinations(prompt, imageStyle as ImageStyle), plan: "pro" });
-  } catch (e: any) {
-    errors.push(`Pollinations: ${e.message}`);
-    console.error("[image] Pollinations falhou:", e.message);
-  }
-
-  try {
-    return NextResponse.json({ ...await fromGemini(prompt, imageStyle as ImageStyle), plan: "pro" });
+    return NextResponse.json({ ...await fromGemini(prompt, style), plan: "pro" });
   } catch (e: any) {
     errors.push(`Gemini: ${e.message}`);
     console.error("[image] Gemini falhou:", e.message);
+  }
+
+  try {
+    return NextResponse.json({ ...await fromDallE(prompt, style), plan: "pro" });
+  } catch (e: any) {
+    errors.push(`DALL-E: ${e.message}`);
+    console.error("[image] DALL-E falhou:", e.message);
   }
 
   try {

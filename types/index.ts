@@ -77,6 +77,7 @@ export interface GeneratedSlide {
   body: string;
   callToAction?: string;
   imagePrompt: string;
+  searchQuery?: string;
   colorScheme: {
     background: string;
     text: string;
