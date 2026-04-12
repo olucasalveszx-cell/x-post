@@ -70,6 +70,10 @@ export default function PromoPanel({ onGenerate }: Props) {
   const [error, setError] = useState("");
   const [imageProgress, setImageProgress] = useState(0);
 
+  /* ── Status (flyer IA) ── */
+  const [flyerStatus, setFlyerStatus] = useState<"idle" | "generating" | "done" | "error">("idle");
+  const [flyerError, setFlyerError] = useState("");
+
   useEffect(() => {
     if (session?.user?.email) {
       fetch(`/api/stripe/verify?email=${encodeURIComponent(session.user.email)}`)
@@ -350,6 +354,51 @@ export default function PromoPanel({ onGenerate }: Props) {
     return withImages;
   };
 
+  /* Gerar flyer com IA (Imagen3 / Gemini) */
+  const handleGenerateFlyerAI = async () => {
+    if (!promoTitle.trim() && !productName.trim()) return;
+    if (!session?.user) { setLoginOpen(true); return; }
+
+    setFlyerStatus("generating");
+    setFlyerError("");
+
+    try {
+      const body: Record<string, any> = {
+        productName, price, promoTitle, promoSubtitle,
+        colorPreset, website, instagram, phone,
+        customerId, activationToken,
+      };
+      if (photoBase64 && photoMime) {
+        body.productPhotoBase64 = photoBase64;
+        body.productPhotoMime = photoMime;
+      }
+
+      const res = await fetch("/api/generate-flyer-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Erro ao gerar imagem");
+
+      const slide: Slide = {
+        id: uuid(),
+        backgroundColor: "#000000",
+        backgroundImageUrl: data.imageUrl,
+        backgroundImageLoading: false,
+        elements: [],
+        width: 1080,
+        height: 1080,
+      };
+      onGenerate([slide]);
+      setFlyerStatus("done");
+    } catch (err: any) {
+      setFlyerError(err.message ?? "Erro desconhecido");
+      setFlyerStatus("error");
+    }
+  };
+
+  /* Fallback: montar flyer sem IA */
   const handleGenerateFlyer = () => {
     if (!productName.trim() && !promoTitle.trim()) return;
     if (!session?.user) { setLoginOpen(true); return; }
@@ -574,13 +623,42 @@ export default function PromoPanel({ onGenerate }: Props) {
             </div>
           </div>
 
-          {/* Botão gerar flyer */}
+          {/* Botão principal — IA */}
+          <button
+            onClick={handleGenerateFlyerAI}
+            disabled={(!promoTitle.trim() && !productName.trim()) || flyerStatus === "generating"}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {flyerStatus === "generating"
+              ? <><Loader2 size={16} className="animate-spin" /> Gerando com IA...</>
+              : <><Sparkles size={16} /> Gerar com IA</>}
+          </button>
+
+          {flyerStatus === "generating" && (
+            <p className="text-center text-[11px] text-gray-500 -mt-2">
+              Imagen3 / Gemini gerando seu flyer... pode levar ~20s
+            </p>
+          )}
+
+          {flyerStatus === "done" && (
+            <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-xs text-green-400">
+              <Sparkles size={13} /> Flyer gerado! Edite os textos no canvas e publique.
+            </div>
+          )}
+
+          {flyerStatus === "error" && (
+            <div className="flex items-start gap-2 bg-red-900/30 border border-red-800/50 rounded-lg p-3 text-xs text-red-300">
+              <AlertCircle size={13} className="mt-0.5 shrink-0" /> {flyerError}
+            </div>
+          )}
+
+          {/* Fallback manual */}
           <button
             onClick={handleGenerateFlyer}
             disabled={!promoTitle.trim() && !productName.trim()}
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="text-[11px] text-gray-600 hover:text-gray-400 underline text-center transition-colors disabled:opacity-30"
           >
-            <Sparkles size={16} /> Gerar Post Único
+            ou montar sem IA (instantâneo)
           </button>
         </>
       )}
