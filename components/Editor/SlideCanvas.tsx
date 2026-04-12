@@ -296,7 +296,6 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   };
 
   const handleBgContextMenu = (e: React.MouseEvent) => {
-    if (!slide.backgroundImageUrl) return;
     e.preventDefault();
     e.stopPropagation();
     const rect = containerRef.current!.getBoundingClientRect();
@@ -408,7 +407,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       className="slide-canvas"
       style={{ width: slide.width, height: slide.height, backgroundColor: slide.backgroundColor, transform: `scale(${scale})`, transformOrigin: "top left" }}
       onClick={handleCanvasClick}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={handleBgContextMenu}
     >
       {/* Fundo gerado por IA */}
       {slide.backgroundImageUrl && (
@@ -672,41 +671,45 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             <span className="text-sm font-semibold text-gray-300">Imagem de fundo</span>
           </div>
 
-          {/* Degradê */}
-          <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
-            <p className="text-sm text-gray-400 mb-2 flex items-center gap-1.5"><Layers size={14} /> Degradê</p>
-            <div className="grid grid-cols-3 gap-1.5">
-              {GRADIENTS.map((g) => (
-                <button key={g.label}
-                  onClick={() => setBgGradient(g.value)}
-                  className={`text-xs py-1.5 px-2 rounded border transition-colors ${
-                    (slide.backgroundGradient ?? "") === g.value
-                      ? "border-brand-500 bg-brand-500/20 text-white"
-                      : "border-[#333] text-gray-400 hover:border-[#555]"
-                  }`}>
-                  {g.label}
-                </button>
-              ))}
+          {/* Degradê — só quando tem imagem */}
+          {slide.backgroundImageUrl && (
+            <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
+              <p className="text-sm text-gray-400 mb-2 flex items-center gap-1.5"><Layers size={14} /> Degradê</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {GRADIENTS.map((g) => (
+                  <button key={g.label}
+                    onClick={() => setBgGradient(g.value)}
+                    className={`text-xs py-1.5 px-2 rounded border transition-colors ${
+                      (slide.backgroundGradient ?? "") === g.value
+                        ? "border-brand-500 bg-brand-500/20 text-white"
+                        : "border-[#333] text-gray-400 hover:border-[#555]"
+                    }`}>
+                    {g.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Gerar nova imagem IA */}
+          {/* Gerar imagem IA */}
           <button onClick={generateBg}
             className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
-            <Wand2 size={15} /> Gerar nova imagem IA
+            <Wand2 size={15} /> {slide.backgroundImageUrl ? "Gerar nova imagem IA" : "Gerar imagem de fundo com IA"}
           </button>
 
-          {/* Trocar imagem */}
+          {/* Adicionar / Trocar imagem */}
           <button onClick={() => bgFileInputRef.current?.click()}
             className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
-            <RefreshCw size={15} className="text-blue-400" /> Trocar imagem
+            <RefreshCw size={15} className="text-blue-400" /> {slide.backgroundImageUrl ? "Trocar imagem" : "Adicionar imagem de fundo"}
           </button>
 
-          {/* Remover fundo */}
-          <button onClick={removeBg}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
-            <X size={15} /> Remover fundo
-          </button>
+          {/* Remover fundo — só quando tem imagem */}
+          {slide.backgroundImageUrl && (
+            <button onClick={removeBg}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+              <X size={15} /> Remover fundo
+            </button>
+          )}
 
           {/* Fechar */}
           <button onClick={closeBgCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
