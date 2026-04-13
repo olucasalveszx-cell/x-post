@@ -59,39 +59,13 @@ function buildPrompt(opts: {
   return lines.join(" ");
 }
 
-/* ── DALL-E 3 (1024x1024 square) ── */
-async function fromDallE(prompt: string): Promise<string> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("OPENAI_API_KEY não configurada");
-
-  const res = await fetch("https://api.openai.com/v1/images/generations", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "dall-e-3",
-      prompt,
-      n: 1,
-      size: "1024x1024",
-      quality: "hd",
-      response_format: "b64_json",
-    }),
-    signal: AbortSignal.timeout(50000),
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `DALL-E HTTP ${res.status}`);
-  const b64 = data.data?.[0]?.b64_json;
-  if (!b64) throw new Error("DALL-E: sem imagem");
-  return `data:image/png;base64,${b64}`;
-}
-
-/* ── Imagen 3 (1:1) ── */
+/* ── Imagen 4 (1:1) ── */
 async function fromImagen3(prompt: string): Promise<string> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${key}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -110,14 +84,13 @@ async function fromImagen3(prompt: string): Promise<string> {
   return `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`;
 }
 
-/* ── Gemini 2.0 Flash texto→imagem ── */
+/* ── Gemini 2.0 Flash Preview texto→imagem ── */
 async function fromGemini(prompt: string): Promise<string> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
-  // Tenta gemini-2.0-flash-exp que suporta geração de imagem
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -149,7 +122,7 @@ The product from the reference image must be displayed prominently on the right 
 Make it look like a premium Brazilian social media advertisement.`;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -215,27 +188,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  /* 2. DALL-E 3 (mais confiável, suporta 1:1 nativo) */
-  try {
-    const url = await fromDallE(prompt);
-    console.log("[flyer] DALL-E 3 OK");
-    return NextResponse.json({ imageUrl: url, source: "dalle3" });
-  } catch (e: any) {
-    errors.push(`DALL-E: ${e.message}`);
-    console.error("[flyer] DALL-E falhou:", e.message);
-  }
-
-  /* 3. Imagen 3 */
-  try {
-    const url = await fromImagen3(prompt);
-    console.log("[flyer] Imagen3 OK");
-    return NextResponse.json({ imageUrl: url, source: "imagen3" });
-  } catch (e: any) {
-    errors.push(`Imagen3: ${e.message}`);
-    console.error("[flyer] Imagen3 falhou:", e.message);
-  }
-
-  /* 4. Gemini texto→imagem */
+  /* 2. Gemini texto→imagem */
   try {
     const url = await fromGemini(prompt);
     console.log("[flyer] Gemini OK");
@@ -243,6 +196,16 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     errors.push(`Gemini: ${e.message}`);
     console.error("[flyer] Gemini falhou:", e.message);
+  }
+
+  /* 3. Imagen 4 */
+  try {
+    const url = await fromImagen3(prompt);
+    console.log("[flyer] Imagen4 OK");
+    return NextResponse.json({ imageUrl: url, source: "imagen4" });
+  } catch (e: any) {
+    errors.push(`Imagen4: ${e.message}`);
+    console.error("[flyer] Imagen4 falhou:", e.message);
   }
 
   return NextResponse.json({ error: errors.join(" | ") }, { status: 500 });
