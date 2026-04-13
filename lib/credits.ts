@@ -42,6 +42,10 @@ function monthKey(email: string): string {
 
 /* ── Busca plano do usuário (com cache 1h) ── */
 export async function getUserPlan(email: string): Promise<string> {
+  // Admin sempre tem plano business (ilimitado)
+  const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+  if (adminEmail && email.toLowerCase().trim() === adminEmail) return "business";
+
   const cacheKey = `plan:${email.toLowerCase()}`;
   const cached = await redis(["get", cacheKey]);
   if (cached.result) return cached.result as string;
