@@ -30,6 +30,18 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        // Verifica se é o admin
+        const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+        const adminPassword = process.env.ADMIN_PASSWORD;
+        if (
+          adminEmail && adminPassword &&
+          credentials.email.toLowerCase().trim() === adminEmail &&
+          credentials.password === adminPassword
+        ) {
+          return { id: adminEmail, email: adminEmail, name: "Admin", image: null, role: "admin" } as any;
+        }
+
+        // Usuário comum via Redis
         const key = `user:${credentials.email.toLowerCase().trim()}`;
         const raw = await redisGet(key);
         if (!raw) return null;
@@ -54,9 +66,10 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.email = user.email;
-        token.name  = user.name;
+        token.email   = user.email;
+        token.name    = user.name;
         token.picture = (user as any).image ?? null;
+        token.role    = (user as any).role ?? "user";
       }
       return token;
     },
@@ -65,6 +78,7 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email as string;
         session.user.name  = token.name  as string;
         session.user.image = (token.picture as string | null) ?? null;
+        (session.user as any).role = token.role ?? "user";
       }
       return session;
     },

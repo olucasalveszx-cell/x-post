@@ -24,7 +24,10 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
     if (status === "loading") return;
 
     const run = async () => {
-      // 0. Admin bypass — cookie xpz_admin presente
+      // 0. Admin bypass — role admin no JWT ou cookie xpz_admin
+      if ((session?.user as any)?.role === "admin") {
+        setAuthorized(true); setChecking(false); return;
+      }
       if (document.cookie.split(";").some(c => c.trim().startsWith("xpz_admin="))) {
         setAuthorized(true); setChecking(false); return;
       }
