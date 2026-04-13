@@ -9,6 +9,7 @@ import {
   MousePointer, TrendingUp, Shield,
 } from "lucide-react";
 import MarqueeImages from "@/components/MarqueeImages";
+import LoginModal from "@/components/LoginModal";
 
 // ── Dados ──────────────────────────────────────────────────────
 
@@ -97,6 +98,7 @@ export default function LandingPage() {
   const pricingRef = useRef<HTMLDivElement>(null);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [loginOpen, setLoginOpen] = useState(false);
 
   const scrollToPricing = () =>
     pricingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -132,12 +134,19 @@ export default function LandingPage() {
         <nav className="hidden md:flex items-center gap-6 text-sm text-gray-400">
           <button onClick={scrollToPricing} className="hover:text-white transition-colors">Preços</button>
           <Link href="/editor" className="hover:text-white transition-colors">Editor</Link>
+          <button onClick={() => setLoginOpen(true)} className="hover:text-white transition-colors">Entrar</button>
         </nav>
-        <button onClick={scrollToPricing}
-          className="px-4 py-2 rounded-full text-sm font-bold text-white transition-all hover:opacity-90 hover:scale-105"
-          style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
-          Ver planos
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setLoginOpen(true)}
+            className="hidden sm:block px-4 py-2 rounded-full text-sm font-medium text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all">
+            Entrar
+          </button>
+          <button onClick={scrollToPricing}
+            className="px-4 py-2 rounded-full text-sm font-bold text-white transition-all hover:opacity-90 hover:scale-105"
+            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+            Ver planos
+          </button>
+        </div>
       </header>
 
       {/* ── HERO ───────────────────────────────────────────── */}
@@ -454,10 +463,18 @@ export default function LandingPage() {
           ))}
         </div>
 
-        <p className="text-center text-xs text-gray-600 mt-6 flex items-center justify-center gap-1.5">
-          <Crown size={11} className="text-yellow-500/60" />
-          Pagamento seguro via Stripe · Cartão de crédito · Cancele quando quiser
-        </p>
+        <div className="flex flex-col items-center gap-2 mt-6">
+          <p className="text-xs text-gray-600 flex items-center gap-1.5">
+            <Crown size={11} className="text-yellow-500/60" />
+            Pagamento seguro via Stripe · Cartão de crédito · Cancele quando quiser
+          </p>
+          <p className="text-xs text-gray-600">
+            Já tem conta?{" "}
+            <button onClick={() => setLoginOpen(true)} className="text-purple-400 hover:text-purple-300 underline transition-colors">
+              Fazer login
+            </button>
+          </p>
+        </div>
       </section>
 
       {/* ── FAQ ────────────────────────────────────────────── */}
@@ -526,6 +543,7 @@ export default function LandingPage() {
         </div>
       </footer>
 
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
     </main>
   );
 }
