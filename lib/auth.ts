@@ -71,6 +71,11 @@ export const authOptions: NextAuthOptions = {
         token.picture = (user as any).image ?? null;
         token.role    = (user as any).role ?? "user";
       }
+      // Admin pelo email — funciona com Google e credentials
+      const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+      if (adminEmail && token.email?.toLowerCase() === adminEmail) {
+        token.role = "admin";
+      }
       return token;
     },
     async session({ session, token }) {
