@@ -198,32 +198,27 @@ export default function AIAssistant({ open, onClose }: Props) {
     const doSpeak = (voices: SpeechSynthesisVoice[]) => {
       const utt = new SpeechSynthesisUtterance(clean);
       utt.lang = "pt-BR";
-      utt.rate = 1.15;
-      utt.pitch = 1.7;
+      utt.rate = 0.95;   // ligeiramente mais lento — voz centrada e calma
+      utt.pitch = 1.2;   // feminina e natural, sem soar aguda/artificial
 
-      // Prioridade: vozes femininas pt-BR
-      const FEMALE_NAMES = [
-        "maria", "luciana", "francisca", "vitória", "vitoria",
-        "fernanda", "camila", "ana", "isabela",
-        "google português do brasil", "google portuguese brazil",
-        "female", "feminino",
-      ];
-      const MALE_NAMES = ["daniel", "ricardo", "male", "masculino"];
+      const MALE_NAMES = ["daniel", "ricardo", "reed", "male", "masculino", "jorge", "carlos"];
 
-      const isFemale = (v: SpeechSynthesisVoice) =>
-        FEMALE_NAMES.some(n => v.name.toLowerCase().includes(n));
       const isMale = (v: SpeechSynthesisVoice) =>
         MALE_NAMES.some(n => v.name.toLowerCase().includes(n));
 
+      // Prioridade de voz:
+      // 1) "Google português do Brasil" — melhor qualidade no Chrome desktop
+      // 2) Qualquer voz pt-BR online (networkd = mais natural)
+      // 3) Qualquer pt-BR que não seja masculina
+      // 4) Qualquer voz pt
+      const ptBR = voices.filter(v => v.lang === "pt-BR" || v.lang === "pt-br");
+
       const voice =
-        // 1) voz feminina explícita em pt-BR
-        voices.find(v => (v.lang === "pt-BR" || v.lang === "pt-br") && isFemale(v)) ||
-        // 2) qualquer pt-BR que não seja explicitamente masculina
-        voices.find(v => (v.lang === "pt-BR" || v.lang === "pt-br") && !isMale(v)) ||
-        // 3) qualquer pt
+        ptBR.find(v => v.name.toLowerCase().includes("google português do brasil")) ||
+        ptBR.find(v => v.name.toLowerCase().includes("google")) ||
+        ptBR.find(v => !isMale(v)) ||
+        ptBR[0] ||
         voices.find(v => v.lang.startsWith("pt") && !isMale(v)) ||
-        // 4) voz feminina em qualquer idioma como fallback
-        voices.find(v => isFemale(v)) ||
         null;
 
       if (voice) utt.voice = voice;
@@ -321,9 +316,10 @@ export default function AIAssistant({ open, onClose }: Props) {
 
     const rec = new SR();
     rec.lang = "pt-BR";
-    // continuous = false → para automaticamente após silêncio (ideal mobile)
-    // continuous = true  → só para quando o usuário clicar "Parar"
-    rec.continuous = false;
+    // Mobile: para sozinho após silêncio (auto-send funciona melhor)
+    // Desktop: mantém aberto para frases longas com pausas naturais
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    rec.continuous = !isMobile;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
 
