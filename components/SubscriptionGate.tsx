@@ -24,6 +24,11 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
     if (status === "loading") return;
 
     const run = async () => {
+      // 0. Admin bypass — cookie xpz_admin presente
+      if (document.cookie.split(";").some(c => c.trim().startsWith("xpz_admin="))) {
+        setAuthorized(true); setChecking(false); return;
+      }
+
       // 1. Token Kirvano
       const kirvanoToken = localStorage.getItem("xpz_activation_token");
       if (kirvanoToken) { setAuthorized(true); setChecking(false); return; }
