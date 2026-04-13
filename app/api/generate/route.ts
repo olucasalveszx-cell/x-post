@@ -50,6 +50,9 @@ const styleInstructions: Record<WritingStyle, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    const body: GenerateRequest & { imageStyle?: string } = await req.json();
+    const { topic, searchResults, slideCount, writingStyle = "viral", imageStyle } = body;
+
     const session = await getServerSession(authOptions);
     const email = session?.user?.email;
 
@@ -63,9 +66,6 @@ export async function POST(req: NextRequest) {
         );
       }
     }
-
-    const body: GenerateRequest & { imageStyle?: string } = await req.json();
-    const { topic, searchResults, slideCount, writingStyle = "viral", imageStyle } = body;
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     console.log("[generate] key presente:", !!apiKey, "prefix:", apiKey?.slice(0, 14));
