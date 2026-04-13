@@ -1,6 +1,6 @@
 "use client";
 
-import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck } from "lucide-react";
+import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2 } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import { useRef, useState, useEffect } from "react";
@@ -49,6 +49,10 @@ export default function Toolbar({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [generating, setGenerating] = useState(false);
+  const [showEditAI, setShowEditAI] = useState(false);
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
 
   // ── Perfil ────────────────────────────────────────────────
   const [showProfile, setShowProfile] = useState(false);
@@ -153,6 +157,44 @@ export default function Toolbar({
     onUpdate({ ...slide, elements: slide.elements.map((el) => el.id === selectedElement.id ? { ...el, style: { ...(el.style as any), ...stylePatch } } : el) });
   };
 
+  // ── Editar fundo com IA ────────────────────────────────────
+  const editBackgroundWithAI = async () => {
+    if (!editPrompt.trim() || !slide.backgroundImageUrl) return;
+    setEditLoading(true);
+    setEditError("");
+    try {
+      // Converte URL em base64 (pode já ser data URL ou URL externa)
+      let imageBase64 = "";
+      let imageMime = "image/jpeg";
+
+      if (slide.backgroundImageUrl.startsWith("data:")) {
+        const [header, b64] = slide.backgroundImageUrl.split(",");
+        imageBase64 = b64;
+        imageMime = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
+      } else {
+        const imgRes = await fetch(slide.backgroundImageUrl);
+        const buf = await imgRes.arrayBuffer();
+        imageMime = imgRes.headers.get("content-type") ?? "image/jpeg";
+        imageBase64 = Buffer.from(buf).toString("base64");
+      }
+
+      const res = await fetch("/api/edit-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64, imageMime, prompt: editPrompt }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.imageUrl) throw new Error(data.error ?? "Erro ao editar");
+      onUpdate({ ...slide, backgroundImageUrl: data.imageUrl });
+      setShowEditAI(false);
+      setEditPrompt("");
+    } catch (e: any) {
+      setEditError(e.message ?? "Erro desconhecido");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const s = selectedElement?.type === "text" ? (selectedElement.style as any) : null;
   const isText = selectedElement?.type === "text";
 
@@ -202,6 +244,16 @@ export default function Toolbar({
           <Wand2 size={14} className={generating ? "animate-spin" : ""} />
           {generating ? "Gerando..." : "Fundo IA"}
         </button>
+
+        {/* Editar imagem com IA (só aparece quando há imagem de fundo) */}
+        {slide.backgroundImageUrl && (
+          <button
+            onClick={() => { setShowEditAI((v) => !v); setEditError(""); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm shrink-0 transition-colors ${showEditAI ? "bg-pink-600/30 border-pink-500/50 text-pink-300" : "bg-pink-600/10 hover:bg-pink-600/20 border-pink-600/30 text-pink-400"}`}>
+            <Sparkles size={14} />
+            Editar com IA
+          </button>
+        )}
 
         <div className="w-px h-6 bg-[#2a2a2a]" />
 
@@ -306,6 +358,48 @@ export default function Toolbar({
           <button onClick={insertProfile}
             className="w-full py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-sm font-medium text-white transition-colors">
             Inserir no slide
+          </button>
+        </div>
+      )}
+
+      {/* Painel Editar com IA */}
+      {showEditAI && slide.backgroundImageUrl && (
+        <div className="absolute top-full left-0 z-50 mt-1 ml-2 bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl p-4 w-96">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
+              <Sparkles size={14} className="text-pink-400" /> Editar imagem com IA
+            </span>
+            <button onClick={() => setShowEditAI(false)} className="text-gray-500 hover:text-gray-300"><X size={16} /></button>
+          </div>
+
+          {/* Preview da imagem atual */}
+          <div className="rounded-lg overflow-hidden mb-3 border border-[#2a2a2a]" style={{ height: 120 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={slide.backgroundImageUrl} alt="Imagem atual" className="w-full h-full object-cover" />
+          </div>
+
+          <p className="text-[11px] text-gray-500 mb-2">
+            Descreva o que quer alterar. O rosto e demais elementos são preservados ao máximo pelo Gemini.
+          </p>
+
+          <textarea
+            value={editPrompt}
+            onChange={(e) => setEditPrompt(e.target.value)}
+            placeholder="ex: ele segurando a taça da copa do mundo"
+            rows={3}
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-pink-500 resize-none placeholder:text-gray-600"
+          />
+
+          {editError && (
+            <p className="text-xs text-red-400 mt-1">{editError}</p>
+          )}
+
+          <button
+            onClick={editBackgroundWithAI}
+            disabled={editLoading || !editPrompt.trim()}
+            className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 disabled:opacity-40 text-sm font-medium text-white transition-colors"
+          >
+            {editLoading ? <><Loader2 size={14} className="animate-spin" /> Editando...</> : <><Sparkles size={14} /> Aplicar edição</>}
           </button>
         </div>
       )}

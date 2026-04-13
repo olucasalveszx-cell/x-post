@@ -220,6 +220,64 @@ async function fromDallE(prompt: string, style: ImageStyle) {
   return { imageUrl: `data:image/png;base64,${b64}`, source: "dalle" };
 }
 
+// ── Unsplash (alta qualidade, grátis 50 req/h) ───────────────
+async function fromUnsplash(prompt: string) {
+  const key = process.env.UNSPLASH_ACCESS_KEY;
+  if (!key) throw new Error("UNSPLASH_ACCESS_KEY não configurada");
+
+  const query = prompt.split(/[,.|]/)[0].trim().split(/\s+/).slice(0, 5).join(" ");
+  const res = await fetch(
+    `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=15&orientation=portrait`,
+    { headers: { Authorization: `Client-ID ${key}` }, signal: AbortSignal.timeout(10000) }
+  );
+  if (!res.ok) throw new Error(`Unsplash HTTP ${res.status}`);
+
+  const data = await res.json();
+  const photos: any[] = data.results ?? [];
+  if (!photos.length) throw new Error("Unsplash: sem resultados");
+
+  const pick = photos[Math.floor(Math.random() * Math.min(photos.length, 8))];
+  const imageUrl = pick.urls?.regular ?? pick.urls?.full;
+  if (!imageUrl) throw new Error("Unsplash: URL não encontrada");
+
+  const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(12000) });
+  if (!imgRes.ok) throw new Error(`Unsplash imagem HTTP ${imgRes.status}`);
+  const ct = imgRes.headers.get("content-type") ?? "image/jpeg";
+  const b64 = Buffer.from(await imgRes.arrayBuffer()).toString("base64");
+
+  console.log("[image] Unsplash OK:", pick.id);
+  return { imageUrl: `data:${ct};base64,${b64}`, source: "unsplash" };
+}
+
+// ── Pixabay (grátis, ilimitado) ───────────────────────────────
+async function fromPixabay(prompt: string) {
+  const key = process.env.PIXABAY_API_KEY;
+  if (!key) throw new Error("PIXABAY_API_KEY não configurada");
+
+  const query = prompt.split(/[,.|]/)[0].trim().split(/\s+/).slice(0, 4).join("+");
+  const res = await fetch(
+    `https://pixabay.com/api/?key=${key}&q=${encodeURIComponent(query)}&image_type=photo&orientation=vertical&per_page=20&safesearch=true`,
+    { signal: AbortSignal.timeout(10000) }
+  );
+  if (!res.ok) throw new Error(`Pixabay HTTP ${res.status}`);
+
+  const data = await res.json();
+  const hits: any[] = data.hits ?? [];
+  if (!hits.length) throw new Error("Pixabay: sem resultados");
+
+  const pick = hits[Math.floor(Math.random() * Math.min(hits.length, 10))];
+  const imageUrl = pick.largeImageURL ?? pick.webformatURL;
+  if (!imageUrl) throw new Error("Pixabay: URL não encontrada");
+
+  const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(12000) });
+  if (!imgRes.ok) throw new Error(`Pixabay imagem HTTP ${imgRes.status}`);
+  const ct = imgRes.headers.get("content-type") ?? "image/jpeg";
+  const b64 = Buffer.from(await imgRes.arrayBuffer()).toString("base64");
+
+  console.log("[image] Pixabay OK:", pick.id);
+  return { imageUrl: `data:${ct};base64,${b64}`, source: "pixabay" };
+}
+
 // ── Google Images via Serper ──────────────────────────────────
 async function fromSerper(prompt: string) {
   const key = process.env.SERPER_API_KEY;
@@ -319,17 +377,27 @@ export async function POST(req: NextRequest) {
 
   const hasReference = !!(referenceImageBase64 && referenceImageMime);
 
-  // Foto Real → busca no Google (disponível para todos, Pro e Free)
+  // Foto Real → Serper (Google) → Unsplash → Pixabay → Pexels
   if (imageStyle === "foto_real") {
     try {
       return NextResponse.json({ ...await fromSerper(prompt), plan: "real" });
     } catch (e: any) {
       console.error("[image] Serper falhou:", e.message);
-      try {
-        return NextResponse.json({ ...await fromPexels(prompt), plan: "real_fallback" });
-      } catch (e2: any) {
-        return NextResponse.json({ error: e2.message }, { status: 500 });
-      }
+    }
+    try {
+      return NextResponse.json({ ...await fromUnsplash(prompt), plan: "real" });
+    } catch (e: any) {
+      console.error("[image] Unsplash falhou:", e.message);
+    }
+    try {
+      return NextResponse.json({ ...await fromPixabay(prompt), plan: "real" });
+    } catch (e: any) {
+      console.error("[image] Pixabay falhou:", e.message);
+    }
+    try {
+      return NextResponse.json({ ...await fromPexels(prompt), plan: "real_fallback" });
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message }, { status: 500 });
     }
   }
 
