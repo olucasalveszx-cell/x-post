@@ -51,7 +51,40 @@ function buildPrompt(subject: string, style: ImageStyle): string {
   return `${subject}. ${cfg.prompt}. Portrait orientation 4:5 aspect ratio, single cohesive composition. ${cfg.base}.`;
 }
 
-// ── Imagen 3 (melhor qualidade, via Gemini API key) ───────────
+// ── Imagen 4 (máxima qualidade — usado no estilo Realista) ───
+async function fromImagen4(prompt: string, style: ImageStyle) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY não configurada");
+
+  const fullPrompt = buildPrompt(prompt, style);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${key}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      instances: [{ prompt: fullPrompt }],
+      parameters: {
+        sampleCount: 1,
+        aspectRatio: "3:4",
+        safetyFilterLevel: "block_few",
+        personGeneration: "allow_adult",
+      },
+    }),
+    signal: AbortSignal.timeout(50000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message ?? `Imagen4 HTTP ${res.status}`);
+
+  const pred = data.predictions?.[0];
+  if (!pred?.bytesBase64Encoded) throw new Error("Imagen4: sem imagem na resposta");
+
+  console.log("[image] Imagen 4 OK");
+  return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen4" };
+}
+
+// ── Imagen 3 (fallback, via Gemini API key) ───────────────────
 async function fromImagen3(prompt: string, style: ImageStyle) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
@@ -348,7 +381,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Plano Pro → Imagen 3 → Gemini 2.0 Flash → DALL-E 3 → Pexels
+  // Realista → Imagen 4 primeiro (maior qualidade fotorrealista)
+  if (style === "realista") {
+    try {
+      return NextResponse.json({ ...await fromImagen4(prompt, style), plan: "pro" });
+    } catch (e: any) {
+      errors.push(`Imagen4: ${e.message}`);
+      console.error("[image] Imagen4 falhou, tentando Imagen3:", e.message);
+    }
+  }
+
+  // Demais estilos (ou fallback do Realista) → Imagen 3 → Gemini → DALL-E → Pexels
   try {
     return NextResponse.json({ ...await fromImagen3(prompt, style), plan: "pro" });
   } catch (e: any) {
