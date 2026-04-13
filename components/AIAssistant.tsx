@@ -276,9 +276,16 @@ export default function AIAssistant({ open, onClose }: Props) {
       const data = await res.json();
       const reply = data.text || "Erro ao processar. Tente novamente.";
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
-      speak(reply, () => {
-        if (autoListenRef.current) setTimeout(() => startListenRef.current(), 600);
-      });
+
+      if (ttsEnabled) {
+        // Com TTS: ouve de novo depois que Zora terminar de falar
+        speak(reply, () => {
+          if (autoListenRef.current) setTimeout(() => startListenRef.current(), 700);
+        });
+      } else {
+        // Sem TTS: ouve de novo após 1.5s (tempo de ler a resposta)
+        if (autoListenRef.current) setTimeout(() => startListenRef.current(), 1500);
+      }
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "Erro de conexão." }]);
     } finally {
@@ -314,7 +321,9 @@ export default function AIAssistant({ open, onClose }: Props) {
 
     const rec = new SR();
     rec.lang = "pt-BR";
-    rec.continuous = true;      // mantém aberto até o usuário clicar "Parar"
+    // continuous = false → para automaticamente após silêncio (ideal mobile)
+    // continuous = true  → só para quando o usuário clicar "Parar"
+    rec.continuous = false;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
 
@@ -332,9 +341,12 @@ export default function AIAssistant({ open, onClose }: Props) {
         if (e.results[i].isFinal) final += t;
         else interim += t;
       }
-      const combined = final || interim;
-      setTranscript(combined);
-      transcriptRef.current = combined;
+      // Garante que o resultado final seja capturado mesmo no mobile
+      const combined = (final || interim).trim();
+      if (combined) {
+        setTranscript(combined);
+        transcriptRef.current = combined;
+      }
     };
 
     rec.onend = () => {
@@ -590,15 +602,16 @@ export default function AIAssistant({ open, onClose }: Props) {
         <div className="flex items-center gap-3 z-10">
           <button
             onClick={() => setAutoListen(v => !v)}
-            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full transition-all"
+            className="flex items-center gap-1.5 text-[12px] px-4 py-2 rounded-full font-semibold transition-all"
             style={{
-              background: autoListen ? "rgba(168,85,247,0.15)" : "rgba(255,255,255,0.04)",
-              border: `1px solid ${autoListen ? "#7c3aed" : "#1f1f1f"}`,
-              color: autoListen ? "#a855f7" : "#4b5563",
+              background: autoListen ? "rgba(168,85,247,0.25)" : "rgba(255,255,255,0.06)",
+              border: `1.5px solid ${autoListen ? "#a855f7" : "#2a2a2a"}`,
+              color: autoListen ? "#d8b4fe" : "#6b7280",
+              boxShadow: autoListen ? "0 0 16px rgba(168,85,247,0.3)" : "none",
             }}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${autoListen ? "bg-purple-500 animate-pulse" : "bg-gray-600"}`} />
-            Modo conversa
+            <span className={`w-2 h-2 rounded-full ${autoListen ? "bg-purple-400 animate-pulse" : "bg-gray-600"}`} />
+            {autoListen ? "Conversa ativa" : "Conversa automática"}
           </button>
 
           <button
@@ -768,26 +781,43 @@ export default function AIAssistant({ open, onClose }: Props) {
             </button>
           </div>
 
-          <button
-            onClick={listening ? stopListening : startListening}
-            disabled={loading || micStarting}
-            className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-medium text-sm transition-all disabled:opacity-40"
-            style={{
-              background: listening
-                ? "linear-gradient(135deg,#dc2626,#ef4444)"
-                : "linear-gradient(135deg,#7c3aed,#a855f7)",
-              color: "white",
-              boxShadow: listening ? "0 0 20px rgba(239,68,68,0.4)" : "0 0 20px rgba(168,85,247,0.3)",
-            }}
-          >
-            {micStarting ? (
-              <><Loader2 size={18} className="animate-spin" /> Iniciando microfone...</>
-            ) : listening ? (
-              <><MicOff size={18} /> Parar de ouvir</>
-            ) : (
-              <><Mic size={18} /> {speaking ? "Interromper e falar" : "Falar com a Zora"}</>
-            )}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={listening ? stopListening : startListening}
+              disabled={loading || micStarting}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all disabled:opacity-40"
+              style={{
+                background: listening
+                  ? "linear-gradient(135deg,#dc2626,#ef4444)"
+                  : "linear-gradient(135deg,#7c3aed,#a855f7)",
+                color: "white",
+                boxShadow: listening ? "0 0 20px rgba(239,68,68,0.4)" : "0 0 20px rgba(168,85,247,0.3)",
+              }}
+            >
+              {micStarting ? (
+                <><Loader2 size={16} className="animate-spin" /> Iniciando...</>
+              ) : listening ? (
+                <><MicOff size={16} /> Parar</>
+              ) : (
+                <><Mic size={16} /> {speaking ? "Interromper" : "Falar"}</>
+              )}
+            </button>
+
+            {/* Toggle conversa automática */}
+            <button
+              onClick={() => setAutoListen(v => !v)}
+              title={autoListen ? "Desativar conversa automática" : "Ativar conversa automática (Zora ouve de volta após responder)"}
+              className="px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
+              style={{
+                background: autoListen ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.05)",
+                border: `1.5px solid ${autoListen ? "#a855f7" : "#2a2a2a"}`,
+                color: autoListen ? "#d8b4fe" : "#6b7280",
+              }}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${autoListen ? "bg-purple-400 animate-pulse" : "bg-gray-600"}`} />
+              {autoListen ? "Auto" : "Auto"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
