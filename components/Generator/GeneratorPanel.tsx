@@ -335,7 +335,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       ) : (
         <div className="flex items-center justify-between bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2">
           <span className="text-xs text-gray-500">Grátis · {session.user.name?.split(" ")[0]}</span>
-          <button onClick={goToCheckout} className="text-[11px] text-brand-400 hover:text-brand-300 underline transition-colors">
+          <button onClick={() => goToCheckout()} className="text-[11px] text-brand-400 hover:text-brand-300 underline transition-colors">
             Upgrade Pro
           </button>
         </div>
@@ -452,7 +452,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         </div>
         {!isPro && (
           <button
-            onClick={goToCheckout}
+            onClick={() => goToCheckout()}
             className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 text-xs font-medium transition-colors"
           >
             <Zap size={12} /> Fazer upgrade para imagens IA · Pro
@@ -572,7 +572,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
             ? <>Fotos reais do Google · busca automática</>
             : isPro
             ? <>Imagens geradas com Gemini / DALL-E 3 · estilo {IMAGE_STYLES.find(s => s.value === imageStyle)?.label}</>
-            : <>Imagens do Pexels · <button onClick={goToCheckout} className="text-yellow-400 underline">upgrade para IA</button></>
+            : <>Imagens do Pexels · <button onClick={() => goToCheckout()} className="text-yellow-400 underline">upgrade para IA</button></>
           }
         </div>
       )}
