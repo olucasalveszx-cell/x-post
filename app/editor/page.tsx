@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuid } from "uuid";
-import { Download, ArrowLeft, User, LogIn, Sparkles, Layers, X, MessageCircle, RotateCcw } from "lucide-react";
+import { Download, ArrowLeft, User, LogIn, Sparkles, Layers, X, MessageCircle, RotateCcw, Zap } from "lucide-react";
 import Link from "next/link";
 import { Slide } from "@/types";
 import { renderSlide } from "@/lib/render-slide";
@@ -56,6 +56,7 @@ export default function EditorPage() {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [credits, setCredits] = useState<{ remaining: number; limit: number; unlimited: boolean } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const AUTO_SAVE_KEY = "xpz_autosave_slides";
@@ -245,6 +246,13 @@ export default function EditorPage() {
   const [displayScale, setDisplayScale] = useState(560 / 1350);
 
   useEffect(() => {
+    fetch("/api/credits")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setCredits(data); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const update = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
@@ -278,6 +286,28 @@ export default function EditorPage() {
         </div>
 
         <div className="flex items-center gap-1.5 md:gap-2">
+          {credits && (
+            <div className="flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-semibold"
+              style={{
+                background: credits.unlimited || credits.remaining > 10
+                  ? "rgba(168,85,247,0.1)" : credits.remaining > 0
+                  ? "rgba(251,191,36,0.1)" : "rgba(239,68,68,0.1)",
+                borderColor: credits.unlimited || credits.remaining > 10
+                  ? "rgba(168,85,247,0.3)" : credits.remaining > 0
+                  ? "rgba(251,191,36,0.3)" : "rgba(239,68,68,0.3)",
+                color: credits.unlimited || credits.remaining > 10
+                  ? "#c084fc" : credits.remaining > 0
+                  ? "#fbbf24" : "#f87171",
+              }}>
+              <Zap size={11} />
+              <span className="hidden md:inline">
+                {credits.unlimited ? "∞ créditos" : `${credits.remaining}/${credits.limit}`}
+              </span>
+              <span className="md:hidden">
+                {credits.unlimited ? "∞" : credits.remaining}
+              </span>
+            </div>
+          )}
           <AuthButton />
           <button
             onClick={() => setShowAI(true)}

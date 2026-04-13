@@ -5,6 +5,7 @@ import { hasActiveSubscription } from "@/lib/stripe";
 import { isEmailActive } from "@/lib/kv";
 import { stripe } from "@/lib/stripe";
 import { verifyToken } from "@/lib/activation";
+import { consumeCredits } from "@/lib/credits";
 
 export const maxDuration = 55;
 
@@ -172,6 +173,17 @@ export async function POST(req: NextRequest) {
   }
   if (!isPro && customerId) isPro = await hasActiveSubscription(customerId).catch(() => false);
   if (!isPro && activationToken) { const { valid } = verifyToken(activationToken); isPro = valid; }
+
+  /* Créditos */
+  if (email) {
+    const credit = await consumeCredits(email, "flyer");
+    if (!credit.ok) {
+      return NextResponse.json(
+        { error: `Créditos insuficientes. Você usou todos os créditos do plano ${credit.plan} este mês. Faça upgrade para continuar.` },
+        { status: 402 }
+      );
+    }
+  }
 
   const prompt = buildPrompt({ productName, price, promoTitle, promoSubtitle, colorPreset, website, instagram, phone });
   const errors: string[] = [];

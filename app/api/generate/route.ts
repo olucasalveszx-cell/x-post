@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GenerateRequest, GeneratedContent, WritingStyle } from "@/types";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { consumeCredits } from "@/lib/credits";
 
 export const maxDuration = 60;
 
@@ -47,6 +50,19 @@ const styleInstructions: Record<WritingStyle, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    const email = session?.user?.email;
+
+    if (email) {
+      const credit = await consumeCredits(email, "carousel");
+      if (!credit.ok) {
+        return NextResponse.json(
+          { error: `Créditos insuficientes. Você usou todos os créditos do plano ${credit.plan} este mês. Faça upgrade para continuar.` },
+          { status: 402 }
+        );
+      }
+    }
+
     const body: GenerateRequest = await req.json();
     const { topic, searchResults, slideCount, writingStyle = "viral" } = body;
 
