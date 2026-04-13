@@ -4,9 +4,13 @@ import { stripe } from "@/lib/stripe";
 export const maxDuration = 30;
 
 const PLAN_PRICE: Record<string, string | undefined> = {
-  weekly:  process.env.STRIPE_PRICE_WEEKLY,
-  monthly: process.env.STRIPE_PRICE_MONTHLY ?? process.env.STRIPE_PRICE_ID,
-  annual:  process.env.STRIPE_PRICE_ANNUAL,
+  basic:    process.env.STRIPE_PRICE_BASIC,
+  pro:      process.env.STRIPE_PRICE_PRO,
+  business: process.env.STRIPE_PRICE_BUSINESS,
+  // compatibilidade com planos antigos
+  weekly:   process.env.STRIPE_PRICE_WEEKLY,
+  monthly:  process.env.STRIPE_PRICE_MONTHLY ?? process.env.STRIPE_PRICE_ID,
+  annual:   process.env.STRIPE_PRICE_ANNUAL,
 };
 
 export async function POST(req: NextRequest) {

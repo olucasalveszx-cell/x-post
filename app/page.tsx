@@ -23,28 +23,27 @@ const FEATURES = [
 
 const PLANS = [
   {
-    key: "weekly",
-    label: "Semanal",
-    price: "19,93",
+    key: "basic",
+    label: "Básico",
+    price: "29",
     cents: "",
-    period: "/ semana",
-    equiv: "≈ R$ 86/mês",
+    period: "/ mês",
+    equiv: null as string | null,
     highlight: false,
     badge: null as string | null,
     cta: "Começar agora",
     features: [
       "Carrosséis ilimitados com IA",
-      "Imagens geradas por IA",
-      "Publicação no Instagram",
       "Pesquisa web em tempo real",
       "Editor visual completo",
+      "Publicação no Instagram",
     ],
-    missing: ["Assistente IA de conteúdo", "Suporte prioritário"],
+    missing: ["Flyer promocional com IA", "Assistente IA (Zora)", "Suporte prioritário"],
   },
   {
-    key: "monthly",
-    label: "Mensal",
-    price: "39,97",
+    key: "pro",
+    label: "Pro",
+    price: "59",
     cents: "",
     period: "/ mês",
     equiv: null as string | null,
@@ -53,31 +52,31 @@ const PLANS = [
     cta: "Assinar agora",
     features: [
       "Carrosséis ilimitados com IA",
-      "Imagens geradas por IA",
-      "Publicação no Instagram",
       "Pesquisa web em tempo real",
       "Editor visual completo",
-      "Assistente IA de conteúdo",
+      "Publicação no Instagram",
+      "Flyer promocional com IA",
+      "Assistente IA (Zora)",
     ],
     missing: ["Suporte prioritário"],
   },
   {
-    key: "annual",
-    label: "Anual",
-    price: "412,78",
+    key: "business",
+    label: "Business",
+    price: "99",
     cents: "",
-    period: "/ ano",
-    equiv: "≈ R$ 34,40/mês",
+    period: "/ mês",
+    equiv: null as string | null,
     highlight: false,
-    badge: "Economize 14%" as string | null,
-    cta: "Melhor custo-benefício",
+    badge: "Mais completo" as string | null,
+    cta: "Quero o melhor",
     features: [
       "Carrosséis ilimitados com IA",
-      "Imagens geradas por IA",
-      "Publicação no Instagram",
       "Pesquisa web em tempo real",
       "Editor visual completo",
-      "Assistente IA de conteúdo",
+      "Publicação no Instagram",
+      "Flyer promocional com IA",
+      "Assistente IA (Zora)",
       "Suporte prioritário",
     ],
     missing: [],
@@ -366,9 +365,9 @@ export default function LandingPage() {
               <div className="flex items-center gap-2 mb-5">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center"
                   style={{ background: plan.highlight ? "rgba(168,85,247,0.3)" : "rgba(255,255,255,0.07)" }}>
-                  {plan.key === "weekly"  && <Clock    size={14} className="text-purple-300" />}
-                  {plan.key === "monthly" && <Star     size={14} className="text-purple-300" />}
-                  {plan.key === "annual"  && <Calendar size={14} className="text-purple-300" />}
+                  {plan.key === "basic"    && <Zap    size={14} className="text-purple-300" />}
+                  {plan.key === "pro"     && <Star   size={14} className="text-purple-300" />}
+                  {plan.key === "business"&& <Crown  size={14} className="text-yellow-400" />}
                 </div>
                 <span className="text-sm font-bold uppercase tracking-widest text-gray-300">{plan.label}</span>
               </div>
@@ -429,25 +428,25 @@ export default function LandingPage() {
           </div>
           {[
             "Carrosséis ilimitados",
-            "Imagens IA (FLUX)",
-            "Publicação Instagram",
             "Pesquisa na web",
             "Editor visual",
+            "Publicação Instagram",
+            "Flyer promocional IA",
             "Assistente IA (Zora)",
             "Suporte prioritário",
           ].map((row, ri) => (
             <div key={row} className="grid grid-cols-4 text-[13px]"
               style={{ borderBottom: ri < 6 ? "1px solid rgba(255,255,255,0.05)" : "none", background: ri % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)" }}>
               <div className="px-5 py-3 text-gray-400">{row}</div>
-              {/* Semanal */}
+              {/* Básico */}
               <div className="px-3 py-3 flex justify-center">
-                {ri <= 4 ? <Check size={16} className="text-purple-400" /> : <X size={14} className="text-gray-700" />}
+                {ri <= 3 ? <Check size={16} className="text-purple-400" /> : <X size={14} className="text-gray-700" />}
               </div>
-              {/* Mensal */}
+              {/* Pro */}
               <div className="px-3 py-3 flex justify-center">
                 {ri <= 5 ? <Check size={16} className="text-purple-400" /> : <X size={14} className="text-gray-700" />}
               </div>
-              {/* Anual */}
+              {/* Business */}
               <div className="px-3 py-3 flex justify-center">
                 <Check size={16} className="text-purple-400" />
               </div>
@@ -504,7 +503,7 @@ export default function LandingPage() {
           style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 40px rgba(124,58,237,0.4)" }}>
           <Sparkles size={20} /> Começar agora <ArrowRight size={20} />
         </button>
-        <p className="text-xs text-gray-600 mt-4">A partir de R$19,93/semana · Cancele quando quiser</p>
+        <p className="text-xs text-gray-600 mt-4">A partir de R$29/mês · Cancele quando quiser</p>
       </section>
 
       {/* ── FOOTER ─────────────────────────────────────────── */}
