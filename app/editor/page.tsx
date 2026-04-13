@@ -250,6 +250,13 @@ export default function EditorPage() {
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setCredits(data); })
       .catch(() => {});
+
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (d) setCredits(d);
+    };
+    window.addEventListener("credits-updated", handler);
+    return () => window.removeEventListener("credits-updated", handler);
   }, []);
 
   useEffect(() => {

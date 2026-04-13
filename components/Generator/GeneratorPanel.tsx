@@ -62,6 +62,8 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   const [inputMode, setInputMode] = useState<"topic" | "prompt">("topic");
   const [customPrompt, setCustomPrompt] = useState("");
   const [zoraHighlight, setZoraHighlight] = useState(false);
+  const [credits, setCredits] = useState<{ remaining: number; limit: number; unlimited: boolean; plan: string } | null>(null);
+  const [creditToast, setCreditToast] = useState<{ spent: number; remaining: number } | null>(null);
 
   // Recebe prompts gerados pela Zora
   useEffect(() => {
@@ -98,6 +100,15 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       .then((d) => setIsPro(d.active ?? false))
       .catch(() => {});
   }, [session]);
+
+  const fetchCredits = () => {
+    fetch("/api/credits")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) { setCredits(d); window.dispatchEvent(new CustomEvent("credits-updated", { detail: d })); } })
+      .catch(() => {});
+  };
+
+  useEffect(() => { fetchCredits(); }, [session]);
 
   const writingStyleOptions: { value: WritingStyle; label: string; desc: string }[] = [
     { value: "viral",        label: "⚡ Viral",        desc: "Chocante, para o scroll" },
@@ -222,6 +233,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         body: JSON.stringify({ topic, searchResults: searchData.results, slideCount, writingStyle }),
       });
       const genData: GeneratedContent = await genRes.json();
+      if (genRes.status === 402) throw new Error((genData as any).error);
       if (!genRes.ok) throw new Error((genData as any).error);
 
       setStatus("images");
@@ -232,6 +244,9 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       const slidesWithImages = await generateImages(slidesWithoutImages, (done) => setImageProgress(done));
       onGenerate(slidesWithImages);
       setStatus("done");
+      const prev = credits;
+      fetchCredits();
+      if (prev && !prev.unlimited) setCreditToast({ spent: 1, remaining: Math.max(0, prev.remaining - 1) });
     } catch (err: any) {
       setError(err.message ?? "Erro desconhecido");
       setStatus("error");
@@ -500,10 +515,34 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         </div>
       </div>}
 
+      {/* Indicador de créditos */}
+      {credits && !credits.unlimited && (
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg text-xs"
+          style={{
+            background: credits.remaining > 5 ? "rgba(168,85,247,0.08)" : credits.remaining > 0 ? "rgba(251,191,36,0.08)" : "rgba(239,68,68,0.08)",
+            border: `1px solid ${credits.remaining > 5 ? "rgba(168,85,247,0.2)" : credits.remaining > 0 ? "rgba(251,191,36,0.2)" : "rgba(239,68,68,0.2)"}`,
+          }}>
+          <span style={{ color: credits.remaining > 5 ? "#c084fc" : credits.remaining > 0 ? "#fbbf24" : "#f87171" }}
+            className="flex items-center gap-1">
+            <Zap size={11} />
+            {credits.remaining > 0 ? `Esta geração usa 1 crédito` : "Sem créditos disponíveis"}
+          </span>
+          <span className="text-gray-500">{credits.remaining}/{credits.limit} restantes</span>
+        </div>
+      )}
+
+      {/* Toast de créditos após gerar */}
+      {creditToast && (
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs animate-pulse">
+          <span className="text-green-400 flex items-center gap-1"><Zap size={11} /> 1 crédito usado</span>
+          <span className="text-gray-400">{creditToast.remaining} restantes este mês</span>
+        </div>
+      )}
+
       {/* Botão */}
       <button
         onClick={handleGenerate}
-        disabled={(inputMode === "topic" ? !topic.trim() : !customPrompt.trim()) || isLoading}
+        disabled={(inputMode === "topic" ? !topic.trim() : !customPrompt.trim()) || isLoading || (credits !== null && !credits.unlimited && credits.remaining <= 0)}
         className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
         {isLoading ? <Loader2 size={16} className="animate-spin" /> : inputMode === "prompt" ? <Terminal size={16} /> : <Sparkles size={16} />}
         {status === "searching" && "Pesquisando na web..."}
