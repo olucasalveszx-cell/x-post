@@ -80,6 +80,11 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   }, []);
 
   useEffect(() => {
+    // Admin bypass — sempre Pro
+    if ((session?.user as any)?.role === "admin") {
+      setIsPro(true);
+      return;
+    }
     // Se logado com Google, verifica pelo email da sessão
     if (session?.user?.email) {
       fetch(`/api/stripe/verify?email=${encodeURIComponent(session.user.email)}`)

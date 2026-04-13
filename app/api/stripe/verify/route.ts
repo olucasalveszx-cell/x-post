@@ -25,6 +25,12 @@ export async function GET(req: NextRequest) {
 
   // Via email (Google login) — verifica Kirvano KV + Stripe por email
   if (email) {
+    // 0. Admin bypass
+    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+    if (adminEmail && email.toLowerCase().trim() === adminEmail) {
+      return NextResponse.json({ active: true, source: "admin" });
+    }
+
     // 1. Verifica Kirvano
     const kirvanoActive = await isEmailActive(email).catch(() => false);
     if (kirvanoActive) return NextResponse.json({ active: true, source: "kirvano" });
