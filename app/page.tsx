@@ -25,7 +25,7 @@ const PLANS = [
   {
     key: "basic",
     label: "Básico",
-    price: "29",
+    price: "29,90",
     cents: "",
     period: "/ mês",
     equiv: null as string | null,
@@ -43,7 +43,7 @@ const PLANS = [
   {
     key: "pro",
     label: "Pro",
-    price: "59",
+    price: "61,90",
     cents: "",
     period: "/ mês",
     equiv: null as string | null,
@@ -63,7 +63,7 @@ const PLANS = [
   {
     key: "business",
     label: "Business",
-    price: "99",
+    price: "99,90",
     cents: "",
     period: "/ mês",
     equiv: null as string | null,
@@ -503,7 +503,7 @@ export default function LandingPage() {
           style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 40px rgba(124,58,237,0.4)" }}>
           <Sparkles size={20} /> Começar agora <ArrowRight size={20} />
         </button>
-        <p className="text-xs text-gray-600 mt-4">A partir de R$29/mês · Cancele quando quiser</p>
+        <p className="text-xs text-gray-600 mt-4">A partir de R$29,90/mês · Cancele quando quiser</p>
       </section>
 
       {/* ── FOOTER ─────────────────────────────────────────── */}
