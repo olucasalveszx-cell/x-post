@@ -69,12 +69,23 @@ export async function POST(req: NextRequest) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return NextResponse.json({ error: "ANTHROPIC_API_KEY não configurada" }, { status: 500 });
 
+  // A API da Anthropic exige que a primeira mensagem seja do usuário.
+  // A mensagem de boas-vindas da Zora (role "assistant") é apenas visual —
+  // removemos qualquer mensagem "assistant" no início do array antes de enviar.
+  const apiMessages = messages.filter((_: any, i: number) =>
+    !(i === 0 && messages[0].role === "assistant")
+  );
+
+  if (!apiMessages.length || apiMessages[0].role !== "user") {
+    return NextResponse.json({ error: "Nenhuma mensagem do usuário encontrada." }, { status: 400 });
+  }
+
   try {
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 1024,
       system: SYSTEM,
-      messages,
+      messages: apiMessages,
     });
 
     const text = response.content[0]?.type === "text" ? response.content[0].text : "";
