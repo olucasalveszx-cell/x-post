@@ -54,7 +54,8 @@ export async function POST(req: NextRequest) {
     const email = session?.user?.email;
 
     if (email) {
-      const credit = await consumeCredits(email, "carousel");
+      const action = imageStyle === "foto_real" ? "carousel" : "carousel_ai";
+      const credit = await consumeCredits(email, action);
       if (!credit.ok) {
         return NextResponse.json(
           { error: `Créditos insuficientes. Você usou todos os créditos do plano ${credit.plan} este mês. Faça upgrade para continuar.` },
@@ -63,8 +64,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const body: GenerateRequest = await req.json();
-    const { topic, searchResults, slideCount, writingStyle = "viral" } = body;
+    const body: GenerateRequest & { imageStyle?: string } = await req.json();
+    const { topic, searchResults, slideCount, writingStyle = "viral", imageStyle } = body;
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     console.log("[generate] key presente:", !!apiKey, "prefix:", apiKey?.slice(0, 14));

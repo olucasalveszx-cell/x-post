@@ -235,7 +235,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       const genRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, searchResults: searchData.results, slideCount, writingStyle }),
+        body: JSON.stringify({ topic, searchResults: searchData.results, slideCount, writingStyle, imageStyle }),
       });
       const genData: GeneratedContent = await genRes.json();
       if (genRes.status === 402) throw new Error((genData as any).error);
@@ -251,7 +251,8 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       setStatus("done");
       const prev = credits;
       fetchCredits();
-      if (prev && !prev.unlimited) setCreditToast({ spent: 1, remaining: Math.max(0, prev.remaining - 1) });
+      const cost = imageStyle === "foto_real" ? 1 : 2;
+      if (prev && !prev.unlimited) setCreditToast({ spent: cost, remaining: Math.max(0, prev.remaining - cost) });
     } catch (err: any) {
       setError(err.message ?? "Erro desconhecido");
       setStatus("error");
@@ -534,7 +535,9 @@ export default function GeneratorPanel({ onGenerate }: Props) {
           <span style={{ color: credits.remaining > 5 ? "#c084fc" : credits.remaining > 0 ? "#fbbf24" : "#f87171" }}
             className="flex items-center gap-1">
             <Zap size={11} />
-            {credits.remaining > 0 ? `Esta geração usa 1 crédito` : "Sem créditos disponíveis"}
+            {credits.remaining > 0
+              ? `Esta geração usa ${imageStyle === "foto_real" ? "1" : "2"} crédito${imageStyle === "foto_real" ? "" : "s"}`
+              : "Sem créditos disponíveis"}
           </span>
           <span className="text-gray-500">{credits.remaining}/{credits.limit} restantes</span>
         </div>
@@ -543,7 +546,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       {/* Toast de créditos após gerar */}
       {creditToast && (
         <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs animate-pulse">
-          <span className="text-green-400 flex items-center gap-1"><Zap size={11} /> 1 crédito usado</span>
+          <span className="text-green-400 flex items-center gap-1"><Zap size={11} /> {creditToast.spent} crédito{creditToast.spent > 1 ? "s" : ""} usado{creditToast.spent > 1 ? "s" : ""}</span>
           <span className="text-gray-400">{creditToast.remaining} restantes este mês</span>
         </div>
       )}

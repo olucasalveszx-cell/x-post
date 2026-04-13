@@ -13,17 +13,18 @@ async function redis(cmd: string[]) {
 /* ── Limites por plano ── */
 export const PLAN_LIMITS: Record<string, number> = {
   basic:    30,
-  pro:      80,
+  pro:      45,
   business: -1, // -1 = ilimitado
   free:      5,
 };
 
 /* ── Custo por ação ── */
 export const ACTION_COST: Record<string, number> = {
-  carousel: 1,
-  flyer:    2,
-  promo:    1,
-  translate: 1,
+  carousel:    1,  // foto real (Google)
+  carousel_ai: 2,  // imagens geradas por IA
+  flyer:       2,
+  promo:       1,
+  translate:   1,
 };
 
 /* ── Detecta plano pelo price ID ── */
