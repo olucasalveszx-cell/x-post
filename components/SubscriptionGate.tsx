@@ -7,9 +7,9 @@ import { Sparkles, Loader2, Lock, ArrowRight, Check } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
 
 const PLANS = [
-  { key: "weekly",  label: "Semanal",  price: "19,93", period: "semana" },
-  { key: "monthly", label: "Mensal",   price: "39,97", period: "mês", popular: true },
-  { key: "annual",  label: "Anual",    price: "412,78", period: "ano", badge: "−14%" },
+  { key: "basic",    label: "Básico",   price: "29,90", period: "mês" },
+  { key: "pro",      label: "Pro",      price: "61,90", period: "mês", popular: true },
+  { key: "business", label: "Business", price: "99,90", period: "mês", badge: "Completo" },
 ];
 
 export default function SubscriptionGate({ children }: { children: React.ReactNode }) {

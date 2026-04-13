@@ -285,9 +285,13 @@ export default function GeneratorPanel({ onGenerate }: Props) {
 
   const isLoading = ["searching", "generating", "images"].includes(status);
 
-  const goToCheckout = async () => {
+  const goToCheckout = async (plan = "pro") => {
     try {
-      const res = await fetch("/api/stripe/checkout", { method: "POST" });
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
       const data = await res.json();
       if (!res.ok || !data.url) {
         alert("Erro ao abrir checkout: " + (data.error ?? res.status));
