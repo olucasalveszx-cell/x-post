@@ -150,57 +150,161 @@ export default function LandingPage() {
       </header>
 
       {/* ── HERO ───────────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center text-center px-5 pt-24 pb-16 overflow-hidden">
-        {/* Glow fundo */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.18) 0%,transparent 70%)", filter: "blur(40px)" }} />
+      <section className="relative flex flex-col items-center text-center overflow-hidden"
+        style={{ minHeight: "100vh", background: "#020202" }}>
 
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-purple-500/25 bg-purple-500/8 text-purple-300 text-xs font-semibold mb-7 tracking-wide"
-          style={{ background: "rgba(124,58,237,0.1)" }}>
-          <Zap size={11} className="text-yellow-400" />
-          IA que pesquisa, escreve e publica por você
-        </div>
+        {/* Grid sutil de fundo */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px)",
+          backgroundSize: "72px 72px",
+        }} />
 
-        <h1 className="text-[42px] md:text-[72px] lg:text-[84px] font-black leading-[1.0] max-w-4xl tracking-tight">
-          Carrosséis{" "}
-          <span style={{ background: "linear-gradient(135deg,#c084fc,#ec4899,#f97316)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            virais
-          </span>
-          <br />no Instagram em{" "}
-          <span style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            segundos
-          </span>
-        </h1>
+        {/* Glow roxo atrás do logo */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{
+          width: 900, height: 620,
+          background: "radial-gradient(ellipse at 50% 30%, rgba(109,40,217,0.32) 0%, transparent 65%)",
+          filter: "blur(24px)",
+        }} />
 
-        <p className="mt-6 text-gray-400 text-lg md:text-xl max-w-xl leading-relaxed">
-          IA que pesquisa na web, escreve o texto e gera as imagens.
-          Do zero ao carrossel publicado — sem Canva, sem ChatGPT.
-        </p>
+        {/* Glow lateral esquerdo */}
+        <div className="absolute top-1/3 -left-20 pointer-events-none" style={{
+          width: 300, height: 400,
+          background: "radial-gradient(ellipse, rgba(168,85,247,0.1) 0%, transparent 70%)",
+          filter: "blur(40px)",
+        }} />
 
-        <div className="flex flex-col sm:flex-row items-center gap-3 mt-10">
-          <button onClick={scrollToPricing}
-            className="flex items-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-[15px] transition-all hover:scale-105 hover:brightness-110"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 32px rgba(124,58,237,0.4)" }}>
-            <Sparkles size={17} />
-            Criar meu carrossel agora
-            <ArrowRight size={17} />
-          </button>
-          <Link href="/editor"
-            className="flex items-center gap-2 px-5 py-4 rounded-2xl text-sm font-semibold text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all"
-            style={{ background: "rgba(255,255,255,0.04)" }}>
-            Ver editor →
-          </Link>
-        </div>
+        <div className="relative z-10 flex flex-col items-center w-full px-5 pt-20 pb-10">
 
-        {/* Trust badges */}
-        <div className="flex flex-wrap justify-center gap-5 mt-10 text-xs text-gray-500">
-          {[
-            { icon: <Shield size={12} className="text-green-400" />, text: "Pagamento seguro" },
-            { icon: <Star size={12} className="text-yellow-400" />,  text: "Cancele quando quiser" },
-            { icon: <Zap size={12} className="text-purple-400" />,   text: "Acesso imediato" },
-          ].map((b) => (
-            <span key={b.text} className="flex items-center gap-1.5">{b.icon}{b.text}</span>
-          ))}
+          {/* ── XP ZONE logo graffiti ── */}
+          <div className="relative select-none mb-4" style={{ lineHeight: 0.85 }}>
+
+            {/* XP */}
+            <div style={{
+              fontSize: "clamp(108px, 19vw, 230px)",
+              fontWeight: 900,
+              fontFamily: "Impact, 'Arial Black', 'Haettenschweiler', sans-serif",
+              color: "#ffffff",
+              WebkitTextStroke: "3px rgba(0,0,0,0.6)",
+              textShadow: [
+                "0 0 80px rgba(120,0,255,0.55)",
+                "0 0 160px rgba(120,0,255,0.25)",
+                "4px 4px 0 #000",
+                "-4px 4px 0 #000",
+                "4px -4px 0 #000",
+                "-4px -4px 0 #000",
+                "0 8px 30px rgba(0,0,0,0.9)",
+              ].join(","),
+              transform: "skewX(-4deg)",
+              letterSpacing: "-0.04em",
+            }}>XP</div>
+
+            {/* Raio SVG centralizado */}
+            <div className="absolute pointer-events-none" style={{ top: "38%", left: "50%", transform: "translate(-50%,-15%)", zIndex: 20 }}>
+              <svg width="52" height="150" viewBox="0 0 52 150" fill="none">
+                <defs>
+                  <filter id="boltGlow">
+                    <feGaussianBlur stdDeviation="5" result="b" />
+                    <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
+                </defs>
+                <path d="M32 2 L8 70 L24 70 L17 148 L48 62 L30 62 Z" fill="#9333ea" filter="url(#boltGlow)" />
+                <path d="M32 12 L14 66 L28 66 L22 128 L44 68 L29 68 Z" fill="#c084fc" opacity="0.45" />
+              </svg>
+            </div>
+
+            {/* ZONE */}
+            <div style={{
+              fontSize: "clamp(46px, 8.5vw, 112px)",
+              fontWeight: 900,
+              fontFamily: "Impact, 'Arial Black', sans-serif",
+              background: "linear-gradient(135deg, #e9d5ff 0%, #a855f7 35%, #7c3aed 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              filter: "drop-shadow(0 0 22px rgba(168,85,247,0.9)) drop-shadow(0 0 50px rgba(168,85,247,0.5))",
+              transform: "skewX(-7deg)",
+              letterSpacing: "0.14em",
+              marginTop: "6px",
+            }}>ZONE</div>
+          </div>
+
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-purple-300 text-xs font-semibold mt-5 mb-5 tracking-wide"
+            style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(168,85,247,0.28)" }}>
+            <Zap size={11} className="text-yellow-400" />
+            IA que pesquisa, escreve e publica por você
+          </div>
+
+          {/* Subtítulo */}
+          <p className="text-gray-400 text-base md:text-lg max-w-md leading-relaxed mb-8">
+            Carrosséis virais para o Instagram em segundos.<br className="hidden sm:block" />
+            Do zero ao publicado — sem Canva, sem ChatGPT.
+          </p>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 mb-14">
+            <button onClick={scrollToPricing}
+              className="flex items-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-[15px] transition-all hover:scale-105 hover:brightness-110"
+              style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 32px rgba(124,58,237,0.45)" }}>
+              <Sparkles size={17} /> Criar meu carrossel agora <ArrowRight size={17} />
+            </button>
+            <Link href="/editor"
+              className="flex items-center gap-2 px-5 py-4 rounded-2xl text-sm font-semibold text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all"
+              style={{ background: "rgba(255,255,255,0.04)" }}>
+              Ver editor →
+            </Link>
+          </div>
+
+          {/* Mock cards do editor */}
+          <div className="flex items-end justify-center gap-3 w-full max-w-lg mx-auto mb-10">
+            {[
+              { bg: "#0d0a1f", accent: "#6366f1", title: "5 ERROS",  sub: "que travam seu alcance", deg: "-7deg", y: "18px", s: 0.87 },
+              { bg: "#1a0510", accent: "#ec4899", title: "VIRAL",    sub: "em 30s com IA",          deg: "0deg",  y: "0px",  s: 1,    featured: true },
+              { bg: "#071a10", accent: "#10b981", title: "3 DICAS",  sub: "dobrar o engajamento",   deg: "7deg",  y: "18px", s: 0.87 },
+            ].map((c, i) => (
+              <div key={i} className="flex-shrink-0 relative" style={{
+                width: c.featured ? 154 : 122,
+                height: c.featured ? 196 : 162,
+                borderRadius: 14,
+                background: c.bg,
+                border: `1px solid ${c.accent}50`,
+                transform: `rotate(${c.deg}) scale(${c.s}) translateY(${c.y})`,
+                boxShadow: c.featured
+                  ? `0 0 35px ${c.accent}35, 0 20px 50px rgba(0,0,0,0.7)`
+                  : "0 12px 30px rgba(0,0,0,0.6)",
+                overflow: "hidden",
+                padding: "12px 10px 10px",
+                display: "flex",
+                flexDirection: "column",
+              }}>
+                {/* Barra colorida topo */}
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${c.accent}, transparent)` }} />
+                {/* Área de imagem fake */}
+                <div style={{ flex: 1, borderRadius: 8, background: `linear-gradient(135deg, ${c.accent}20, ${c.accent}05)`, marginBottom: 8, position: "relative", overflow: "hidden" }}>
+                  <div style={{ position: "absolute", bottom: 6, left: 6, right: 6, height: 2, background: c.accent, opacity: 0.3, borderRadius: 2 }} />
+                  <div style={{ position: "absolute", bottom: 12, left: 6, right: 14, height: 2, background: c.accent, opacity: 0.15, borderRadius: 2 }} />
+                </div>
+                {/* Título */}
+                <div style={{ fontWeight: 900, fontSize: c.featured ? 17 : 13, color: "white", lineHeight: 1.1, letterSpacing: "-0.01em" }}>{c.title}</div>
+                <div style={{ fontSize: 8, color: "rgba(255,255,255,0.4)", marginTop: 3, lineHeight: 1.3 }}>{c.sub}</div>
+                {/* XP badge no featured */}
+                {c.featured && (
+                  <div style={{ position: "absolute", top: 8, right: 8, fontSize: 8, fontWeight: 900, color: c.accent, letterSpacing: "0.05em", opacity: 0.7 }}>XP</div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Trust badges */}
+          <div className="flex flex-wrap justify-center gap-5 text-xs text-gray-600">
+            {[
+              { icon: <Shield size={12} className="text-green-400" />, text: "Pagamento seguro" },
+              { icon: <Star size={12} className="text-yellow-400" />,  text: "Cancele quando quiser" },
+              { icon: <Zap size={12} className="text-purple-400" />,   text: "Acesso imediato" },
+            ].map((b) => (
+              <span key={b.text} className="flex items-center gap-1.5">{b.icon}{b.text}</span>
+            ))}
+          </div>
+
         </div>
       </section>
 
