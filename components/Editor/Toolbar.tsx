@@ -118,8 +118,11 @@ export default function Toolbar({
 
     const W = slide.width;
     const H = slide.height;
-    const textEls = slide.elements.filter((e) => e.type === "text");
-    const [titleEl, bodyEl] = textEls;
+    // Ignora elementos de header (y < 12%) e footer (y > 82%) — são @handle, marca, dots, etc.
+    const contentEls = slide.elements.filter((e) =>
+      e.type === "text" && e.y >= H * 0.12 && e.y <= H * 0.82
+    );
+    const [titleEl, bodyEl] = contentEls;
     let newElements = [...slide.elements];
 
     if (presetId === "top55" || presetId === "top40") {
@@ -176,8 +179,11 @@ export default function Toolbar({
     const layout = LAYOUTS.find(l => l.id === layoutId);
     if (!layout) return;
 
-    const textEls = slide.elements.filter(e => e.type === "text");
-    const [titleEl, bodyEl] = textEls;
+    // Ignora header (y < 12%) e footer (y > 82%)
+    const contentEls = slide.elements.filter(e =>
+      e.type === "text" && e.y >= H * 0.12 && e.y <= H * 0.82
+    );
+    const [titleEl, bodyEl] = contentEls;
 
     let newElements = [...slide.elements];
 
