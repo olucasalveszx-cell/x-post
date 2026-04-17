@@ -5,7 +5,6 @@ export const maxDuration = 55;
 const EDIT_MODELS = [
   "gemini-2.0-flash-preview-image-generation",
   "gemini-2.0-flash-exp-image-generation",
-  "gemini-2.0-flash-exp",
 ];
 
 export async function POST(req: NextRequest) {

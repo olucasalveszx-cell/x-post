@@ -59,8 +59,32 @@ function WhatsAppButton() {
   );
 }
 
-// ── Mascote papagaio Xpo com X no peito ──────────────────────
-function ParrotMascot({ size = 200, className = "" }: { size?: number; className?: string }) {
+// ── Ícone Zora (avatar IA) ────────────────────────────────────
+function ZoraAvatar({ size = 48 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="zoraBg" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#a78bfa" />
+          <stop offset="100%" stopColor="#4c1d95" />
+        </radialGradient>
+        <filter id="zoraGlow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <circle cx="24" cy="24" r="24" fill="url(#zoraBg)" />
+      <g filter="url(#zoraGlow)" stroke="#c084fc" strokeWidth="2.5" strokeLinecap="round" fill="none">
+        <path d="M14 18 L34 18 L24 32 Z" />
+        <path d="M18 26 L30 26" opacity="0.5" />
+      </g>
+      <circle cx="24" cy="24" r="3.5" fill="#e9d5ff" opacity="0.9" />
+    </svg>
+  );
+}
+
+// ── [SVG mascote removido] — mantido apenas como guard de TS ──
+function __LegacySVG({ size = 200, className = "" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 -35 200 255" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
@@ -153,11 +177,14 @@ function ParrotMascot({ size = 200, className = "" }: { size?: number; className
   );
 }
 
-// ── Logo header (mascote pequeno + texto) ─────────────────────
+// ── Logo header ───────────────────────────────────────────────
 function Logo({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <ParrotMascot size={36} />
+      <div className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-[17px] text-white select-none"
+        style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 0 12px rgba(124,58,237,0.4)" }}>
+        X
+      </div>
       <span className="text-[22px] font-black tracking-tight text-white leading-none">
         x<span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>post</span>
       </span>
@@ -336,26 +363,63 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Coluna mascote */}
-          <div className="flex-shrink-0 flex flex-col items-center justify-center relative lg:w-[420px]">
-            {/* Anel de glow atrás do mascote */}
-            <div className="absolute w-[300px] h-[300px] rounded-full pointer-events-none"
-              style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.22) 0%,transparent 70%)", filter: "blur(30px)" }} />
-            <div className="absolute w-[200px] h-[200px] rounded-full pointer-events-none"
-              style={{ background: "radial-gradient(ellipse,rgba(236,72,153,0.12) 0%,transparent 70%)", filter: "blur(20px)" }} />
-
-            <div className="relative" style={{ filter: "drop-shadow(0 0 30px rgba(124,58,237,0.3))" }}>
-              <ParrotMascot size={280} className="drop-shadow-2xl" />
-            </div>
-
-            {/* Badge flutuante */}
-            <div className="absolute top-4 right-4 lg:right-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold"
-              style={{ background: "rgba(124,58,237,0.18)", border: "1px solid rgba(168,85,247,0.35)", color: "#c084fc" }}>
-              <Sparkles size={10} /> IA gerada
-            </div>
-            <div className="absolute bottom-8 left-4 lg:left-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold"
-              style={{ background: "rgba(236,72,153,0.15)", border: "1px solid rgba(236,72,153,0.3)", color: "#f472b6" }}>
-              <Instagram size={10} /> Pronto pra postar
+          {/* Coluna visual — card de preview do produto */}
+          <div className="flex-shrink-0 flex flex-col items-center justify-center relative lg:w-[400px]">
+            <div className="relative w-full max-w-[360px]">
+              {/* Glow de fundo */}
+              <div className="absolute -inset-8 rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.18) 0%,transparent 70%)", filter: "blur(30px)" }} />
+              {/* Card principal */}
+              <div className="relative rounded-3xl overflow-hidden border border-white/10"
+                style={{ background: "linear-gradient(160deg,rgba(124,58,237,0.18),rgba(30,10,60,0.9))", backdropFilter: "blur(12px)" }}>
+                {/* Header do card */}
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+                  </div>
+                  <span className="text-[11px] text-gray-500 font-mono ml-1">xpost — editor</span>
+                </div>
+                {/* Slides simulados */}
+                <div className="p-4 flex gap-2 overflow-hidden">
+                  {[
+                    { bg: "linear-gradient(135deg,#4f46e5,#7c3aed)", title: "Como vender mais em 2025", sub: "3 estratégias que funcionam" },
+                    { bg: "linear-gradient(135deg,#0f172a,#1e3a5f)", title: "O segredo do engajamento", sub: "Revelado pela IA" },
+                    { bg: "linear-gradient(135deg,#1a0533,#6d28d9)", title: "Crescimento no Instagram", sub: "Do zero a 10k seguidores" },
+                  ].map((s, i) => (
+                    <div key={i} className="flex-shrink-0 rounded-2xl overflow-hidden relative"
+                      style={{ width: 100, height: 130, background: s.bg, opacity: i === 0 ? 1 : 0.6 + i * 0.1 }}>
+                      <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.9) 0%,transparent 60%)" }} />
+                      <div className="absolute bottom-0 left-0 right-0 p-2">
+                        <div className="text-white font-bold leading-tight mb-0.5" style={{ fontSize: 7 }}>{s.title}</div>
+                        <div className="text-gray-400" style={{ fontSize: 6 }}>{s.sub}</div>
+                      </div>
+                      {i === 0 && (
+                        <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[6px] font-bold text-white"
+                          style={{ background: "rgba(168,85,247,0.7)" }}>IA</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {/* Status bar */}
+                <div className="px-4 pb-4 flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full w-2/3 rounded-full" style={{ background: "linear-gradient(to right,#7c3aed,#a855f7)" }} />
+                  </div>
+                  <span className="text-[10px] text-gray-500">Gerando...</span>
+                  <Sparkles size={10} className="text-purple-400 animate-pulse" />
+                </div>
+              </div>
+              {/* Badges flutuantes */}
+              <div className="absolute -top-2 -right-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold"
+                style={{ background: "rgba(124,58,237,0.2)", border: "1px solid rgba(168,85,247,0.4)", color: "#c084fc" }}>
+                <Sparkles size={9} /> IA gerada
+              </div>
+              <div className="absolute -bottom-2 -left-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold"
+                style={{ background: "rgba(236,72,153,0.15)", border: "1px solid rgba(236,72,153,0.3)", color: "#f472b6" }}>
+                <Instagram size={9} /> Pronto pra postar
+              </div>
             </div>
           </div>
         </div>
@@ -404,29 +468,56 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── MASCOTE DESTAQUE ────────────────────────────────── */}
+      {/* ── ZORA — ASSISTENTE IA ────────────────────────────── */}
       <section className="px-5 py-10 max-w-4xl mx-auto">
         <div className="relative rounded-3xl overflow-hidden flex flex-col md:flex-row items-center gap-8 p-8 md:p-10"
-          style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.12),rgba(236,72,153,0.06))", border: "1.5px solid rgba(168,85,247,0.2)" }}>
+          style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.14),rgba(236,72,153,0.06))", border: "1.5px solid rgba(168,85,247,0.25)" }}>
           <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "radial-gradient(ellipse 60% 80% at 80% 50%,rgba(124,58,237,0.08) 0%,transparent 70%)" }} />
-          <ParrotMascot size={140} className="flex-shrink-0 relative" />
+            style={{ background: "radial-gradient(ellipse 60% 80% at 80% 50%,rgba(124,58,237,0.10) 0%,transparent 70%)" }} />
+
+          {/* Avatar Zora */}
+          <div className="flex-shrink-0 relative flex flex-col items-center gap-3">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.4) 0%,transparent 70%)", filter: "blur(18px)", transform: "scale(1.4)" }} />
+              <div className="relative w-28 h-28 rounded-full flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg,#4c1d95,#7c3aed)", border: "2px solid rgba(168,85,247,0.5)", boxShadow: "0 0 32px rgba(124,58,237,0.4)" }}>
+                <ZoraAvatar size={64} />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", border: "2px solid #060606" }}>
+                <Sparkles size={12} className="text-white" />
+              </div>
+            </div>
+            <div className="px-3 py-1 rounded-full text-[11px] font-bold"
+              style={{ background: "rgba(168,85,247,0.15)", border: "1px solid rgba(168,85,247,0.3)", color: "#c084fc" }}>
+              Planos Pro & Business
+            </div>
+          </div>
+
           <div className="relative text-center md:text-left">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-purple-400/70 mb-2">Seu novo assistente</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-purple-400/70 mb-2">Sua assistente de IA</p>
             <h3 className="text-2xl md:text-3xl font-black mb-3">
-              Conheça o{" "}
+              Conheça a{" "}
               <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                Xpo
+                Zora
               </span>
-              , o mascote do XPost
             </h3>
-            <p className="text-gray-400 text-sm leading-relaxed max-w-md">
-              Com o <strong className="text-purple-400">X</strong> no peito, o Xpo enfrenta qualquer nicho — pesquisa, escreve, gera imagens e publica no Instagram por você. Ele não descansa até seu conteúdo ficar perfeito.
+            <p className="text-gray-400 text-sm leading-relaxed max-w-md mb-4">
+              A Zora é a assistente de IA integrada ao XPost. Ela sugere pautas, responde perguntas sobre o seu nicho, ajuda a refinar textos e orienta sua estratégia de conteúdo — disponível direto no editor.
             </p>
+            <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-5">
+              {["Sugestão de pautas", "Refinar textos", "Estratégia de nicho", "Responde dúvidas", "Sempre disponível"].map((tag) => (
+                <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium"
+                  style={{ background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.2)", color: "#d8b4fe" }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
             <button onClick={scrollToPricing}
-              className="mt-5 inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all hover:scale-105"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all hover:scale-105"
               style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}>
-              <Sparkles size={14} /> Começar com o Xpo
+              <Sparkles size={14} /> Acessar a Zora
             </button>
           </div>
         </div>
@@ -511,12 +602,6 @@ export default function LandingPage() {
       {/* ── PRICING ────────────────────────────────────────── */}
       <section ref={pricingRef} id="pricing" className="px-5 py-20 max-w-5xl mx-auto scroll-mt-16">
         <div className="text-center mb-14 relative">
-          {/* Papagaio sobrevoando */}
-          <div className="absolute -top-10 right-4 md:right-10 pointer-events-none select-none"
-            style={{ filter: "drop-shadow(0 0 18px rgba(124,58,237,0.35))", animation: "float 3.5s ease-in-out infinite" }}>
-            <ParrotMascot size={88} />
-          </div>
-          <style>{`@keyframes float { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-12px) rotate(4deg)} }`}</style>
           <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Planos e preços</p>
           <h2 className="text-3xl md:text-5xl font-black">
             Escolha e{" "}
@@ -651,7 +736,6 @@ export default function LandingPage() {
       <section className="px-5 py-24 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse 70% 60% at 50% 100%,rgba(124,58,237,0.12) 0%,transparent 70%)" }} />
-        <ParrotMascot size={90} className="mx-auto mb-6 opacity-90" />
         <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-4">Comece hoje</p>
         <h2 className="text-3xl md:text-5xl font-black leading-tight max-w-xl mx-auto mb-5">
           Pare de perder tempo.{" "}
@@ -674,7 +758,8 @@ export default function LandingPage() {
       <footer className="px-5 py-10 text-center text-xs text-gray-600"
         style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="flex items-center justify-center gap-2 mb-3">
-          <ParrotMascot size={32} />
+          <div className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-[12px] text-white"
+            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>X</div>
           <span className="font-black text-gray-400 text-sm">
             x<span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>post</span>
           </span>
