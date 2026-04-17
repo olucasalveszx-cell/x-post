@@ -23,44 +23,92 @@ function applyAccent(text: string, accentColor: string): string {
 }
 
 function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & { _imagePrompt: string; _searchQuery: string })[] {
+  const W = SLIDE_W;
+  const H = SLIDE_H;
+  const N = generated.slides.length;
+  const handle = ws.handle ? `@${ws.handle.replace(/^@/, "")}` : "";
+  const brand = ws.brandName || "";
+  const ctitle = ws.carouselTitle || "";
+
   return generated.slides.map((gs, i) => {
-    const bg = gs.colorScheme.background;
     const accent = gs.colorScheme.accent;
-    const isLast = i === generated.slides.length - 1;
-    const elements = [];
+    const isLast = i === N - 1;
+    const elements: any[] = [];
 
-    elements.push({
-      id: uuid(), type: "text" as const,
-      x: 64, y: SLIDE_H - 520, width: SLIDE_W - 128, height: 340,
-      content: applyAccent(gs.title, accent),
-      style: { fontSize: 92, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: "left" as const, lineHeight: 1.0 },
-    });
-
-    elements.push({
-      id: uuid(), type: "text" as const,
-      x: 64, y: SLIDE_H - 172, width: SLIDE_W - 128, height: 108,
-      content: gs.body,
-      style: { fontSize: 26, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.65)", textAlign: "left" as const, lineHeight: 1.45 },
-    });
-
-    if (isLast && gs.callToAction) {
+    // ── Header ───────────────────────────────────────────
+    if (handle) {
       elements.push({
         id: uuid(), type: "text" as const,
-        x: 64, y: SLIDE_H - 64, width: SLIDE_W - 128, height: 48,
-        content: `<span style="color:${accent}">${gs.callToAction}</span>`,
-        style: { fontSize: 24, fontWeight: "bold" as const, fontFamily: "sans-serif", color: accent, textAlign: "left" as const, lineHeight: 1 },
+        x: 60, y: 36, width: W * 0.44, height: 52,
+        content: handle,
+        style: { fontSize: 27, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.55)", textAlign: "left" as const, lineHeight: 1 },
+      });
+    }
+    if (ctitle) {
+      elements.push({
+        id: uuid(), type: "text" as const,
+        x: W * 0.44, y: 36, width: W * 0.52, height: 52,
+        content: ctitle,
+        style: { fontSize: 27, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.55)", textAlign: "right" as const, lineHeight: 1 },
       });
     }
 
+    // ── Title ─────────────────────────────────────────────
+    elements.push({
+      id: uuid(), type: "text" as const,
+      x: 60, y: H - 510, width: W - 120, height: 310,
+      content: applyAccent(gs.title, accent),
+      style: { fontSize: 90, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: "center" as const, lineHeight: 1.0 },
+    });
+
+    // ── Body ──────────────────────────────────────────────
+    elements.push({
+      id: uuid(), type: "text" as const,
+      x: 80, y: H - 192, width: W - 160, height: 110,
+      content: isLast && gs.callToAction ? gs.callToAction : gs.body,
+      style: { fontSize: 28, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.65)", textAlign: "center" as const, lineHeight: 1.4 },
+    });
+
+    // ── Footer ────────────────────────────────────────────
+    const FY = H - 82;
+
+    if (brand) {
+      elements.push({
+        id: uuid(), type: "text" as const,
+        x: 60, y: FY, width: W * 0.32, height: 70,
+        content: brand,
+        style: { fontSize: 25, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.4)", textAlign: "left" as const, lineHeight: 1 },
+      });
+    }
+
+    // Dots
+    const dots = Array.from({ length: N }, (_, di) =>
+      di === i ? `<span style="color:rgba(255,255,255,0.9)">●</span>` : `<span style="color:rgba(255,255,255,0.18)">●</span>`
+    ).join(" ");
+    elements.push({
+      id: uuid(), type: "text" as const,
+      x: W * 0.28, y: FY + 8, width: W * 0.44, height: 56,
+      content: dots,
+      style: { fontSize: 20, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.25)", textAlign: "center" as const, lineHeight: 1 },
+    });
+
+    // Arrasta / Salva
+    elements.push({
+      id: uuid(), type: "text" as const,
+      x: W * 0.6, y: FY, width: W * 0.35, height: 70,
+      content: isLast ? "salva ❤️" : "arrasta →",
+      style: { fontSize: 25, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.4)", textAlign: "right" as const, lineHeight: 1 },
+    });
+
     return {
       id: uuid(),
-      backgroundColor: bg,
+      backgroundColor: "#0a0a0a",
       backgroundImageUrl: undefined,
       backgroundImageLoading: true,
-      backgroundGradient: "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.80) 40%, rgba(0,0,0,0.30) 70%, rgba(0,0,0,0.10) 100%)",
+      backgroundGradient: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.97) 28%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.1) 72%, rgba(0,0,0,0) 100%)",
       elements,
-      width: SLIDE_W,
-      height: SLIDE_H,
+      width: W,
+      height: H,
       _imagePrompt: gs.imagePrompt || ws.topic,
       _searchQuery: gs.searchQuery || ws.topic,
     };
@@ -463,9 +511,11 @@ export default function GeneratorPanel({ onGenerate }: Props) {
 }
 
 function defaultSettings(): WizardSettings {
+  const safe = (key: string) => { try { return localStorage.getItem(key) ?? ""; } catch { return ""; } };
   return {
     topic: "", inputMode: "topic", customPrompt: "",
     slideCount: 7, writingStyle: "viral", imageStyle: "gemini",
     refImageBase64: null, refImageMime: "image/jpeg", refImagePreview: null,
+    handle: safe("xpz_handle"), brandName: safe("xpz_brand"), carouselTitle: safe("xpz_carousel_title"),
   };
 }

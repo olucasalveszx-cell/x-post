@@ -17,6 +17,10 @@ export interface WizardSettings {
   refImageBase64: string | null;
   refImageMime: string;
   refImagePreview: string | null;
+  // Branding
+  handle: string;
+  brandName: string;
+  carouselTitle: string;
 }
 
 interface Props {
@@ -48,6 +52,9 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
   const [refImageBase64, setRefImageBase64] = useState<string | null>(initial?.refImageBase64 ?? null);
   const [refImageMime, setRefImageMime] = useState(initial?.refImageMime ?? "image/jpeg");
   const [refImagePreview, setRefImagePreview] = useState<string | null>(initial?.refImagePreview ?? null);
+  const [handle, setHandle] = useState(() => initial?.handle ?? (typeof localStorage !== "undefined" ? localStorage.getItem("xpz_handle") ?? "" : ""));
+  const [brandName, setBrandName] = useState(() => initial?.brandName ?? (typeof localStorage !== "undefined" ? localStorage.getItem("xpz_brand") ?? "" : ""));
+  const [carouselTitle, setCarouselTitle] = useState(() => initial?.carouselTitle ?? (typeof localStorage !== "undefined" ? localStorage.getItem("xpz_carousel_title") ?? "" : ""));
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -105,7 +112,13 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
   };
 
   const handleConfirm = () => {
-    onConfirm({ topic, inputMode, customPrompt, slideCount, writingStyle, imageStyle, refImageBase64, refImageMime, refImagePreview });
+    // Persist branding
+    try {
+      localStorage.setItem("xpz_handle", handle);
+      localStorage.setItem("xpz_brand", brandName);
+      localStorage.setItem("xpz_carousel_title", carouselTitle);
+    } catch {}
+    onConfirm({ topic, inputMode, customPrompt, slideCount, writingStyle, imageStyle, refImageBase64, refImageMime, refImagePreview, handle, brandName, carouselTitle });
     onClose();
   };
 
@@ -232,6 +245,40 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                   )}
                 </div>
               )}
+
+              {/* Branding */}
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Sua Marca <span className="normal-case text-gray-600">(opcional)</span></p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] text-gray-600">@handle</label>
+                    <input
+                      value={handle}
+                      onChange={(e) => setHandle(e.target.value.replace(/^@+/, ""))}
+                      placeholder="seuperfil"
+                      className="bg-[#0a0a0a] border border-[#222] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-700 text-white"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] text-gray-600">Nome da marca</label>
+                    <input
+                      value={brandName}
+                      onChange={(e) => setBrandName(e.target.value)}
+                      placeholder="MyBrand"
+                      className="bg-[#0a0a0a] border border-[#222] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-700 text-white"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-gray-600">Título do carrossel (aparece no topo direito)</label>
+                  <input
+                    value={carouselTitle}
+                    onChange={(e) => setCarouselTitle(e.target.value)}
+                    placeholder="Ex: Carrosséis com IA"
+                    className="bg-[#0a0a0a] border border-[#222] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-700 text-white"
+                  />
+                </div>
+              </div>
 
               {/* Slide count */}
               <div>
