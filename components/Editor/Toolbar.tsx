@@ -404,6 +404,53 @@ export default function Toolbar({
         </div>
       )}
 
+      {/* Painel de imagem de fundo */}
+      {slide.backgroundImageUrl && !isText && (
+        <div className="flex items-center gap-4 px-4 py-2 border-t border-[#161616] overflow-x-auto whitespace-nowrap scrollbar-none">
+          <span className="text-xs text-gray-500 shrink-0">Imagem:</span>
+
+          <label className="flex items-center gap-2 text-xs text-gray-400 shrink-0">
+            X
+            <input
+              type="range" min={0} max={100} step={1}
+              value={slide.backgroundPosition?.x ?? 50}
+              onChange={(e) => onUpdate({ ...slide, backgroundPosition: { x: Number(e.target.value), y: slide.backgroundPosition?.y ?? 50 } })}
+              className="w-24 accent-brand-500"
+            />
+            <span className="text-gray-600 w-6">{slide.backgroundPosition?.x ?? 50}</span>
+          </label>
+
+          <label className="flex items-center gap-2 text-xs text-gray-400 shrink-0">
+            Y
+            <input
+              type="range" min={0} max={100} step={1}
+              value={slide.backgroundPosition?.y ?? 50}
+              onChange={(e) => onUpdate({ ...slide, backgroundPosition: { x: slide.backgroundPosition?.x ?? 50, y: Number(e.target.value) } })}
+              className="w-24 accent-brand-500"
+            />
+            <span className="text-gray-600 w-6">{slide.backgroundPosition?.y ?? 50}</span>
+          </label>
+
+          <label className="flex items-center gap-2 text-xs text-gray-400 shrink-0">
+            Zoom
+            <input
+              type="range" min={100} max={200} step={5}
+              value={slide.backgroundZoom ?? 100}
+              onChange={(e) => onUpdate({ ...slide, backgroundZoom: Number(e.target.value) })}
+              className="w-24 accent-brand-500"
+            />
+            <span className="text-gray-600 w-8">{slide.backgroundZoom ?? 100}%</span>
+          </label>
+
+          <button
+            onClick={() => onUpdate({ ...slide, backgroundPosition: { x: 50, y: 50 }, backgroundZoom: 100 })}
+            className="text-xs text-gray-600 hover:text-gray-400 shrink-0 underline"
+          >
+            Reset
+          </button>
+        </div>
+      )}
+
       {/* Painel de tipografia */}
       {isText && s && (
         <div className="flex items-center gap-3 px-4 py-2 border-t border-[#161616] overflow-x-auto whitespace-nowrap scrollbar-none">

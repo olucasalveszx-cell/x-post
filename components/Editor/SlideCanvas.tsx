@@ -485,7 +485,9 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             src={slide.backgroundImageUrl} alt=""
             className="absolute inset-0 w-full h-full object-cover cursor-context-menu"
             style={{
-              objectPosition: "center top",
+              objectPosition: `${slide.backgroundPosition?.x ?? 50}% ${slide.backgroundPosition?.y ?? 50}%`,
+              transform: slide.backgroundZoom && slide.backgroundZoom !== 100 ? `scale(${slide.backgroundZoom / 100})` : undefined,
+              transformOrigin: `${slide.backgroundPosition?.x ?? 50}% ${slide.backgroundPosition?.y ?? 50}%`,
               clipPath: slide.backgroundCrop
                 ? `inset(${slide.backgroundCrop.top}% ${slide.backgroundCrop.right}% ${slide.backgroundCrop.bottom}% ${slide.backgroundCrop.left}%)`
                 : undefined,
