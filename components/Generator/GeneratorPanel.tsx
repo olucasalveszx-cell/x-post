@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { Sparkles, Search, Loader2, AlertCircle, Crown, Zap, LogIn, CheckCircle2 } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
@@ -235,8 +236,69 @@ export default function GeneratorPanel({ onGenerate }: Props) {
     } catch (err: any) { setError(err.message ?? "Erro desconhecido"); setStatus("error"); }
   };
 
+  const loadingPopup = isLoading && typeof window !== "undefined"
+    ? createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center md:hidden" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}>
+          <div className="flex flex-col items-center gap-5 px-8 py-10 rounded-3xl bg-[#0f0f0f] border border-[#1e1e1e] shadow-2xl mx-4 w-full max-w-xs">
+            {/* Animated icon */}
+            <div className="relative">
+              <div className="p-5 rounded-full bg-brand-500/10 border border-brand-500/20">
+                <Loader2 size={36} className="animate-spin text-brand-400" />
+              </div>
+              <div className="absolute inset-0 rounded-full bg-brand-500/5 animate-ping" />
+            </div>
+
+            {/* Status text */}
+            <div className="text-center">
+              <p className="text-base font-semibold text-white">
+                {status === "searching" && "Pesquisando na web..."}
+                {status === "generating" && "Gerando com I.A..."}
+                {status === "images" && "Gerando imagens com I.A"}
+              </p>
+              <p className="text-xs text-gray-500 mt-1.5">
+                {status === "searching" && "Buscando informações atualizadas"}
+                {status === "generating" && "Criando o conteúdo dos slides"}
+                {status === "images" && totalImages > 0 ? `${imageProgress} de ${totalImages} slides` : "Aguarde um momento..."}
+              </p>
+            </div>
+
+            {/* Progress bar */}
+            {status === "images" && totalImages > 0 && (
+              <div className="w-full flex flex-col gap-1.5">
+                <div className="w-full bg-[#1a1a1a] rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-brand-500 h-full transition-all duration-500 rounded-full"
+                    style={{ width: `${(imageProgress / totalImages) * 100}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-gray-600 text-right">{Math.round((imageProgress / totalImages) * 100)}%</p>
+              </div>
+            )}
+
+            {/* Steps indicator */}
+            <div className="flex items-center gap-2 mt-1">
+              {["searching", "generating", "images"].map((s, i) => (
+                <div key={s} className="flex items-center gap-2">
+                  <div
+                    className="w-2 h-2 rounded-full transition-all duration-300"
+                    style={{
+                      background: status === s ? "#a855f7" : ["searching", "generating", "images"].indexOf(status) > i ? "#6b21a8" : "#1f1f1f",
+                      boxShadow: status === s ? "0 0 8px #a855f7" : "none",
+                    }}
+                  />
+                  {i < 2 && <div className="w-6 h-px bg-[#222]" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
+
   return (
     <div className="flex flex-col h-full">
+      {loadingPopup}
       {/* User badge */}
       <div className="p-4 shrink-0 border-b border-[#161616]">
         {!session?.user ? (
