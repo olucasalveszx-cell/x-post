@@ -5,9 +5,6 @@ import { Plus, Trash2, Edit2, Check, X } from "lucide-react";
 import { Slide, Project } from "@/types";
 import { v4 as uuid } from "uuid";
 
-const THUMB_W = 62;
-const THUMB_H = 78;
-
 interface Props {
   projects: Project[];
   activeProjectId: string;
@@ -16,13 +13,16 @@ interface Props {
   slideHeight: number;
   onProjectsChange: (projects: Project[]) => void;
   onSelectSlide: (projectId: string, slideIndex: number) => void;
+  compact?: boolean;
 }
 
 export default function HorizontalSlidePanel({
   projects, activeProjectId, activeSlideIndex,
   slideWidth, slideHeight,
-  onProjectsChange, onSelectSlide,
+  onProjectsChange, onSelectSlide, compact = false,
 }: Props) {
+  const THUMB_W = compact ? 44 : 62;
+  const THUMB_H = compact ? 55 : 78;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
 
@@ -80,7 +80,7 @@ export default function HorizontalSlidePanel({
   return (
     <div
       className="shrink-0 bg-[#080808] border-t border-[#161616] flex flex-col overflow-hidden"
-      style={{ maxHeight: 220 }}
+      style={{ maxHeight: compact ? 140 : 220 }}
     >
       <div className="flex-1 overflow-y-auto">
         {projects.map((project) => {
@@ -88,7 +88,7 @@ export default function HorizontalSlidePanel({
           return (
             <div key={project.id} className="border-b border-[#111] last:border-b-0">
               {/* Row header */}
-              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+              <div className={`flex items-center gap-2 px-3 ${compact ? "pt-1.5 pb-0.5" : "pt-2 pb-1"}`}>
                 {editingId === project.id ? (
                   <div className="flex items-center gap-2 flex-1">
                     <input
@@ -121,9 +121,11 @@ export default function HorizontalSlidePanel({
                       {project.name}
                       <Edit2 size={9} className="opacity-0 group-hover:opacity-40 transition-opacity" />
                     </button>
-                    <span className="text-[10px] text-[#374151] ml-1">
-                      {project.slides.length} slides
-                    </span>
+                    {!compact && (
+                      <span className="text-[10px] text-[#374151] ml-1">
+                        {project.slides.length} slides
+                      </span>
+                    )}
                     {projects.length > 1 && (
                       <button
                         onClick={() => deleteProject(project.id)}
@@ -137,7 +139,7 @@ export default function HorizontalSlidePanel({
               </div>
 
               {/* Slides row */}
-              <div className="flex items-center gap-2 px-3 pb-2.5 overflow-x-auto scrollbar-none">
+              <div className={`flex items-center gap-1.5 px-3 ${compact ? "pb-1.5" : "pb-2.5"} overflow-x-auto scrollbar-none`}>
                 {project.slides.map((slide, si) => {
                   const isActiveSlide = isActive && si === activeSlideIndex;
                   return (
@@ -216,7 +218,7 @@ export default function HorizontalSlidePanel({
       </div>
 
       {/* Footer — add project */}
-      <div className="shrink-0 flex items-center px-3 py-1.5 border-t border-[#111]">
+      <div className={`shrink-0 flex items-center px-3 ${compact ? "py-1" : "py-1.5"} border-t border-[#111]`}>
         <button
           onClick={addProject}
           className="flex items-center gap-1.5 text-[11px] text-[#4b5563] hover:text-gray-300 transition-colors px-2 py-1 rounded-lg hover:bg-white/5"

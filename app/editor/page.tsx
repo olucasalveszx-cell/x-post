@@ -466,17 +466,16 @@ export default function EditorPage() {
           </div>
 
           {/* ── Painel horizontal de slides / projetos ─────────── */}
-          {!isMobile && (
-            <HorizontalSlidePanel
-              projects={projects}
-              activeProjectId={activeProjectId}
-              activeSlideIndex={safeIndex}
-              slideWidth={SLIDE_W}
-              slideHeight={SLIDE_H}
-              onProjectsChange={setProjects}
-              onSelectSlide={handleSelectSlide}
-            />
-          )}
+          <HorizontalSlidePanel
+            projects={projects}
+            activeProjectId={activeProjectId}
+            activeSlideIndex={safeIndex}
+            slideWidth={SLIDE_W}
+            slideHeight={SLIDE_H}
+            onProjectsChange={setProjects}
+            onSelectSlide={handleSelectSlide}
+            compact={isMobile}
+          />
         </div>
       </div>
 
