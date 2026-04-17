@@ -165,45 +165,75 @@ async function fromOpenRouter(prompt: string, style: ImageStyle) {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new Error("OPENROUTER_API_KEY não configurada");
 
-  const fullPrompt = buildPrompt(prompt, style);
+  const subjectPrompt = buildPrompt(prompt, style);
 
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${key}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": process.env.NEXT_PUBLIC_BASE_URL ?? "https://xpost-iota.vercel.app",
-      "X-Title": "XPost Zone",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-3.1-flash-image-preview",
-      messages: [{ role: "user", content: fullPrompt }],
-      modalities: ["text", "image"],
-    }),
-    signal: AbortSignal.timeout(50000),
+  // System prompt obriga o modelo a sempre gerar uma imagem
+  const SYSTEM = "You are an image generation AI. Your ONLY job is to generate images. You MUST always respond with an image. Never respond with only text. Always include an image in your response, no exceptions.";
+
+  // User prompt explícito para geração de imagem
+  const USER = `Generate a high-quality image of the following: ${subjectPrompt}\n\nIMPORTANT: You MUST generate and return an actual image. Do not describe it — create it.`;
+
+  const body = JSON.stringify({
+    model: "google/gemini-3.1-flash-image-preview",
+    messages: [
+      { role: "system", content: SYSTEM },
+      { role: "user",   content: USER },
+    ],
+    modalities: ["image"],
   });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `OpenRouter HTTP ${res.status}`);
+  const headers = {
+    "Authorization": `Bearer ${key}`,
+    "Content-Type": "application/json",
+    "HTTP-Referer": process.env.NEXT_PUBLIC_BASE_URL ?? "https://xpostzone.online",
+    "X-Title": "XPost Zone",
+  };
 
-  // Tenta formato OpenAI multimodal (array de content parts)
-  const parts: any[] = data.choices?.[0]?.message?.content ?? [];
-  if (Array.isArray(parts)) {
-    const imgPart = parts.find((p: any) => p.type === "image_url" && p.image_url?.url);
-    if (imgPart) {
-      console.log("[image] OpenRouter OK (array parts)");
-      return { imageUrl: imgPart.image_url.url, source: "openrouter" };
+  // Tenta até 2 vezes antes de desistir
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST", headers, body,
+      signal: AbortSignal.timeout(52000),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      console.error(`[image] OpenRouter tentativa ${attempt} HTTP ${res.status}:`, data.error?.message);
+      if (attempt === 2) throw new Error(data.error?.message ?? `OpenRouter HTTP ${res.status}`);
+      continue;
     }
+
+    console.log(`[image] OpenRouter tentativa ${attempt} — tipo content:`, typeof data.choices?.[0]?.message?.content);
+
+    // Formato array de parts (multimodal)
+    const parts: any[] = data.choices?.[0]?.message?.content ?? [];
+    if (Array.isArray(parts)) {
+      const imgPart = parts.find((p: any) => p.type === "image_url" && p.image_url?.url);
+      if (imgPart) {
+        console.log("[image] OpenRouter OK (array parts)");
+        return { imageUrl: imgPart.image_url.url, source: "openrouter" };
+      }
+      // inline_data (base64 embutido)
+      const inlinePart = parts.find((p: any) => p.inline_data?.data);
+      if (inlinePart) {
+        const { data: b64, mime_type } = inlinePart.inline_data;
+        console.log("[image] OpenRouter OK (inline_data)");
+        return { imageUrl: `data:${mime_type ?? "image/png"};base64,${b64}`, source: "openrouter" };
+      }
+    }
+
+    // Formato string base64 direta
+    const content = data.choices?.[0]?.message?.content;
+    if (typeof content === "string" && content.startsWith("data:image")) {
+      console.log("[image] OpenRouter OK (string b64)");
+      return { imageUrl: content, source: "openrouter" };
+    }
+
+    console.warn(`[image] OpenRouter tentativa ${attempt}: sem imagem na resposta. Content:`, JSON.stringify(data.choices?.[0]?.message?.content)?.slice(0, 200));
+    if (attempt === 2) throw new Error("OpenRouter: sem imagem após 2 tentativas");
   }
 
-  // Tenta formato string base64 direto
-  const content = data.choices?.[0]?.message?.content;
-  if (typeof content === "string" && content.startsWith("data:image")) {
-    console.log("[image] OpenRouter OK (string b64)");
-    return { imageUrl: content, source: "openrouter" };
-  }
-
-  throw new Error("OpenRouter: sem imagem na resposta");
+  throw new Error("OpenRouter: falha inesperada");
 }
 
 // ── Pexels (fallback final) ───────────────────────────────────
