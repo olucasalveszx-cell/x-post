@@ -291,11 +291,14 @@ export default function EditorPage() {
 
   useEffect(() => {
     const update = () => {
-      setIsMobile(window.innerWidth < 768);
+      const mob = window.innerWidth < 768;
+      setIsMobile(mob);
       if (!canvasContainerRef.current) return;
       const { width, height } = canvasContainerRef.current.getBoundingClientRect();
-      const pad = 32;
-      const s = Math.min((width - pad) / SLIDE_W, (height - pad) / SLIDE_H, 560 / SLIDE_H);
+      const pad = mob ? 16 : 32;
+      // No mobile: cabe na largura da tela com 8px de margem em cada lado
+      const mobileCap = mob ? (window.innerWidth - 16) / SLIDE_W : Infinity;
+      const s = Math.min((width - pad) / SLIDE_W, (height - pad) / SLIDE_H, 560 / SLIDE_H, mobileCap);
       setDisplayScale(s);
     };
     update();

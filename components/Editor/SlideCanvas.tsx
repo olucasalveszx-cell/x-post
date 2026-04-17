@@ -599,7 +599,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         const S = 1 / scale;
         const hW = Math.round(70 * S);   // largura do handle de crop (70px na tela)
         const hT = Math.round(22 * S);   // espessura do handle de crop (22px na tela)
-        const rS = Math.round(22 * S);   // tamanho do handle de resize (22px na tela)
+        const rS = Math.round(30 * S);   // tamanho do handle de resize (30px na tela)
         const oW = Math.round(2.5 * S);  // espessura da borda de seleção (2.5px na tela)
 
         return (
@@ -704,13 +704,26 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               </div>
             )}
 
-            {/* Handle resize — escalonado para mobile */}
+            {/* Handle resize — escalonado, maior e com label para texto */}
             {isSelected && !isCropping && (
-              <div
-                style={{ position: "absolute", width: rS, height: rS, background: "#a855f7", border: `${Math.max(1, Math.round(1.5 * S))}px solid white`, borderRadius: "50%", cursor: "se-resize", bottom: -Math.round(rS / 2), right: -Math.round(rS / 2), zIndex: 10, touchAction: "none" }}
-                onMouseDown={(e) => { e.stopPropagation(); handleResizeDown(e, el); }}
-                onTouchStart={(e) => { e.stopPropagation(); handleResizeTouchStart(e, el); }}
-              />
+              <>
+                {el.type === "text" && (
+                  <div style={{ position: "absolute", bottom: -Math.round(rS / 2) - Math.round(20 * S), right: 0, display: "flex", alignItems: "center", gap: Math.round(4 * S), zIndex: 11, pointerEvents: "none" }}>
+                    <span style={{ fontSize: Math.round(11 * S), color: "rgba(168,85,247,0.9)", background: "rgba(0,0,0,0.6)", borderRadius: Math.round(4 * S), padding: `${Math.round(2 * S)}px ${Math.round(6 * S)}px`, whiteSpace: "nowrap", fontFamily: "sans-serif" }}>
+                      ↕↔ tamanho
+                    </span>
+                  </div>
+                )}
+                <div
+                  style={{ position: "absolute", width: rS, height: rS, background: el.type === "text" ? "#7c3aed" : "#a855f7", border: `${Math.max(1, Math.round(2 * S))}px solid white`, borderRadius: "50%", cursor: "se-resize", bottom: -Math.round(rS / 2), right: -Math.round(rS / 2), zIndex: 10, touchAction: "none", boxShadow: el.type === "text" ? `0 0 ${Math.round(8 * S)}px rgba(124,58,237,0.8)` : "none", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  onMouseDown={(e) => { e.stopPropagation(); handleResizeDown(e, el); }}
+                  onTouchStart={(e) => { e.stopPropagation(); handleResizeTouchStart(e, el); }}
+                >
+                  <svg width={Math.round(12 * S)} height={Math.round(12 * S)} viewBox="0 0 12 12" fill="white" style={{ pointerEvents: "none" }}>
+                    <path d="M1 11L11 1M6 11h5V6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                  </svg>
+                </div>
+              </>
             )}
           </div>
         );
