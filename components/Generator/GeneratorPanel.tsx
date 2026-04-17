@@ -15,26 +15,16 @@ interface Props {
 const SLIDE_W = 1080;
 const SLIDE_H = 1350;
 
-type ImageStyle = "realista" | "cartoon" | "anime" | "stock" | "cinematico" | "abstrato" | "foto_real";
+type ImageStyle = "gemini" | "foto_real";
 
 const IMAGE_STYLES: { value: ImageStyle; label: string; desc: string; emoji: string; free?: boolean }[] = [
-  { value: "foto_real",  label: "Foto Real",   desc: "Foto IA ultra-realista",         emoji: "📸", free: true },
-  { value: "realista",   label: "Realista",    desc: "Foto 8K, luz natural, HDR",      emoji: "📷" },
-  { value: "cinematico", label: "Cinemático",  desc: "Filme épico, luz dramática",      emoji: "🎬" },
-  { value: "stock",      label: "Stock",       desc: "Editorial limpo, corporativo",    emoji: "💼" },
-  { value: "cartoon",    label: "Cartoon",     desc: "Disney/Pixar, cores vibrantes",   emoji: "🎨" },
-  { value: "anime",      label: "Anime",       desc: "Ghibli, mangá detalhado",         emoji: "⛩️" },
-  { value: "abstrato",   label: "Abstrato",    desc: "Formas geométricas, neon",        emoji: "🌀" },
+  { value: "foto_real", label: "Foto Real", desc: "Ultra-realista · Gemini IA",  emoji: "📸", free: true },
+  { value: "gemini",    label: "Gemini IA", desc: "Cinemático · Imagen Pro",      emoji: "✨" },
 ];
 
 const STYLE_PROMPTS: Record<ImageStyle, string> = {
-  foto_real:  "ultra-realistic documentary photograph, natural light, photojournalism quality, authentic candid moment",
-  realista:   "ultra-realistic photography, natural lighting, shallow depth of field, sharp focus, 8k DSLR photo, photojournalism quality, authentic emotion",
-  cinematico: "cinematic still, dramatic moody lighting, film grain, anamorphic lens flare, Blade Runner color grading, dark atmospheric, hyper-detailed, IMAX quality",
-  stock:      "professional stock photography, clean bright studio lighting, corporate editorial style, high-key lighting, sharp and polished, Getty Images quality",
-  cartoon:    "vibrant cartoon illustration, bold outlines, flat colors with cel shading, Disney/Pixar style, expressive characters, clean vector art",
-  anime:      "anime illustration style, manga aesthetic, studio Ghibli quality, detailed linework, vivid colors, dramatic sky, Japanese animation",
-  abstrato:   "abstract digital art, geometric shapes, neon color palette, fluid dynamics, futuristic data visualization, award-winning generative art",
+  foto_real: "ultra-realistic documentary photograph, natural light, photojournalism quality, authentic candid moment",
+  gemini:    "cinematic high-quality image, dramatic lighting, rich colors, sharp focus, ultra-detailed, professional photography",
 };
 
 function applyAccent(text: string, accentColor: string): string {
@@ -45,7 +35,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   const [topic, setTopic] = useState("");
   const [slideCount, setSlideCount] = useState(7);
   const [writingStyle, setWritingStyle] = useState<WritingStyle>("viral");
-  const [imageStyle, setImageStyle] = useState<ImageStyle>("cinematico");
+  const [imageStyle, setImageStyle] = useState<ImageStyle>("gemini");
   const [status, setStatus] = useState<"idle" | "searching" | "generating" | "images" | "done" | "error">("idle");
   const [error, setError] = useState("");
   const [sources, setSources] = useState<SearchResult[]>([]);

@@ -8,129 +8,33 @@ import { stripe } from "@/lib/stripe";
 
 export const maxDuration = 45;
 
-type ImageStyle = "realista" | "cinematico" | "stock" | "cartoon" | "anime" | "abstrato" | "foto_real";
+type ImageStyle = "gemini" | "foto_real";
 
-interface StyleConfig {
-  prompt: string;
-  base: string;
-}
-
-const STYLES: Record<ImageStyle, StyleConfig> = {
-  realista: {
-    prompt: `ultra-realistic photography, shot on Canon EOS R5 with 85mm f/1.4 lens, natural golden-hour lighting, shallow depth of field with sharp subject focus, accurate human anatomy with perfectly proportioned limbs and faces, photojournalism quality, rich textures and fine details, true-to-life skin tones, authentic candid emotion, 8K resolution, HDR tonal range`,
-    base: `natural background with soft bokeh, warm color grading, no distortions, no warping, anatomically correct proportions, no text, no watermarks, no logos`,
-  },
-  cinematico: {
-    prompt: `cinematic movie still, shot by Roger Deakins, dramatic three-point lighting with strong shadows and highlights, anamorphic lens compression, film grain texture, epic wide-aspect framing, deep contrast ratio, rich color grading inspired by Blade Runner 2049 and Dune, atmospheric haze and volumetric light rays, hyper-detailed production design, IMAX 70mm film quality`,
-    base: `dark moody background, teal and orange color palette, perfectly composed frame, no distortions, no warping, no text, no watermarks, no logos`,
-  },
-  stock: {
-    prompt: `professional stock photography, clean bright studio environment, soft box high-key lighting from three sides, sharp focus throughout frame, polished corporate editorial aesthetic, confident subjects with natural genuine expressions, perfectly balanced composition following rule of thirds, Getty Images and Shutterstock quality, business professional setting, crisp white or neutral background`,
-    base: `bright clean background, neutral tones, perfectly proportioned figures, no distortions, no warping, no text, no watermarks, no logos`,
-  },
-  cartoon: {
-    prompt: `vibrant 2D cartoon illustration, clean bold outlines, flat colors with subtle cel shading, Disney and Pixar animation quality, expressive simplified character design with large eyes and clear emotions, smooth clean vector curves, balanced color palette with primary and complementary colors, professional illustration composition, charming and friendly visual style`,
-    base: `solid or simple gradient background, clean linework, no photorealism, no 3D rendering artifacts, no distortions, perfectly drawn proportions, no text, no watermarks, no logos`,
-  },
-  anime: {
-    prompt: `high-quality anime illustration, Studio Ghibli and Makoto Shinkai artistic style, detailed clean linework with precise inking, vibrant saturated colors with detailed shading and highlights, expressive character faces with large detailed eyes, dramatic sky with volumetric clouds, detailed environmental storytelling, professional manga-quality artwork, dynamic composition with strong focal point`,
-    base: `anime-style detailed background, rich saturated palette, perfectly drawn anatomy in anime proportion style, clean lines without artifacts, no photorealism, no text, no watermarks, no logos`,
-  },
-  abstrato: {
-    prompt: `premium abstract digital artwork, no human figures, sophisticated geometric and organic shape composition, fluid metallic and neon elements, deep layered visual complexity, award-winning generative art aesthetic, balanced asymmetric composition, rich contrast between dark and luminous elements, futuristic data-visualization inspired design, professional digital fine art quality, vivid color harmony`,
-    base: `deep dark background with glowing elements, multiple color layers with depth, perfectly balanced composition, no faces or people, no text, no watermarks, no logos`,
-  },
-  foto_real: {
-    prompt: `ultra-realistic documentary photograph, shot on full-frame DSLR, natural available light, sharp focus, authentic candid moment, photojournalism quality, true-to-life colors, no retouching, real life scene`,
-    base: `natural real-world background, authentic environment, no studio setup, no artistic filters, no text, no watermarks, no logos`,
-  },
+const PROMPTS: Record<ImageStyle, string> = {
+  gemini: `cinematic high-quality image, dramatic lighting, rich colors, sharp focus, ultra-detailed, professional photography, Instagram editorial aesthetic, no text, no watermarks, no logos`,
+  foto_real: `ultra-realistic documentary photograph, natural light, sharp focus, authentic candid moment, photojournalism quality, true-to-life colors, no retouching, no text, no watermarks`,
 };
 
 function buildPrompt(subject: string, style: ImageStyle): string {
-  const cfg = STYLES[style] ?? STYLES.cinematico;
-  return `${subject}. ${cfg.prompt}. Portrait orientation 4:5 aspect ratio, single cohesive composition. ${cfg.base}.`;
+  const stylePrompt = PROMPTS[style] ?? PROMPTS.gemini;
+  return `${subject}. ${stylePrompt}. Portrait orientation 4:5 aspect ratio.`;
 }
 
-// ── Imagen 4 (máxima qualidade — usado no estilo Realista) ───
-async function fromImagen4(prompt: string, style: ImageStyle) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY não configurada");
-
-  const fullPrompt = buildPrompt(prompt, style);
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${key}`;
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      instances: [{ prompt: fullPrompt }],
-      parameters: {
-        sampleCount: 1,
-        aspectRatio: "3:4",
-        safetyFilterLevel: "block_few",
-        personGeneration: "allow_adult",
-      },
-    }),
-    signal: AbortSignal.timeout(50000),
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `Imagen4 HTTP ${res.status}`);
-
-  const pred = data.predictions?.[0];
-  if (!pred?.bytesBase64Encoded) throw new Error("Imagen4: sem imagem na resposta");
-
-  console.log("[image] Imagen 4 OK");
-  return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen4" };
-}
-
-// ── Imagen 3 ──────────────────────────────────────────────────
-async function fromImagen3(prompt: string, style: ImageStyle) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY não configurada");
-
-  const fullPrompt = buildPrompt(prompt, style);
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${key}`;
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      instances: [{ prompt: fullPrompt }],
-      parameters: {
-        sampleCount: 1,
-        aspectRatio: "3:4",
-        safetyFilterLevel: "block_few",
-        personGeneration: "allow_adult",
-      },
-    }),
-    signal: AbortSignal.timeout(40000),
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `Imagen3 HTTP ${res.status}`);
-
-  const pred = data.predictions?.[0];
-  if (!pred?.bytesBase64Encoded) throw new Error("Imagen3: sem imagem na resposta");
-
-  console.log("[image] Imagen 3 OK");
-  return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen3" };
-}
-
-// ── Gemini 2.0 Flash Image Generation ────────────────────────
+// ── Gemini Flash Image Generation (tenta múltiplos modelos) ──
 async function fromGemini(prompt: string, style: ImageStyle) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
   const fullPrompt = buildPrompt(prompt, style);
-  // Tenta os dois nomes de modelo (o preview pode ter sido renomeado)
-  const models = [
+
+  const MODELS = [
     "gemini-2.0-flash-preview-image-generation",
     "gemini-2.0-flash-exp-image-generation",
+    "gemini-2.0-flash-exp",
   ];
 
   let lastError = "";
-  for (const model of models) {
+  for (const model of MODELS) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
     try {
       const res = await fetch(url, {
@@ -144,14 +48,21 @@ async function fromGemini(prompt: string, style: ImageStyle) {
       });
 
       const data = await res.json();
-      if (!res.ok) { lastError = data.error?.message ?? `Gemini HTTP ${res.status}`; continue; }
+      if (!res.ok) {
+        lastError = data.error?.message ?? `Gemini HTTP ${res.status}`;
+        console.error(`[image] ${model} falhou:`, lastError);
+        continue;
+      }
 
       const parts = data.candidates?.[0]?.content?.parts ?? [];
       const imagePart = parts.find((p: any) => p.inlineData);
-      if (!imagePart?.inlineData) { lastError = "Gemini: sem imagem na resposta"; continue; }
+      if (!imagePart?.inlineData) {
+        lastError = `${model}: sem imagem na resposta`;
+        continue;
+      }
 
       const { data: b64, mimeType } = imagePart.inlineData;
-      console.log(`[image] Gemini (${model}) OK`);
+      console.log(`[image] Gemini OK (${model})`);
       return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini" };
     } catch (e: any) {
       lastError = e.message;
@@ -160,44 +71,52 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   throw new Error(lastError || "Gemini: falha em todos os modelos");
 }
 
+// ── Imagen 4 ──────────────────────────────────────────────────
+async function fromImagen4(prompt: string, style: ImageStyle) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
-// ── Pexels (fallback de emergência) ──────────────────────────
-async function fromPexels(prompt: string) {
-  const key = process.env.PEXELS_API_KEY;
-  if (!key) throw new Error("PEXELS_API_KEY não configurada");
-
-  const query = prompt
-    .split(/[,.|]/)[0]
-    .replace(/<[^>]+>/g, "")
-    .replace(/[^\w\sÀ-ÿ]/g, "")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 5)
-    .join(" ") || "technology business";
-
-  const page = Math.ceil(Math.random() * 3);
-  const res = await fetch(
-    `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=portrait&per_page=15&page=${page}`,
-    { headers: { Authorization: key } },
-  );
-  if (!res.ok) throw new Error(`Pexels HTTP ${res.status}`);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${key}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      instances: [{ prompt: buildPrompt(prompt, style) }],
+      parameters: { sampleCount: 1, aspectRatio: "3:4", safetyFilterLevel: "block_few", personGeneration: "allow_adult" },
+    }),
+    signal: AbortSignal.timeout(50000),
+  });
 
   const data = await res.json();
-  let photos = data.photos ?? [];
+  if (!res.ok) throw new Error(data.error?.message ?? `Imagen4 HTTP ${res.status}`);
+  const pred = data.predictions?.[0];
+  if (!pred?.bytesBase64Encoded) throw new Error("Imagen4: sem imagem");
+  console.log("[image] Imagen 4 OK");
+  return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen4" };
+}
 
-  if (!photos.length) {
-    const res2 = await fetch(
-      `https://api.pexels.com/v1/search?query=business&orientation=portrait&per_page=15&page=1`,
-      { headers: { Authorization: key } },
-    );
-    const d2 = await res2.json();
-    photos = d2.photos ?? [];
-  }
+// ── Imagen 3 ──────────────────────────────────────────────────
+async function fromImagen3(prompt: string, style: ImageStyle) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
-  if (!photos.length) throw new Error("Pexels: sem resultados");
-  const photo = photos[Math.floor(Math.random() * photos.length)];
-  console.log("[image] Pexels fallback OK");
-  return { imageUrl: photo.src?.large2x ?? photo.src?.original, source: "pexels" };
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${key}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      instances: [{ prompt: buildPrompt(prompt, style) }],
+      parameters: { sampleCount: 1, aspectRatio: "3:4", safetyFilterLevel: "block_few", personGeneration: "allow_adult" },
+    }),
+    signal: AbortSignal.timeout(40000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message ?? `Imagen3 HTTP ${res.status}`);
+  const pred = data.predictions?.[0];
+  if (!pred?.bytesBase64Encoded) throw new Error("Imagen3: sem imagem");
+  console.log("[image] Imagen 3 OK");
+  return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen3" };
 }
 
 // ── Gemini com imagem de referência ──────────────────────────
@@ -205,51 +124,76 @@ async function fromGeminiWithReference(prompt: string, style: ImageStyle, refBas
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
-  const cfg = STYLES[style] ?? STYLES.cinematico;
-  const styleGuide = `${cfg.prompt}. ${cfg.base}`;
+  const styleGuide = PROMPTS[style] ?? PROMPTS.gemini;
+  const textInstruction = `Use this image as visual reference. Transform it into a stylized Instagram carousel slide background: "${prompt}". Style: ${styleGuide}. Portrait 4:5. No text, no watermarks.`;
 
-  const textInstruction = `Use this image as a visual reference and style inspiration. Transform it into a stylized Instagram carousel slide background with the following direction: "${prompt}". Apply this style: ${styleGuide}. Portrait orientation 4:5 aspect ratio. Maintain the essence and mood of the reference image but adapt it to a cinematic, high-quality Instagram aesthetic. No text, no watermarks.`;
+  const MODELS = ["gemini-2.0-flash-preview-image-generation", "gemini-2.0-flash-exp-image-generation"];
+  let lastError = "";
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`;
+  for (const model of MODELS) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ inlineData: { mimeType: refMime, data: refBase64 } }, { text: textInstruction }] }],
+          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+        }),
+        signal: AbortSignal.timeout(45000),
+      });
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{
-        parts: [
-          { inlineData: { mimeType: refMime, data: refBase64 } },
-          { text: textInstruction },
-        ],
-      }],
-      generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-    }),
-    signal: AbortSignal.timeout(45000),
-  });
+      const data = await res.json();
+      if (!res.ok) { lastError = data.error?.message ?? `Gemini HTTP ${res.status}`; continue; }
+
+      const parts = data.candidates?.[0]?.content?.parts ?? [];
+      const imagePart = parts.find((p: any) => p.inlineData);
+      if (!imagePart?.inlineData) { lastError = "sem imagem na resposta"; continue; }
+
+      const { data: b64, mimeType } = imagePart.inlineData;
+      console.log(`[image] Gemini reference OK (${model})`);
+      return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini_ref" };
+    } catch (e: any) {
+      lastError = e.message;
+    }
+  }
+  throw new Error(lastError || "GeminiRef: falha");
+}
+
+// ── Pexels (fallback final) ───────────────────────────────────
+async function fromPexels(prompt: string) {
+  const key = process.env.PEXELS_API_KEY;
+  if (!key) throw new Error("PEXELS_API_KEY não configurada");
+
+  const query = prompt.replace(/<[^>]+>/g, "").replace(/[^\w\sÀ-ÿ]/g, "").trim()
+    .split(/\s+/).slice(0, 5).join(" ") || "business technology";
+
+  const res = await fetch(
+    `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=portrait&per_page=15&page=${Math.ceil(Math.random() * 3)}`,
+    { headers: { Authorization: key } }
+  );
+  if (!res.ok) throw new Error(`Pexels HTTP ${res.status}`);
 
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `Gemini HTTP ${res.status}`);
+  const photos = data.photos ?? [];
+  if (!photos.length) throw new Error("Pexels: sem resultados");
 
-  const parts = data.candidates?.[0]?.content?.parts ?? [];
-  const imagePart = parts.find((p: any) => p.inlineData);
-  if (!imagePart?.inlineData) throw new Error("Gemini: sem imagem na resposta");
-
-  const { data: b64, mimeType } = imagePart.inlineData;
-  console.log("[image] Gemini reference OK");
-  return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini_ref" };
+  const photo = photos[Math.floor(Math.random() * photos.length)];
+  console.log("[image] Pexels fallback OK");
+  return { imageUrl: photo.src?.large2x ?? photo.src?.original, source: "pexels" };
 }
 
 // ── Handler principal ─────────────────────────────────────────
 export async function POST(req: NextRequest) {
-  const { prompt, imageStyle = "cinematico", customerId, activationToken, referenceImageBase64, referenceImageMime } = await req.json();
+  const { prompt, imageStyle = "gemini", customerId, activationToken, referenceImageBase64, referenceImageMime } = await req.json();
   if (!prompt) return NextResponse.json({ error: "prompt obrigatório" }, { status: 400 });
 
+  const style: ImageStyle = (imageStyle === "foto_real") ? "foto_real" : "gemini";
   const hasReference = !!(referenceImageBase64 && referenceImageMime);
-  const style: ImageStyle = (imageStyle as ImageStyle) in STYLES ? (imageStyle as ImageStyle) : "cinematico";
 
+  // ── Verificar plano ───────────────────────────────────────────
   let isPro = false;
 
-  // 1. Sessão Google (server-side)
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
   if (email) {
@@ -258,58 +202,46 @@ export async function POST(req: NextRequest) {
       isPro = true;
     } else {
       const customers = await stripe.customers.list({ email, limit: 1 });
-      if (customers.data.length > 0) {
-        isPro = await hasActiveSubscription(customers.data[0].id);
-      }
+      if (customers.data.length > 0) isPro = await hasActiveSubscription(customers.data[0].id);
     }
   }
-
-  // 2. Fallback: customerId Stripe
   if (!isPro && customerId) isPro = await hasActiveSubscription(customerId);
+  if (!isPro && activationToken) { const { valid } = verifyToken(activationToken); isPro = valid; }
 
-  // 3. Fallback: token Kirvano
-  if (!isPro && activationToken) {
-    const { valid } = verifyToken(activationToken);
-    isPro = valid;
-  }
-
-  // Plano gratuito → Gemini 2.0 Flash → Pexels fallback
+  // ── Plano gratuito → Gemini → Pexels ─────────────────────────
   if (!isPro) {
     try {
       return NextResponse.json({ ...await fromGemini(prompt, style), plan: "free" });
-    } catch (err: any) {
-      console.error("[image] Gemini free falhou:", err.message);
+    } catch (e: any) {
+      console.error("[image] Gemini free falhou:", e.message);
     }
     try {
       return NextResponse.json({ ...await fromPexels(prompt), plan: "free_fallback" });
-    } catch (err: any) {
-      return NextResponse.json({ error: err.message }, { status: 500 });
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message }, { status: 500 });
     }
   }
 
-  // Plano Pro com imagem de referência → Gemini multimodal → fallbacks normais
+  // ── Plano Pro ─────────────────────────────────────────────────
   const errors: string[] = [];
 
+  // Com imagem de referência → Gemini multimodal
   if (hasReference) {
     try {
       return NextResponse.json({ ...await fromGeminiWithReference(prompt, style, referenceImageBase64, referenceImageMime), plan: "pro_ref" });
     } catch (e: any) {
       errors.push(`GeminiRef: ${e.message}`);
-      console.error("[image] GeminiRef falhou:", e.message);
     }
   }
 
-  // Realista e Foto Real → Imagen 4 (maior qualidade fotorrealista)
-  if (style === "realista" || style === "foto_real") {
-    try {
-      return NextResponse.json({ ...await fromImagen4(prompt, style), plan: "pro" });
-    } catch (e: any) {
-      errors.push(`Imagen4: ${e.message}`);
-      console.error("[image] Imagen4 falhou, tentando Imagen3:", e.message);
-    }
+  // Imagen 4 → Imagen 3 → Gemini → Pexels
+  try {
+    return NextResponse.json({ ...await fromImagen4(prompt, style), plan: "pro" });
+  } catch (e: any) {
+    errors.push(`Imagen4: ${e.message}`);
+    console.error("[image] Imagen4 falhou:", e.message);
   }
 
-  // Demais estilos (ou fallback do Realista) → Imagen 3 → Gemini
   try {
     return NextResponse.json({ ...await fromImagen3(prompt, style), plan: "pro" });
   } catch (e: any) {
@@ -324,7 +256,6 @@ export async function POST(req: NextRequest) {
     console.error("[image] Gemini falhou:", e.message);
   }
 
-  // Fallback final → Pexels
   try {
     return NextResponse.json({ ...await fromPexels(prompt), plan: "fallback" });
   } catch (e: any) {
