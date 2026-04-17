@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Slide, SlideElement } from "@/types";
 import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2 } from "lucide-react";
 
@@ -496,6 +497,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   };
 
   return (
+    <>
     <div
       ref={containerRef}
       className="slide-canvas"
@@ -906,45 +908,6 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         </div>
       )}
 
-      {/* Input de tema quando slide está vazio */}
-      {showThemeInput && !generatingBg && (
-        <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
-          onClick={(e) => { e.stopPropagation(); setShowThemeInput(false); }}>
-          <div className="flex flex-col gap-4 rounded-3xl p-6 mx-6"
-            style={{ background: "#111", border: "1px solid #2a2a2a", width: slide.width * 0.75, maxWidth: 600 }}
-            onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2">
-              <Wand2 style={{ width: slide.width * 0.03, height: slide.width * 0.03, color: "#a855f7" }} />
-              <span style={{ fontSize: slide.width * 0.025, fontWeight: 700, color: "#fff" }}>Qual tema pretende usar?</span>
-            </div>
-            <input
-              autoFocus
-              value={themeValue}
-              onChange={(e) => setThemeValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && themeValue.trim()) runGenerateBg(themeValue.trim());
-                if (e.key === "Escape") setShowThemeInput(false);
-              }}
-              placeholder="Ex: tecnologia, saúde, negócios..."
-              style={{ fontSize: slide.width * 0.02, padding: `${slide.width * 0.012}px ${slide.width * 0.018}px`, background: "#1a1a1a", border: "1px solid #333", borderRadius: slide.width * 0.015, color: "#fff", outline: "none", width: "100%" }}
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowThemeInput(false)}
-                style={{ flex: 1, fontSize: slide.width * 0.018, padding: `${slide.width * 0.01}px`, background: "#222", border: "1px solid #333", borderRadius: slide.width * 0.012, color: "#6b7280" }}>
-                Cancelar
-              </button>
-              <button
-                onClick={() => themeValue.trim() && runGenerateBg(themeValue.trim())}
-                disabled={!themeValue.trim()}
-                style={{ flex: 2, fontSize: slide.width * 0.018, padding: `${slide.width * 0.01}px`, background: themeValue.trim() ? "#7c3aed" : "#333", border: "none", borderRadius: slide.width * 0.012, color: themeValue.trim() ? "#fff" : "#555", fontWeight: 600 }}>
-                Gerar imagem
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Loading overlay ao gerar fundo */}
       {generatingBg && (
         <div className="absolute inset-0 z-[200] flex flex-col items-center justify-center" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}>
@@ -953,5 +916,52 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         </div>
       )}
     </div>
+
+    {/* theme input portal — fora do canvas para evitar stacking context do transform:scale */}
+    {showThemeInput && !generatingBg && typeof window !== "undefined" && createPortal(
+      <div
+        className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center sm:p-6"
+        style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}
+        onClick={() => setShowThemeInput(false)}
+      >
+        <div
+          className="w-full sm:max-w-sm bg-[#111] border-t sm:border border-[#222] rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-2">
+            <Wand2 size={20} className="text-brand-400" />
+            <span className="text-base font-bold text-white">Qual tema pretende usar?</span>
+          </div>
+          <input
+            autoFocus
+            value={themeValue}
+            onChange={(e) => setThemeValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && themeValue.trim()) runGenerateBg(themeValue.trim());
+              if (e.key === "Escape") setShowThemeInput(false);
+            }}
+            placeholder="Ex: tecnologia, saúde, negócios..."
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowThemeInput(false)}
+              className="flex-1 py-2.5 rounded-xl bg-[#222] border border-[#333] text-gray-500 text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => themeValue.trim() && runGenerateBg(themeValue.trim())}
+              disabled={!themeValue.trim()}
+              className="flex-[2] py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-30 text-white text-sm font-semibold"
+            >
+              Gerar imagem
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 }
