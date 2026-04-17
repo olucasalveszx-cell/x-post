@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
 export const maxDuration = 55;
+
+const EDIT_MODELS = [
+  "gemini-2.0-flash-preview-image-generation",
+  "gemini-2.0-flash-exp-image-generation",
+  "gemini-2.0-flash-exp",
+];
 
 export async function POST(req: NextRequest) {
   const { imageBase64, imageMime = "image/jpeg", prompt } = await req.json();
@@ -13,42 +17,54 @@ export async function POST(req: NextRequest) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return NextResponse.json({ error: "GEMINI_API_KEY não configurada" }, { status: 500 });
 
-  const instruction = `You are an expert photo editor.
-Take the provided image and apply ONLY the requested change: "${prompt}".
-Keep everything else IDENTICAL — the person's face, body, clothing, background style, lighting, and overall composition must remain exactly the same.
-Only add or change what was explicitly requested in the prompt.
-Output a high-quality edited version of the image in portrait 4:5 ratio.`;
+  const instruction = `You are an expert photo editor. Apply ONLY this change to the image: "${prompt}". Keep everything else identical — composition, lighting, style, faces, and background. Output a high-quality edited image.`;
 
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { inlineData: { mimeType: imageMime, data: imageBase64 } },
-              { text: instruction },
-            ],
-          }],
-          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-        }),
-        signal: AbortSignal.timeout(50000),
+  let lastError = "";
+
+  for (const model of EDIT_MODELS) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { inlineData: { mimeType: imageMime, data: imageBase64 } },
+                { text: instruction },
+              ],
+            }],
+            generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+          }),
+          signal: AbortSignal.timeout(50000),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) {
+        lastError = data.error?.message ?? `${model} HTTP ${res.status}`;
+        console.error(`[edit-image] ${model} falhou:`, lastError);
+        continue;
       }
-    );
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message ?? `Gemini HTTP ${res.status}`);
+      const parts = data.candidates?.[0]?.content?.parts ?? [];
+      const img = parts.find((p: any) => p.inlineData);
+      if (!img?.inlineData) {
+        lastError = `${model}: sem imagem na resposta`;
+        console.warn(`[edit-image] ${model}:`, lastError);
+        continue;
+      }
 
-    const parts = data.candidates?.[0]?.content?.parts ?? [];
-    const img = parts.find((p: any) => p.inlineData);
-    if (!img?.inlineData) throw new Error("Gemini: sem imagem na resposta");
-
-    return NextResponse.json({
-      imageUrl: `data:${img.inlineData.mimeType};base64,${img.inlineData.data}`,
-    });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+      console.log(`[edit-image] OK via ${model}`);
+      return NextResponse.json({
+        imageUrl: `data:${img.inlineData.mimeType};base64,${img.inlineData.data}`,
+      });
+    } catch (e: any) {
+      lastError = e.message;
+      console.error(`[edit-image] ${model} exception:`, lastError);
+    }
   }
+
+  return NextResponse.json({ error: lastError || "Falha em todos os modelos de edição" }, { status: 500 });
 }
