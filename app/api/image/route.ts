@@ -123,28 +123,81 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
   const fullPrompt = buildPrompt(prompt, style);
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`;
+  // Tenta os dois nomes de modelo (o preview pode ter sido renomeado)
+  const models = [
+    "gemini-2.0-flash-preview-image-generation",
+    "gemini-2.0-flash-exp-image-generation",
+  ];
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: fullPrompt }] }],
-      generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-    }),
-    signal: AbortSignal.timeout(40000),
-  });
+  let lastError = "";
+  for (const model of models) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: fullPrompt }] }],
+          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+        }),
+        signal: AbortSignal.timeout(40000),
+      });
+
+      const data = await res.json();
+      if (!res.ok) { lastError = data.error?.message ?? `Gemini HTTP ${res.status}`; continue; }
+
+      const parts = data.candidates?.[0]?.content?.parts ?? [];
+      const imagePart = parts.find((p: any) => p.inlineData);
+      if (!imagePart?.inlineData) { lastError = "Gemini: sem imagem na resposta"; continue; }
+
+      const { data: b64, mimeType } = imagePart.inlineData;
+      console.log(`[image] Gemini (${model}) OK`);
+      return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini" };
+    } catch (e: any) {
+      lastError = e.message;
+    }
+  }
+  throw new Error(lastError || "Gemini: falha em todos os modelos");
+}
+
+
+// ── Pexels (fallback de emergência) ──────────────────────────
+async function fromPexels(prompt: string) {
+  const key = process.env.PEXELS_API_KEY;
+  if (!key) throw new Error("PEXELS_API_KEY não configurada");
+
+  const query = prompt
+    .split(/[,.|]/)[0]
+    .replace(/<[^>]+>/g, "")
+    .replace(/[^\w\sÀ-ÿ]/g, "")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 5)
+    .join(" ") || "technology business";
+
+  const page = Math.ceil(Math.random() * 3);
+  const res = await fetch(
+    `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=portrait&per_page=15&page=${page}`,
+    { headers: { Authorization: key } },
+  );
+  if (!res.ok) throw new Error(`Pexels HTTP ${res.status}`);
 
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `Gemini HTTP ${res.status}`);
+  let photos = data.photos ?? [];
 
-  const parts = data.candidates?.[0]?.content?.parts ?? [];
-  const imagePart = parts.find((p: any) => p.inlineData);
-  if (!imagePart?.inlineData) throw new Error("Gemini: sem imagem na resposta");
+  if (!photos.length) {
+    const res2 = await fetch(
+      `https://api.pexels.com/v1/search?query=business&orientation=portrait&per_page=15&page=1`,
+      { headers: { Authorization: key } },
+    );
+    const d2 = await res2.json();
+    photos = d2.photos ?? [];
+  }
 
-  const { data: b64, mimeType } = imagePart.inlineData;
-  console.log("[image] Gemini 2.0 Flash OK");
-  return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini" };
+  if (!photos.length) throw new Error("Pexels: sem resultados");
+  const photo = photos[Math.floor(Math.random() * photos.length)];
+  console.log("[image] Pexels fallback OK");
+  return { imageUrl: photo.src?.large2x ?? photo.src?.original, source: "pexels" };
 }
 
 // ── Gemini com imagem de referência ──────────────────────────
@@ -220,10 +273,15 @@ export async function POST(req: NextRequest) {
     isPro = valid;
   }
 
-  // Plano gratuito → Gemini 2.0 Flash
+  // Plano gratuito → Gemini 2.0 Flash → Pexels fallback
   if (!isPro) {
     try {
       return NextResponse.json({ ...await fromGemini(prompt, style), plan: "free" });
+    } catch (err: any) {
+      console.error("[image] Gemini free falhou:", err.message);
+    }
+    try {
+      return NextResponse.json({ ...await fromPexels(prompt), plan: "free_fallback" });
     } catch (err: any) {
       return NextResponse.json({ error: err.message }, { status: 500 });
     }
@@ -263,6 +321,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ...await fromGemini(prompt, style), plan: "pro" });
   } catch (e: any) {
     errors.push(`Gemini: ${e.message}`);
+    console.error("[image] Gemini falhou:", e.message);
+  }
+
+  // Fallback final → Pexels
+  try {
+    return NextResponse.json({ ...await fromPexels(prompt), plan: "fallback" });
+  } catch (e: any) {
+    errors.push(`Pexels: ${e.message}`);
     return NextResponse.json({ error: errors.join(" | ") }, { status: 500 });
   }
 }
