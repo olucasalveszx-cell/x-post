@@ -331,7 +331,8 @@ export default function Toolbar({
         const imgRes = await fetch(slide.backgroundImageUrl);
         const buf = await imgRes.arrayBuffer();
         imageMime = imgRes.headers.get("content-type") ?? "image/jpeg";
-        imageBase64 = Buffer.from(buf).toString("base64");
+        const bytes = new Uint8Array(buf);
+        imageBase64 = btoa(bytes.reduce((s, b) => s + String.fromCharCode(b), ""));
       }
 
       const res = await fetch("/api/edit-image", {

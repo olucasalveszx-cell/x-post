@@ -5,11 +5,6 @@ import { authOptions } from "@/lib/auth";
 export const maxDuration = 55;
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  }
-
   const { imageBase64, imageMime = "image/jpeg", prompt } = await req.json();
   if (!imageBase64 || !prompt) {
     return NextResponse.json({ error: "imageBase64 e prompt são obrigatórios" }, { status: 400 });
