@@ -160,6 +160,52 @@ async function fromGeminiWithReference(prompt: string, style: ImageStyle, refBas
   throw new Error(lastError || "GeminiRef: falha");
 }
 
+// ── OpenRouter — Gemini Flash Image Preview ───────────────────
+async function fromOpenRouter(prompt: string, style: ImageStyle) {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) throw new Error("OPENROUTER_API_KEY não configurada");
+
+  const fullPrompt = buildPrompt(prompt, style);
+
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${key}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": process.env.NEXT_PUBLIC_BASE_URL ?? "https://xpost-iota.vercel.app",
+      "X-Title": "XPost Zone",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3.1-flash-image-preview",
+      messages: [{ role: "user", content: fullPrompt }],
+      modalities: ["text", "image"],
+    }),
+    signal: AbortSignal.timeout(50000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message ?? `OpenRouter HTTP ${res.status}`);
+
+  // Tenta formato OpenAI multimodal (array de content parts)
+  const parts: any[] = data.choices?.[0]?.message?.content ?? [];
+  if (Array.isArray(parts)) {
+    const imgPart = parts.find((p: any) => p.type === "image_url" && p.image_url?.url);
+    if (imgPart) {
+      console.log("[image] OpenRouter OK (array parts)");
+      return { imageUrl: imgPart.image_url.url, source: "openrouter" };
+    }
+  }
+
+  // Tenta formato string base64 direto
+  const content = data.choices?.[0]?.message?.content;
+  if (typeof content === "string" && content.startsWith("data:image")) {
+    console.log("[image] OpenRouter OK (string b64)");
+    return { imageUrl: content, source: "openrouter" };
+  }
+
+  throw new Error("OpenRouter: sem imagem na resposta");
+}
+
 // ── Pexels (fallback final) ───────────────────────────────────
 async function fromPexels(prompt: string) {
   const key = process.env.PEXELS_API_KEY;
@@ -247,6 +293,13 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     errors.push(`Imagen3: ${e.message}`);
     console.error("[image] Imagen3 falhou:", e.message);
+  }
+
+  try {
+    return NextResponse.json({ ...await fromOpenRouter(prompt, style), plan: "pro" });
+  } catch (e: any) {
+    errors.push(`OpenRouter: ${e.message}`);
+    console.error("[image] OpenRouter falhou:", e.message);
   }
 
   try {
