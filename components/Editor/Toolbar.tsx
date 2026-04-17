@@ -1,6 +1,6 @@
 "use client";
 
-import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2 } from "lucide-react";
+import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import { useRef, useState, useEffect } from "react";
@@ -53,6 +53,56 @@ export default function Toolbar({
   const [editPrompt, setEditPrompt] = useState("");
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
+  const [showLayouts, setShowLayouts] = useState(false);
+
+  const LAYOUTS = [
+    { id: "classic",    label: "Clássico",    desc: "Texto embaixo",    gradient: "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.80) 40%, rgba(0,0,0,0.30) 70%, rgba(0,0,0,0.10) 100%)", preview: [{ top: "62%", left: "6%", w: "88%", h: "20%", size: "lg" }, { top: "86%", left: "6%", w: "70%", h: "8%", size: "sm" }] },
+    { id: "top",        label: "Topo",        desc: "Texto no topo",    gradient: "linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.70) 40%, rgba(0,0,0,0.15) 70%, rgba(0,0,0,0.05) 100%)", preview: [{ top: "8%", left: "6%", w: "88%", h: "20%", size: "lg" }, { top: "32%", left: "6%", w: "70%", h: "8%", size: "sm" }] },
+    { id: "center",     label: "Centralizado",desc: "Texto no centro",  gradient: "linear-gradient(to bottom, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.88) 40%, rgba(0,0,0,0.88) 60%, rgba(0,0,0,0.70) 100%)", preview: [{ top: "35%", left: "10%", w: "80%", h: "18%", size: "lg" }, { top: "57%", left: "15%", w: "70%", h: "7%", size: "sm" }] },
+    { id: "bold",       label: "Bold",        desc: "Título gigante",   gradient: "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.90) 50%, rgba(0,0,0,0.70) 100%)", preview: [{ top: "28%", left: "4%", w: "92%", h: "42%", size: "xl" }, { top: "74%", left: "4%", w: "65%", h: "7%", size: "sm" }] },
+    { id: "cinematic",  label: "Cinemático",  desc: "Estilo filme",     gradient: "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.40) 70%, rgba(0,0,0,0.10) 100%)", preview: [{ top: "60%", left: "4%", w: "92%", h: "22%", size: "lg" }, { top: "86%", left: "4%", w: "60%", h: "7%", size: "sm" }] },
+    { id: "minimal",    label: "Minimalista", desc: "Clean e direto",   gradient: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.15) 100%)", preview: [{ top: "55%", left: "6%", w: "88%", h: "17%", size: "lg" }, { top: "76%", left: "6%", w: "65%", h: "7%", size: "sm" }] },
+  ];
+
+  const applyLayout = (layoutId: string) => {
+    const W = slide.width;
+    const H = slide.height;
+    const layout = LAYOUTS.find(l => l.id === layoutId);
+    if (!layout) return;
+
+    const textEls = slide.elements.filter(e => e.type === "text");
+    const [titleEl, bodyEl] = textEls;
+
+    let newElements = [...slide.elements];
+
+    const positions: Record<string, { ty: number; by: number; fs: number; ba: "left" | "center" }> = {
+      classic:   { ty: H - 520, by: H - 172, fs: Math.round(H * 0.068), ba: "left" },
+      top:       { ty: 80,      by: 390,     fs: Math.round(H * 0.058), ba: "left" },
+      center:    { ty: Math.round(H * 0.30), by: Math.round(H * 0.58), fs: Math.round(H * 0.060), ba: "center" },
+      bold:      { ty: Math.round(H * 0.25), by: Math.round(H * 0.74), fs: Math.round(H * 0.085), ba: "left" },
+      cinematic: { ty: Math.round(H * 0.60), by: Math.round(H * 0.88), fs: Math.round(H * 0.072), ba: "left" },
+      minimal:   { ty: Math.round(H * 0.55), by: Math.round(H * 0.80), fs: Math.round(H * 0.052), ba: "left" },
+    };
+
+    const p = positions[layoutId];
+    if (!p) return;
+
+    if (titleEl) {
+      newElements = newElements.map(e => e.id === titleEl.id ? {
+        ...e, x: 64, y: p.ty, width: W - 128, height: Math.round(H * 0.26),
+        style: { ...(e.style as any), fontSize: p.fs, textAlign: p.ba },
+      } : e);
+    }
+    if (bodyEl) {
+      newElements = newElements.map(e => e.id === bodyEl.id ? {
+        ...e, x: 64, y: p.by, width: W - 128, height: Math.round(H * 0.09),
+        style: { ...(e.style as any), fontSize: Math.round(H * 0.019), textAlign: p.ba },
+      } : e);
+    }
+
+    onUpdate({ ...slide, elements: newElements, backgroundGradient: layout.gradient });
+    setShowLayouts(false);
+  };
 
   // ── Perfil ────────────────────────────────────────────────
   const [showProfile, setShowProfile] = useState(false);
@@ -238,6 +288,12 @@ export default function Toolbar({
           <UserCircle size={14} /> Perfil
         </button>
 
+        {/* Layout */}
+        <button onClick={() => { setShowLayouts(v => !v); setShowProfile(false); setShowEditAI(false); }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showLayouts ? "bg-brand-600 text-white" : "bg-[#2a2a2a] hover:bg-[#333] text-gray-300"}`}>
+          <LayoutTemplate size={14} /> Layout
+        </button>
+
         {/* Gerar fundo IA */}
         <button onClick={generateBackground} disabled={generating}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-brand-600/20 hover:bg-brand-600/40 border border-brand-600/30 text-brand-400 text-sm shrink-0 disabled:opacity-40 transition-colors">
@@ -359,6 +415,48 @@ export default function Toolbar({
             className="w-full py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-sm font-medium text-white transition-colors">
             Inserir no slide
           </button>
+        </div>
+      )}
+
+      {/* Painel de layouts */}
+      {showLayouts && (
+        <div className="absolute top-full left-0 z-50 mt-1 ml-2 bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl p-4 w-[420px]">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
+              <LayoutTemplate size={14} className="text-brand-400" /> Templates de Layout
+            </span>
+            <button onClick={() => setShowLayouts(false)} className="text-gray-500 hover:text-gray-300"><X size={16} /></button>
+          </div>
+          <p className="text-[11px] text-gray-600 mb-3">Reposiciona o texto e ajusta o gradiente. O conteúdo é preservado.</p>
+          <div className="grid grid-cols-3 gap-2">
+            {LAYOUTS.map((layout) => (
+              <button
+                key={layout.id}
+                onClick={() => applyLayout(layout.id)}
+                className="flex flex-col gap-2 p-2 rounded-xl border border-[#2a2a2a] hover:border-brand-500/50 hover:bg-brand-500/5 transition-all text-left"
+              >
+                {/* Mini preview */}
+                <div className="relative w-full rounded-lg overflow-hidden bg-[#1a1a1a]" style={{ aspectRatio: "4/5" }}>
+                  <div className="absolute inset-0" style={{ background: layout.gradient }} />
+                  {layout.preview.map((block, i) => (
+                    <div
+                      key={i}
+                      className="absolute rounded"
+                      style={{
+                        top: block.top, left: block.left, width: block.w, height: block.h,
+                        background: "rgba(255,255,255,0.85)",
+                        opacity: block.size === "sm" ? 0.5 : 0.9,
+                      }}
+                    />
+                  ))}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-white">{layout.label}</p>
+                  <p className="text-[10px] text-gray-500">{layout.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
