@@ -4,22 +4,165 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import {
   Instagram, Sparkles, ArrowRight, Check, X,
-  Zap, Clock, Star, Calendar, ChevronDown,
+  Zap, Star, ChevronDown,
   Loader2, Crown, Brain, Globe, Image as ImageIcon,
   MousePointer, TrendingUp, Shield,
 } from "lucide-react";
 import MarqueeImages from "@/components/MarqueeImages";
 import LoginModal from "@/components/LoginModal";
 
-// ── Dados ──────────────────────────────────────────────────────
+// ── Botão flutuante WhatsApp ───────────────────────────────────
+const WA_NUMBER = "5581973014080";
+const WA_MSG = encodeURIComponent("Olá! Vim pelo XPost e quero saber mais sobre os planos 🐻");
 
+function WhatsAppButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="fixed bottom-6 right-5 z-[9990] flex flex-col items-end gap-3">
+      {open && (
+        <div className="bg-[#111] border border-[#222] rounded-2xl shadow-2xl p-4 w-72 flex flex-col gap-3 animate-in slide-in-from-bottom-4"
+          style={{ backdropFilter: "blur(12px)" }}>
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: "#25d366" }}>
+              <svg viewBox="0 0 24 24" width={18} height={18} fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm">Fale com a gente</p>
+              <p className="text-gray-500 text-[11px]">(81) 97301-4080</p>
+            </div>
+          </div>
+          <p className="text-gray-400 text-xs leading-relaxed">
+            Dúvidas sobre os planos ou quer ver uma demo ao vivo? Chama no WhatsApp — respondemos na hora! 🚀
+          </p>
+          <a
+            href={`https://wa.me/${WA_NUMBER}?text=${WA_MSG}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold transition-all hover:opacity-90 hover:scale-105"
+            style={{ background: "#25d366" }}
+          >
+            <svg viewBox="0 0 24 24" width={15} height={15} fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Chamar no WhatsApp
+          </a>
+        </div>
+      )}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95"
+        style={{ background: "#25d366", boxShadow: "0 4px 24px rgba(37,211,102,0.45)" }}
+        aria-label="WhatsApp"
+      >
+        <svg viewBox="0 0 24 24" width={28} height={28} fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      </button>
+    </div>
+  );
+}
+
+// ── Mascote urso com tapa-olho em X ───────────────────────────
+function BearMascot({ size = 200, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <filter id="xglow" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <radialGradient id="earGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#2d1e0f" />
+          <stop offset="100%" stopColor="#1a1108" />
+        </radialGradient>
+        <radialGradient id="headGrad" cx="40%" cy="35%" r="60%">
+          <stop offset="0%" stopColor="#241808" />
+          <stop offset="100%" stopColor="#0f0b05" />
+        </radialGradient>
+        <radialGradient id="purpleGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="rgba(124,58,237,0.35)" />
+          <stop offset="100%" stopColor="rgba(124,58,237,0)" />
+        </radialGradient>
+      </defs>
+
+      {/* Sombra suave no chão */}
+      <ellipse cx="100" cy="194" rx="52" ry="7" fill="rgba(124,58,237,0.15)" />
+
+      {/* Orelha esquerda */}
+      <circle cx="40" cy="50" r="30" fill="url(#earGrad)" />
+      <circle cx="40" cy="50" r="18" fill="#2d1e0f" />
+
+      {/* Orelha direita */}
+      <circle cx="160" cy="50" r="30" fill="url(#earGrad)" />
+      <circle cx="160" cy="50" r="18" fill="#2d1e0f" />
+
+      {/* Cabeça */}
+      <circle cx="100" cy="110" r="80" fill="url(#headGrad)" />
+
+      {/* Focinho */}
+      <ellipse cx="100" cy="133" rx="50" ry="40" fill="#2d1e0f" />
+
+      {/* Brilho lateral sutil na cabeça */}
+      <ellipse cx="70" cy="72" rx="22" ry="30" fill="rgba(255,255,255,0.025)" />
+
+      {/* Glow roxo atrás do tapa-olho */}
+      <ellipse cx="68" cy="97" rx="34" ry="28" fill="url(#purpleGlow)" />
+
+      {/* Tapa-olho — fundo escuro */}
+      <rect x="40" y="76" width="56" height="42" rx="13" fill="#080503" />
+      {/* Tira do tapa-olho indo até a orelha */}
+      <path d="M40 82 C32 75 30 62 38 52" stroke="#120e08" strokeWidth="7" fill="none" strokeLinecap="round" />
+
+      {/* X roxo — traços externos (glow) */}
+      <g filter="url(#xglow)">
+        <line x1="51" y1="84" x2="85" y2="112" stroke="#7c3aed" strokeWidth="7" strokeLinecap="round" />
+        <line x1="85" y1="84" x2="51" y2="112" stroke="#7c3aed" strokeWidth="7" strokeLinecap="round" />
+      </g>
+      {/* X roxo — traços internos (destaque) */}
+      <line x1="53" y1="86" x2="83" y2="110" stroke="#c084fc" strokeWidth="3.5" strokeLinecap="round" opacity="0.75" />
+      <line x1="83" y1="86" x2="53" y2="110" stroke="#c084fc" strokeWidth="3.5" strokeLinecap="round" opacity="0.75" />
+
+      {/* Olho direito — esclerótica */}
+      <circle cx="134" cy="96" r="22" fill="white" />
+      {/* Íris */}
+      <circle cx="137" cy="93" r="14" fill="#140800" />
+      {/* Pupila reflexo */}
+      <circle cx="142" cy="88" r="5" fill="white" />
+      <circle cx="135" cy="98" r="2.5" fill="white" opacity="0.3" />
+
+      {/* Sobrancelha direita (personalidade) */}
+      <path d="M118 78 Q134 70 150 76" stroke="#1a1108" strokeWidth="5" fill="none" strokeLinecap="round" />
+
+      {/* Nariz */}
+      <ellipse cx="100" cy="143" rx="15" ry="10" fill="#0a0604" />
+      {/* Nariz — reflexo */}
+      <ellipse cx="95" cy="140" rx="4.5" ry="3" fill="#1e1408" opacity="0.5" />
+
+      {/* Boca */}
+      <path d="M84 154 Q100 168 116 154" stroke="#0a0604" strokeWidth="4" fill="none" strokeLinecap="round" />
+      <path d="M84 154 Q80 160 83 164" stroke="#0a0604" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path d="M116 154 Q120 160 117 164" stroke="#0a0604" strokeWidth="3" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ── Logo header (mascote pequeno + texto) ─────────────────────
+function Logo({ className = "" }: { className?: string }) {
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>
+      <BearMascot size={36} />
+      <span className="text-[22px] font-black tracking-tight text-white leading-none">
+        x<span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>post</span>
+      </span>
+    </div>
+  );
+}
+
+// ── Dados ──────────────────────────────────────────────────────
 const FEATURES = [
-  { icon: <Globe size={22} />,       title: "Pesquisa real na web",        desc: "A IA busca dados atuais sobre qualquer tema para embasar seu conteúdo com informações reais." },
-  { icon: <Brain size={22} />,       title: "Texto escrito por IA",        desc: "Claude AI escreve títulos impactantes, corpo e CTA adaptados ao seu nicho e estilo." },
-  { icon: <ImageIcon size={22} />,   title: "Imagens cinematográficas",    desc: "Gera imagens únicas com FLUX AI para cada slide — dark, dramáticas e profissionais." },
-  { icon: <Instagram size={22} />,   title: "Publica direto no Instagram", desc: "Conecte sua conta Business e publique carrosséis com um único clique, sem sair da plataforma." },
-  { icon: <MousePointer size={22} />,title: "Editor visual completo",      desc: "Edite textos, imagens, cores e layout de cada slide com total liberdade, sem precisar de Canva." },
-  { icon: <TrendingUp size={22} />,  title: "Crescimento consistente",     desc: "Conteúdo diário profissional que gera engajamento real e atrai seguidores qualificados." },
+  { icon: <Globe size={22} />,        title: "Pesquisa real na web",        desc: "A IA busca dados atuais sobre qualquer tema para embasar seu conteúdo com informações reais." },
+  { icon: <Brain size={22} />,        title: "Texto escrito por IA",        desc: "Claude AI escreve títulos impactantes, corpo e CTA adaptados ao seu nicho e estilo." },
+  { icon: <ImageIcon size={22} />,    title: "Imagens cinematográficas",    desc: "Gera imagens únicas com Gemini AI para cada slide — dark, dramáticas e profissionais." },
+  { icon: <Instagram size={22} />,    title: "Publica direto no Instagram", desc: "Conecte sua conta Business e publique carrosséis com um único clique, sem sair da plataforma." },
+  { icon: <MousePointer size={22} />, title: "Editor visual completo",      desc: "Edite textos, imagens, cores e layout de cada slide com total liberdade, sem precisar de Canva." },
+  { icon: <TrendingUp size={22} />,   title: "Crescimento consistente",     desc: "Conteúdo diário profissional que gera engajamento real e atrai seguidores qualificados." },
 ];
 
 const PLANS = [
@@ -27,70 +170,47 @@ const PLANS = [
     key: "basic",
     label: "Básico",
     price: "29,90",
-    cents: "",
     period: "/ mês",
     equiv: null as string | null,
     highlight: false,
     badge: null as string | null,
     cta: "Começar agora",
-    features: [
-      "Carrosséis ilimitados com IA",
-      "Pesquisa web em tempo real",
-      "Editor visual completo",
-      "Publicação no Instagram",
-    ],
+    features: ["Carrosséis ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "Publicação no Instagram"],
     missing: ["Flyer promocional com IA", "Assistente IA (Zora)", "Suporte prioritário"],
   },
   {
     key: "pro",
     label: "Pro",
     price: "61,90",
-    cents: "",
     period: "/ mês",
     equiv: null as string | null,
     highlight: true,
     badge: "Mais popular" as string | null,
     cta: "Assinar agora",
-    features: [
-      "Carrosséis ilimitados com IA",
-      "Pesquisa web em tempo real",
-      "Editor visual completo",
-      "Publicação no Instagram",
-      "Flyer promocional com IA",
-      "Assistente IA (Zora)",
-    ],
+    features: ["Carrosséis ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "Publicação no Instagram", "Flyer promocional com IA", "Assistente IA (Zora)"],
     missing: ["Suporte prioritário"],
   },
   {
     key: "business",
     label: "Business",
     price: "99,90",
-    cents: "",
     period: "/ mês",
     equiv: null as string | null,
     highlight: false,
     badge: "Mais completo" as string | null,
     cta: "Quero o melhor",
-    features: [
-      "Carrosséis ilimitados com IA",
-      "Pesquisa web em tempo real",
-      "Editor visual completo",
-      "Publicação no Instagram",
-      "Flyer promocional com IA",
-      "Assistente IA (Zora)",
-      "Suporte prioritário",
-    ],
+    features: ["Carrosséis ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "Publicação no Instagram", "Flyer promocional com IA", "Assistente IA (Zora)", "Suporte prioritário"],
     missing: [],
   },
 ];
 
 const FAQS = [
-  { q: "Preciso instalar alguma coisa?",    a: "Não. XPost Zone é 100% online, funciona direto no browser, em qualquer dispositivo." },
-  { q: "Funciona para qualquer nicho?",     a: "Sim. A IA pesquisa na web e adapta o conteúdo ao seu nicho automaticamente — de finanças a gastronomia." },
-  { q: "As imagens são realmente geradas por IA?", a: "Sim. Usamos modelos FLUX para criar imagens cinematográficas únicas para cada slide." },
-  { q: "Consigo publicar direto no Instagram?", a: "Sim. Conecte sua conta Instagram Business e publique com um clique, sem sair da plataforma." },
-  { q: "Posso cancelar quando quiser?",     a: "Sim. Sem fidelidade, sem multa. Cancele quando quiser pelo portal do cliente Stripe." },
-  { q: "Meu carrossel vai parecer amador?", a: "Não. O editor permite customizar tudo — fontes, cores, layout, imagens. O resultado é profissional." },
+  { q: "Preciso instalar alguma coisa?",            a: "Não. XPost é 100% online, funciona direto no browser, em qualquer dispositivo." },
+  { q: "Funciona para qualquer nicho?",             a: "Sim. A IA pesquisa na web e adapta o conteúdo ao seu nicho automaticamente — de finanças a gastronomia." },
+  { q: "As imagens são realmente geradas por IA?",  a: "Sim. Usamos Gemini AI para criar imagens cinematográficas únicas para cada slide." },
+  { q: "Consigo publicar direto no Instagram?",     a: "Sim. Conecte sua conta Instagram Business e publique com um clique, sem sair da plataforma." },
+  { q: "Posso cancelar quando quiser?",             a: "Sim. Sem fidelidade, sem multa. Cancele quando quiser pelo portal do cliente Stripe." },
+  { q: "Meu carrossel vai parecer amador?",         a: "Não. O editor permite customizar tudo — fontes, cores, layout, imagens. O resultado é profissional." },
 ];
 
 // ── Componente ─────────────────────────────────────────────────
@@ -125,12 +245,9 @@ export default function LandingPage() {
     <main className="min-h-screen bg-[#060606] text-white overflow-x-hidden">
 
       {/* ── HEADER ─────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 flex items-center justify-between px-5 md:px-10 py-3.5 border-b border-white/5"
+      <header className="sticky top-0 z-50 flex items-center justify-between px-5 md:px-10 py-3 border-b border-white/5"
         style={{ background: "rgba(6,6,6,0.92)", backdropFilter: "blur(12px)" }}>
-        <div className="flex items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="XPost Zone" className="h-10 w-auto object-contain" />
-        </div>
+        <Logo />
         <nav className="hidden md:flex items-center gap-6 text-sm text-gray-400">
           <button onClick={scrollToPricing} className="hover:text-white transition-colors">Preços</button>
           <Link href="/editor" className="hover:text-white transition-colors">Editor</Link>
@@ -150,64 +267,94 @@ export default function LandingPage() {
       </header>
 
       {/* ── HERO ───────────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center text-center px-5 pt-24 pb-16 overflow-hidden">
-        {/* Glow fundo */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.18) 0%,transparent 70%)", filter: "blur(40px)" }} />
+      <section className="relative px-5 md:px-10 pt-16 pb-12 overflow-hidden">
+        {/* Glows de fundo */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.15) 0%,transparent 70%)", filter: "blur(50px)" }} />
+        <div className="absolute top-20 right-0 w-[400px] h-[400px] rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(ellipse,rgba(236,72,153,0.08) 0%,transparent 70%)", filter: "blur(60px)" }} />
 
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-purple-500/25 bg-purple-500/8 text-purple-300 text-xs font-semibold mb-7 tracking-wide"
-          style={{ background: "rgba(124,58,237,0.1)" }}>
-          <Zap size={11} className="text-yellow-400" />
-          IA que pesquisa, escreve e publica por você
-        </div>
+        <div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-10 lg:gap-0">
 
-        <h1 className="text-[42px] md:text-[72px] lg:text-[84px] font-black leading-[1.0] max-w-4xl tracking-tight">
-          Carrosséis{" "}
-          <span style={{ background: "linear-gradient(135deg,#c084fc,#ec4899,#f97316)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            virais
-          </span>
-          <br />no Instagram em{" "}
-          <span style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            segundos
-          </span>
-        </h1>
+          {/* Coluna texto */}
+          <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-purple-500/25 text-purple-300 text-xs font-semibold mb-6 tracking-wide"
+              style={{ background: "rgba(124,58,237,0.1)" }}>
+              <Zap size={11} className="text-yellow-400" />
+              IA que pesquisa, escreve e publica por você
+            </div>
 
-        <p className="mt-6 text-gray-400 text-lg md:text-xl max-w-xl leading-relaxed">
-          IA que pesquisa na web, escreve o texto e gera as imagens.
-          Do zero ao carrossel publicado — sem Canva, sem ChatGPT.
-        </p>
+            <h1 className="text-[40px] md:text-[66px] lg:text-[74px] font-black leading-[1.0] max-w-xl tracking-tight">
+              Carrosséis{" "}
+              <span style={{ background: "linear-gradient(135deg,#c084fc,#ec4899,#f97316)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                virais
+              </span>
+              <br />no Instagram em{" "}
+              <span style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                segundos
+              </span>
+            </h1>
 
-        <div className="flex flex-col sm:flex-row items-center gap-3 mt-10">
-          <button onClick={scrollToPricing}
-            className="flex items-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-[15px] transition-all hover:scale-105 hover:brightness-110"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 32px rgba(124,58,237,0.4)" }}>
-            <Sparkles size={17} />
-            Criar meu carrossel agora
-            <ArrowRight size={17} />
-          </button>
-          <Link href="/editor"
-            className="flex items-center gap-2 px-5 py-4 rounded-2xl text-sm font-semibold text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all"
-            style={{ background: "rgba(255,255,255,0.04)" }}>
-            Ver editor →
-          </Link>
-        </div>
+            <p className="mt-5 text-gray-400 text-lg max-w-md leading-relaxed">
+              IA que pesquisa na web, escreve o texto e gera as imagens.
+              Do zero ao carrossel publicado — sem Canva, sem ChatGPT.
+            </p>
 
-        {/* Trust badges */}
-        <div className="flex flex-wrap justify-center gap-5 mt-10 text-xs text-gray-500">
-          {[
-            { icon: <Shield size={12} className="text-green-400" />, text: "Pagamento seguro" },
-            { icon: <Star size={12} className="text-yellow-400" />,  text: "Cancele quando quiser" },
-            { icon: <Zap size={12} className="text-purple-400" />,   text: "Acesso imediato" },
-          ].map((b) => (
-            <span key={b.text} className="flex items-center gap-1.5">{b.icon}{b.text}</span>
-          ))}
+            <div className="flex flex-col sm:flex-row items-center gap-3 mt-8">
+              <button onClick={scrollToPricing}
+                className="flex items-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-[15px] transition-all hover:scale-105 hover:brightness-110"
+                style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 32px rgba(124,58,237,0.4)" }}>
+                <Sparkles size={17} />
+                Criar meu carrossel agora
+                <ArrowRight size={17} />
+              </button>
+              <Link href="/editor"
+                className="flex items-center gap-2 px-5 py-4 rounded-2xl text-sm font-semibold text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all"
+                style={{ background: "rgba(255,255,255,0.04)" }}>
+                Ver editor →
+              </Link>
+            </div>
+
+            <div className="flex flex-wrap justify-center lg:justify-start gap-5 mt-8 text-xs text-gray-500">
+              {[
+                { icon: <Shield size={12} className="text-green-400" />, text: "Pagamento seguro" },
+                { icon: <Star size={12} className="text-yellow-400" />,  text: "Cancele quando quiser" },
+                { icon: <Zap size={12} className="text-purple-400" />,   text: "Acesso imediato" },
+              ].map((b) => (
+                <span key={b.text} className="flex items-center gap-1.5">{b.icon}{b.text}</span>
+              ))}
+            </div>
+          </div>
+
+          {/* Coluna mascote */}
+          <div className="flex-shrink-0 flex flex-col items-center justify-center relative lg:w-[420px]">
+            {/* Anel de glow atrás do mascote */}
+            <div className="absolute w-[300px] h-[300px] rounded-full pointer-events-none"
+              style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.22) 0%,transparent 70%)", filter: "blur(30px)" }} />
+            <div className="absolute w-[200px] h-[200px] rounded-full pointer-events-none"
+              style={{ background: "radial-gradient(ellipse,rgba(236,72,153,0.12) 0%,transparent 70%)", filter: "blur(20px)" }} />
+
+            <div className="relative" style={{ filter: "drop-shadow(0 0 30px rgba(124,58,237,0.3))" }}>
+              <BearMascot size={280} className="drop-shadow-2xl" />
+            </div>
+
+            {/* Badge flutuante */}
+            <div className="absolute top-4 right-4 lg:right-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold"
+              style={{ background: "rgba(124,58,237,0.18)", border: "1px solid rgba(168,85,247,0.35)", color: "#c084fc" }}>
+              <Sparkles size={10} /> IA gerada
+            </div>
+            <div className="absolute bottom-8 left-4 lg:left-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold"
+              style={{ background: "rgba(236,72,153,0.15)", border: "1px solid rgba(236,72,153,0.3)", color: "#f472b6" }}>
+              <Instagram size={10} /> Pronto pra postar
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ── MARQUEE ────────────────────────────────────────── */}
       <section className="relative w-full py-10 overflow-hidden">
         <div className="text-center mb-8">
-          <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-2">Criado com XPost Zone</p>
+          <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-2">Criado com XPost</p>
           <h2 className="text-xl md:text-2xl font-bold text-white">
             Veja exemplos reais de carrosséis gerados por IA
           </h2>
@@ -217,7 +364,6 @@ export default function LandingPage() {
         <div className="absolute inset-y-0 right-0 w-24 z-10 pointer-events-none"
           style={{ background: "linear-gradient(to left,#060606,transparent)" }} />
         <MarqueeImages />
-
         <div className="flex justify-center mt-8">
           <button onClick={scrollToPricing}
             className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold border border-purple-500/25 text-purple-300 hover:bg-purple-500/8 transition-colors"
@@ -231,9 +377,9 @@ export default function LandingPage() {
       <section className="px-5 py-12 max-w-4xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { num: "30s",   label: "para gerar um carrossel" },
-            { num: "100%",  label: "online, zero instalação" },
-            { num: "IA",    label: "pesquisa + texto + imagem" },
+            { num: "30s",      label: "para gerar um carrossel" },
+            { num: "100%",     label: "online, zero instalação" },
+            { num: "IA",       label: "pesquisa + texto + imagem" },
             { num: "1 clique", label: "para publicar no Instagram" },
           ].map((s) => (
             <div key={s.label} className="flex flex-col items-center justify-center text-center p-5 rounded-2xl"
@@ -245,6 +391,34 @@ export default function LandingPage() {
               <p className="text-[11px] text-gray-500 mt-1 leading-tight">{s.label}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── MASCOTE DESTAQUE ────────────────────────────────── */}
+      <section className="px-5 py-10 max-w-4xl mx-auto">
+        <div className="relative rounded-3xl overflow-hidden flex flex-col md:flex-row items-center gap-8 p-8 md:p-10"
+          style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.12),rgba(236,72,153,0.06))", border: "1.5px solid rgba(168,85,247,0.2)" }}>
+          <div className="absolute inset-0 pointer-events-none"
+            style={{ background: "radial-gradient(ellipse 60% 80% at 80% 50%,rgba(124,58,237,0.08) 0%,transparent 70%)" }} />
+          <BearMascot size={140} className="flex-shrink-0 relative" />
+          <div className="relative text-center md:text-left">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-purple-400/70 mb-2">Seu novo assistente</p>
+            <h3 className="text-2xl md:text-3xl font-black mb-3">
+              Conheça o{" "}
+              <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Xpo
+              </span>
+              , o mascote do XPost
+            </h3>
+            <p className="text-gray-400 text-sm leading-relaxed max-w-md">
+              Com o tapa-olho em <strong className="text-purple-400">X</strong>, o Xpo enfrenta qualquer nicho — pesquisa, escreve, gera imagens e publica no Instagram por você. Ele não descansa até seu conteúdo ficar perfeito.
+            </p>
+            <button onClick={scrollToPricing}
+              className="mt-5 inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all hover:scale-105"
+              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}>
+              <Sparkles size={14} /> Começar com o Xpo
+            </button>
+          </div>
         </div>
       </section>
 
@@ -264,17 +438,10 @@ export default function LandingPage() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
-          {/* Sem XPost */}
           <div className="rounded-3xl p-7" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)" }}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-500/60 mb-4">Sem XPost Zone</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-500/60 mb-4">Sem XPost</p>
             <ul className="space-y-3">
-              {[
-                "Horas no Canva sem resultado nenhum",
-                "Posts inconsistentes que ninguém vê",
-                "Sem estratégia de crescimento",
-                "Vendo concorrentes crescerem enquanto você trava",
-                "Sem previsibilidade de clientes ou vendas",
-              ].map((i) => (
+              {["Horas no Canva sem resultado nenhum", "Posts inconsistentes que ninguém vê", "Sem estratégia de crescimento", "Vendo concorrentes crescerem enquanto você trava", "Sem previsibilidade de clientes ou vendas"].map((i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-gray-400">
                   <X size={15} className="text-red-500 flex-shrink-0 mt-0.5" /> {i}
                 </li>
@@ -282,22 +449,15 @@ export default function LandingPage() {
             </ul>
           </div>
 
-          {/* Com XPost */}
           <div className="rounded-3xl p-7 relative overflow-hidden"
             style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.12),rgba(236,72,153,0.06))", border: "1.5px solid rgba(168,85,247,0.35)" }}>
             <div className="absolute -top-3 right-5 px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide"
               style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white" }}>
               ✦ Sua melhor escolha
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-purple-400/70 mb-4">Com XPost Zone</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-purple-400/70 mb-4">Com XPost</p>
             <ul className="space-y-3">
-              {[
-                "Carrossel pronto em 30 segundos com IA",
-                "Conteúdo profissional todos os dias",
-                "Mais alcance, engajamento e seguidores",
-                "Crescimento constante e previsível",
-                "Mais vendas no automático",
-              ].map((i) => (
+              {["Carrossel pronto em 30 segundos com IA", "Conteúdo profissional todos os dias", "Mais alcance, engajamento e seguidores", "Crescimento constante e previsível", "Mais vendas no automático"].map((i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-gray-200">
                   <Check size={15} className="text-purple-400 flex-shrink-0 mt-0.5" /> {i}
                 </li>
@@ -351,47 +511,36 @@ export default function LandingPage() {
           <p className="mt-3 text-gray-500 text-sm">Sem fidelidade. Cancele quando quiser.</p>
         </div>
 
-        {/* Cards */}
         <div className="grid md:grid-cols-3 gap-5 items-stretch">
           {PLANS.map((plan) => (
             <div key={plan.key} className="relative flex flex-col rounded-3xl p-7 transition-transform hover:-translate-y-1"
               style={{
-                background: plan.highlight
-                  ? "linear-gradient(160deg,rgba(124,58,237,0.22),rgba(168,85,247,0.1))"
-                  : "rgba(255,255,255,0.03)",
+                background: plan.highlight ? "linear-gradient(160deg,rgba(124,58,237,0.22),rgba(168,85,247,0.1))" : "rgba(255,255,255,0.03)",
                 border: plan.highlight ? "2px solid rgba(168,85,247,0.6)" : "1px solid rgba(255,255,255,0.08)",
                 boxShadow: plan.highlight ? "0 0 40px rgba(124,58,237,0.15)" : "none",
               }}>
-
               {plan.badge && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-wide whitespace-nowrap"
                   style={{ background: plan.highlight ? "linear-gradient(135deg,#7c3aed,#a855f7)" : "rgba(255,255,255,0.1)", color: "white" }}>
                   {plan.badge}
                 </div>
               )}
-
-              {/* Label */}
               <div className="flex items-center gap-2 mb-5">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center"
                   style={{ background: plan.highlight ? "rgba(168,85,247,0.3)" : "rgba(255,255,255,0.07)" }}>
                   {plan.key === "basic"    && <Zap    size={14} className="text-purple-300" />}
-                  {plan.key === "pro"     && <Star   size={14} className="text-purple-300" />}
-                  {plan.key === "business"&& <Crown  size={14} className="text-yellow-400" />}
+                  {plan.key === "pro"      && <Star   size={14} className="text-purple-300" />}
+                  {plan.key === "business" && <Crown  size={14} className="text-yellow-400" />}
                 </div>
                 <span className="text-sm font-bold uppercase tracking-widest text-gray-300">{plan.label}</span>
               </div>
-
-              {/* Preço */}
               <div className="mb-6">
                 <div className="flex items-start gap-1">
                   <span className="text-sm text-gray-400 mt-2">R$</span>
                   <span className="text-[52px] font-black leading-none tracking-tight text-white">{plan.price}</span>
                 </div>
                 <p className="text-sm text-gray-500 mt-1">{plan.period}</p>
-                {plan.equiv && <p className="text-xs text-purple-400 mt-1 font-medium">{plan.equiv}</p>}
               </div>
-
-              {/* Botão */}
               <button
                 onClick={() => goToCheckout(plan.key)}
                 disabled={loadingPlan !== null}
@@ -399,15 +548,9 @@ export default function LandingPage() {
                 style={plan.highlight
                   ? { background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white", boxShadow: "0 4px 20px rgba(124,58,237,0.4)" }
                   : { background: "rgba(255,255,255,0.07)", color: "white", border: "1px solid rgba(255,255,255,0.1)" }}>
-                {loadingPlan === plan.key
-                  ? <><Loader2 size={14} className="animate-spin" /> Aguarde...</>
-                  : plan.cta}
+                {loadingPlan === plan.key ? <><Loader2 size={14} className="animate-spin" /> Aguarde...</> : plan.cta}
               </button>
-
-              {/* Divisor */}
               <div className="w-full h-px mb-5" style={{ background: "rgba(255,255,255,0.07)" }} />
-
-              {/* Features incluídas */}
               <ul className="space-y-2.5 flex-1">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2.5 text-[13px] text-gray-300">
@@ -430,32 +573,19 @@ export default function LandingPage() {
             style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="px-5 py-3.5 text-gray-500">Recurso</div>
             {PLANS.map((p) => (
-              <div key={p.key} className={`px-3 py-3.5 text-center ${p.highlight ? "text-purple-400" : "text-gray-500"}`}>
-                {p.label}
-              </div>
+              <div key={p.key} className={`px-3 py-3.5 text-center ${p.highlight ? "text-purple-400" : "text-gray-500"}`}>{p.label}</div>
             ))}
           </div>
-          {[
-            "Carrosséis ilimitados",
-            "Pesquisa na web",
-            "Editor visual",
-            "Publicação Instagram",
-            "Flyer promocional IA",
-            "Assistente IA (Zora)",
-            "Suporte prioritário",
-          ].map((row, ri) => (
+          {["Carrosséis ilimitados", "Pesquisa na web", "Editor visual", "Publicação Instagram", "Flyer promocional IA", "Assistente IA (Zora)", "Suporte prioritário"].map((row, ri) => (
             <div key={row} className="grid grid-cols-4 text-[13px]"
               style={{ borderBottom: ri < 6 ? "1px solid rgba(255,255,255,0.05)" : "none", background: ri % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)" }}>
               <div className="px-5 py-3 text-gray-400">{row}</div>
-              {/* Básico */}
               <div className="px-3 py-3 flex justify-center">
                 {ri <= 3 ? <Check size={16} className="text-purple-400" /> : <X size={14} className="text-gray-700" />}
               </div>
-              {/* Pro */}
               <div className="px-3 py-3 flex justify-center">
                 {ri <= 5 ? <Check size={16} className="text-purple-400" /> : <X size={14} className="text-gray-700" />}
               </div>
-              {/* Business */}
               <div className="px-3 py-3 flex justify-center">
                 <Check size={16} className="text-purple-400" />
               </div>
@@ -505,6 +635,7 @@ export default function LandingPage() {
       <section className="px-5 py-24 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse 70% 60% at 50% 100%,rgba(124,58,237,0.12) 0%,transparent 70%)" }} />
+        <BearMascot size={90} className="mx-auto mb-6 opacity-90" />
         <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-4">Comece hoje</p>
         <h2 className="text-3xl md:text-5xl font-black leading-tight max-w-xl mx-auto mb-5">
           Pare de perder tempo.{" "}
@@ -527,23 +658,23 @@ export default function LandingPage() {
       <footer className="px-5 py-10 text-center text-xs text-gray-600"
         style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="flex items-center justify-center gap-2 mb-3">
-          <div className="w-6 h-6 rounded-lg flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)" }}>
-            <Instagram size={12} color="white" />
-          </div>
-          <span className="font-black text-gray-400 text-sm">XPost Zone</span>
+          <BearMascot size={32} />
+          <span className="font-black text-gray-400 text-sm">
+            x<span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>post</span>
+          </span>
         </div>
-        <p>© 2025 XPost Zone · Todos os direitos reservados</p>
+        <p>© 2025 XPost · Todos os direitos reservados</p>
         <div className="flex justify-center gap-5 mt-3">
           <Link href="/editor" className="hover:text-gray-400 transition-colors">Editor</Link>
           <span className="text-gray-700">·</span>
           <button onClick={scrollToPricing} className="hover:text-gray-400 transition-colors">Preços</button>
           <span className="text-gray-700">·</span>
-          <a href="mailto:suporte@xpostzone.com" className="hover:text-gray-400 transition-colors">Suporte</a>
+          <a href="mailto:suporte@xpost.app" className="hover:text-gray-400 transition-colors">Suporte</a>
         </div>
       </footer>
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+      <WhatsAppButton />
     </main>
   );
 }

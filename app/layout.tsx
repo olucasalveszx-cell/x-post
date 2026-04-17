@@ -3,7 +3,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "XPost Zone — Criador de Carrosséis para Instagram",
+  title: "XPost — Criador de Carrosséis para Instagram com IA",
   description: "Crie carrosséis para Instagram com IA, baseado em dados reais da web.",
   icons: {
     icon: "/logo.png",
