@@ -413,8 +413,38 @@ export default function EditorPage() {
             }}
           />
 
-          <div ref={canvasContainerRef} className="flex-1 overflow-auto flex items-center justify-center bg-[#0a0a0a] p-4">
-            <div ref={canvasRef} style={{ width: DISPLAY_W, height: DISPLAY_H, position: "relative" }} className="shadow-2xl rounded overflow-hidden">
+          <div ref={canvasContainerRef} className="flex-1 overflow-auto flex items-center justify-center bg-[#0a0a0a] p-4 relative">
+            {/* Empty-state overlay */}
+            {slides.length === 1 && slides[0].elements.length === 0 && !slides[0].backgroundImageUrl && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-10 pointer-events-none">
+                <div className="flex flex-col items-center gap-4 pointer-events-auto">
+                  <div className="p-4 rounded-2xl bg-brand-500/10 border border-brand-500/20">
+                    <Sparkles size={32} className="text-brand-400" />
+                  </div>
+                  <div className="text-center">
+                    <h2 className="text-xl font-bold text-white mb-1">Pronto para criar?</h2>
+                    <p className="text-sm text-gray-500">Gere um carrossel incrível com IA em segundos</p>
+                  </div>
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent("open-generator-wizard"))}
+                    className="flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-base transition-all shadow-2xl shadow-brand-500/30 hover:shadow-brand-500/50 hover:scale-105 active:scale-100"
+                  >
+                    <Sparkles size={20} /> Gerar Ideias
+                  </button>
+                </div>
+              </div>
+            )}
+            <div
+              ref={canvasRef}
+              style={{
+                width: DISPLAY_W,
+                height: DISPLAY_H,
+                position: "relative",
+                opacity: slides.length === 1 && slides[0].elements.length === 0 && !slides[0].backgroundImageUrl ? 0.15 : 1,
+                transition: "opacity 0.3s",
+              }}
+              className="shadow-2xl rounded overflow-hidden"
+            >
               {slides.map((slide, i) => (
                 <div key={slide.id} id={`slide-render-${slide.id}`} style={{ display: i === currentIndex ? "block" : "none", width: SLIDE_W, height: SLIDE_H }}>
                   <SlideCanvas slide={slide} onUpdate={updateSlide} scale={displayScale} onSelectElement={(el) => setSelectedElementId(el?.id ?? null)} />
