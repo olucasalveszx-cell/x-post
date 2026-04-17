@@ -96,13 +96,18 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   // ── Resize ─────────────────────────────────────────────────
   const handleResizeDown = (e: React.MouseEvent, el: SlideElement) => {
     e.stopPropagation();
+    const origFontSize = el.type === "text" ? ((el.style as any)?.fontSize ?? 0) : 0;
     resizeRef.current = { elementId: el.id, startX: e.clientX, startY: e.clientY, origW: el.width, origH: el.height };
     const onMove = (me: MouseEvent) => {
       if (!resizeRef.current) return;
-      updateElement(resizeRef.current.elementId, {
-        width: Math.max(60, resizeRef.current.origW + (me.clientX - resizeRef.current.startX) / scale),
-        height: Math.max(40, resizeRef.current.origH + (me.clientY - resizeRef.current.startY) / scale),
-      });
+      const newW = Math.max(60, resizeRef.current.origW + (me.clientX - resizeRef.current.startX) / scale);
+      const newH = Math.max(40, resizeRef.current.origH + (me.clientY - resizeRef.current.startY) / scale);
+      const patch: Partial<SlideElement> = { width: newW, height: newH };
+      if (origFontSize > 0) {
+        const ratio = newH / resizeRef.current.origH;
+        patch.style = { ...(el.style as any), fontSize: Math.max(8, Math.round(origFontSize * ratio)) };
+      }
+      updateElement(resizeRef.current.elementId, patch);
     };
     const onUp = () => { resizeRef.current = null; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
     window.addEventListener("mousemove", onMove);
@@ -211,15 +216,20 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const handleResizeTouchStart = (e: React.TouchEvent, el: SlideElement) => {
     e.stopPropagation();
     const touch = e.touches[0];
+    const origFontSize = el.type === "text" ? ((el.style as any)?.fontSize ?? 0) : 0;
     resizeRef.current = { elementId: el.id, startX: touch.clientX, startY: touch.clientY, origW: el.width, origH: el.height };
     const onMove = (te: TouchEvent) => {
       if (!resizeRef.current) return;
       te.preventDefault();
       const t = te.touches[0];
-      updateElement(resizeRef.current.elementId, {
-        width: Math.max(60, resizeRef.current.origW + (t.clientX - resizeRef.current.startX) / scale),
-        height: Math.max(40, resizeRef.current.origH + (t.clientY - resizeRef.current.startY) / scale),
-      });
+      const newW = Math.max(60, resizeRef.current.origW + (t.clientX - resizeRef.current.startX) / scale);
+      const newH = Math.max(40, resizeRef.current.origH + (t.clientY - resizeRef.current.startY) / scale);
+      const patch: Partial<SlideElement> = { width: newW, height: newH };
+      if (origFontSize > 0) {
+        const ratio = newH / resizeRef.current.origH;
+        patch.style = { ...(el.style as any), fontSize: Math.max(8, Math.round(origFontSize * ratio)) };
+      }
+      updateElement(resizeRef.current.elementId, patch);
     };
     const onEnd = () => {
       resizeRef.current = null;
