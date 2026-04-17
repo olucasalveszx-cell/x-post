@@ -59,13 +59,18 @@ function WhatsAppButton() {
   );
 }
 
-// ── Mascote urso com tapa-olho em X ───────────────────────────
+// ── Mascote urso com tapa-olho em X e chapéu pirata ──────────
 function BearMascot({ size = 200, className = "" }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" className={className}>
+    // viewBox expandido para cima (-50) para acomodar o chapéu
+    <svg width={size} height={size} viewBox="0 -50 200 250" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
         <filter id="xglow" x="-80%" y="-80%" width="260%" height="260%">
           <feGaussianBlur stdDeviation="4" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id="hatx" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="5" result="blur" />
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
         <radialGradient id="earGrad" cx="50%" cy="50%" r="50%">
@@ -82,57 +87,88 @@ function BearMascot({ size = 200, className = "" }: { size?: number; className?:
         </radialGradient>
       </defs>
 
-      {/* Sombra suave no chão */}
+      {/* Sombra no chão */}
       <ellipse cx="100" cy="194" rx="52" ry="7" fill="rgba(124,58,237,0.15)" />
+
+      {/* ── CHAPÉU PIRATA ── renderizado antes das orelhas para que elas fiquem por cima da aba */}
+
+      {/* Sombra do chapéu (profundidade) */}
+      <path d="M49 46 Q46 8 58 -34 L142 -34 Q154 8 151 46 Z" fill="rgba(0,0,0,0.55)" />
+
+      {/* Copa do chapéu */}
+      <path d="M47 44 Q44 6 56 -36 L144 -36 Q156 6 153 44 Z" fill="#090706" />
+
+      {/* Brilho sutil na lateral esquerda da copa */}
+      <path d="M49 44 Q47 8 58 -34 L100 -36 Q95 -6 93 44 Z" fill="rgba(255,255,255,0.03)" />
+
+      {/* Sombra da aba */}
+      <ellipse cx="102" cy="48" rx="90" ry="15" fill="rgba(0,0,0,0.5)" />
+
+      {/* Aba do chapéu */}
+      <ellipse cx="100" cy="45" rx="88" ry="13" fill="#090706" />
+
+      {/* Brilho no topo da aba */}
+      <ellipse cx="98" cy="42" rx="83" ry="9" fill="#100e0b" />
+
+      {/* Faixa do chapéu — roxa */}
+      <path d="M49 37 Q100 41 151 37 Q151 30 100 28 Q49 30 49 37 Z" fill="#2e1065" />
+      <path d="M51 32 Q100 30 149 32 Q149 29 100 27 Q51 29 51 32 Z" fill="#4c1d95" opacity="0.7" />
+
+      {/* X da marca na copa do chapéu */}
+      <g filter="url(#hatx)">
+        <line x1="88" y1="-22" x2="112" y2="2" stroke="#6d28d9" strokeWidth="6" strokeLinecap="round" />
+        <line x1="112" y1="-22" x2="88" y2="2" stroke="#6d28d9" strokeWidth="6" strokeLinecap="round" />
+      </g>
+      <line x1="89" y1="-21" x2="111" y2="1" stroke="#a855f7" strokeWidth="3" strokeLinecap="round" opacity="0.85" />
+      <line x1="111" y1="-21" x2="89" y2="1" stroke="#a855f7" strokeWidth="3" strokeLinecap="round" opacity="0.85" />
+
+      {/* ── URSO ── orelhas renderizadas DEPOIS da aba para "furar" o chapéu */}
 
       {/* Orelha esquerda */}
       <circle cx="40" cy="50" r="30" fill="url(#earGrad)" />
-      <circle cx="40" cy="50" r="18" fill="#2d1e0f" />
-
       {/* Orelha direita */}
       <circle cx="160" cy="50" r="30" fill="url(#earGrad)" />
-      <circle cx="160" cy="50" r="18" fill="#2d1e0f" />
 
       {/* Cabeça */}
       <circle cx="100" cy="110" r="80" fill="url(#headGrad)" />
 
+      {/* Interior das orelhas (por cima da cabeça) */}
+      <circle cx="40" cy="50" r="18" fill="#2d1e0f" />
+      <circle cx="160" cy="50" r="18" fill="#2d1e0f" />
+
       {/* Focinho */}
       <ellipse cx="100" cy="133" rx="50" ry="40" fill="#2d1e0f" />
 
-      {/* Brilho lateral sutil na cabeça */}
+      {/* Brilho lateral na cabeça */}
       <ellipse cx="70" cy="72" rx="22" ry="30" fill="rgba(255,255,255,0.025)" />
 
       {/* Glow roxo atrás do tapa-olho */}
       <ellipse cx="68" cy="97" rx="34" ry="28" fill="url(#purpleGlow)" />
 
-      {/* Tapa-olho — fundo escuro */}
+      {/* Tapa-olho */}
       <rect x="40" y="76" width="56" height="42" rx="13" fill="#080503" />
-      {/* Tira do tapa-olho indo até a orelha */}
       <path d="M40 82 C32 75 30 62 38 52" stroke="#120e08" strokeWidth="7" fill="none" strokeLinecap="round" />
 
-      {/* X roxo — traços externos (glow) */}
+      {/* X do tapa-olho — glow */}
       <g filter="url(#xglow)">
         <line x1="51" y1="84" x2="85" y2="112" stroke="#7c3aed" strokeWidth="7" strokeLinecap="round" />
         <line x1="85" y1="84" x2="51" y2="112" stroke="#7c3aed" strokeWidth="7" strokeLinecap="round" />
       </g>
-      {/* X roxo — traços internos (destaque) */}
+      {/* X do tapa-olho — destaque */}
       <line x1="53" y1="86" x2="83" y2="110" stroke="#c084fc" strokeWidth="3.5" strokeLinecap="round" opacity="0.75" />
       <line x1="83" y1="86" x2="53" y2="110" stroke="#c084fc" strokeWidth="3.5" strokeLinecap="round" opacity="0.75" />
 
-      {/* Olho direito — esclerótica */}
+      {/* Olho direito */}
       <circle cx="134" cy="96" r="22" fill="white" />
-      {/* Íris */}
       <circle cx="137" cy="93" r="14" fill="#140800" />
-      {/* Pupila reflexo */}
       <circle cx="142" cy="88" r="5" fill="white" />
       <circle cx="135" cy="98" r="2.5" fill="white" opacity="0.3" />
 
-      {/* Sobrancelha direita (personalidade) */}
+      {/* Sobrancelha */}
       <path d="M118 78 Q134 70 150 76" stroke="#1a1108" strokeWidth="5" fill="none" strokeLinecap="round" />
 
       {/* Nariz */}
       <ellipse cx="100" cy="143" rx="15" ry="10" fill="#0a0604" />
-      {/* Nariz — reflexo */}
       <ellipse cx="95" cy="140" rx="4.5" ry="3" fill="#1e1408" opacity="0.5" />
 
       {/* Boca */}
