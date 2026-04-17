@@ -196,13 +196,54 @@ export default function Toolbar({
     setShowFrame(false);
   };
 
-  const LAYOUTS = [
-    { id: "classic",    label: "Clássico",    desc: "Texto embaixo",    gradient: "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.80) 40%, rgba(0,0,0,0.30) 70%, rgba(0,0,0,0.10) 100%)", preview: [{ top: "62%", left: "6%", w: "88%", h: "20%", size: "lg" }, { top: "86%", left: "6%", w: "70%", h: "8%", size: "sm" }] },
-    { id: "top",        label: "Topo",        desc: "Texto no topo",    gradient: "linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.70) 40%, rgba(0,0,0,0.15) 70%, rgba(0,0,0,0.05) 100%)", preview: [{ top: "8%", left: "6%", w: "88%", h: "20%", size: "lg" }, { top: "32%", left: "6%", w: "70%", h: "8%", size: "sm" }] },
-    { id: "center",     label: "Centralizado",desc: "Texto no centro",  gradient: "linear-gradient(to bottom, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.88) 40%, rgba(0,0,0,0.88) 60%, rgba(0,0,0,0.70) 100%)", preview: [{ top: "35%", left: "10%", w: "80%", h: "18%", size: "lg" }, { top: "57%", left: "15%", w: "70%", h: "7%", size: "sm" }] },
-    { id: "bold",       label: "Bold",        desc: "Título gigante",   gradient: "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.90) 50%, rgba(0,0,0,0.70) 100%)", preview: [{ top: "28%", left: "4%", w: "92%", h: "42%", size: "xl" }, { top: "74%", left: "4%", w: "65%", h: "7%", size: "sm" }] },
-    { id: "cinematic",  label: "Cinemático",  desc: "Estilo filme",     gradient: "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.40) 70%, rgba(0,0,0,0.10) 100%)", preview: [{ top: "60%", left: "4%", w: "92%", h: "22%", size: "lg" }, { top: "86%", left: "4%", w: "60%", h: "7%", size: "sm" }] },
-    { id: "minimal",    label: "Minimalista", desc: "Clean e direto",   gradient: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.15) 100%)", preview: [{ top: "55%", left: "6%", w: "88%", h: "17%", size: "lg" }, { top: "76%", left: "6%", w: "65%", h: "7%", size: "sm" }] },
+  const LAYOUTS: {
+    id: string; label: string; desc: string; gradient: string;
+    bgPosition: { x: number; y: number }; bgZoom: number;
+    textBlocks: { top: string; left: string; w: string; h: string; bold?: boolean }[];
+    photoCover: string; // gradiente que simula a foto no preview
+  }[] = [
+    {
+      id: "classic", label: "Clássico", desc: "Foto cheia, texto embaixo",
+      gradient: "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.80) 40%, rgba(0,0,0,0.30) 70%, rgba(0,0,0,0.10) 100%)",
+      bgPosition: { x: 50, y: 40 }, bgZoom: 110,
+      textBlocks: [{ top: "62%", left: "6%", w: "88%", h: "18%", bold: true }, { top: "84%", left: "6%", w: "68%", h: "7%" }],
+      photoCover: "linear-gradient(160deg, #4f46e5 0%, #7c3aed 40%, #db2777 100%)",
+    },
+    {
+      id: "top", label: "Topo", desc: "Texto no topo, foto abaixo",
+      gradient: "linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.70) 40%, rgba(0,0,0,0.15) 70%, rgba(0,0,0,0.05) 100%)",
+      bgPosition: { x: 50, y: 65 }, bgZoom: 110,
+      textBlocks: [{ top: "8%", left: "6%", w: "88%", h: "20%", bold: true }, { top: "32%", left: "6%", w: "68%", h: "7%" }],
+      photoCover: "linear-gradient(200deg, #0f172a 0%, #1e3a8a 40%, #4f46e5 100%)",
+    },
+    {
+      id: "center", label: "Centralizado", desc: "Foto + texto no meio",
+      gradient: "linear-gradient(to bottom, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.88) 40%, rgba(0,0,0,0.88) 60%, rgba(0,0,0,0.70) 100%)",
+      bgPosition: { x: 50, y: 50 }, bgZoom: 105,
+      textBlocks: [{ top: "35%", left: "10%", w: "80%", h: "18%", bold: true }, { top: "57%", left: "14%", w: "72%", h: "7%" }],
+      photoCover: "linear-gradient(135deg, #064e3b 0%, #065f46 40%, #047857 100%)",
+    },
+    {
+      id: "bold", label: "Bold", desc: "Título gigante, foto de fundo",
+      gradient: "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.90) 50%, rgba(0,0,0,0.70) 100%)",
+      bgPosition: { x: 50, y: 35 }, bgZoom: 115,
+      textBlocks: [{ top: "28%", left: "4%", w: "92%", h: "40%", bold: true }, { top: "74%", left: "4%", w: "62%", h: "7%" }],
+      photoCover: "linear-gradient(160deg, #78350f 0%, #92400e 40%, #b45309 100%)",
+    },
+    {
+      id: "cinematic", label: "Cinemático", desc: "Foto no topo, texto baixo",
+      gradient: "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.40) 70%, rgba(0,0,0,0.10) 100%)",
+      bgPosition: { x: 50, y: 40 }, bgZoom: 112,
+      textBlocks: [{ top: "60%", left: "4%", w: "92%", h: "20%", bold: true }, { top: "84%", left: "4%", w: "58%", h: "7%" }],
+      photoCover: "linear-gradient(180deg, #0c4a6e 0%, #075985 50%, #0369a1 100%)",
+    },
+    {
+      id: "minimal", label: "Minimalista", desc: "Clean, foto desfocada",
+      gradient: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.15) 100%)",
+      bgPosition: { x: 50, y: 50 }, bgZoom: 100,
+      textBlocks: [{ top: "55%", left: "6%", w: "88%", h: "16%", bold: true }, { top: "75%", left: "6%", w: "62%", h: "7%" }],
+      photoCover: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)",
+    },
   ];
 
   const applyLayout = (layoutId: string) => {
@@ -244,7 +285,13 @@ export default function Toolbar({
       } : e);
     }
 
-    onUpdate({ ...slide, elements: newElements, backgroundGradient: layout.gradient });
+    onUpdate({
+      ...slide,
+      elements: newElements,
+      backgroundGradient: layout.gradient,
+      backgroundPosition: layout.bgPosition,
+      backgroundZoom: layout.bgZoom,
+    });
     setShowLayouts(false);
   };
 
@@ -594,20 +641,27 @@ export default function Toolbar({
                 onClick={() => applyLayout(layout.id)}
                 className="flex flex-col gap-2 p-2 rounded-xl border border-[#2a2a2a] hover:border-brand-500/50 hover:bg-brand-500/5 transition-all text-left"
               >
-                {/* Mini preview */}
-                <div className="relative w-full rounded-lg overflow-hidden bg-[#1a1a1a]" style={{ aspectRatio: "4/5" }}>
+                {/* Mini preview: foto simulada + gradiente + blocos de texto */}
+                <div className="relative w-full rounded-lg overflow-hidden" style={{ aspectRatio: "4/5" }}>
+                  {/* Foto simulada */}
+                  <div className="absolute inset-0" style={{ background: layout.photoCover }} />
+                  {/* Gradiente do layout */}
                   <div className="absolute inset-0" style={{ background: layout.gradient }} />
-                  {layout.preview.map((block, i) => (
+                  {/* Blocos de texto */}
+                  {layout.textBlocks.map((block, i) => (
                     <div
                       key={i}
-                      className="absolute rounded"
+                      className="absolute rounded-sm"
                       style={{
                         top: block.top, left: block.left, width: block.w, height: block.h,
-                        background: "rgba(255,255,255,0.85)",
-                        opacity: block.size === "sm" ? 0.5 : 0.9,
+                        background: block.bold ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.50)",
                       }}
                     />
                   ))}
+                  {/* Label de posição da foto */}
+                  <div className="absolute bottom-1 right-1 bg-black/50 rounded px-1 py-0.5 text-[7px] text-gray-400 font-mono">
+                    {layout.bgPosition.x}% {layout.bgPosition.y}% {layout.bgZoom > 100 ? `${layout.bgZoom}%` : ""}
+                  </div>
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-white">{layout.label}</p>

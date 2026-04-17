@@ -30,7 +30,6 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   const MODELS = [
     "gemini-2.0-flash-preview-image-generation",
     "gemini-2.0-flash-exp-image-generation",
-    "gemini-2.0-flash-exp",
   ];
 
   let lastError = "";

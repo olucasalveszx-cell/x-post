@@ -33,6 +33,7 @@ export interface SlideElement {
   // Moldura (frame)
   frameImageUrl?: string;
   frameShape?: string;
+  frameImageOffset?: { x: number; y: number }; // objectPosition em %, default 50 50
 }
 
 export interface TextStyle {

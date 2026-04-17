@@ -13,7 +13,7 @@ import LoginModal from "@/components/LoginModal";
 
 // ── Botão flutuante WhatsApp ───────────────────────────────────
 const WA_NUMBER = "5581973014080";
-const WA_MSG = encodeURIComponent("Olá! Vim pelo XPost e quero saber mais sobre os planos 🐻");
+const WA_MSG = encodeURIComponent("Olá! Vim pelo XPost e quero saber mais sobre os planos 🦜");
 
 function WhatsAppButton() {
   const [open, setOpen] = useState(false);
@@ -59,122 +59,96 @@ function WhatsAppButton() {
   );
 }
 
-// ── Mascote urso com tapa-olho em X e chapéu pirata ──────────
-function BearMascot({ size = 200, className = "" }: { size?: number; className?: string }) {
+// ── Mascote papagaio Xpo com X no peito ──────────────────────
+function ParrotMascot({ size = 200, className = "" }: { size?: number; className?: string }) {
   return (
-    // viewBox expandido para cima (-50) para acomodar o chapéu
-    <svg width={size} height={size} viewBox="0 -50 200 250" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <svg width={size} height={size} viewBox="0 -35 200 255" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
-        <filter id="xglow" x="-80%" y="-80%" width="260%" height="260%">
-          <feGaussianBlur stdDeviation="4" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <filter id="hatx" x="-60%" y="-60%" width="220%" height="220%">
+        <filter id="pxglow" x="-80%" y="-80%" width="260%" height="260%">
           <feGaussianBlur stdDeviation="5" result="blur" />
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
-        <radialGradient id="earGrad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#2d1e0f" />
-          <stop offset="100%" stopColor="#1a1108" />
+        <radialGradient id="pbodyg" cx="38%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#8b5cf6" />
+          <stop offset="100%" stopColor="#3b0764" />
         </radialGradient>
-        <radialGradient id="headGrad" cx="40%" cy="35%" r="60%">
-          <stop offset="0%" stopColor="#241808" />
-          <stop offset="100%" stopColor="#0f0b05" />
+        <radialGradient id="pheadg" cx="35%" cy="28%" r="65%">
+          <stop offset="0%" stopColor="#a78bfa" />
+          <stop offset="100%" stopColor="#4c1d95" />
         </radialGradient>
-        <radialGradient id="purpleGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="rgba(124,58,237,0.35)" />
-          <stop offset="100%" stopColor="rgba(124,58,237,0)" />
+        <radialGradient id="pwingg" cx="50%" cy="40%" r="70%">
+          <stop offset="0%" stopColor="#6d28d9" />
+          <stop offset="100%" stopColor="#2e1065" />
         </radialGradient>
       </defs>
 
-      {/* Sombra no chão */}
-      <ellipse cx="100" cy="194" rx="52" ry="7" fill="rgba(124,58,237,0.15)" />
+      {/* Sombra */}
+      <ellipse cx="102" cy="215" rx="50" ry="7" fill="rgba(124,58,237,0.18)" />
 
-      {/* ── CHAPÉU PIRATA ── renderizado antes das orelhas para que elas fiquem por cima da aba */}
+      {/* Penas da cauda */}
+      <path d="M82 170 Q58 200 50 216" stroke="#0d9488" strokeWidth="16" strokeLinecap="round" fill="none" />
+      <path d="M96 176 Q89 210 86 220" stroke="#6d28d9" strokeWidth="13" strokeLinecap="round" fill="none" />
+      <path d="M116 170 Q134 200 144 214" stroke="#f59e0b" strokeWidth="15" strokeLinecap="round" fill="none" />
 
-      {/* Sombra do chapéu (profundidade) */}
-      <path d="M49 46 Q46 8 58 -34 L142 -34 Q154 8 151 46 Z" fill="rgba(0,0,0,0.55)" />
+      {/* Asa esquerda */}
+      <path d="M44 118 Q8 92 6 126 Q5 162 40 168 Q62 166 68 146 Z" fill="url(#pwingg)" />
+      <path d="M18 110 Q12 128 15 146" stroke="#a855f7" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.35" />
 
-      {/* Copa do chapéu */}
-      <path d="M47 44 Q44 6 56 -36 L144 -36 Q156 6 153 44 Z" fill="#090706" />
+      {/* Asa direita */}
+      <path d="M156 118 Q192 92 194 126 Q195 162 160 168 Q138 166 132 146 Z" fill="url(#pwingg)" />
+      <path d="M182 110 Q188 128 185 146" stroke="#a855f7" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.35" />
 
-      {/* Brilho sutil na lateral esquerda da copa */}
-      <path d="M49 44 Q47 8 58 -34 L100 -36 Q95 -6 93 44 Z" fill="rgba(255,255,255,0.03)" />
-
-      {/* Sombra da aba */}
-      <ellipse cx="102" cy="48" rx="90" ry="15" fill="rgba(0,0,0,0.5)" />
-
-      {/* Aba do chapéu */}
-      <ellipse cx="100" cy="45" rx="88" ry="13" fill="#090706" />
-
-      {/* Brilho no topo da aba */}
-      <ellipse cx="98" cy="42" rx="83" ry="9" fill="#100e0b" />
-
-      {/* Faixa do chapéu — roxa */}
-      <path d="M49 37 Q100 41 151 37 Q151 30 100 28 Q49 30 49 37 Z" fill="#2e1065" />
-      <path d="M51 32 Q100 30 149 32 Q149 29 100 27 Q51 29 51 32 Z" fill="#4c1d95" opacity="0.7" />
-
-      {/* X da marca na copa do chapéu */}
-      <g filter="url(#hatx)">
-        <line x1="88" y1="-22" x2="112" y2="2" stroke="#6d28d9" strokeWidth="6" strokeLinecap="round" />
-        <line x1="112" y1="-22" x2="88" y2="2" stroke="#6d28d9" strokeWidth="6" strokeLinecap="round" />
-      </g>
-      <line x1="89" y1="-21" x2="111" y2="1" stroke="#a855f7" strokeWidth="3" strokeLinecap="round" opacity="0.85" />
-      <line x1="111" y1="-21" x2="89" y2="1" stroke="#a855f7" strokeWidth="3" strokeLinecap="round" opacity="0.85" />
-
-      {/* ── URSO ── orelhas renderizadas DEPOIS da aba para "furar" o chapéu */}
-
-      {/* Orelha esquerda */}
-      <circle cx="40" cy="50" r="30" fill="url(#earGrad)" />
-      {/* Orelha direita */}
-      <circle cx="160" cy="50" r="30" fill="url(#earGrad)" />
+      {/* Corpo */}
+      <ellipse cx="100" cy="150" rx="63" ry="55" fill="url(#pbodyg)" />
+      <ellipse cx="76" cy="128" rx="22" ry="30" fill="rgba(255,255,255,0.07)" />
+      <ellipse cx="100" cy="152" rx="38" ry="34" fill="rgba(196,181,253,0.09)" />
 
       {/* Cabeça */}
-      <circle cx="100" cy="110" r="80" fill="url(#headGrad)" />
+      <circle cx="100" cy="73" r="52" fill="url(#pheadg)" />
+      <ellipse cx="76" cy="52" rx="16" ry="22" fill="rgba(255,255,255,0.07)" />
 
-      {/* Interior das orelhas (por cima da cabeça) */}
-      <circle cx="40" cy="50" r="18" fill="#2d1e0f" />
-      <circle cx="160" cy="50" r="18" fill="#2d1e0f" />
+      {/* Bico superior */}
+      <path d="M97 87 Q128 80 132 97 Q128 107 97 102 Z" fill="#f59e0b" />
+      <path d="M99 88 Q122 83 124 95" stroke="#fde68a" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.7" />
+      {/* Bico inferior */}
+      <path d="M97 102 Q124 107 126 115 Q116 121 97 112 Z" fill="#d97706" />
 
-      {/* Focinho */}
-      <ellipse cx="100" cy="133" rx="50" ry="40" fill="#2d1e0f" />
-
-      {/* Brilho lateral na cabeça */}
-      <ellipse cx="70" cy="72" rx="22" ry="30" fill="rgba(255,255,255,0.025)" />
-
-      {/* Glow roxo atrás do tapa-olho */}
-      <ellipse cx="68" cy="97" rx="34" ry="28" fill="url(#purpleGlow)" />
-
-      {/* Tapa-olho */}
-      <rect x="40" y="76" width="56" height="42" rx="13" fill="#080503" />
-      <path d="M40 82 C32 75 30 62 38 52" stroke="#120e08" strokeWidth="7" fill="none" strokeLinecap="round" />
-
-      {/* X do tapa-olho — glow */}
-      <g filter="url(#xglow)">
-        <line x1="51" y1="84" x2="85" y2="112" stroke="#7c3aed" strokeWidth="7" strokeLinecap="round" />
-        <line x1="85" y1="84" x2="51" y2="112" stroke="#7c3aed" strokeWidth="7" strokeLinecap="round" />
-      </g>
-      {/* X do tapa-olho — destaque */}
-      <line x1="53" y1="86" x2="83" y2="110" stroke="#c084fc" strokeWidth="3.5" strokeLinecap="round" opacity="0.75" />
-      <line x1="83" y1="86" x2="53" y2="110" stroke="#c084fc" strokeWidth="3.5" strokeLinecap="round" opacity="0.75" />
+      {/* Olho esquerdo (principal) */}
+      <circle cx="74" cy="65" r="20" fill="white" />
+      <circle cx="76" cy="67" r="13" fill="#0d0d0d" />
+      <circle cx="82" cy="61" r="5" fill="white" />
+      <circle cx="73" cy="73" r="2" fill="white" opacity="0.4" />
+      <circle cx="74" cy="65" r="20" fill="none" stroke="rgba(196,181,253,0.2)" strokeWidth="2" />
 
       {/* Olho direito */}
-      <circle cx="134" cy="96" r="22" fill="white" />
-      <circle cx="137" cy="93" r="14" fill="#140800" />
-      <circle cx="142" cy="88" r="5" fill="white" />
-      <circle cx="135" cy="98" r="2.5" fill="white" opacity="0.3" />
+      <circle cx="118" cy="65" r="14" fill="white" />
+      <circle cx="119" cy="67" r="9.5" fill="#0d0d0d" />
+      <circle cx="124" cy="62" r="3.5" fill="white" />
+      <circle cx="118" cy="65" r="14" fill="none" stroke="rgba(196,181,253,0.15)" strokeWidth="1.5" />
 
-      {/* Sobrancelha */}
-      <path d="M118 78 Q134 70 150 76" stroke="#1a1108" strokeWidth="5" fill="none" strokeLinecap="round" />
+      {/* Crista — 4 penas coloridas */}
+      <path d="M72 24 Q60 -6 65 -22" stroke="#0d9488" strokeWidth="9" strokeLinecap="round" fill="none" />
+      <path d="M87 16 Q80 -16 84 -30" stroke="#fbbf24" strokeWidth="9" strokeLinecap="round" fill="none" />
+      <path d="M102 12 Q100 -18 105 -32" stroke="#a855f7" strokeWidth="9" strokeLinecap="round" fill="none" />
+      <path d="M117 16 Q124 -10 122 -24" stroke="#f472b6" strokeWidth="9" strokeLinecap="round" fill="none" />
+      <circle cx="65" cy="-22" r="6.5" fill="#0d9488" />
+      <circle cx="84" cy="-30" r="6.5" fill="#fbbf24" />
+      <circle cx="105" cy="-32" r="6.5" fill="#a855f7" />
+      <circle cx="122" cy="-24" r="6.5" fill="#f472b6" />
 
-      {/* Nariz */}
-      <ellipse cx="100" cy="143" rx="15" ry="10" fill="#0a0604" />
-      <ellipse cx="95" cy="140" rx="4.5" ry="3" fill="#1e1408" opacity="0.5" />
+      {/* X no peito — marca da brand */}
+      <g filter="url(#pxglow)">
+        <line x1="78" y1="122" x2="122" y2="172" stroke="#7c3aed" strokeWidth="12" strokeLinecap="round" />
+        <line x1="122" y1="122" x2="78" y2="172" stroke="#7c3aed" strokeWidth="12" strokeLinecap="round" />
+      </g>
+      <line x1="80" y1="124" x2="120" y2="170" stroke="#c084fc" strokeWidth="5.5" strokeLinecap="round" opacity="0.9" />
+      <line x1="120" y1="124" x2="80" y2="170" stroke="#c084fc" strokeWidth="5.5" strokeLinecap="round" opacity="0.9" />
 
-      {/* Boca */}
-      <path d="M84 154 Q100 168 116 154" stroke="#0a0604" strokeWidth="4" fill="none" strokeLinecap="round" />
-      <path d="M84 154 Q80 160 83 164" stroke="#0a0604" strokeWidth="3" fill="none" strokeLinecap="round" />
-      <path d="M116 154 Q120 160 117 164" stroke="#0a0604" strokeWidth="3" fill="none" strokeLinecap="round" />
+      {/* Patas */}
+      <g stroke="#f59e0b" strokeWidth="4.5" strokeLinecap="round" fill="none">
+        <path d="M80 198 Q70 207 65 215 M80 198 Q77 208 74 216 M80 198 Q86 208 90 215" />
+        <path d="M120 198 Q130 207 135 215 M120 198 Q123 208 126 216 M120 198 Q114 208 110 215" />
+      </g>
     </svg>
   );
 }
@@ -183,7 +157,7 @@ function BearMascot({ size = 200, className = "" }: { size?: number; className?:
 function Logo({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <BearMascot size={36} />
+      <ParrotMascot size={36} />
       <span className="text-[22px] font-black tracking-tight text-white leading-none">
         x<span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>post</span>
       </span>
@@ -371,7 +345,7 @@ export default function LandingPage() {
               style={{ background: "radial-gradient(ellipse,rgba(236,72,153,0.12) 0%,transparent 70%)", filter: "blur(20px)" }} />
 
             <div className="relative" style={{ filter: "drop-shadow(0 0 30px rgba(124,58,237,0.3))" }}>
-              <BearMascot size={280} className="drop-shadow-2xl" />
+              <ParrotMascot size={280} className="drop-shadow-2xl" />
             </div>
 
             {/* Badge flutuante */}
@@ -436,7 +410,7 @@ export default function LandingPage() {
           style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.12),rgba(236,72,153,0.06))", border: "1.5px solid rgba(168,85,247,0.2)" }}>
           <div className="absolute inset-0 pointer-events-none"
             style={{ background: "radial-gradient(ellipse 60% 80% at 80% 50%,rgba(124,58,237,0.08) 0%,transparent 70%)" }} />
-          <BearMascot size={140} className="flex-shrink-0 relative" />
+          <ParrotMascot size={140} className="flex-shrink-0 relative" />
           <div className="relative text-center md:text-left">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-purple-400/70 mb-2">Seu novo assistente</p>
             <h3 className="text-2xl md:text-3xl font-black mb-3">
@@ -447,7 +421,7 @@ export default function LandingPage() {
               , o mascote do XPost
             </h3>
             <p className="text-gray-400 text-sm leading-relaxed max-w-md">
-              Com o tapa-olho em <strong className="text-purple-400">X</strong>, o Xpo enfrenta qualquer nicho — pesquisa, escreve, gera imagens e publica no Instagram por você. Ele não descansa até seu conteúdo ficar perfeito.
+              Com o <strong className="text-purple-400">X</strong> no peito, o Xpo enfrenta qualquer nicho — pesquisa, escreve, gera imagens e publica no Instagram por você. Ele não descansa até seu conteúdo ficar perfeito.
             </p>
             <button onClick={scrollToPricing}
               className="mt-5 inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all hover:scale-105"
@@ -536,7 +510,13 @@ export default function LandingPage() {
 
       {/* ── PRICING ────────────────────────────────────────── */}
       <section ref={pricingRef} id="pricing" className="px-5 py-20 max-w-5xl mx-auto scroll-mt-16">
-        <div className="text-center mb-14">
+        <div className="text-center mb-14 relative">
+          {/* Papagaio sobrevoando */}
+          <div className="absolute -top-10 right-4 md:right-10 pointer-events-none select-none"
+            style={{ filter: "drop-shadow(0 0 18px rgba(124,58,237,0.35))", animation: "float 3.5s ease-in-out infinite" }}>
+            <ParrotMascot size={88} />
+          </div>
+          <style>{`@keyframes float { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-12px) rotate(4deg)} }`}</style>
           <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Planos e preços</p>
           <h2 className="text-3xl md:text-5xl font-black">
             Escolha e{" "}
@@ -671,7 +651,7 @@ export default function LandingPage() {
       <section className="px-5 py-24 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse 70% 60% at 50% 100%,rgba(124,58,237,0.12) 0%,transparent 70%)" }} />
-        <BearMascot size={90} className="mx-auto mb-6 opacity-90" />
+        <ParrotMascot size={90} className="mx-auto mb-6 opacity-90" />
         <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-4">Comece hoje</p>
         <h2 className="text-3xl md:text-5xl font-black leading-tight max-w-xl mx-auto mb-5">
           Pare de perder tempo.{" "}
@@ -694,7 +674,7 @@ export default function LandingPage() {
       <footer className="px-5 py-10 text-center text-xs text-gray-600"
         style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="flex items-center justify-center gap-2 mb-3">
-          <BearMascot size={32} />
+          <ParrotMascot size={32} />
           <span className="font-black text-gray-400 text-sm">
             x<span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>post</span>
           </span>
