@@ -254,8 +254,13 @@ export async function POST(req: NextRequest) {
   if (!isPro && customerId) isPro = await hasActiveSubscription(customerId);
   if (!isPro && activationToken) { const { valid } = verifyToken(activationToken); isPro = valid; }
 
-  // ── Plano gratuito → Gemini → Pexels ─────────────────────────
+  // ── Plano gratuito: OpenRouter → Gemini → Pexels ────────────
   if (!isPro) {
+    try {
+      return NextResponse.json({ ...await fromOpenRouter(prompt, style), plan: "free" });
+    } catch (e: any) {
+      console.error("[image] OpenRouter free falhou:", e.message);
+    }
     try {
       return NextResponse.json({ ...await fromGemini(prompt, style), plan: "free" });
     } catch (e: any) {
@@ -268,8 +273,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Plano Pro ─────────────────────────────────────────────────
+  // ── Plano Pro: OpenRouter → GeminiRef → Imagen4 → Imagen3 → Gemini → Pexels
   const errors: string[] = [];
+
+  // OpenRouter como principal
+  try {
+    return NextResponse.json({ ...await fromOpenRouter(prompt, style), plan: "pro" });
+  } catch (e: any) {
+    errors.push(`OpenRouter: ${e.message}`);
+    console.error("[image] OpenRouter pro falhou:", e.message);
+  }
 
   // Com imagem de referência → Gemini multimodal
   if (hasReference) {
@@ -280,7 +293,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Imagen 4 → Imagen 3 → Gemini → Pexels
   try {
     return NextResponse.json({ ...await fromImagen4(prompt, style), plan: "pro" });
   } catch (e: any) {
@@ -293,13 +305,6 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     errors.push(`Imagen3: ${e.message}`);
     console.error("[image] Imagen3 falhou:", e.message);
-  }
-
-  try {
-    return NextResponse.json({ ...await fromOpenRouter(prompt, style), plan: "pro" });
-  } catch (e: any) {
-    errors.push(`OpenRouter: ${e.message}`);
-    console.error("[image] OpenRouter falhou:", e.message);
   }
 
   try {

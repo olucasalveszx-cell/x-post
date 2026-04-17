@@ -111,11 +111,11 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
 
   const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: "rgba(0,0,0,0.80)", backdropFilter: "blur(6px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="relative w-full max-w-md bg-[#111] border border-[#222] rounded-2xl shadow-2xl flex flex-col" style={{ maxHeight: "90vh" }}>
+      <div className="relative w-full sm:max-w-md bg-[#111] sm:border border-t border-[#222] rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col" style={{ maxHeight: "95vh" }}>
 
         {/* Close */}
         <button

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuid } from "uuid";
-import { Download, ArrowLeft, User, LogIn, Sparkles, Layers, X, MessageCircle, RotateCcw, Zap } from "lucide-react";
+import { Download, ArrowLeft, User, LogIn, Sparkles, Layers, X, MessageCircle, RotateCcw, Zap, PanelLeft, PanelRight } from "lucide-react";
 import Link from "next/link";
 import { Slide } from "@/types";
 import { renderSlide } from "@/lib/render-slide";
@@ -281,70 +281,64 @@ export default function EditorPage() {
     <SubscriptionGate>
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between px-3 md:px-5 py-2 md:py-3 bg-[#070707] border-b border-[#161616] z-10">
-        <div className="flex items-center gap-2 md:gap-3">
-          <Link href="/" className="text-gray-500 hover:text-white transition-colors">
+      <header className="flex items-center justify-between px-3 md:px-5 py-2 md:py-3 bg-[#070707] border-b border-[#161616] z-10 shrink-0">
+        <div className="flex items-center gap-2">
+          <Link href="/" className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-colors">
             <ArrowLeft size={18} />
           </Link>
-          <div className="flex items-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="XPost Zone" className="h-10 w-auto md:h-12 object-contain" />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="XPost Zone" className="h-8 md:h-11 w-auto object-contain" />
         </div>
 
-        <div className="flex items-center gap-1.5 md:gap-2">
+        <div className="flex items-center gap-1.5">
+          {/* Créditos — só no desktop */}
           {credits && (
-            <div className="flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-semibold"
+            <div className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-semibold"
               style={{
-                background: credits.unlimited || credits.remaining > 10
-                  ? "rgba(168,85,247,0.1)" : credits.remaining > 0
-                  ? "rgba(251,191,36,0.1)" : "rgba(239,68,68,0.1)",
-                borderColor: credits.unlimited || credits.remaining > 10
-                  ? "rgba(168,85,247,0.3)" : credits.remaining > 0
-                  ? "rgba(251,191,36,0.3)" : "rgba(239,68,68,0.3)",
-                color: credits.unlimited || credits.remaining > 10
-                  ? "#c084fc" : credits.remaining > 0
-                  ? "#fbbf24" : "#f87171",
+                background: credits.unlimited || credits.remaining > 10 ? "rgba(168,85,247,0.1)" : credits.remaining > 0 ? "rgba(251,191,36,0.1)" : "rgba(239,68,68,0.1)",
+                borderColor: credits.unlimited || credits.remaining > 10 ? "rgba(168,85,247,0.3)" : credits.remaining > 0 ? "rgba(251,191,36,0.3)" : "rgba(239,68,68,0.3)",
+                color: credits.unlimited || credits.remaining > 10 ? "#c084fc" : credits.remaining > 0 ? "#fbbf24" : "#f87171",
               }}>
               <Zap size={11} />
-              <span className="hidden md:inline">
-                {credits.unlimited ? "∞ créditos" : `${credits.remaining}/${credits.limit}`}
-              </span>
-              <span className="md:hidden">
-                {credits.unlimited ? "∞" : credits.remaining}
-              </span>
+              {credits.unlimited ? "∞ créditos" : `${credits.remaining}/${credits.limit}`}
             </div>
           )}
+
           <AuthButton />
+
+          {/* Zora — ícone no mobile, texto no desktop */}
           <button
             onClick={() => setShowAI(true)}
             className="flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-purple-700 bg-purple-900/30 hover:bg-purple-800/40 text-purple-300 transition-colors"
           >
-            <MessageCircle size={14} />
+            <MessageCircle size={15} />
             <span className="hidden md:inline">Zora IA</span>
           </button>
+
+          {/* Exportar — ícone no mobile */}
           <button
             onClick={handleExport}
             disabled={exporting}
-            className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-[#111] hover:bg-[#1a1a1a] text-sm border border-[#222] disabled:opacity-40"
+            className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-[#111] hover:bg-[#1a1a1a] text-sm border border-[#222] disabled:opacity-40 transition-colors"
           >
-            <Download size={14} />
-            <span className="hidden md:inline">{exporting ? "Exportando..." : "Exportar JPG"}</span>
+            <Download size={15} />
+            <span className="hidden md:inline">{exporting ? "Exportando..." : "Exportar"}</span>
           </button>
 
-          {igAccount ? (
-            <button onClick={() => setShowPublish(true)}
-              className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium">
-              <User size={14} />
-              <span className="hidden md:inline">@{igAccount.username}</span>
-            </button>
-          ) : (
-            <button onClick={handleIGLogin}
-              className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium">
-              <LogIn size={14} />
-              <span className="hidden md:inline">Login Instagram</span>
-            </button>
-          )}
+          {/* Instagram — só no desktop (mobile tem na barra inferior) */}
+          <div className="hidden md:block">
+            {igAccount ? (
+              <button onClick={() => setShowPublish(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium">
+                <User size={14} /> @{igAccount.username}
+              </button>
+            ) : (
+              <button onClick={handleIGLogin}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium">
+                <LogIn size={14} /> Login Instagram
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -369,65 +363,112 @@ export default function EditorPage() {
       )}
 
       <div className="flex flex-1 overflow-hidden relative">
+        {/* Overlay escurecedor dos painéis mobile */}
         {isMobile && mobilePanel && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 30 }} onClick={() => setMobilePanel(null)} />
+          <div
+            className="fixed inset-0 z-30 bg-black/70 backdrop-blur-sm"
+            onClick={() => setMobilePanel(null)}
+          />
         )}
 
-        {/* Painel esquerdo */}
+        {/* Painel esquerdo — IA / Gerar */}
         {isMobile ? (
-          <div style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 320, zIndex: 40, background: "#080808", borderRight: "1px solid #161616", display: "flex", flexDirection: "column", transform: mobilePanel === "side" ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.3s" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid #161616" }}>
-              <span style={{ fontSize: 14, color: "#d1d5db" }}>Gerar / Traduzir</span>
-              <button onClick={() => setMobilePanel(null)}><X size={18} color="#9ca3af" /></button>
+          <div className="fixed inset-y-0 left-0 z-40 flex flex-col bg-[#080808] border-r border-[#161616]"
+            style={{ width: "85vw", maxWidth: 360, transform: mobilePanel === "side" ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#161616] shrink-0">
+              <span className="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                <Sparkles size={14} className="text-brand-400" /> Gerar Carrossel
+              </span>
+              <button onClick={() => setMobilePanel(null)} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400">
+                <X size={16} />
+              </button>
             </div>
-            <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+            <div className="flex-1 overflow-y-auto">
               <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} currentSlides={slides} />
             </div>
           </div>
         ) : (
-          <div style={{ width: 320, background: "#080808", borderRight: "1px solid #161616", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div className="flex flex-col overflow-hidden shrink-0" style={{ width: 300, background: "#080808", borderRight: "1px solid #161616" }}>
             <SidePanel onGenerate={handleGenerate} currentSlides={slides} />
           </div>
         )}
 
         {/* Área principal */}
         <div className="flex flex-col flex-1 overflow-hidden min-w-0">
-          <Toolbar
-            slide={currentSlide}
-            onUpdate={updateSlide}
-            onAddSlide={addSlide}
-            onDeleteSlide={deleteSlide}
-            slideIndex={currentIndex}
-            totalSlides={slides.length}
-            onPrev={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-            onNext={() => setCurrentIndex((i) => Math.min(slides.length - 1, i + 1))}
-            selectedElement={selectedElement}
-            onUndo={undo}
-            onRedo={redo}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            format={format.label}
-            onFormatChange={(label) => {
-              const f = FORMATS.find((f) => f.label === label);
-              if (f) handleFormatChange(f);
-            }}
-          />
+          {/* Toolbar — oculta no mobile */}
+          {!isMobile && (
+            <Toolbar
+              slide={currentSlide}
+              onUpdate={updateSlide}
+              onAddSlide={addSlide}
+              onDeleteSlide={deleteSlide}
+              slideIndex={currentIndex}
+              totalSlides={slides.length}
+              onPrev={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+              onNext={() => setCurrentIndex((i) => Math.min(slides.length - 1, i + 1))}
+              selectedElement={selectedElement}
+              onUndo={undo}
+              onRedo={redo}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              format={format.label}
+              onFormatChange={(label) => {
+                const f = FORMATS.find((f) => f.label === label);
+                if (f) handleFormatChange(f);
+              }}
+            />
+          )}
 
-          <div ref={canvasContainerRef} className="flex-1 overflow-auto flex items-center justify-center bg-[#0a0a0a] p-4 relative">
+          {/* Mini toolbar mobile — navegação de slides */}
+          {isMobile && (
+            <div className="flex items-center justify-between px-3 py-2 bg-[#080808] border-b border-[#161616] shrink-0">
+              <div className="flex items-center gap-1">
+                <button onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))} disabled={currentIndex === 0}
+                  className="p-2 rounded-lg bg-[#111] border border-[#222] disabled:opacity-30 text-gray-300">
+                  <ArrowLeft size={16} />
+                </button>
+                <span className="text-sm text-gray-400 px-2 min-w-[56px] text-center font-medium">
+                  {currentIndex + 1} / {slides.length}
+                </span>
+                <button onClick={() => setCurrentIndex((i) => Math.min(slides.length - 1, i + 1))} disabled={currentIndex === slides.length - 1}
+                  className="p-2 rounded-lg bg-[#111] border border-[#222] disabled:opacity-30 text-gray-300">
+                  <ArrowLeft size={16} className="rotate-180" />
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={addSlide}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-sm font-medium text-white">
+                  <Layers size={14} /> Slide
+                </button>
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent("open-generator-wizard"))}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-brand-600/20 border border-brand-500/30 text-brand-400 text-sm font-medium">
+                  <Sparkles size={14} /> Gerar
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div
+            ref={canvasContainerRef}
+            className="flex-1 overflow-auto flex items-center justify-center bg-[#0a0a0a] relative"
+            style={{ padding: isMobile ? "12px" : "16px" }}
+          >
             {/* Empty-state overlay */}
             {slides.length === 1 && slides[0].elements.length === 0 && !slides[0].backgroundImageUrl && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-10 pointer-events-none">
-                <div className="flex flex-col items-center gap-4 pointer-events-auto">
-                  <div className="p-4 rounded-2xl bg-brand-500/10 border border-brand-500/20">
-                    <Sparkles size={32} className="text-brand-400" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+                <div className="flex flex-col items-center gap-5 pointer-events-auto px-6 text-center">
+                  <div className="p-5 rounded-3xl bg-brand-500/10 border border-brand-500/20">
+                    <Sparkles size={isMobile ? 28 : 36} className="text-brand-400" />
                   </div>
-                  <div className="text-center">
-                    <h2 className="text-xl font-bold text-white mb-1">Pronto para criar?</h2>
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Pronto para criar?</h2>
                     <p className="text-sm text-gray-500">Gere um carrossel incrível com IA em segundos</p>
                   </div>
                   <button
                     onClick={() => window.dispatchEvent(new CustomEvent("open-generator-wizard"))}
-                    className="flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-base transition-all shadow-2xl shadow-brand-500/30 hover:shadow-brand-500/50 hover:scale-105 active:scale-100"
+                    className="flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold text-base transition-all shadow-2xl shadow-brand-500/30"
+                    style={{ minWidth: 200, touchAction: "manipulation" }}
                   >
                     <Sparkles size={20} /> Gerar Ideias
                   </button>
@@ -440,8 +481,8 @@ export default function EditorPage() {
                 width: DISPLAY_W,
                 height: DISPLAY_H,
                 position: "relative",
-                opacity: slides.length === 1 && slides[0].elements.length === 0 && !slides[0].backgroundImageUrl ? 0.15 : 1,
-                transition: "opacity 0.3s",
+                opacity: slides.length === 1 && slides[0].elements.length === 0 && !slides[0].backgroundImageUrl ? 0.1 : 1,
+                transition: "opacity 0.4s",
               }}
               className="shadow-2xl rounded overflow-hidden"
             >
@@ -454,19 +495,24 @@ export default function EditorPage() {
           </div>
         </div>
 
-        {/* Painel direito */}
+        {/* Painel direito — thumbnails dos slides */}
         {isMobile ? (
-          <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: 128, zIndex: 40, background: "#080808", borderLeft: "1px solid #161616", display: "flex", flexDirection: "column", transform: mobilePanel === "slides" ? "translateX(0)" : "translateX(100%)", transition: "transform 0.3s" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", borderBottom: "1px solid #161616" }}>
-              <span style={{ fontSize: 12, color: "#d1d5db" }}>Slides</span>
-              <button onClick={() => setMobilePanel(null)}><X size={16} color="#9ca3af" /></button>
+          <div className="fixed inset-y-0 right-0 z-40 flex flex-col bg-[#080808] border-l border-[#161616]"
+            style={{ width: "75vw", maxWidth: 300, transform: mobilePanel === "slides" ? "translateX(0)" : "translateX(100%)", transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#161616] shrink-0">
+              <span className="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                <Layers size={14} /> Slides
+              </span>
+              <button onClick={() => setMobilePanel(null)} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400">
+                <X size={16} />
+              </button>
             </div>
-            <div style={{ flex: 1, overflowY: "auto" }}>
+            <div className="flex-1 overflow-y-auto p-2">
               <SlidePanel slides={slides} currentIndex={currentIndex} onSelect={(i) => { setCurrentIndex(i); setMobilePanel(null); }} />
             </div>
           </div>
         ) : (
-          <div style={{ width: 128, background: "#080808", borderLeft: "1px solid #161616", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+          <div className="shrink-0 overflow-y-auto" style={{ width: 128, background: "#080808", borderLeft: "1px solid #161616" }}>
             <SlidePanel slides={slides} currentIndex={currentIndex} onSelect={setCurrentIndex} />
           </div>
         )}
@@ -474,23 +520,29 @@ export default function EditorPage() {
 
       {/* Barra inferior mobile */}
       {isMobile && (
-        <div style={{ display: "flex", borderTop: "1px solid #161616", background: "#080808", zIndex: 20 }}>
-          <button onClick={() => setMobilePanel(mobilePanel === "side" ? null : "side")}
-            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: mobilePanel === "side" ? "#a855f7" : "#6b7280" }}>
-            <Sparkles size={18} />IA
-          </button>
-          <button onClick={() => setMobilePanel(mobilePanel === "slides" ? null : "slides")}
-            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: mobilePanel === "slides" ? "#a855f7" : "#6b7280" }}>
-            <Layers size={18} />Slides
-          </button>
-          <button onClick={() => setShowAI(true)}
-            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: "#a855f7" }}>
-            <MessageCircle size={18} />Zora
-          </button>
-          <button onClick={() => setShowPublish(true)}
-            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 0", fontSize: 12, color: "#6b7280" }}>
-            <User size={18} />Publicar
-          </button>
+        <div className="shrink-0 bg-[#080808] border-t border-[#161616] safe-area-pb"
+          style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", zIndex: 20 }}>
+          {[
+            { id: "side",   icon: <Sparkles size={20} />,     label: "IA",      action: () => setMobilePanel(mobilePanel === "side" ? null : "side"),   active: mobilePanel === "side" },
+            { id: "slides", icon: <Layers size={20} />,       label: "Slides",  action: () => setMobilePanel(mobilePanel === "slides" ? null : "slides"), active: mobilePanel === "slides" },
+            { id: "zora",   icon: <MessageCircle size={20} />,label: "Zora",    action: () => setShowAI(true),                                           active: false },
+            { id: "pub",    icon: <User size={20} />,         label: "Publicar",action: () => setShowPublish(true),                                      active: false },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={tab.action}
+              className="flex flex-col items-center justify-center gap-1 py-3.5 transition-colors"
+              style={{
+                color: tab.active ? "#a855f7" : "#6b7280",
+                background: tab.active ? "rgba(168,85,247,0.08)" : "transparent",
+                fontSize: 11,
+                touchAction: "manipulation",
+              }}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
         </div>
       )}
 
