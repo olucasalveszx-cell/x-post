@@ -6,7 +6,7 @@ import { verifyToken } from "@/lib/activation";
 import { isEmailActive } from "@/lib/kv";
 import { stripe } from "@/lib/stripe";
 
-export const maxDuration = 45;
+export const maxDuration = 60;
 
 type ImageStyle = "gemini" | "foto_real";
 

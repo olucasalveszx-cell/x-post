@@ -56,16 +56,21 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
   // ── Arrastar ───────────────────────────────────────────────
   const handleMouseDown = (e: React.MouseEvent, el: SlideElement) => {
-    if (cropId === el.id) return; // em modo crop não move
+    if (cropId === el.id) return;
     e.stopPropagation();
+
+    const wasSelected = selectedId === el.id;
     setSelectedId(el.id);
     onSelectElement?.(el);
+
+    // Primeiro clique apenas seleciona; só arrasta se já estava selecionado
+    if (!wasSelected) return;
 
     let dragging = false;
     const holdTimer = setTimeout(() => {
       dragging = true;
       dragRef.current = { elementId: el.id, startX: e.clientX, startY: e.clientY, origX: el.x, origY: el.y };
-    }, 180);
+    }, 150);
 
     const onMove = (me: MouseEvent) => {
       if (!dragging || !dragRef.current) return;
@@ -130,6 +135,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     if (cropId === el.id) return;
     e.stopPropagation();
 
+    const wasSelected = selectedId === el.id;
     setSelectedId(el.id);
     onSelectElement?.(el);
 
@@ -163,18 +169,20 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       return;
     }
 
-    // Um dedo → arrastar
+    // Um dedo → arrastar (só se já estava selecionado)
+    if (!wasSelected) return;
+
     const touch = e.touches[0];
     const startX = touch.clientX;
     const startY = touch.clientY;
     let dragging = false;
 
     const onMove = (te: TouchEvent) => {
-      if (te.touches.length >= 2) return; // ignorar se virou pinch
+      if (te.touches.length >= 2) return;
       const t = te.touches[0];
       const dx = t.clientX - startX;
       const dy = t.clientY - startY;
-      if (!dragging && Math.sqrt(dx * dx + dy * dy) > 6) {
+      if (!dragging && Math.sqrt(dx * dx + dy * dy) > 12) {
         dragging = true;
         dragRef.current = { elementId: el.id, startX, startY, origX: el.x, origY: el.y };
       }
@@ -389,7 +397,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       const res = await fetch("/api/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, imageStyle: "cinematico", customerId, activationToken }),
+        body: JSON.stringify({ prompt, imageStyle: "gemini", customerId, activationToken }),
       });
       const data = await res.json();
       if (data.imageUrl) onUpdate({ ...slide, backgroundImageUrl: data.imageUrl });
@@ -849,6 +857,20 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           {/* Fechar */}
           <button onClick={closeBgCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
             Fechar
+          </button>
+        </div>
+      )}
+
+      {/* Botão "Gerar imagem com I.A" quando não há fundo */}
+      {!slide.backgroundImageUrl && !generatingBg && !selectedId && (
+        <div className="absolute inset-0 flex items-end justify-center pointer-events-none" style={{ zIndex: 10, paddingBottom: slide.height * 0.08 }}>
+          <button
+            className="pointer-events-auto flex items-center gap-2 px-5 py-3 rounded-2xl text-white font-semibold transition-all"
+            style={{ fontSize: slide.width * 0.022, background: "rgba(168,85,247,0.18)", border: "1.5px solid rgba(168,85,247,0.45)", backdropFilter: "blur(8px)", boxShadow: "0 0 24px rgba(168,85,247,0.25)" }}
+            onClick={(e) => { e.stopPropagation(); generateBg(); }}
+          >
+            <Wand2 style={{ width: slide.width * 0.025, height: slide.width * 0.025 }} />
+            Gerar imagem com I.A
           </button>
         </div>
       )}
