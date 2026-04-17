@@ -14,7 +14,7 @@ export interface Slide {
 
 export interface SlideElement {
   id: string;
-  type: "text" | "image" | "shape" | "profile";
+  type: "text" | "image" | "shape" | "profile" | "frame";
   x: number;
   y: number;
   width: number;
@@ -30,6 +30,9 @@ export interface SlideElement {
   profileName?: string;
   profileHandle?: string;
   profileVerified?: boolean;
+  // Moldura (frame)
+  frameImageUrl?: string;
+  frameShape?: string;
 }
 
 export interface TextStyle {

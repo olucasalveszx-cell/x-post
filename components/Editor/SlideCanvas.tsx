@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Slide, SlideElement } from "@/types";
-import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2 } from "lucide-react";
+import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square } from "lucide-react";
 
 interface Props {
   slide: Slide;
@@ -18,6 +18,18 @@ type CropState = { elementId: string; startX: number; startY: number; handle: st
 
 type CtxMenu = { x: number; y: number; el: SlideElement } | null;
 type BgCtxMenu = { x: number; y: number } | null;
+
+const FRAME_CLIP: Record<string, { clip?: string; radius?: string }> = {
+  circle:   { radius: "50%" },
+  rounded:  { radius: "14%" },
+  rect:     {},
+  squircle: { radius: "28%" },
+  arch:     { radius: "50% 50% 0 0 / 60% 60% 0 0" },
+  diamond:  { clip: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" },
+  hexagon:  { clip: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" },
+  triangle: { clip: "polygon(50% 0%, 0% 100%, 100% 100%)" },
+  star:     { clip: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)" },
+};
 
 const GRADIENTS = [
   { label: "Escuro baixo",  value: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, transparent 60%)" },
@@ -38,6 +50,9 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const [generatingBg, setGeneratingBg] = useState(false);
   const [showThemeInput, setShowThemeInput] = useState(false);
   const [themeValue, setThemeValue] = useState("");
+  const [frameCtxMenu, setFrameCtxMenu] = useState<CtxMenu>(null);
+  const [loadingFrames, setLoadingFrames] = useState<Set<string>>(new Set());
+  const [framePendingId, setFramePendingId] = useState<string | null>(null);
   const dragRef = useRef<DragState>(null);
   const resizeRef = useRef<ResizeState>(null);
   const cropRef = useRef<CropState>(null);
@@ -45,6 +60,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const menuDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
+  const frameFileInputRef = useRef<HTMLInputElement>(null);
 
   const updateElement = useCallback((id: string, patch: Partial<SlideElement>) => {
     onUpdate({ ...slide, elements: slide.elements.map((el) => el.id === id ? { ...el, ...patch } : el) });
@@ -429,6 +445,43 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     setBgCtxMenu((prev) => prev); // keep menu open to allow multiple picks
   };
 
+  const generateFrameImage = async (frameEl: SlideElement) => {
+    setFrameCtxMenu(null);
+    const prompt = slideTexts || "professional lifestyle photography, vibrant colors, high quality";
+    setLoadingFrames((s) => new Set(s).add(frameEl.id));
+    try {
+      const res = await fetch("/api/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, imageStyle: "gemini" }),
+      });
+      const data = await res.json();
+      if (data.imageUrl) updateElement(frameEl.id, { frameImageUrl: data.imageUrl });
+    } catch {}
+    finally { setLoadingFrames((s) => { const n = new Set(s); n.delete(frameEl.id); return n; }); }
+  };
+
+  const handleFrameFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !framePendingId) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => updateElement(framePendingId, { frameImageUrl: ev.target?.result as string });
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleFrameContextMenu = (e: React.MouseEvent, el: SlideElement) => {
+    e.preventDefault();
+    e.stopPropagation();
+    closeCtx();
+    closeBgCtx();
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setFrameCtxMenu({ x: (e.clientX - rect.left) / scale, y: (e.clientY - rect.top) / scale, el });
+  };
+
+  const closeFrameCtx = () => setFrameCtxMenu(null);
+
   const handleBgFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -489,6 +542,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const handleCanvasClick = () => {
     if (ctxMenu) { closeCtx(); return; }
     if (bgCtxMenu) { closeBgCtx(); return; }
+    if (frameCtxMenu) { closeFrameCtx(); return; }
     if (isCroppingBg) return; // não deseleciona enquanto está cortando o fundo
     setSelectedId(null);
     setEditingId(null);
@@ -570,6 +624,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       )}
       {/* Hidden file input for bg image replacement */}
       <input ref={bgFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgFileChange} />
+      {/* Hidden file input para foto de moldura */}
+      <input ref={frameFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFrameFileChange} />
 
       {/* Botões de crop do fundo */}
       {isCroppingBg && !bgCtxMenu && (
@@ -613,6 +669,57 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         const hT = Math.round(22 * S);   // espessura do handle de crop (22px na tela)
         const rS = Math.round(30 * S);   // tamanho do handle de resize (30px na tela)
         const oW = Math.round(2.5 * S);  // espessura da borda de seleção (2.5px na tela)
+
+        // Frame (moldura): renderização própria sem o container padrão
+        if (el.type === "frame") {
+          const shapeStyle = FRAME_CLIP[el.frameShape ?? "circle"] ?? {};
+          const isLoading = loadingFrames.has(el.id);
+          const innerStyle: React.CSSProperties = {
+            width: "100%", height: "100%", overflow: "hidden", position: "relative",
+            ...(shapeStyle.clip ? { clipPath: shapeStyle.clip } : {}),
+            ...(shapeStyle.radius ? { borderRadius: shapeStyle.radius } : {}),
+          };
+          return (
+            <div
+              key={el.id}
+              className="slide-element"
+              style={{
+                left: el.x, top: el.y, width: el.width, height: el.height,
+                opacity: el.opacity ?? 1, zIndex: el.zIndex ?? 20, touchAction: "none",
+                ...(isSelected ? { outline: `${oW}px solid #a855f7`, outlineOffset: `${Math.round(2 * S)}px` } : {}),
+              }}
+              onMouseDown={(e) => handleMouseDown(e, el)}
+              onTouchStart={(e) => handleTouchStart(e, el)}
+              onContextMenu={(e) => handleFrameContextMenu(e, el)}
+            >
+              <div style={innerStyle}>
+                {isLoading ? (
+                  <div style={{ width: "100%", height: "100%", background: "rgba(168,85,247,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: Math.round(el.width * 0.18), height: Math.round(el.width * 0.18), border: `${Math.round(el.width * 0.025)}px solid #a855f7`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                  </div>
+                ) : el.frameImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={el.frameImageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} draggable={false} />
+                ) : (
+                  <div
+                    style={{ width: "100%", height: "100%", background: "rgba(255,255,255,0.06)", border: `${Math.round(2 * S)}px dashed rgba(168,85,247,0.5)`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: Math.round(el.height * 0.05), color: "rgba(168,85,247,0.7)", cursor: "pointer", boxSizing: "border-box" }}
+                    onClick={(e) => { e.stopPropagation(); if (isSelected) { setFramePendingId(el.id); frameFileInputRef.current?.click(); } else { setSelectedId(el.id); onSelectElement?.(el); } }}
+                  >
+                    <ImageIcon style={{ width: Math.round(el.width * 0.22), height: Math.round(el.width * 0.22) }} />
+                    <span style={{ fontSize: Math.round(el.width * 0.07), fontFamily: "sans-serif", fontWeight: 600, textAlign: "center", padding: "0 8%" }}>Adicionar foto</span>
+                  </div>
+                )}
+              </div>
+              {isSelected && !isLoading && (
+                <div
+                  style={{ position: "absolute", width: rS, height: rS, background: "#a855f7", border: `${Math.max(1, Math.round(2 * S))}px solid white`, borderRadius: "50%", cursor: "se-resize", bottom: -Math.round(rS / 2), right: -Math.round(rS / 2), zIndex: 10, touchAction: "none" }}
+                  onMouseDown={(e) => { e.stopPropagation(); handleResizeDown(e, el); }}
+                  onTouchStart={(e) => { e.stopPropagation(); handleResizeTouchStart(e, el); }}
+                />
+              )}
+            </div>
+          );
+        }
 
         return (
           <div
@@ -813,6 +920,59 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
           {/* Fechar */}
           <button onClick={closeCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
+            Fechar
+          </button>
+        </div>
+      )}
+
+      {/* Context menu de moldura */}
+      {frameCtxMenu && (
+        <div
+          className="absolute z-[100] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1.5 min-w-[220px]"
+          style={{
+            left: Math.min(frameCtxMenu.x, slide.width - 240 / scale),
+            top: Math.min(frameCtxMenu.y, slide.height - 300 / scale),
+            transform: `scale(${1 / scale})`,
+            transformOrigin: "top left",
+          }}
+          onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <div className="px-4 py-2.5 border-b border-[#2a2a2a] flex items-center gap-2">
+            <Square size={15} className="text-brand-400" />
+            <span className="text-sm font-semibold text-gray-300">Moldura</span>
+          </div>
+          <button
+            onClick={() => generateFrameImage(frameCtxMenu.el)}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
+          >
+            <Wand2 size={15} /> Gerar foto com I.A
+          </button>
+          <button
+            onClick={() => { setFramePendingId(frameCtxMenu.el.id); frameFileInputRef.current?.click(); closeFrameCtx(); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
+          >
+            <RefreshCw size={15} className="text-blue-400" /> {frameCtxMenu.el.frameImageUrl ? "Trocar foto" : "Adicionar foto"}
+          </button>
+          {frameCtxMenu.el.frameImageUrl && (
+            <button
+              onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: undefined }); closeFrameCtx(); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
+            >
+              <X size={15} /> Remover foto
+            </button>
+          )}
+          <div className="border-b border-[#2a2a2a]">
+            <button onClick={() => { bringForward(frameCtxMenu.el); closeFrameCtx(); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
+              <ArrowUp size={15} className="text-blue-400" /> Trazer à frente
+            </button>
+            <button onClick={() => { sendBackward(frameCtxMenu.el); closeFrameCtx(); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
+              <ArrowDown size={15} className="text-blue-400" /> Enviar para trás
+            </button>
+          </div>
+          <button onClick={closeFrameCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
             Fechar
           </button>
         </div>

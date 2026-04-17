@@ -55,6 +55,38 @@ export default function Toolbar({
   const [editError, setEditError] = useState("");
   const [showLayouts, setShowLayouts] = useState(false);
   const [showFrame, setShowFrame] = useState(false);
+  const [showMolds, setShowMolds] = useState(false);
+
+  const MOLD_SHAPES = [
+    { id: "circle",   label: "Círculo",      path: <circle cx="24" cy="24" r="22" /> },
+    { id: "rounded",  label: "Arredond.",     path: <rect x="4" y="4" width="40" height="40" rx="10" ry="10" /> },
+    { id: "rect",     label: "Retângulo",     path: <rect x="4" y="8" width="40" height="32" /> },
+    { id: "squircle", label: "Suave",         path: <rect x="4" y="4" width="40" height="40" rx="18" ry="18" /> },
+    { id: "arch",     label: "Arco",          path: <path d="M4 48 Q4 4 24 4 Q44 4 44 48 Z" /> },
+    { id: "diamond",  label: "Losango",       path: <polygon points="24,2 46,24 24,46 2,24" /> },
+    { id: "hexagon",  label: "Hexágono",      path: <polygon points="24,2 44,13 44,35 24,46 4,35 4,13" /> },
+    { id: "triangle", label: "Triângulo",     path: <polygon points="24,2 46,46 2,46" /> },
+    { id: "star",     label: "Estrela",       path: <polygon points="24,2 29,18 46,18 33,28 38,44 24,34 10,44 15,28 2,18 19,18" /> },
+  ] as const;
+
+  const addFrame = (shape: string) => {
+    const W = slide.width;
+    const H = slide.height;
+    const size = Math.round(Math.min(W, H) * 0.42);
+    const newEl = {
+      id: require("uuid").v4(),
+      type: "frame" as const,
+      frameShape: shape,
+      x: Math.round((W - size) / 2),
+      y: Math.round((H - size) / 2),
+      width: size,
+      height: size,
+      zIndex: 20,
+      opacity: 1,
+    };
+    onUpdate({ ...slide, elements: [...slide.elements, newEl] });
+    setShowMolds(false);
+  };
 
   const FRAME_PRESETS: {
     id: string; label: string; desc: string;
@@ -402,14 +434,20 @@ export default function Toolbar({
         </button>
 
         {/* Layout */}
-        <button onClick={() => { setShowLayouts(v => !v); setShowProfile(false); setShowEditAI(false); setShowFrame(false); }}
+        <button onClick={() => { setShowLayouts(v => !v); setShowProfile(false); setShowEditAI(false); setShowFrame(false); setShowMolds(false); }}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showLayouts ? "bg-brand-600 text-white" : "bg-[#2a2a2a] hover:bg-[#333] text-gray-300"}`}>
           <LayoutTemplate size={14} /> Layout
         </button>
 
+        {/* Molduras */}
+        <button onClick={() => { setShowMolds(v => !v); setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowFrame(false); }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showMolds ? "bg-violet-600 text-white" : "bg-[#2a2a2a] hover:bg-[#333] text-gray-300"}`}>
+          <FrameIcon size={14} /> Molduras
+        </button>
+
         {/* Frame da imagem */}
         {slide.backgroundImageUrl && (
-          <button onClick={() => { setShowFrame(v => !v); setShowLayouts(false); setShowProfile(false); setShowEditAI(false); }}
+          <button onClick={() => { setShowFrame(v => !v); setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showFrame ? "bg-indigo-600 text-white" : "bg-[#2a2a2a] hover:bg-[#333] text-gray-300"}`}>
             <FrameIcon size={14} /> Frame
           </button>
@@ -575,6 +613,33 @@ export default function Toolbar({
                   <p className="text-xs font-semibold text-white">{layout.label}</p>
                   <p className="text-[10px] text-gray-500">{layout.desc}</p>
                 </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Painel de Molduras */}
+      {showMolds && (
+        <div className="absolute top-full left-0 z-50 mt-1 ml-2 bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl p-4 w-[360px]">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
+              <FrameIcon size={14} className="text-violet-400" /> Molduras
+            </span>
+            <button onClick={() => setShowMolds(false)} className="text-gray-500 hover:text-gray-300"><X size={16} /></button>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">Clique em uma forma para adicionar ao slide. Clique com o botão direito na moldura para adicionar foto.</p>
+          <div className="grid grid-cols-3 gap-2">
+            {MOLD_SHAPES.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => addFrame(s.id)}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] hover:border-violet-500/50 hover:bg-violet-500/10 transition-all group"
+              >
+                <svg viewBox="0 0 48 48" width={52} height={52} fill="rgba(168,85,247,0.25)" stroke="rgba(168,85,247,0.8)" strokeWidth={2} className="group-hover:fill-violet-500/40 transition-all">
+                  {s.path}
+                </svg>
+                <span className="text-[11px] text-gray-400 group-hover:text-violet-300 transition-colors">{s.label}</span>
               </button>
             ))}
           </div>
