@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuid } from "uuid";
-import { Download, ArrowLeft, User, LogIn, Sparkles, Layers, X, MessageCircle, RotateCcw, Zap } from "lucide-react";
+import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap } from "lucide-react";
 import Link from "next/link";
 import { Slide, Project } from "@/types";
 import { renderSlide } from "@/lib/render-slide";
@@ -407,8 +407,8 @@ export default function EditorPage() {
         {/* ── Área central ──────────────────────────────────────── */}
         <div className="flex flex-col flex-1 overflow-hidden min-w-0">
 
-          {/* Toolbar — desktop only */}
-          {!isMobile && currentSlide && (
+          {/* Toolbar */}
+          {currentSlide && (
             <Toolbar
               slide={currentSlide}
               onUpdate={updateSlide}
@@ -431,31 +431,6 @@ export default function EditorPage() {
             />
           )}
 
-          {/* Mini toolbar mobile */}
-          {isMobile && (
-            <div className="flex items-center justify-between px-3 py-2 bg-[#080808] border-b border-[#161616] shrink-0">
-              <div className="flex items-center gap-1">
-                <button onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))} disabled={safeIndex === 0}
-                  className="p-2 rounded-lg bg-[#111] border border-[#222] disabled:opacity-30 text-gray-300">
-                  <ArrowLeft size={16} />
-                </button>
-                <span className="text-sm text-gray-400 px-2 min-w-[56px] text-center font-medium">{safeIndex + 1} / {slides.length}</span>
-                <button onClick={() => setCurrentIndex((i) => Math.min(slides.length - 1, i + 1))} disabled={safeIndex === slides.length - 1}
-                  className="p-2 rounded-lg bg-[#111] border border-[#222] disabled:opacity-30 text-gray-300">
-                  <ArrowLeft size={16} className="rotate-180" />
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={addSlide} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-sm font-medium text-white">
-                  <Layers size={14} /> Slide
-                </button>
-                <button onClick={() => window.dispatchEvent(new CustomEvent("open-generator-wizard"))}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-brand-600/20 border border-brand-500/30 text-brand-400 text-sm font-medium">
-                  <Sparkles size={14} /> Gerar
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Canvas */}
           <div ref={canvasContainerRef} className="flex-1 overflow-auto flex items-center justify-center bg-[#0a0a0a] relative"
@@ -508,12 +483,11 @@ export default function EditorPage() {
       {/* ── Barra inferior mobile ─────────────────────────────── */}
       {isMobile && (
         <div className="shrink-0 bg-[#080808] border-t border-[#161616]"
-          style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", zIndex: 20 }}>
+          style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", zIndex: 20 }}>
           {[
             { id: "side",  icon: <Sparkles size={20} />,      label: "IA",      action: () => setMobilePanel(mobilePanel === "side" ? null : "side"), active: mobilePanel === "side" },
             { id: "zora",  icon: <MessageCircle size={20} />, label: "Zora",    action: () => setShowAI(true),                                        active: false },
             { id: "pub",   icon: <User size={20} />,          label: "Publicar",action: () => setShowPublish(true),                                   active: false },
-            { id: "exp",   icon: <Download size={20} />,      label: "Exportar",action: handleExport,                                                 active: false },
           ].map((tab) => (
             <button key={tab.id} onClick={tab.action}
               className="flex flex-col items-center justify-center gap-1 py-3.5 transition-colors"

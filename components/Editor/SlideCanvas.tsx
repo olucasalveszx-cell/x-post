@@ -615,7 +615,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                     value={stripHtml(el.content ?? "")} onChange={(e) => updateElement(el.id, { content: e.target.value })}
                     onBlur={() => setEditingId(null)} onClick={(e) => e.stopPropagation()} />
                 ) : (
-                  <div className="w-full h-full overflow-hidden" style={{ ...textStyle(el), padding: 4, whiteSpace: "pre-wrap" }} dangerouslySetInnerHTML={{ __html: el.content ?? "" }} />
+                  <div className="w-full overflow-visible" style={{ ...textStyle(el), padding: 4, whiteSpace: "pre-wrap" }} dangerouslySetInnerHTML={{ __html: el.content ?? "" }} />
                 )}
               </>
             )}
