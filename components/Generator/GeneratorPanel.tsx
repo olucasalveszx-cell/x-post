@@ -174,9 +174,13 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   const [creditToast, setCreditToast] = useState<{ spent: number; remaining: number } | null>(null);
   const [showWizard, setShowWizard] = useState(false);
 
-  // Listen for external trigger (canvas overlay button)
+  // Listen for external trigger (canvas overlay button / onboarding)
   useEffect(() => {
-    const handler = () => setShowWizard(true);
+    const handler = (e: Event) => {
+      const topic = (e as CustomEvent).detail?.topic;
+      if (topic) setLastSettings((prev) => ({ ...(prev ?? defaultSettings()), topic, inputMode: "topic" }));
+      setShowWizard(true);
+    };
     window.addEventListener("open-generator-wizard", handler);
     return () => window.removeEventListener("open-generator-wizard", handler);
   }, []);

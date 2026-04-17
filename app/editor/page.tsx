@@ -11,6 +11,7 @@ import AuthButton from "@/components/AuthButton";
 import SlideCanvas from "@/components/Editor/SlideCanvas";
 import Toolbar from "@/components/Editor/Toolbar";
 import HorizontalSlidePanel from "@/components/Editor/HorizontalSlidePanel";
+import OnboardingModal from "@/components/Editor/OnboardingModal";
 import PublishModal from "@/components/Actions/PublishModal";
 import AIAssistant from "@/components/AIAssistant";
 import SubscriptionGate from "@/components/SubscriptionGate";
@@ -500,6 +501,11 @@ export default function EditorPage() {
 
       {showPublish && <PublishModal slides={slides} account={igAccount} onClose={() => setShowPublish(false)} onLoginClick={handleIGLogin} />}
       <AIAssistant open={showAI} onClose={() => setShowAI(false)} />
+      <OnboardingModal
+        onConfirm={(topic) => {
+          window.dispatchEvent(new CustomEvent("open-generator-wizard", { detail: { topic } }));
+        }}
+      />
     </div>
     </SubscriptionGate>
   );

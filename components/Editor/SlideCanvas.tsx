@@ -409,12 +409,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
   const generateBg = () => {
     closeBgCtx();
-    if (slideTexts) {
-      runGenerateBg(slideTexts);
-    } else {
-      setThemeValue("");
-      setShowThemeInput(true);
-    }
+    setThemeValue(slideTexts.slice(0, 120));
+    setShowThemeInput(true);
   };
 
   const setBgGradient = (gradient: string) => {
@@ -876,19 +872,13 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       {/* Botão "Gerar imagem com I.A" quando não há fundo */}
       {!slide.backgroundImageUrl && !generatingBg && !selectedId && !showThemeInput && (
         <div className="absolute inset-0 flex flex-col items-center justify-end pointer-events-none" style={{ zIndex: 10, paddingBottom: slide.height * 0.06 }}>
-          {slideTexts && (
-            <p className="pointer-events-none text-white/40 text-center px-6 mb-3 leading-snug"
-              style={{ fontSize: slide.width * 0.018, maxWidth: slide.width * 0.75 }}>
-              "{slideTexts.slice(0, 80)}{slideTexts.length > 80 ? "…" : ""}"
-            </p>
-          )}
           <button
             className="pointer-events-auto flex items-center gap-2 px-5 py-3 rounded-2xl text-white font-semibold transition-all active:scale-95"
             style={{ fontSize: slide.width * 0.022, background: "rgba(168,85,247,0.18)", border: "1.5px solid rgba(168,85,247,0.45)", backdropFilter: "blur(8px)", boxShadow: "0 0 24px rgba(168,85,247,0.25)" }}
             onClick={(e) => { e.stopPropagation(); generateBg(); }}
           >
             <Wand2 style={{ width: slide.width * 0.025, height: slide.width * 0.025 }} />
-            {slideTexts ? "Gerar imagem com I.A" : "Gerar imagem com I.A"}
+            Fundo I.A
           </button>
         </div>
       )}
@@ -902,7 +892,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2">
               <Wand2 style={{ width: slide.width * 0.03, height: slide.width * 0.03, color: "#a855f7" }} />
-              <span style={{ fontSize: slide.width * 0.025, fontWeight: 700, color: "#fff" }}>Qual é o tema?</span>
+              <span style={{ fontSize: slide.width * 0.025, fontWeight: 700, color: "#fff" }}>Qual tema pretende usar?</span>
             </div>
             <input
               autoFocus
