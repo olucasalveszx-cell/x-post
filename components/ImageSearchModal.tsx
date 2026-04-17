@@ -65,7 +65,6 @@ export default function ImageSearchModal({ open, onClose, onSelect, defaultQuery
     setLoadingIdx(idx);
     setError("");
     try {
-      // Proxy via server-side para evitar CORS
       const res = await fetch("/api/image-proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,7 +75,7 @@ export default function ImageSearchModal({ open, onClose, onSelect, defaultQuery
       setSelectedUrl(img.url);
       onSelect(data.base64, data.mimeType, img.url);
       setTimeout(onClose, 300);
-    } catch (e: any) {
+    } catch {
       setError("Falha ao carregar imagem. Tente outra.");
     } finally {
       setLoadingIdx(null);
@@ -88,7 +87,6 @@ export default function ImageSearchModal({ open, onClose, onSelect, defaultQuery
   return createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.85)" }}>
       <div className="relative w-full max-w-2xl rounded-2xl border border-[#2a2a2a] bg-[#0d0d0d] flex flex-col max-h-[90vh] overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e]">
           <span className="text-sm font-semibold text-white">Buscar imagem de referência</span>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
@@ -96,7 +94,6 @@ export default function ImageSearchModal({ open, onClose, onSelect, defaultQuery
           </button>
         </div>
 
-        {/* Search bar */}
         <div className="px-5 py-3 border-b border-[#1a1a1a]">
           <div className="flex gap-2">
             <div className="flex-1 flex items-center gap-2 bg-[#111] border border-[#2a2a2a] rounded-xl px-3 py-2">
@@ -124,7 +121,6 @@ export default function ImageSearchModal({ open, onClose, onSelect, defaultQuery
           </p>
         </div>
 
-        {/* Results */}
         <div className="flex-1 overflow-y-auto p-4">
           {searching && (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-500">

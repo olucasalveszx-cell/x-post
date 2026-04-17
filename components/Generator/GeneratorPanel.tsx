@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Sparkles, Search, Loader2, AlertCircle, Image, Wand2, Crown, Zap, LogIn, ImagePlus, X, Terminal, Wand } from "lucide-react";
+import { Sparkles, Search, Loader2, AlertCircle, Image, Wand2, Crown, Zap, LogIn, ImagePlus, X, Terminal } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
 import ImageSearchModal from "@/components/ImageSearchModal";
 import { GeneratedContent, SearchResult, Slide, WritingStyle } from "@/types";
@@ -18,7 +18,7 @@ const SLIDE_H = 1350;
 type ImageStyle = "realista" | "cartoon" | "anime" | "stock" | "cinematico" | "abstrato" | "foto_real";
 
 const IMAGE_STYLES: { value: ImageStyle; label: string; desc: string; emoji: string; free?: boolean }[] = [
-  { value: "foto_real",  label: "Foto Real",   desc: "Foto real do Google",            emoji: "🔍", free: true },
+  { value: "foto_real",  label: "Foto Real",   desc: "Foto IA ultra-realista",         emoji: "📸", free: true },
   { value: "realista",   label: "Realista",    desc: "Foto 8K, luz natural, HDR",      emoji: "📷" },
   { value: "cinematico", label: "Cinemático",  desc: "Filme épico, luz dramática",      emoji: "🎬" },
   { value: "stock",      label: "Stock",       desc: "Editorial limpo, corporativo",    emoji: "💼" },
@@ -28,7 +28,7 @@ const IMAGE_STYLES: { value: ImageStyle; label: string; desc: string; emoji: str
 ];
 
 const STYLE_PROMPTS: Record<ImageStyle, string> = {
-  foto_real:  "real photograph from the web",
+  foto_real:  "ultra-realistic documentary photograph, natural light, photojournalism quality, authentic candid moment",
   realista:   "ultra-realistic photography, natural lighting, shallow depth of field, sharp focus, 8k DSLR photo, photojournalism quality, authentic emotion",
   cinematico: "cinematic still, dramatic moody lighting, film grain, anamorphic lens flare, Blade Runner color grading, dark atmospheric, hyper-detailed, IMAX quality",
   stock:      "professional stock photography, clean bright studio lighting, corporate editorial style, high-key lighting, sharp and polished, Getty Images quality",
@@ -180,7 +180,6 @@ export default function GeneratorPanel({ onGenerate }: Props) {
     let done = 0;
     const withImages = await Promise.all(
       slides.map(async (slide) => {
-        // Foto Real usa searchQuery (curto, natural); IA usa imagePrompt (descritivo)
         const prompt = imageStyle === "foto_real"
           ? ((slide as any)._searchQuery ?? topic)
           : ((slide as any)._imagePrompt ?? topic);
@@ -413,7 +412,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
           />
           {zoraHighlight && (
             <p className="text-[11px] text-purple-400 flex items-center gap-1 mt-1">
-              <Wand size={10} /> Prompt gerado pela Zora — pronto para usar!
+              <Wand2 size={10} /> Prompt gerado pela Zora — pronto para usar!
             </p>
           )}
           <p className="text-[10px] text-gray-600 mt-1">A IA segue seu prompt à risca. Sem pesquisa na web.</p>
@@ -576,11 +575,9 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       {status === "done" && (
         <div className="flex items-center gap-2 bg-brand-500/10 border border-brand-500/20 rounded-lg p-3 text-xs text-brand-400">
           <Image size={13} />
-          {imageStyle === "foto_real"
-            ? <>Fotos reais do Google · busca automática</>
-            : isPro
-            ? <>Imagens geradas com Gemini / DALL-E 3 · estilo {IMAGE_STYLES.find(s => s.value === imageStyle)?.label}</>
-            : <>Imagens do Pexels · <button onClick={() => goToCheckout()} className="text-yellow-400 underline">upgrade para IA</button></>
+          {isPro
+            ? <>Imagens geradas com Gemini / Imagen · estilo {IMAGE_STYLES.find(s => s.value === imageStyle)?.label}</>
+            : <>Imagens geradas com Gemini · <button onClick={() => goToCheckout()} className="text-yellow-400 underline">upgrade para Imagen Pro</button></>
           }
         </div>
       )}

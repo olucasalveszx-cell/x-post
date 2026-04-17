@@ -26,7 +26,7 @@ export default function TranslatePanel({ onGenerate }: Props) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [slideCount, setSlideCount] = useState(7);
-  const [imageSource, setImageSource] = useState<"pexels" | "gemini" | "imagen3" | "dalle3">("pexels");
+  const [imageSource, setImageSource] = useState<"gemini" | "imagen3">("gemini");
   const [status, setStatus] = useState<"idle" | "translating" | "images" | "done" | "error">("idle");
   const [error, setError] = useState("");
   const [imageProgress, setImageProgress] = useState(0);
@@ -316,10 +316,8 @@ export default function TranslatePanel({ onGenerate }: Props) {
         <label className="text-sm text-gray-400 mb-2 block">Imagens</label>
         <div className="grid grid-cols-2 gap-1.5">
           {([
-            { value: "pexels",  label: "Pexels",   sub: "Fotos · padrão",    color: "text-green-400" },
-            { value: "gemini",  label: "Gemini",   sub: "IA Google · grátis", color: "text-blue-400" },
-            { value: "imagen3", label: "Imagen 3", sub: "IA Google · premium",color: "text-purple-400" },
-            { value: "dalle3",  label: "DALL-E 3", sub: "IA OpenAI · pago",   color: "text-orange-400" },
+            { value: "gemini",  label: "Gemini",   sub: "IA Google · padrão",  color: "text-blue-400" },
+            { value: "imagen3", label: "Imagen 3", sub: "IA Google · premium", color: "text-purple-400" },
           ] as const).map((opt) => (
             <button
               key={opt.value}

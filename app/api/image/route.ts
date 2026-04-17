@@ -12,7 +12,7 @@ type ImageStyle = "realista" | "cinematico" | "stock" | "cartoon" | "anime" | "a
 
 interface StyleConfig {
   prompt: string;
-  base: string; // instrução de fundo/composição específica do estilo
+  base: string;
 }
 
 const STYLES: Record<ImageStyle, StyleConfig> = {
@@ -41,8 +41,8 @@ const STYLES: Record<ImageStyle, StyleConfig> = {
     base: `deep dark background with glowing elements, multiple color layers with depth, perfectly balanced composition, no faces or people, no text, no watermarks, no logos`,
   },
   foto_real: {
-    prompt: `real photograph`,
-    base: `no text, no watermarks, no logos`,
+    prompt: `ultra-realistic documentary photograph, shot on full-frame DSLR, natural available light, sharp focus, authentic candid moment, photojournalism quality, true-to-life colors, no retouching, real life scene`,
+    base: `natural real-world background, authentic environment, no studio setup, no artistic filters, no text, no watermarks, no logos`,
   },
 };
 
@@ -84,7 +84,7 @@ async function fromImagen4(prompt: string, style: ImageStyle) {
   return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen4" };
 }
 
-// ── Imagen 3 (fallback, via Gemini API key) ───────────────────
+// ── Imagen 3 ──────────────────────────────────────────────────
 async function fromImagen3(prompt: string, style: ImageStyle) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
@@ -117,7 +117,7 @@ async function fromImagen3(prompt: string, style: ImageStyle) {
   return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen3" };
 }
 
-// ── Gemini 2.0 Flash Image Generation (fallback) ─────────────
+// ── Gemini 2.0 Flash Image Generation ────────────────────────
 async function fromGemini(prompt: string, style: ImageStyle) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
@@ -186,220 +186,13 @@ async function fromGeminiWithReference(prompt: string, style: ImageStyle, refBas
   return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini_ref" };
 }
 
-// ── DALL-E 3 ─────────────────────────────────────────────────
-async function fromDallE(prompt: string, style: ImageStyle) {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("OPENAI_API_KEY não configurada");
-
-  const fullPrompt = buildPrompt(prompt, style);
-
-  const res = await fetch("https://api.openai.com/v1/images/generations", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "dall-e-3",
-      prompt: fullPrompt,
-      n: 1,
-      size: "1024x1792",
-      quality: "standard",
-      response_format: "b64_json",
-    }),
-    signal: AbortSignal.timeout(40000),
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `DALL-E HTTP ${res.status}`);
-
-  const b64 = data.data?.[0]?.b64_json;
-  if (!b64) throw new Error("DALL-E: sem imagem na resposta");
-
-  console.log("[image] DALL-E 3 OK");
-  return { imageUrl: `data:image/png;base64,${b64}`, source: "dalle" };
-}
-
-// ── Unsplash (alta qualidade, grátis 50 req/h) ───────────────
-async function fromUnsplash(prompt: string) {
-  const key = process.env.UNSPLASH_ACCESS_KEY;
-  if (!key) throw new Error("UNSPLASH_ACCESS_KEY não configurada");
-
-  const query = prompt.split(/[,.|]/)[0].trim().split(/\s+/).slice(0, 5).join(" ");
-  const res = await fetch(
-    `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=15&orientation=portrait`,
-    { headers: { Authorization: `Client-ID ${key}` }, signal: AbortSignal.timeout(10000) }
-  );
-  if (!res.ok) throw new Error(`Unsplash HTTP ${res.status}`);
-
-  const data = await res.json();
-  const photos: any[] = data.results ?? [];
-  if (!photos.length) throw new Error("Unsplash: sem resultados");
-
-  const pick = photos[Math.floor(Math.random() * Math.min(photos.length, 8))];
-  const imageUrl = pick.urls?.regular ?? pick.urls?.full;
-  if (!imageUrl) throw new Error("Unsplash: URL não encontrada");
-
-  const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(12000) });
-  if (!imgRes.ok) throw new Error(`Unsplash imagem HTTP ${imgRes.status}`);
-  const ct = imgRes.headers.get("content-type") ?? "image/jpeg";
-  const b64 = Buffer.from(await imgRes.arrayBuffer()).toString("base64");
-
-  console.log("[image] Unsplash OK:", pick.id);
-  return { imageUrl: `data:${ct};base64,${b64}`, source: "unsplash" };
-}
-
-// ── Pixabay (grátis, ilimitado) ───────────────────────────────
-async function fromPixabay(prompt: string) {
-  const key = process.env.PIXABAY_API_KEY;
-  if (!key) throw new Error("PIXABAY_API_KEY não configurada");
-
-  const query = prompt.split(/[,.|]/)[0].trim().split(/\s+/).slice(0, 4).join("+");
-  const res = await fetch(
-    `https://pixabay.com/api/?key=${key}&q=${encodeURIComponent(query)}&image_type=photo&orientation=vertical&per_page=20&safesearch=true`,
-    { signal: AbortSignal.timeout(10000) }
-  );
-  if (!res.ok) throw new Error(`Pixabay HTTP ${res.status}`);
-
-  const data = await res.json();
-  const hits: any[] = data.hits ?? [];
-  if (!hits.length) throw new Error("Pixabay: sem resultados");
-
-  const pick = hits[Math.floor(Math.random() * Math.min(hits.length, 10))];
-  const imageUrl = pick.largeImageURL ?? pick.webformatURL;
-  if (!imageUrl) throw new Error("Pixabay: URL não encontrada");
-
-  const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(12000) });
-  if (!imgRes.ok) throw new Error(`Pixabay imagem HTTP ${imgRes.status}`);
-  const ct = imgRes.headers.get("content-type") ?? "image/jpeg";
-  const b64 = Buffer.from(await imgRes.arrayBuffer()).toString("base64");
-
-  console.log("[image] Pixabay OK:", pick.id);
-  return { imageUrl: `data:${ct};base64,${b64}`, source: "pixabay" };
-}
-
-// ── Google Images via Serper ──────────────────────────────────
-async function fromSerper(prompt: string) {
-  const key = process.env.SERPER_API_KEY;
-  if (!key) throw new Error("SERPER_API_KEY não configurada");
-
-  // Adiciona "foto" para forçar resultados fotográficos reais
-  const query = `${prompt} foto`;
-
-  const res = await fetch("https://google.serper.dev/images", {
-    method: "POST",
-    headers: { "X-API-KEY": key, "Content-Type": "application/json" },
-    body: JSON.stringify({ q: query, gl: "br", hl: "pt", num: 10 }),
-    signal: AbortSignal.timeout(15000),
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? `Serper HTTP ${res.status}`);
-
-  const images: any[] = data.images ?? [];
-  if (!images.length) throw new Error("Serper: sem imagens encontradas");
-
-  // Prefere imagens com boa resolução (≥ 600px), filtra ícones/logos
-  const sorted = images
-    .filter(img => img.imageUrl && img.imageWidth >= 400 && img.imageHeight >= 400)
-    .sort((a, b) => (b.imageWidth * b.imageHeight) - (a.imageWidth * a.imageHeight));
-
-  const candidates = sorted.length > 0 ? sorted : images;
-
-  for (const img of candidates.slice(0, 8)) {
-    if (!img.imageUrl) continue;
-    try {
-      const imgRes = await fetch(img.imageUrl, {
-        signal: AbortSignal.timeout(8000),
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" },
-      });
-      if (!imgRes.ok) continue;
-
-      const ct = imgRes.headers.get("content-type") ?? "";
-      if (!ct.startsWith("image/")) continue;
-
-      const buffer = await imgRes.arrayBuffer();
-      if (buffer.byteLength < 20_000) continue; // descarta ícones pequenos (<20KB)
-
-      const b64 = Buffer.from(buffer).toString("base64");
-      console.log("[image] Serper OK:", img.imageUrl, `${img.imageWidth}x${img.imageHeight}`);
-      return { imageUrl: `data:${ct};base64,${b64}`, source: "serper" };
-    } catch {
-      continue;
-    }
-  }
-  throw new Error("Serper: não foi possível baixar nenhuma imagem válida");
-}
-
-// ── Pexels (fallback final) ───────────────────────────────────
-async function fromPexels(prompt: string) {
-  const key = process.env.PEXELS_API_KEY;
-  if (!key) throw new Error("PEXELS_API_KEY não configurada");
-
-  const query = prompt
-    .split(/[,.|]/)[0]
-    .replace(/<[^>]+>/g, "")
-    .replace(/[^\w\sÀ-ÿ]/g, "")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 5)
-    .join(" ") || "technology business";
-
-  const page = Math.ceil(Math.random() * 3);
-  const res = await fetch(
-    `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=portrait&per_page=15&page=${page}`,
-    { headers: { Authorization: key } },
-  );
-  if (!res.ok) throw new Error(`Pexels HTTP ${res.status}`);
-
-  const data = await res.json();
-  let photos = data.photos ?? [];
-
-  if (!photos.length) {
-    const res2 = await fetch(
-      `https://api.pexels.com/v1/search?query=business&orientation=portrait&per_page=15&page=1`,
-      { headers: { Authorization: key } },
-    );
-    const d2 = await res2.json();
-    photos = d2.photos ?? [];
-  }
-
-  if (!photos.length) throw new Error("Pexels: sem resultados");
-
-  const photo = photos[Math.floor(Math.random() * photos.length)];
-  return { imageUrl: photo.src?.large2x ?? photo.src?.original, source: "pexels" };
-}
-
 // ── Handler principal ─────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const { prompt, imageStyle = "cinematico", customerId, activationToken, referenceImageBase64, referenceImageMime } = await req.json();
   if (!prompt) return NextResponse.json({ error: "prompt obrigatório" }, { status: 400 });
 
   const hasReference = !!(referenceImageBase64 && referenceImageMime);
-
-  // Foto Real → Serper (Google) → Unsplash → Pixabay → Pexels
-  if (imageStyle === "foto_real") {
-    try {
-      return NextResponse.json({ ...await fromSerper(prompt), plan: "real" });
-    } catch (e: any) {
-      console.error("[image] Serper falhou:", e.message);
-    }
-    try {
-      return NextResponse.json({ ...await fromUnsplash(prompt), plan: "real" });
-    } catch (e: any) {
-      console.error("[image] Unsplash falhou:", e.message);
-    }
-    try {
-      return NextResponse.json({ ...await fromPixabay(prompt), plan: "real" });
-    } catch (e: any) {
-      console.error("[image] Pixabay falhou:", e.message);
-    }
-    try {
-      return NextResponse.json({ ...await fromPexels(prompt), plan: "real_fallback" });
-    } catch (e: any) {
-      return NextResponse.json({ error: e.message }, { status: 500 });
-    }
-  }
+  const style: ImageStyle = (imageStyle as ImageStyle) in STYLES ? (imageStyle as ImageStyle) : "cinematico";
 
   let isPro = false;
 
@@ -427,10 +220,10 @@ export async function POST(req: NextRequest) {
     isPro = valid;
   }
 
-  // Plano gratuito → Pexels
+  // Plano gratuito → Gemini 2.0 Flash
   if (!isPro) {
     try {
-      return NextResponse.json({ ...await fromPexels(prompt), plan: "free" });
+      return NextResponse.json({ ...await fromGemini(prompt, style), plan: "free" });
     } catch (err: any) {
       return NextResponse.json({ error: err.message }, { status: 500 });
     }
@@ -438,7 +231,6 @@ export async function POST(req: NextRequest) {
 
   // Plano Pro com imagem de referência → Gemini multimodal → fallbacks normais
   const errors: string[] = [];
-  const style = imageStyle as ImageStyle;
 
   if (hasReference) {
     try {
@@ -449,8 +241,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Realista → Imagen 4 primeiro (maior qualidade fotorrealista)
-  if (style === "realista") {
+  // Realista e Foto Real → Imagen 4 (maior qualidade fotorrealista)
+  if (style === "realista" || style === "foto_real") {
     try {
       return NextResponse.json({ ...await fromImagen4(prompt, style), plan: "pro" });
     } catch (e: any) {
@@ -459,7 +251,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Demais estilos (ou fallback do Realista) → Imagen 3 → Gemini → DALL-E → Pexels
+  // Demais estilos (ou fallback do Realista) → Imagen 3 → Gemini
   try {
     return NextResponse.json({ ...await fromImagen3(prompt, style), plan: "pro" });
   } catch (e: any) {
@@ -471,20 +263,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ...await fromGemini(prompt, style), plan: "pro" });
   } catch (e: any) {
     errors.push(`Gemini: ${e.message}`);
-    console.error("[image] Gemini falhou:", e.message);
-  }
-
-  try {
-    return NextResponse.json({ ...await fromDallE(prompt, style), plan: "pro" });
-  } catch (e: any) {
-    errors.push(`DALL-E: ${e.message}`);
-    console.error("[image] DALL-E falhou:", e.message);
-  }
-
-  try {
-    return NextResponse.json({ ...await fromPexels(prompt), plan: "pro_fallback" });
-  } catch (e: any) {
-    errors.push(`Pexels: ${e.message}`);
     return NextResponse.json({ error: errors.join(" | ") }, { status: 500 });
   }
 }

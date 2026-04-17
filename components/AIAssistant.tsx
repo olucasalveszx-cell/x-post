@@ -98,6 +98,7 @@ export default function AIAssistant({ open, onClose }: Props) {
   const [autoListen, setAutoListen] = useState(false);
   const [micError, setMicError]   = useState<string | null>(null);
   const [micStarting, setMicStarting] = useState(false); // entre clique e onstart
+  const [isOpera, setIsOpera]     = useState(false);
 
   const bottomRef      = useRef<HTMLDivElement>(null);
   const inputRef       = useRef<HTMLInputElement>(null);
@@ -106,9 +107,15 @@ export default function AIAssistant({ open, onClose }: Props) {
   const messagesRef    = useRef<Message[]>([]);
   const autoListenRef  = useRef(false);
   const startListenRef = useRef<() => void>(() => {});
+  const isOperaRef     = useRef(false);
 
-  /* ── Carregar histórico do localStorage ── */
+  /* ── Carregar histórico do localStorage + detectar Opera ── */
   useEffect(() => {
+    const ua = navigator.userAgent;
+    const opera = ua.includes("OPR/") || ua.includes("Opera");
+    isOperaRef.current = opera;
+    setIsOpera(opera);
+
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -360,16 +367,25 @@ export default function AIAssistant({ open, onClose }: Props) {
       setMicStarting(false);
       setListening(false);
       const code: string = e?.error ?? "";
+      const opera = isOperaRef.current;
       const MSGS: Record<string, string> = {
-        "not-allowed":         "Microfone bloqueado. Clique no cadeado da barra de endereço e permita o microfone.",
-        "permission-denied":   "Permissão negada. Permita o microfone nas configurações do navegador.",
+        "not-allowed": opera
+          ? "Microfone bloqueado no Opera. Clique no ícone de câmera/microfone na barra de endereço → Permitir. Ou use o Chrome/Edge para voz."
+          : "Microfone bloqueado. Clique no cadeado da barra de endereço e permita o microfone.",
+        "permission-denied": opera
+          ? "Permissão negada. No Opera: Configurações → Privacidade → Microfone → permitir este site."
+          : "Permissão negada. Permita o microfone nas configurações do navegador.",
         "no-speech":           "Nenhuma fala detectada. Fale mais alto e tente novamente.",
         "audio-capture":       "Microfone não encontrado. Verifique se está conectado.",
-        "network":             "Erro de rede no serviço de voz. Verifique sua conexão.",
+        "network": opera
+          ? "O Opera bloqueou o serviço de reconhecimento de voz do Google. Use o Google Chrome ou Microsoft Edge para usar o microfone com a Zora."
+          : "Erro de rede no serviço de voz. Verifique sua conexão.",
         "aborted":             "", // silencioso — usuário parou manualmente
-        "service-not-allowed": "Serviço de voz bloqueado. O site precisa estar em HTTPS.",
+        "service-not-allowed": opera
+          ? "Serviço de voz não permitido no Opera. Tente o Google Chrome ou Edge."
+          : "Serviço de voz bloqueado. O site precisa estar em HTTPS.",
       };
-      const msg = MSGS[code] ?? (code ? `Erro de microfone (${code}). Recarregue a página.` : "");
+      const msg = MSGS[code] ?? (code ? `Erro de microfone (${code}). ${opera ? "No Opera, tente o Chrome/Edge para usar voz." : "Recarregue a página."}` : "");
       if (msg) setMicError(msg);
     };
 
@@ -555,6 +571,14 @@ export default function AIAssistant({ open, onClose }: Props) {
           {listening ? "Ouvindo..." : micStarting ? "Iniciando microfone..." : speaking ? "Falando..." : loading ? "Pensando..." : "Toque para falar"}
         </p>
 
+        {/* Aviso Opera (modo voz) */}
+        {isOpera && !micError && (
+          <div className="mx-6 mb-2 px-3 py-2 rounded-xl text-[11px] text-amber-300 text-center z-10"
+            style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+            Opera pode bloquear o microfone — use o Chrome/Edge para voz
+          </div>
+        )}
+
         {/* Transcript / última fala / erro */}
         <div className="px-6 mb-5 min-h-[36px] flex items-center justify-center z-10">
           {micError ? (
@@ -735,6 +759,15 @@ export default function AIAssistant({ open, onClose }: Props) {
           )}
           <div ref={bottomRef} />
         </div>
+
+        {/* Aviso Opera */}
+        {isOpera && (
+          <div className="mx-4 mt-2 mb-1 px-3 py-2 rounded-xl text-xs text-amber-300 flex items-start gap-2"
+            style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}>
+            <span className="shrink-0 mt-0.5">⚠️</span>
+            <span>O <strong>Opera</strong> pode bloquear o reconhecimento de voz. Para usar o microfone sem problemas, abra no <strong>Chrome</strong> ou <strong>Edge</strong>. O chat de texto funciona normalmente.</span>
+          </div>
+        )}
 
         {/* Erro de microfone */}
         {micError && (
