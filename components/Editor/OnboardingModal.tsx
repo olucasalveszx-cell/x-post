@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Sparkles, ArrowRight } from "lucide-react";
+import { useSession } from "next-auth/react";
 
-const STORAGE_KEY = "xpz_onboarded";
+const SESSION_KEY = "xpz_session_welcomed";
 
 const SUGGESTIONS = [
   "Marketing digital para pequenas empresas",
@@ -19,25 +20,35 @@ interface Props {
 }
 
 export default function OnboardingModal({ onConfirm }: Props) {
+  const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const [topic, setTopic] = useState("");
   const [mounted, setMounted] = useState(false);
 
+  useEffect(() => { setMounted(true); }, []);
+
+  // Mostra sempre que uma nova sessão de login é detectada
   useEffect(() => {
-    setMounted(true);
-    const done = localStorage.getItem(STORAGE_KEY);
-    if (!done) setOpen(true);
-  }, []);
+    if (status !== "authenticated") return;
+    const userKey = `${SESSION_KEY}_${session?.user?.email ?? "guest"}`;
+    const seen = sessionStorage.getItem(userKey);
+    if (!seen) setOpen(true);
+  }, [status, session?.user?.email]);
+
+  const markSeen = () => {
+    const userKey = `${SESSION_KEY}_${session?.user?.email ?? "guest"}`;
+    sessionStorage.setItem(userKey, "1");
+  };
 
   const handleConfirm = () => {
     if (!topic.trim()) return;
-    localStorage.setItem(STORAGE_KEY, "1");
+    markSeen();
     setOpen(false);
     onConfirm(topic.trim());
   };
 
   const handleSkip = () => {
-    localStorage.setItem(STORAGE_KEY, "1");
+    markSeen();
     setOpen(false);
   };
 
