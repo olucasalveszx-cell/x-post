@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 const SYSTEM = `Você é Zora, a assistente de IA da XPost Zone — plataforma de criação de carrosséis virais para Instagram.
 
 ## Identidade
@@ -68,6 +66,7 @@ export async function POST(req: NextRequest) {
 
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return NextResponse.json({ error: "ANTHROPIC_API_KEY não configurada" }, { status: 500 });
+  const client = new Anthropic({ apiKey: key });
 
   // A API da Anthropic exige que a primeira mensagem seja do usuário.
   // A mensagem de boas-vindas da Zora (role "assistant") é apenas visual —

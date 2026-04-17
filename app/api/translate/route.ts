@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 async function fetchPageText(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
@@ -49,6 +47,7 @@ Responda APENAS com JSON válido (sem markdown):
 Crie exatamente ${slideCount} slides.`;
 
 export async function POST(req: NextRequest) {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   try {
     const { url, text, imageBase64, imageMimeType, slideCount = 7 } = await req.json();
 
