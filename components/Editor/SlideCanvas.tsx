@@ -35,6 +35,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const [cropId, setCropId] = useState<string | null>(null);
   const [isCroppingBg, setIsCroppingBg] = useState(false);
   const [generatingBg, setGeneratingBg] = useState(false);
+  const [showThemeInput, setShowThemeInput] = useState(false);
+  const [themeValue, setThemeValue] = useState("");
   const dragRef = useRef<DragState>(null);
   const resizeRef = useRef<ResizeState>(null);
   const cropRef = useRef<CropState>(null);
@@ -382,15 +384,15 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     window.addEventListener("touchend", onUp);
   };
 
-  const generateBg = async () => {
-    closeBgCtx();
-    const texts = slide.elements
-      .filter((e) => e.type === "text")
-      .map((e) => (e.content ?? "").replace(/<[^>]+>/g, "").trim())
-      .filter(Boolean)
-      .join(". ");
-    const prompt = texts || "modern dark cinematic professional background";
+  const slideTexts = slide.elements
+    .filter((e) => e.type === "text")
+    .map((e) => (e.content ?? "").replace(/<[^>]+>/g, "").trim())
+    .filter(Boolean)
+    .join(". ");
+
+  const runGenerateBg = async (prompt: string) => {
     setGeneratingBg(true);
+    setShowThemeInput(false);
     try {
       const customerId = localStorage.getItem("xpz_customer_id") ?? undefined;
       const activationToken = localStorage.getItem("xpz_activation_token") ?? undefined;
@@ -403,6 +405,16 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       if (data.imageUrl) onUpdate({ ...slide, backgroundImageUrl: data.imageUrl });
     } catch {}
     finally { setGeneratingBg(false); }
+  };
+
+  const generateBg = () => {
+    closeBgCtx();
+    if (slideTexts) {
+      runGenerateBg(slideTexts);
+    } else {
+      setThemeValue("");
+      setShowThemeInput(true);
+    }
   };
 
   const setBgGradient = (gradient: string) => {
@@ -862,16 +874,61 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       )}
 
       {/* Botão "Gerar imagem com I.A" quando não há fundo */}
-      {!slide.backgroundImageUrl && !generatingBg && !selectedId && (
-        <div className="absolute inset-0 flex items-end justify-center pointer-events-none" style={{ zIndex: 10, paddingBottom: slide.height * 0.08 }}>
+      {!slide.backgroundImageUrl && !generatingBg && !selectedId && !showThemeInput && (
+        <div className="absolute inset-0 flex flex-col items-center justify-end pointer-events-none" style={{ zIndex: 10, paddingBottom: slide.height * 0.06 }}>
+          {slideTexts && (
+            <p className="pointer-events-none text-white/40 text-center px-6 mb-3 leading-snug"
+              style={{ fontSize: slide.width * 0.018, maxWidth: slide.width * 0.75 }}>
+              "{slideTexts.slice(0, 80)}{slideTexts.length > 80 ? "…" : ""}"
+            </p>
+          )}
           <button
-            className="pointer-events-auto flex items-center gap-2 px-5 py-3 rounded-2xl text-white font-semibold transition-all"
+            className="pointer-events-auto flex items-center gap-2 px-5 py-3 rounded-2xl text-white font-semibold transition-all active:scale-95"
             style={{ fontSize: slide.width * 0.022, background: "rgba(168,85,247,0.18)", border: "1.5px solid rgba(168,85,247,0.45)", backdropFilter: "blur(8px)", boxShadow: "0 0 24px rgba(168,85,247,0.25)" }}
             onClick={(e) => { e.stopPropagation(); generateBg(); }}
           >
             <Wand2 style={{ width: slide.width * 0.025, height: slide.width * 0.025 }} />
-            Gerar imagem com I.A
+            {slideTexts ? "Gerar imagem com I.A" : "Gerar imagem com I.A"}
           </button>
+        </div>
+      )}
+
+      {/* Input de tema quando slide está vazio */}
+      {showThemeInput && !generatingBg && (
+        <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+          onClick={(e) => { e.stopPropagation(); setShowThemeInput(false); }}>
+          <div className="flex flex-col gap-4 rounded-3xl p-6 mx-6"
+            style={{ background: "#111", border: "1px solid #2a2a2a", width: slide.width * 0.75, maxWidth: 600 }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2">
+              <Wand2 style={{ width: slide.width * 0.03, height: slide.width * 0.03, color: "#a855f7" }} />
+              <span style={{ fontSize: slide.width * 0.025, fontWeight: 700, color: "#fff" }}>Qual é o tema?</span>
+            </div>
+            <input
+              autoFocus
+              value={themeValue}
+              onChange={(e) => setThemeValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && themeValue.trim()) runGenerateBg(themeValue.trim());
+                if (e.key === "Escape") setShowThemeInput(false);
+              }}
+              placeholder="Ex: tecnologia, saúde, negócios..."
+              style={{ fontSize: slide.width * 0.02, padding: `${slide.width * 0.012}px ${slide.width * 0.018}px`, background: "#1a1a1a", border: "1px solid #333", borderRadius: slide.width * 0.015, color: "#fff", outline: "none", width: "100%" }}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowThemeInput(false)}
+                style={{ flex: 1, fontSize: slide.width * 0.018, padding: `${slide.width * 0.01}px`, background: "#222", border: "1px solid #333", borderRadius: slide.width * 0.012, color: "#6b7280" }}>
+                Cancelar
+              </button>
+              <button
+                onClick={() => themeValue.trim() && runGenerateBg(themeValue.trim())}
+                disabled={!themeValue.trim()}
+                style={{ flex: 2, fontSize: slide.width * 0.018, padding: `${slide.width * 0.01}px`, background: themeValue.trim() ? "#7c3aed" : "#333", border: "none", borderRadius: slide.width * 0.012, color: themeValue.trim() ? "#fff" : "#555", fontWeight: 600 }}>
+                Gerar imagem
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
