@@ -1,6 +1,6 @@
 "use client";
 
-import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate } from "lucide-react";
+import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import { useRef, useState, useEffect } from "react";
@@ -54,6 +54,112 @@ export default function Toolbar({
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
   const [showLayouts, setShowLayouts] = useState(false);
+  const [showFrame, setShowFrame] = useState(false);
+
+  const FRAME_PRESETS: {
+    id: string; label: string; desc: string;
+    crop: { top: number; right: number; bottom: number; left: number };
+    gradient: string;
+    imgArea: { top: string; height: string }; // para mini-preview
+  }[] = [
+    {
+      id: "full",
+      label: "Full",
+      desc: "Imagem de fundo total",
+      crop: { top: 0, right: 0, bottom: 0, left: 0 },
+      gradient: "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.80) 40%, rgba(0,0,0,0.20) 70%, rgba(0,0,0,0.05) 100%)",
+      imgArea: { top: "0%", height: "100%" },
+    },
+    {
+      id: "top55",
+      label: "Topo 55%",
+      desc: "Imagem no topo, texto embaixo",
+      crop: { top: 0, right: 0, bottom: 45, left: 0 },
+      gradient: "linear-gradient(to top, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.0) 45%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.15) 100%)",
+      imgArea: { top: "0%", height: "55%" },
+    },
+    {
+      id: "top40",
+      label: "Topo 40%",
+      desc: "Quadro compacto no topo",
+      crop: { top: 0, right: 0, bottom: 60, left: 0 },
+      gradient: "linear-gradient(to top, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.0) 40%, rgba(0,0,0,0.40) 55%, rgba(0,0,0,0.10) 100%)",
+      imgArea: { top: "0%", height: "40%" },
+    },
+    {
+      id: "bottom55",
+      label: "Inferior 55%",
+      desc: "Texto em cima, imagem embaixo",
+      crop: { top: 45, right: 0, bottom: 0, left: 0 },
+      gradient: "linear-gradient(to bottom, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.0) 45%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.15) 100%)",
+      imgArea: { top: "45%", height: "55%" },
+    },
+    {
+      id: "bottom40",
+      label: "Inferior 40%",
+      desc: "Quadro compacto embaixo",
+      crop: { top: 60, right: 0, bottom: 0, left: 0 },
+      gradient: "linear-gradient(to bottom, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.0) 60%, rgba(0,0,0,0.40) 75%, rgba(0,0,0,0.10) 100%)",
+      imgArea: { top: "60%", height: "40%" },
+    },
+    {
+      id: "center",
+      label: "Centro",
+      desc: "Quadro centralizado com margens",
+      crop: { top: 18, right: 4, bottom: 18, left: 4 },
+      gradient: "linear-gradient(to top, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.0) 100%)",
+      imgArea: { top: "18%", height: "64%" },
+    },
+  ];
+
+  const applyFrame = (presetId: string) => {
+    const preset = FRAME_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+
+    const W = slide.width;
+    const H = slide.height;
+    const textEls = slide.elements.filter((e) => e.type === "text");
+    const [titleEl, bodyEl] = textEls;
+    let newElements = [...slide.elements];
+
+    if (presetId === "top55" || presetId === "top40") {
+      const imgBottom = presetId === "top55" ? 0.55 : 0.40;
+      if (titleEl) {
+        newElements = newElements.map((e) => e.id === titleEl.id ? {
+          ...e, x: 64, y: Math.round(H * (imgBottom + 0.04)), width: W - 128, height: Math.round(H * 0.22),
+          style: { ...(e.style as any), fontSize: Math.round(H * 0.062), textAlign: "left" },
+        } : e);
+      }
+      if (bodyEl) {
+        newElements = newElements.map((e) => e.id === bodyEl.id ? {
+          ...e, x: 64, y: Math.round(H * (imgBottom + 0.28)), width: W - 128, height: Math.round(H * 0.10),
+          style: { ...(e.style as any), fontSize: Math.round(H * 0.020), textAlign: "left" },
+        } : e);
+      }
+    } else if (presetId === "bottom55" || presetId === "bottom40") {
+      const imgTop = presetId === "bottom55" ? 0.45 : 0.60;
+      if (titleEl) {
+        newElements = newElements.map((e) => e.id === titleEl.id ? {
+          ...e, x: 64, y: Math.round(H * 0.06), width: W - 128, height: Math.round(H * 0.26),
+          style: { ...(e.style as any), fontSize: Math.round(H * 0.068), textAlign: "center" },
+        } : e);
+      }
+      if (bodyEl) {
+        newElements = newElements.map((e) => e.id === bodyEl.id ? {
+          ...e, x: 64, y: Math.round(H * 0.34), width: W - 128, height: Math.round(H * 0.09),
+          style: { ...(e.style as any), fontSize: Math.round(H * 0.020), textAlign: "center" },
+        } : e);
+      }
+    }
+
+    onUpdate({
+      ...slide,
+      elements: newElements,
+      backgroundCrop: preset.crop,
+      backgroundGradient: preset.gradient,
+    });
+    setShowFrame(false);
+  };
 
   const LAYOUTS = [
     { id: "classic",    label: "Clássico",    desc: "Texto embaixo",    gradient: "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.80) 40%, rgba(0,0,0,0.30) 70%, rgba(0,0,0,0.10) 100%)", preview: [{ top: "62%", left: "6%", w: "88%", h: "20%", size: "lg" }, { top: "86%", left: "6%", w: "70%", h: "8%", size: "sm" }] },
@@ -289,10 +395,18 @@ export default function Toolbar({
         </button>
 
         {/* Layout */}
-        <button onClick={() => { setShowLayouts(v => !v); setShowProfile(false); setShowEditAI(false); }}
+        <button onClick={() => { setShowLayouts(v => !v); setShowProfile(false); setShowEditAI(false); setShowFrame(false); }}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showLayouts ? "bg-brand-600 text-white" : "bg-[#2a2a2a] hover:bg-[#333] text-gray-300"}`}>
           <LayoutTemplate size={14} /> Layout
         </button>
+
+        {/* Frame da imagem */}
+        {slide.backgroundImageUrl && (
+          <button onClick={() => { setShowFrame(v => !v); setShowLayouts(false); setShowProfile(false); setShowEditAI(false); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showFrame ? "bg-indigo-600 text-white" : "bg-[#2a2a2a] hover:bg-[#333] text-gray-300"}`}>
+            <FrameIcon size={14} /> Frame
+          </button>
+        )}
 
         {/* Gerar fundo IA */}
         <button onClick={generateBackground} disabled={generating}
@@ -453,6 +567,63 @@ export default function Toolbar({
                 <div>
                   <p className="text-xs font-semibold text-white">{layout.label}</p>
                   <p className="text-[10px] text-gray-500">{layout.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Painel de Frame da imagem */}
+      {showFrame && slide.backgroundImageUrl && (
+        <div className="absolute top-full left-0 z-50 mt-1 ml-2 bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl p-4 w-[400px]">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
+              <FrameIcon size={14} className="text-indigo-400" /> Quadro da Imagem
+            </span>
+            <button onClick={() => setShowFrame(false)} className="text-gray-500 hover:text-gray-300"><X size={16} /></button>
+          </div>
+          <p className="text-[11px] text-gray-600 mb-3">Escolha onde a imagem aparece no slide. O texto é reposicionado automaticamente.</p>
+          <div className="grid grid-cols-3 gap-2">
+            {FRAME_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => applyFrame(preset.id)}
+                className="flex flex-col gap-2 p-2 rounded-xl border border-[#2a2a2a] hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all text-left"
+              >
+                {/* Mini preview do frame */}
+                <div className="relative w-full rounded-lg overflow-hidden bg-[#0a0a0a] border border-[#2a2a2a]" style={{ aspectRatio: "4/5" }}>
+                  {/* Área da imagem */}
+                  <div
+                    className="absolute left-[4%] right-[4%] rounded-sm"
+                    style={{
+                      top: preset.imgArea.top,
+                      height: preset.imgArea.height,
+                      background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%)",
+                      opacity: 0.85,
+                    }}
+                  />
+                  {/* Linhas de texto simuladas */}
+                  {(preset.id === "bottom55" || preset.id === "bottom40") ? (
+                    <>
+                      <div className="absolute left-[8%] right-[8%] rounded" style={{ top: "8%", height: "10%", background: "rgba(255,255,255,0.8)" }} />
+                      <div className="absolute left-[10%] right-[20%] rounded" style={{ top: "21%", height: "5%", background: "rgba(255,255,255,0.4)" }} />
+                    </>
+                  ) : preset.id !== "full" ? (
+                    <>
+                      <div className="absolute left-[8%] right-[8%] rounded" style={{ bottom: "18%", height: "10%", background: "rgba(255,255,255,0.8)" }} />
+                      <div className="absolute left-[10%] right-[20%] rounded" style={{ bottom: "10%", height: "5%", background: "rgba(255,255,255,0.4)" }} />
+                    </>
+                  ) : (
+                    <>
+                      <div className="absolute left-[8%] right-[8%] rounded" style={{ bottom: "14%", height: "10%", background: "rgba(255,255,255,0.8)" }} />
+                      <div className="absolute left-[10%] right-[20%] rounded" style={{ bottom: "8%", height: "5%", background: "rgba(255,255,255,0.4)" }} />
+                    </>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-white">{preset.label}</p>
+                  <p className="text-[10px] text-gray-500 leading-tight">{preset.desc}</p>
                 </div>
               </button>
             ))}

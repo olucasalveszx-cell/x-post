@@ -48,6 +48,12 @@ export interface ShapeStyle {
   borderRadius: number;
 }
 
+export interface Project {
+  id: string;
+  name: string;
+  slides: Slide[];
+}
+
 export interface CarouselData {
   id: string;
   topic: string;
