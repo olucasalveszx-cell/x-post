@@ -304,51 +304,64 @@ export default function LandingPage() {
       </header>
 
       {/* ── HERO ───────────────────────────────────────────── */}
-      <section className="relative px-5 md:px-10 pt-16 pb-12 overflow-hidden">
-        {/* Glows de fundo */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.15) 0%,transparent 70%)", filter: "blur(50px)" }} />
-        <div className="absolute top-20 right-0 w-[400px] h-[400px] rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(ellipse,rgba(236,72,153,0.08) 0%,transparent 70%)", filter: "blur(60px)" }} />
+      <section className="relative min-h-[92vh] px-5 md:px-10 pt-20 pb-16 overflow-hidden flex items-center">
+        {/* Grid de fundo */}
+        <div className="absolute inset-0 pointer-events-none opacity-40"
+          style={{
+            backgroundImage: "linear-gradient(rgba(124,58,237,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,0.07) 1px,transparent 1px)",
+            backgroundSize: "64px 64px",
+          }} />
+        {/* Fade do grid nas bordas */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%,transparent 40%,#060606 75%)" }} />
 
-        <div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-10 lg:gap-0">
+        {/* Glow principal */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] pointer-events-none"
+          style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.22) 0%,transparent 60%)", filter: "blur(70px)" }} />
+        {/* Glow rosa canto direito */}
+        <div className="absolute top-10 right-[-100px] w-[500px] h-[500px] pointer-events-none"
+          style={{ background: "radial-gradient(ellipse,rgba(236,72,153,0.1) 0%,transparent 65%)", filter: "blur(80px)" }} />
+
+        <div className="max-w-6xl mx-auto w-full flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
 
           {/* Coluna texto */}
           <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-purple-500/25 text-purple-300 text-xs font-semibold mb-6 tracking-wide"
-              style={{ background: "rgba(124,58,237,0.1)" }}>
-              <Zap size={11} className="text-yellow-400" />
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-purple-500/30 text-purple-300 text-xs font-bold mb-8 tracking-wide"
+              style={{ background: "rgba(124,58,237,0.12)" }}>
+              <Sparkles size={11} className="text-yellow-400 animate-pulse" />
               IA que pesquisa, escreve e publica por você
             </div>
 
-            <h1 className="text-[40px] md:text-[66px] lg:text-[74px] font-black leading-[1.0] max-w-xl tracking-tight">
-              Carrosséis{" "}
-              <span style={{ background: "linear-gradient(135deg,#c084fc,#ec4899,#f97316)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            <h1 className="text-[52px] md:text-[78px] lg:text-[88px] font-black leading-[0.92] tracking-tighter max-w-2xl">
+              <span className="text-white">Carrosséis</span>
+              <br />
+              <span style={{ background: "linear-gradient(135deg,#c084fc 0%,#ec4899 55%,#f97316 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 virais
               </span>
-              <br />no Instagram em{" "}
-              <span style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                segundos
+              <br />
+              <span className="text-white text-[0.7em]">em </span>
+              <span className="text-[0.7em]" style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                30 segundos
               </span>
             </h1>
 
-            <p className="mt-5 text-gray-400 text-lg max-w-md leading-relaxed">
+            <p className="mt-6 text-gray-400 text-lg max-w-md leading-relaxed">
               IA que pesquisa na web, escreve o texto e gera as imagens.
               Do zero ao carrossel publicado — sem Canva, sem ChatGPT.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 mt-8">
+            <div className="flex flex-col sm:flex-row items-center gap-3 mt-10">
               <button onClick={scrollToPricing}
-                className="flex items-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-[15px] transition-all hover:scale-105 hover:brightness-110"
-                style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 32px rgba(124,58,237,0.4)" }}>
-                <Sparkles size={17} />
+                className="flex items-center gap-2.5 px-9 py-4 rounded-2xl font-bold text-[16px] transition-all hover:scale-105 hover:brightness-110"
+                style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 40px rgba(124,58,237,0.5)" }}>
+                <Sparkles size={18} />
                 Criar meu carrossel agora
-                <ArrowRight size={17} />
+                <ArrowRight size={18} />
               </button>
               <Link href="/editor"
-                className="flex items-center gap-2 px-5 py-4 rounded-2xl text-sm font-semibold text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all"
+                className="flex items-center gap-2 px-6 py-4 rounded-2xl text-sm font-semibold text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all"
                 style={{ background: "rgba(255,255,255,0.04)" }}>
-                Ver editor →
+                Ver demo ao vivo →
               </Link>
             </div>
 
@@ -363,63 +376,139 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Coluna visual — card de preview do produto */}
-          <div className="flex-shrink-0 flex flex-col items-center justify-center relative lg:w-[400px]">
-            <div className="relative w-full max-w-[360px]">
-              {/* Glow de fundo */}
-              <div className="absolute -inset-8 rounded-full pointer-events-none"
-                style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.18) 0%,transparent 70%)", filter: "blur(30px)" }} />
-              {/* Card principal */}
-              <div className="relative rounded-3xl overflow-hidden border border-white/10"
-                style={{ background: "linear-gradient(160deg,rgba(124,58,237,0.18),rgba(30,10,60,0.9))", backdropFilter: "blur(12px)" }}>
-                {/* Header do card */}
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
-                  <div className="flex gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-                  </div>
-                  <span className="text-[11px] text-gray-500 font-mono ml-1">xpost — editor</span>
+          {/* Coluna visual — mockup do editor */}
+          <div className="flex-shrink-0 flex flex-col items-center justify-center relative lg:w-[480px]">
+            {/* Glow externo */}
+            <div className="absolute -inset-16 pointer-events-none"
+              style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.18) 0%,transparent 65%)", filter: "blur(50px)" }} />
+
+            {/* Card mockup editor */}
+            <div className="relative w-full rounded-[28px] overflow-hidden"
+              style={{
+                background: "linear-gradient(160deg,rgba(22,12,48,0.97),rgba(8,4,20,0.99))",
+                border: "1px solid rgba(168,85,247,0.35)",
+                boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 32px 80px rgba(0,0,0,0.7), 0 0 100px rgba(124,58,237,0.18)",
+              }}>
+
+              {/* Browser chrome */}
+              <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.06]"
+                style={{ background: "rgba(255,255,255,0.025)" }}>
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500/70" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
+                  <div className="w-3 h-3 rounded-full bg-green-500/70" />
                 </div>
-                {/* Slides simulados */}
-                <div className="p-4 flex gap-2 overflow-hidden">
+                <div className="flex-1 h-6 rounded-md flex items-center px-3"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <span className="text-[10px] text-gray-600 font-mono">xpostzone.online/editor</span>
+                </div>
+              </div>
+
+              {/* Editor layout simulado */}
+              <div className="flex" style={{ height: 290 }}>
+                {/* Painel slides */}
+                <div className="w-[96px] border-r border-white/[0.05] p-2.5 flex flex-col gap-2"
+                  style={{ background: "rgba(255,255,255,0.018)" }}>
                   {[
-                    { bg: "linear-gradient(135deg,#4f46e5,#7c3aed)", title: "Como vender mais em 2025", sub: "3 estratégias que funcionam" },
-                    { bg: "linear-gradient(135deg,#0f172a,#1e3a5f)", title: "O segredo do engajamento", sub: "Revelado pela IA" },
-                    { bg: "linear-gradient(135deg,#1a0533,#6d28d9)", title: "Crescimento no Instagram", sub: "Do zero a 10k seguidores" },
+                    { grad: "linear-gradient(135deg,#4c1d95,#7c3aed)", active: true },
+                    { grad: "linear-gradient(135deg,#0f172a,#1e3a5f)", active: false },
+                    { grad: "linear-gradient(135deg,#1a0533,#6d28d9)", active: false },
+                    { grad: "linear-gradient(135deg,#0c1a0f,#166534)", active: false },
+                    { grad: "linear-gradient(135deg,#2d1a00,#92400e)", active: false },
                   ].map((s, i) => (
-                    <div key={i} className="flex-shrink-0 rounded-2xl overflow-hidden relative"
-                      style={{ width: 100, height: 130, background: s.bg, opacity: i === 0 ? 1 : 0.6 + i * 0.1 }}>
-                      <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.9) 0%,transparent 60%)" }} />
-                      <div className="absolute bottom-0 left-0 right-0 p-2">
-                        <div className="text-white font-bold leading-tight mb-0.5" style={{ fontSize: 7 }}>{s.title}</div>
-                        <div className="text-gray-400" style={{ fontSize: 6 }}>{s.sub}</div>
+                    <div key={i} className="rounded-lg overflow-hidden relative flex-shrink-0"
+                      style={{
+                        height: 52,
+                        background: s.grad,
+                        border: s.active ? "1.5px solid rgba(168,85,247,0.7)" : "1px solid rgba(255,255,255,0.06)",
+                        boxShadow: s.active ? "0 0 12px rgba(124,58,237,0.35)" : "none",
+                      }}>
+                      <div className="absolute bottom-0 left-0 right-0 p-1.5">
+                        <div className="h-[5px] rounded-sm mb-1" style={{ width: "75%", background: "rgba(255,255,255,0.5)" }} />
+                        <div className="h-[3px] rounded-sm" style={{ width: "55%", background: "rgba(255,255,255,0.25)" }} />
                       </div>
-                      {i === 0 && (
-                        <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[6px] font-bold text-white"
-                          style={{ background: "rgba(168,85,247,0.7)" }}>IA</div>
+                      {s.active && (
+                        <div className="absolute top-1 right-1 px-1 py-0.5 rounded text-[5px] font-bold"
+                          style={{ background: "rgba(168,85,247,0.8)", color: "white" }}>IA</div>
                       )}
                     </div>
                   ))}
                 </div>
-                {/* Status bar */}
-                <div className="px-4 pb-4 flex items-center gap-2">
-                  <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                    <div className="h-full w-2/3 rounded-full" style={{ background: "linear-gradient(to right,#7c3aed,#a855f7)" }} />
+
+                {/* Canvas central */}
+                <div className="flex-1 flex items-center justify-center p-4"
+                  style={{ background: "rgba(0,0,0,0.35)" }}>
+                  <div className="rounded-2xl overflow-hidden relative"
+                    style={{ width: 150, height: 200, background: "linear-gradient(150deg,#1a0533 0%,#3b0764 60%,#4c1d95 100%)" }}>
+                    <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.85) 0%,transparent 55%)" }} />
+                    <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[7px] font-black"
+                      style={{ background: "rgba(168,85,247,0.75)", color: "white" }}>IA</div>
+                    <div className="absolute top-4 left-0 right-0 flex justify-center">
+                      <div className="w-12 h-12 rounded-full opacity-20"
+                        style={{ background: "radial-gradient(circle,#a855f7,transparent)" }} />
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                      <div className="font-black text-white leading-tight mb-1.5" style={{ fontSize: 10 }}>
+                        5 Segredos do<br />Instagram em 2025
+                      </div>
+                      <div className="text-purple-300 leading-tight" style={{ fontSize: 7.5 }}>
+                        Descubra o que os top<br />criadores estão fazendo
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-[10px] text-gray-500">Gerando...</span>
-                  <Sparkles size={10} className="text-purple-400 animate-pulse" />
+                </div>
+
+                {/* Painel propriedades */}
+                <div className="w-[100px] border-l border-white/[0.05] p-3 flex flex-col gap-2.5"
+                  style={{ background: "rgba(255,255,255,0.018)" }}>
+                  <p className="text-[7px] font-bold uppercase tracking-wider text-gray-600">Texto</p>
+                  <div className="space-y-1.5">
+                    <div className="h-[5px] rounded-sm w-full" style={{ background: "rgba(168,85,247,0.4)" }} />
+                    <div className="h-[4px] rounded-sm w-4/5 bg-white/10" />
+                    <div className="h-[4px] rounded-sm w-3/5 bg-white/10" />
+                  </div>
+                  <p className="text-[7px] font-bold uppercase tracking-wider text-gray-600 mt-1">Cor</p>
+                  <div className="flex gap-1">
+                    {["#7c3aed","#ec4899","#f97316","#0d9488"].map((c) => (
+                      <div key={c} className="w-4 h-4 rounded-full" style={{ background: c }} />
+                    ))}
+                  </div>
+                  <div className="mt-2 h-7 rounded-lg flex items-center justify-center gap-1 text-[7px] font-bold text-purple-300"
+                    style={{ background: "rgba(124,58,237,0.2)", border: "1px solid rgba(168,85,247,0.25)" }}>
+                    <Sparkles size={7} /> Zora IA
+                  </div>
+                  <div className="h-7 rounded-lg flex items-center justify-center gap-1 text-[7px] font-bold"
+                    style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.25)", color: "#6ee7b7" }}>
+                    <Instagram size={7} /> Publicar
+                  </div>
                 </div>
               </div>
-              {/* Badges flutuantes */}
-              <div className="absolute -top-2 -right-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold"
-                style={{ background: "rgba(124,58,237,0.2)", border: "1px solid rgba(168,85,247,0.4)", color: "#c084fc" }}>
-                <Sparkles size={9} /> IA gerada
+
+              {/* Status bar */}
+              <div className="px-5 py-3 flex items-center justify-between border-t border-white/[0.05]"
+                style={{ background: "rgba(255,255,255,0.018)" }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full flex items-center justify-center"
+                    style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+                    <Sparkles size={8} className="text-white" />
+                  </div>
+                  <span className="text-[10px] text-gray-500">Gerando imagens com IA...</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                  <span className="text-[9px] text-gray-600">5 / 5 slides</span>
+                </div>
               </div>
-              <div className="absolute -bottom-2 -left-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold"
-                style={{ background: "rgba(236,72,153,0.15)", border: "1px solid rgba(236,72,153,0.3)", color: "#f472b6" }}>
-                <Instagram size={9} /> Pronto pra postar
-              </div>
+            </div>
+
+            {/* Badges flutuantes */}
+            <div className="absolute -top-4 -right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold"
+              style={{ background: "rgba(124,58,237,0.25)", border: "1px solid rgba(168,85,247,0.55)", color: "#c084fc", backdropFilter: "blur(10px)" }}>
+              <Sparkles size={9} /> IA gerada
+            </div>
+            <div className="absolute -bottom-4 -left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold"
+              style={{ background: "rgba(236,72,153,0.18)", border: "1px solid rgba(236,72,153,0.4)", color: "#f472b6", backdropFilter: "blur(10px)" }}>
+              <Instagram size={9} /> Pronto pra postar
             </div>
           </div>
         </div>
