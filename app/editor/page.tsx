@@ -15,6 +15,7 @@ import OnboardingModal from "@/components/Editor/OnboardingModal";
 import PublishModal from "@/components/Actions/PublishModal";
 import AIAssistant from "@/components/AIAssistant";
 import SubscriptionGate from "@/components/SubscriptionGate";
+import ProfilePickerModal, { UserProfile, getStoredProfile, saveProfile, PROFILE_STORAGE_KEY } from "@/components/Editor/ProfilePickerModal";
 
 interface IGAccount { token: string; accountId: string; username: string; }
 
@@ -83,6 +84,8 @@ export default function EditorPage() {
   const [mobilePanel, setMobilePanel] = useState<"side" | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [displayScale, setDisplayScale] = useState(560 / 1350);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [showProfilePicker, setShowProfilePicker] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -141,6 +144,13 @@ export default function EditorPage() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo]);
+
+  // ── Profile picker ───────────────────────────────────────────
+  useEffect(() => {
+    const stored = getStoredProfile();
+    if (stored) { setUserProfile(stored); }
+    else { setTimeout(() => setShowProfilePicker(true), 800); }
+  }, []);
 
   // ── Auto-save ─────────────────────────────────────────────────
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -339,6 +349,21 @@ export default function EditorPage() {
               {credits.unlimited ? "∞ créditos" : `${credits.remaining}/${credits.limit}`}
             </div>
           )}
+          {/* Badge de perfil */}
+          {userProfile && (
+            <button
+              onClick={() => setShowProfilePicker(true)}
+              title="Alterar perfil"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all hover:brightness-110"
+              style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(168,85,247,0.3)", color: "#c084fc" }}>
+              <span style={{ fontSize: 13 }}>
+                {["advocacia","nutricao","odonto","saude","noticias","marketing","fitness","educacao","beleza","gastronomia"].includes(userProfile.key)
+                  ? ["⚖️","🥗","🦷","🏥","📰","📈","💪","📚","💄","🍽️"][["advocacia","nutricao","odonto","saude","noticias","marketing","fitness","educacao","beleza","gastronomia"].indexOf(userProfile.key)]
+                  : "✏️"}
+              </span>
+              {userProfile.label}
+            </button>
+          )}
           <AuthButton />
           <button onClick={() => setShowAI(true)}
             className="flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-purple-700 bg-purple-900/30 hover:bg-purple-800/40 text-purple-300 transition-colors">
@@ -508,6 +533,10 @@ export default function EditorPage() {
         onConfirm={(topic) => {
           window.dispatchEvent(new CustomEvent("open-generator-wizard", { detail: { topic } }));
         }}
+      />
+      <ProfilePickerModal
+        open={showProfilePicker}
+        onClose={(profile) => { setUserProfile(profile); setShowProfilePicker(false); }}
       />
     </div>
     </SubscriptionGate>
