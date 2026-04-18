@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles, LogOut, Users, Loader2, RefreshCw,
-  Activity, TrendingUp, Image, Layers, DollarSign, Crown,
+  Activity, TrendingUp, Image, Layers, DollarSign, Crown, ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 
 interface Stats {
   totalUsers: number;
@@ -164,9 +165,9 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <span className="text-[10px] text-gray-600">
-            Atualizado {lastRefresh.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] text-gray-600 hidden sm:block">
+            {lastRefresh.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
           </span>
           <button
             onClick={fetchStats}
@@ -175,6 +176,12 @@ export default function AdminDashboard() {
           >
             <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
           </button>
+          <Link
+            href="/editor"
+            className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors border border-purple-500/30 hover:border-purple-500/60 px-2.5 py-1.5 rounded-lg"
+          >
+            <ArrowLeft size={13} /> Editor
+          </Link>
           <button
             onClick={handleLogout}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"

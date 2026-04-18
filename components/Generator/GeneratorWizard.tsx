@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Search, Terminal, Crown, ChevronRight, ChevronLeft, Sparkles, Clipboard, Upload } from "lucide-react";
+import { X, Search, Terminal, Crown, ChevronRight, ChevronLeft, Sparkles, Clipboard, Upload, LayoutTemplate } from "lucide-react";
 import { WritingStyle } from "@/types";
 
 type ImageStyle = "gemini" | "foto_real";
+
+export type ImageLayout = "mixed" | "full" | "square" | "top" | "base";
 
 export interface WizardSettings {
   topic: string;
@@ -14,6 +16,7 @@ export interface WizardSettings {
   slideCount: number;
   writingStyle: WritingStyle;
   imageStyle: ImageStyle;
+  imageLayout: ImageLayout;
   refImageBase64: string | null;
   refImageMime: string;
   refImagePreview: string | null;
@@ -48,7 +51,8 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
   const [customPrompt, setCustomPrompt] = useState(initial?.customPrompt ?? "");
   const [slideCount, setSlideCount] = useState(initial?.slideCount ?? 7);
   const [writingStyle, setWritingStyle] = useState<WritingStyle>(initial?.writingStyle ?? "viral");
-  const [imageStyle, setImageStyle] = useState<ImageStyle>(initial?.imageStyle ?? "gemini");
+  const [imageStyle, setImageStyle]   = useState<ImageStyle>(initial?.imageStyle ?? "gemini");
+  const [imageLayout, setImageLayout] = useState<ImageLayout>(initial?.imageLayout ?? "mixed");
   const [refImageBase64, setRefImageBase64] = useState<string | null>(initial?.refImageBase64 ?? null);
   const [refImageMime, setRefImageMime] = useState(initial?.refImageMime ?? "image/jpeg");
   const [refImagePreview, setRefImagePreview] = useState<string | null>(initial?.refImagePreview ?? null);
@@ -118,7 +122,7 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
       localStorage.setItem("xpz_brand", brandName);
       localStorage.setItem("xpz_carousel_title", carouselTitle);
     } catch {}
-    onConfirm({ topic, inputMode, customPrompt, slideCount, writingStyle, imageStyle, refImageBase64, refImageMime, refImagePreview, handle, brandName, carouselTitle });
+    onConfirm({ topic, inputMode, customPrompt, slideCount, writingStyle, imageStyle, imageLayout, refImageBase64, refImageMime, refImagePreview, handle, brandName, carouselTitle });
     onClose();
   };
 
@@ -359,6 +363,44 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                       </span>
                       <p className={`text-sm font-semibold ${imageStyle === is.value ? "text-white" : "text-gray-300"}`}>{is.label}</p>
                       <p className="text-[11px] text-gray-500 leading-snug">{is.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Image layout */}
+              <div>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-3 flex items-center gap-1.5">
+                  <LayoutTemplate size={11} /> Layout da imagem
+                </p>
+                <div className="grid grid-cols-5 gap-2">
+                  {([
+                    { value: "mixed",  label: "Auto",         preview: "mixed"  },
+                    { value: "full",   label: "Fundo total",  preview: "full"   },
+                    { value: "square", label: "Quadrado",     preview: "square" },
+                    { value: "top",    label: "Img. topo",    preview: "top"    },
+                    { value: "base",   label: "Img. base",    preview: "base"   },
+                  ] as { value: ImageLayout; label: string; preview: string }[]).map((lyt) => (
+                    <button
+                      key={lyt.value}
+                      onClick={() => setImageLayout(lyt.value)}
+                      className={`flex flex-col items-center gap-1.5 px-1 py-2 rounded-xl border transition-all ${
+                        imageLayout === lyt.value
+                          ? "border-brand-500 bg-brand-500/10"
+                          : "border-[#222] bg-[#0a0a0a] hover:border-brand-500/30"
+                      }`}
+                    >
+                      {/* Mini preview */}
+                      <div className="w-8 h-10 rounded-md overflow-hidden bg-[#111] border border-[#2a2a2a] relative flex flex-col">
+                        {lyt.preview === "full"   && <div className="absolute inset-0 bg-purple-500/30 rounded-md" />}
+                        {lyt.preview === "mixed"  && (<><div className="absolute inset-0 bg-purple-500/20 rounded-md" /><div className="absolute bottom-0 inset-x-0 h-1/3 bg-[#111]" /></>)}
+                        {lyt.preview === "square" && (<><div className="absolute inset-x-1 top-1 bottom-3 bg-purple-500/30 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-2 bg-[#111]" /></>)}
+                        {lyt.preview === "top"    && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-purple-500/30" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#111]" /></>)}
+                        {lyt.preview === "base"   && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[#111]" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-purple-500/30" /></>)}
+                      </div>
+                      <span className={`text-[9px] font-medium leading-tight text-center ${imageLayout === lyt.value ? "text-white" : "text-gray-500"}`}>
+                        {lyt.label}
+                      </span>
                     </button>
                   ))}
                 </div>

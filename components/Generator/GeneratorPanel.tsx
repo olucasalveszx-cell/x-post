@@ -7,7 +7,7 @@ import { Sparkles, Search, Loader2, AlertCircle, Crown, Zap, LogIn, CheckCircle2
 import LoginModal from "@/components/LoginModal";
 import { GeneratedContent, SearchResult, Slide, WritingStyle } from "@/types";
 import { v4 as uuid } from "uuid";
-import GeneratorWizard, { WizardSettings } from "./GeneratorWizard";
+import GeneratorWizard, { WizardSettings, ImageLayout } from "./GeneratorWizard";
 
 interface Props {
   onGenerate: (slides: Slide[]) => void;
@@ -50,8 +50,21 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
     const accent = gs.colorScheme.accent;
     const isLast = i === N - 1;
 
-    // 0=Cover 1=Cinematic 2=Content 3=Mixed — capa e última sempre 0
-    const variant = (i === 0 || isLast) ? 0 : (((i - 1) % 3) + 1) as 1 | 2 | 3;
+    // Determina variante com base no imageLayout escolhido pelo usuário
+    const layout: ImageLayout = ws.imageLayout ?? "mixed";
+    let variant: 0 | 1 | 2 | 3 | 4 | 5;
+    if (layout === "full") {
+      variant = i % 2 === 0 ? 0 : 1;
+    } else if (layout === "square") {
+      variant = 4;
+    } else if (layout === "top") {
+      variant = 5;
+    } else if (layout === "base") {
+      variant = (i === 0 || isLast) ? 0 : 2;
+    } else {
+      // mixed: capa e última = 0, demais ciclam 1,2,3
+      variant = (i === 0 || isLast) ? 0 : (((i - 1) % 3) + 1) as 1 | 2 | 3;
+    }
     const useBgImage = variant <= 1;
     const elementImageId = !useBgImage ? uuid() : undefined;
 
@@ -107,6 +120,24 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
       bodyY = 340; bodyH = 110; bodySize = 30; bodyAlign = "left";
       elements.push({ id: elementImageId, type: "image" as const,
         x: 60, y: 470, width: W - 120, height: 700, imageObjectPositionY: 25 });
+
+    } else if (variant === 4) {
+      // Quadrado central: título topo, imagem quadrada centralizada, corpo abaixo
+      titleY = 90; titleAlign = "center"; titleSize = 72; titleH = 200;
+      const sqSize = Math.round(W * 0.72);
+      const sqX = Math.round((W - sqSize) / 2);
+      const sqY = Math.round(H * 0.3);
+      bodyY = sqY + sqSize + 40; bodyH = 130; bodySize = 28; bodyAlign = "center";
+      elements.push({ id: elementImageId, type: "image" as const,
+        x: sqX, y: sqY, width: sqSize, height: sqSize, imageObjectPositionY: 50 });
+
+    } else if (variant === 5) {
+      // Imagem no topo: imagem ocupa metade superior, texto na metade inferior
+      const imgH = Math.round(H * 0.5);
+      titleY = imgH + 60; titleAlign = "left"; titleSize = 72; titleH = 220;
+      bodyY = titleY + 230; bodyH = 120; bodySize = 28; bodyAlign = "left";
+      elements.push({ id: elementImageId, type: "image" as const,
+        x: 0, y: 0, width: W, height: imgH, imageObjectPositionY: 40 });
 
     } else {
       // Clássico (Cover/CTA): gradiente forte, título base
@@ -572,7 +603,7 @@ function defaultSettings(): WizardSettings {
   const safe = (key: string) => { try { return localStorage.getItem(key) ?? ""; } catch { return ""; } };
   return {
     topic: "", inputMode: "topic", customPrompt: "",
-    slideCount: 7, writingStyle: "viral", imageStyle: "gemini",
+    slideCount: 7, writingStyle: "viral", imageStyle: "gemini", imageLayout: "mixed",
     refImageBase64: null, refImageMime: "image/jpeg", refImagePreview: null,
     handle: safe("xpz_handle"), brandName: safe("xpz_brand"), carouselTitle: safe("xpz_carousel_title"),
   };
