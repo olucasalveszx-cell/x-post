@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Slide, SlideElement } from "@/types";
-import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square } from "lucide-react";
+import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square, MoreVertical } from "lucide-react";
 
 interface Props {
   slide: Slide;
@@ -985,6 +985,35 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           </div>
         );
       })}
+
+      {/* ── Botão 3 pontos (mobile) — abre o menu de contexto ── */}
+      <button
+        className="absolute z-[60] flex items-center justify-center rounded-xl transition-all active:scale-90 md:hidden"
+        style={{
+          top: 14,
+          right: 14,
+          width: 40,
+          height: 40,
+          transform: `scale(${1 / scale})`,
+          transformOrigin: "top right",
+          background: "rgba(0,0,0,0.60)",
+          border: "1px solid rgba(255,255,255,0.18)",
+          color: "rgba(255,255,255,0.85)",
+          backdropFilter: "blur(8px)",
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          closeCtx(); closeBgCtx(); closeFrameCtx();
+          if (selectedId) {
+            const el = slide.elements.find((el) => el.id === selectedId);
+            if (el?.type === "image") { setCtxMenu({ x: 20, y: 70, el }); return; }
+            if (el?.type === "frame") { setFrameCtxMenu({ x: 20, y: 70, el }); return; }
+          }
+          setBgCtxMenu({ x: 20, y: 70 });
+        }}
+      >
+        <MoreVertical size={18} />
+      </button>
 
       {/* Context menu — scale invertido para aparecer no tamanho real na tela */}
       {ctxMenu && (
