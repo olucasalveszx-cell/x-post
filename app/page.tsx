@@ -186,7 +186,7 @@ function Logo({ className = "" }: { className?: string }) {
         X
       </div>
       <span className="text-[22px] font-black tracking-tight text-white leading-none">
-        x<span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>post</span>
+        x<span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>post</span>
       </span>
     </div>
   );
@@ -554,7 +554,7 @@ export default function LandingPage() {
             <div key={s.label} className="flex flex-col items-center justify-center text-center p-5 rounded-2xl"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
               <p className="text-2xl md:text-3xl font-black"
-                style={{ background: "linear-gradient(135deg,#c084fc,#818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                style={{ background: "linear-gradient(135deg,#c084fc,#818cf8)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
                 {s.num}
               </p>
               <p className="text-[11px] text-gray-500 mt-1 leading-tight">{s.label}</p>
@@ -594,7 +594,7 @@ export default function LandingPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-purple-400/70 mb-2">Sua assistente de IA</p>
             <h3 className="text-2xl md:text-3xl font-black mb-3">
               Conheça a{" "}
-              <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
                 Zora
               </span>
             </h3>
@@ -623,7 +623,7 @@ export default function LandingPage() {
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-[44px] font-black leading-tight max-w-2xl mx-auto">
             Daqui a 6 meses, seu Instagram vai estar{" "}
-            <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
               vendendo todos os dias
             </span>{" "}
             — ou continuar como está?
@@ -700,7 +700,7 @@ export default function LandingPage() {
           <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Planos e preços</p>
           <h2 className="text-3xl md:text-5xl font-black">
             Escolha e{" "}
-            <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
               comece hoje
             </span>
           </h2>
@@ -834,7 +834,7 @@ export default function LandingPage() {
         <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-4">Comece hoje</p>
         <h2 className="text-3xl md:text-5xl font-black leading-tight max-w-xl mx-auto mb-5">
           Pare de perder tempo.{" "}
-          <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
             Comece a crescer.
           </span>
         </h2>
@@ -856,7 +856,7 @@ export default function LandingPage() {
           <div className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-[12px] text-white"
             style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>X</div>
           <span className="font-black text-gray-400 text-sm">
-            x<span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>post</span>
+            x<span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>post</span>
           </span>
         </div>
         <p>© 2025 XPost · Todos os direitos reservados</p>
