@@ -322,7 +322,7 @@ export default function LandingPage() {
         <div className="absolute top-10 right-[-100px] w-[500px] h-[500px] pointer-events-none"
           style={{ background: "radial-gradient(ellipse,rgba(236,72,153,0.1) 0%,transparent 65%)", filter: "blur(80px)" }} />
 
-        <div className="max-w-6xl mx-auto w-full flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
+        <div className="relative z-10 max-w-6xl mx-auto w-full flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
 
           {/* Coluna texto */}
           <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left">
