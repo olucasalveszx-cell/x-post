@@ -26,35 +26,38 @@ function buildPrompt(opts: {
 }): string {
   const theme = THEMES[opts.colorPreset] ?? THEMES[0];
   const lines: string[] = [
-    `Professional Brazilian social media marketing flyer, Instagram square format 1:1.`,
-    `Background: ${theme.desc}, glossy premium finish, vibrant and saturated.`,
+    `Ultra-premium Brazilian promotional social media flyer, Instagram square 1:1 format, hyper-realistic 3D render quality.`,
+    `Background: ${theme.desc}, with radial light burst from center, volumetric rays, deep glossy reflective surface, luxury commercial feel.`,
+    `Overall composition: dramatic asymmetric layout, bold visual hierarchy, cinematic lighting with rim light and key light, high contrast, pixel-perfect detail.`,
   ];
 
   if (opts.promoSubtitle)
-    lines.push(`Small italic white text at top-left: "${opts.promoSubtitle}".`);
+    lines.push(`Elegant italic white uppercase text "${opts.promoSubtitle}" at top-left with subtle glow — category label style.`);
 
   if (opts.promoTitle)
-    lines.push(`Large bold 3D promotional title text "${opts.promoTitle}" in white with thick black drop shadow, positioned prominently at left side.`);
+    lines.push(`MASSIVE 3D extruded bold title text "${opts.promoTitle}" on the left side — white with thick black outline, neon ${theme.accent} inner glow, strong drop shadow, perspective tilt for dynamism.`);
 
   lines.push(
-    `Hero product "${opts.productName || "featured product"}" displayed on a shiny golden 3D circular podium/pedestal at the right side, dramatically lit, product photography quality.`,
-    `Decorative 3D floating percentage symbols (%) in ${theme.accent}, 2-3 scattered around the composition as visual accents.`,
+    `Hero product "${opts.productName || "featured product"}" displayed on a hyper-reflective shiny golden 3D circular podium on the right, product dramatically lit with specular highlights, floating slightly above pedestal, casting shadow below, studio product photography quality with bokeh background.`,
+    `3D floating decorative elements: large glowing % symbols in ${theme.accent} with neon aura, scattered star/sparkle bursts, confetti-like accent dots — all adding energy and sale urgency.`,
+    `"OFERTA ESPECIAL" ribbon or banner element in ${theme.accent} color, diagonally placed, bold uppercase text.`,
   );
 
   if (opts.price)
-    lines.push(`Price badge: ${theme.accent} rounded rectangle showing "R$ ${opts.price}" in large bold black text, at bottom-left area.`);
+    lines.push(`Prominent price badge: large ${theme.accent} pill/rounded-rectangle with thick white border and subtle glow, showing "R$ ${opts.price}" in extra-bold black numerals, placed at bottom-left — visually the most attention-grabbing element after the product.`);
 
   if (opts.website)
-    lines.push(`Top darkened bar with small white text "${opts.website}".`);
+    lines.push(`Semi-transparent frosted glass top bar with small clean white text "${opts.website}" and subtle separator line.`);
 
   if (opts.instagram || opts.phone) {
     const contact = [opts.instagram ? `@${opts.instagram}` : "", opts.phone].filter(Boolean).join("  •  ");
-    lines.push(`Bottom darkened bar with small white text "${contact}".`);
+    lines.push(`Semi-transparent frosted glass bottom bar with white text "${contact}" — social proof footer style.`);
   }
 
   lines.push(
-    `Style: high-quality Brazilian retail advertisement, sharp, no blur, vivid commercial design.`,
-    `No watermarks. No extra text beyond what is specified.`,
+    `Art direction: Top-tier Brazilian retail advertising (like Magazine Luiza, Americanas, Mercado Livre promotional banners) — bold, vibrant, unmistakably sales-driven. Every element fights for attention. Zero dead space.`,
+    `Render quality: 4K, no blur, crisp edges, vivid saturated colors, premium finish.`,
+    `No watermarks. Strictly only the text elements described above — no invented text.`,
   );
 
   return lines.join(" ");
@@ -85,13 +88,13 @@ async function fromImagen3(prompt: string): Promise<string> {
   return `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`;
 }
 
-/* ── Gemini 2.0 Flash Preview texto→imagem ── */
+/* ── Gemini 2.5 Flash texto→imagem ── */
 async function fromGemini(prompt: string): Promise<string> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -116,14 +119,14 @@ async function fromGeminiWithProduct(prompt: string, refB64: string, refMime: st
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
-  const instruction = `You are a professional Brazilian marketing designer.
-Using the product photo provided as the HERO product, create a complete promotional Instagram flyer (square 1:1 format).
+  const instruction = `You are a world-class Brazilian advertising designer specializing in high-conversion social media creatives.
+Using the product photo provided as the HERO product, create a stunning promotional Instagram flyer (square 1:1 format).
 ${prompt}
-The product from the reference image must be displayed prominently on the right side on a golden 3D podium.
-Make it look like a premium Brazilian social media advertisement.`;
+CRITICAL: Extract the product from the reference image, enhance it with professional product retouching (remove background, add dramatic lighting, specular highlights), and place it prominently on a shiny golden 3D podium on the right side.
+The final result must look like a top-tier Brazilian retail advertisement — bold, vibrant, unmistakably persuasive, with visual urgency that makes viewers stop scrolling.`;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -46,12 +46,16 @@ REGRAS DE COPY:
 
 REGRA CRÍTICA PARA imagePrompt:
 - NUNCA mencione nomes de pessoas reais no imagePrompt
-- Descreva o PRODUTO em cena: composição, iluminação, contexto de uso, ambiente
-- Se o produto for roupa: "stylish clothing item on clean surface, soft shadow, premium product photography"
-- Se for eletrônico: "sleek device on minimal surface, dramatic lighting, tech product showcase"
-- Se for alimento: "delicious food product, natural lighting, appetite appeal, commercial food photography"
+- Descreva cenas cinematográficas de produto com alto impacto visual e apelo emocional
+- Exemplos por categoria:
+  - Roupa/moda: "fashion product dramatically lit on glossy black surface, specular highlights, editorial style, luxury fashion photography, deep shadows, hero shot"
+  - Eletrônico: "sleek device floating in dark studio, blue-white rim lighting, tech product showcase, neon reflection on surface, cinematic depth of field"
+  - Alimento: "delicious food product with steam/condensation, soft warm golden light, macro detail, appetite appeal, five-star restaurant plating, commercial food photography"
+  - Cosmético/beleza: "luxury beauty product on marble surface, golden hour light, bokeh background with sparkles, premium lifestyle aesthetic"
+  - Genérico: "hero product shot on dramatic dark gradient background, volumetric lighting, rim light silhouette, 3D render quality, commercial advertising"
 - Adapte ao contexto do produto: "${productName}"
-- Cada slide deve ter imagePrompt ÚNICO, mostrando o produto de ângulo ou contexto diferente
+- Cada slide deve ter imagePrompt ÚNICO, variando: ângulo (frontal/45°/overhead), contexto (studio/lifestyle/ambiente), iluminação (dramática/suave/colorida), mood (urgência/desejo/exclusividade)
+- Inclua sempre: iluminação específica, qualidade de render (4K/hyperrealistic), atmosfera emocional
 
 REGRA CRÍTICA PARA searchQuery:
 - Busca curta para foto real do produto no Google
