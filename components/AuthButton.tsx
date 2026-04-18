@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { LogIn, LogOut, Crown, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
@@ -10,16 +10,19 @@ interface Props {
   isPro?: boolean;
 }
 
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
-
 export default function AuthButton({ isPro }: Props) {
   const { data: session, status } = useSession();
   const [loginOpen, setLoginOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    fetch("/api/admin/me").then(r => r.json()).then(d => setIsAdmin(!!d.isAdmin)).catch(() => {});
+  }, [session]);
 
   if (status === "loading") return null;
 
   if (session?.user) {
-    const isAdmin = ADMIN_EMAIL && session.user.email === ADMIN_EMAIL;
     return (
       <div className="flex items-center gap-2">
         {isPro && (
@@ -30,10 +33,10 @@ export default function AuthButton({ isPro }: Props) {
         {isAdmin && (
           <Link
             href="/admin"
-            className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors font-semibold hidden md:flex"
+            className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors font-semibold"
             title="Admin Dashboard"
           >
-            <LayoutDashboard size={14} /> Dashboard
+            <LayoutDashboard size={14} /> <span className="hidden md:inline">Dashboard</span>
           </Link>
         )}
         {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -5,6 +5,7 @@ import { v4 as uuid } from "uuid";
 import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+
 import { Slide, Project } from "@/types";
 import { renderSlide } from "@/lib/render-slide";
 import SidePanel from "@/components/Generator/SidePanel";
@@ -31,11 +32,9 @@ const FORMATS = [
 type Format = typeof FORMATS[number];
 
 
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
-
 export default function EditorPage() {
   const { data: session } = useSession();
-  const isAdmin = ADMIN_EMAIL && session?.user?.email === ADMIN_EMAIL;
+  const [isAdmin, setIsAdmin] = useState(false);
   const [format, setFormat] = useState<Format>(FORMATS[1]);
   const SLIDE_W = format.width;
   const SLIDE_H = format.height;
@@ -70,6 +69,12 @@ export default function EditorPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const safeIndex = Math.min(currentIndex, Math.max(0, slides.length - 1));
   const currentSlide = slides[safeIndex] ?? slides[0];
+
+  // ── Verifica admin via API (usa ADMIN_EMAIL server-side) ──────
+  useEffect(() => {
+    if (!session?.user) return;
+    fetch("/api/admin/me").then(r => r.json()).then(d => setIsAdmin(!!d.isAdmin)).catch(() => {});
+  }, [session]);
 
   // ── Refs para callbacks estáveis ──────────────────────────────
   const activeProjectIdRef = useRef(activeProjectId);
