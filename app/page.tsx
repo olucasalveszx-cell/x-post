@@ -332,23 +332,16 @@ export default function LandingPage() {
               IA que pesquisa, escreve e publica por você
             </div>
 
-            <h1 className="font-black tracking-tighter max-w-2xl" style={{ lineHeight: 1.0 }}>
-              <span className="text-white block" style={{ fontSize: "clamp(44px, 8vw, 88px)" }}>Carrosséis</span>
-              <span className="block" style={{
-                fontSize: "clamp(44px, 8vw, 88px)",
-                background: "linear-gradient(135deg,#c084fc 0%,#ec4899 55%,#f97316 100%)",
-                WebkitBackgroundClip: "text", backgroundClip: "text",
-                WebkitTextFillColor: "transparent", color: "transparent",
-                paddingBottom: 4,
-              }}>virais</span>
-              <span className="text-white block" style={{ fontSize: "clamp(30px, 5.5vw, 62px)" }}>no Instagram em</span>
-              <span className="block" style={{
-                fontSize: "clamp(30px, 5.5vw, 62px)",
-                background: "linear-gradient(135deg,#818cf8,#a855f7)",
-                WebkitBackgroundClip: "text", backgroundClip: "text",
-                WebkitTextFillColor: "transparent", color: "transparent",
-                paddingBottom: 4,
-              }}>30 segundos</span>
+            <h1 className="text-[42px] md:text-[68px] lg:text-[78px] font-black leading-[1.05] tracking-tighter max-w-2xl">
+              Carrosséis{" "}
+              <span style={{ background: "linear-gradient(135deg,#c084fc 0%,#ec4899 55%,#f97316 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
+                virais
+              </span>
+              <br />
+              no Instagram em{" "}
+              <span style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
+                segundos
+              </span>
             </h1>
 
             <p className="mt-6 text-gray-400 text-lg max-w-md leading-relaxed">
