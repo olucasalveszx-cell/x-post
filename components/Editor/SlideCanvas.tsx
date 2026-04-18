@@ -680,6 +680,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           const isPanning = framePanId === el.id;
           const imgOffsetX = el.frameImageOffset?.x ?? 50;
           const imgOffsetY = el.frameImageOffset?.y ?? 50;
+          const imgZoom = el.frameImageZoom ?? 100;
           const innerStyle: React.CSSProperties = {
             width: "100%", height: "100%", overflow: "hidden", position: "relative",
             ...(shapeStyle.clip ? { clipPath: shapeStyle.clip } : {}),
@@ -697,8 +698,10 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               const cy = "touches" in ev ? (ev as TouchEvent).touches[0].clientY : (ev as MouseEvent).clientY;
               const dx = (cx - framePanRef.current.startX) / scale;
               const dy = (cy - framePanRef.current.startY) / scale;
-              const newX = Math.max(0, Math.min(100, framePanRef.current.origX - (dx / el.width) * 100));
-              const newY = Math.max(0, Math.min(100, framePanRef.current.origY - (dy / el.height) * 100));
+              // A sensibilidade do pan depende do zoom: mais zoom = movimento mais fino
+              const zoomFactor = (el.frameImageZoom ?? 100) / 100;
+              const newX = Math.max(0, Math.min(100, framePanRef.current.origX - (dx / el.width) * 100 / zoomFactor));
+              const newY = Math.max(0, Math.min(100, framePanRef.current.origY - (dy / el.height) * 100 / zoomFactor));
               updateElement(framePanRef.current.elementId, { frameImageOffset: { x: newX, y: newY } });
             };
             const onUp = () => {
@@ -734,7 +737,25 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               onTouchStart={(e) => {
                 if (isPanning && el.frameImageUrl) {
                   e.stopPropagation();
-                  startFramePan(e.touches[0].clientX, e.touches[0].clientY);
+                  // Dois dedos em pan mode = pinch para zoom
+                  if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const t1 = e.touches[0]; const t2 = e.touches[1];
+                    const startDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+                    const origZoom = el.frameImageZoom ?? 100;
+                    const onMove = (te: TouchEvent) => {
+                      if (te.touches.length < 2) return;
+                      te.preventDefault();
+                      const a = te.touches[0]; const b = te.touches[1];
+                      const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+                      updateElement(el.id, { frameImageZoom: Math.max(100, Math.min(400, Math.round(origZoom * (dist / startDist)))) });
+                    };
+                    const onEnd = () => { window.removeEventListener("touchmove", onMove); window.removeEventListener("touchend", onEnd); };
+                    window.addEventListener("touchmove", onMove, { passive: false });
+                    window.addEventListener("touchend", onEnd);
+                  } else {
+                    startFramePan(e.touches[0].clientX, e.touches[0].clientY);
+                  }
                 } else {
                   handleTouchStart(e, el);
                 }
@@ -750,7 +771,15 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={el.frameImageUrl} alt=""
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", objectPosition: `${imgOffsetX}% ${imgOffsetY}%`, cursor: isPanning ? "grabbing" : undefined }}
+                    style={{
+                      width: "100%", height: "100%",
+                      objectFit: "cover",
+                      objectPosition: `${imgOffsetX}% ${imgOffsetY}%`,
+                      transform: imgZoom !== 100 ? `scale(${imgZoom / 100})` : undefined,
+                      transformOrigin: `${imgOffsetX}% ${imgOffsetY}%`,
+                      display: "block",
+                      cursor: isPanning ? "grabbing" : undefined,
+                    }}
                     draggable={false}
                   />
                 ) : (
@@ -764,14 +793,12 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                 )}
               </div>
 
-              {/* Botão "Ajustar foto" — aparece quando selecionado e tem imagem */}
+              {/* Botão "Ajustar foto" */}
               {isSelected && !isLoading && el.frameImageUrl && !isPanning && (
-                <div
-                  style={{ position: "absolute", top: -Math.round(36 * S), left: 0, display: "flex", gap: Math.round(4 * S), zIndex: 15 }}
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <div style={{ position: "absolute", top: -Math.round(36 * S), left: 0, display: "flex", gap: Math.round(4 * S), zIndex: 15 }}
+                  onClick={(e) => e.stopPropagation()}>
                   <button
-                    style={{ background: "#a855f7", border: "none", borderRadius: Math.round(8 * S), padding: `${Math.round(4 * S)}px ${Math.round(10 * S)}px`, color: "#fff", fontSize: Math.round(11 * S), fontFamily: "sans-serif", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: Math.round(4 * S) }}
+                    style={{ background: "#a855f7", border: "none", borderRadius: Math.round(8 * S), padding: `${Math.round(4 * S)}px ${Math.round(10 * S)}px`, color: "#fff", fontSize: Math.round(11 * S), fontFamily: "sans-serif", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); setFramePanId(el.id); }}
                   >
@@ -780,22 +807,44 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                 </div>
               )}
 
-              {/* Label modo pan ativo */}
+              {/* Toolbar modo pan: label + zoom slider + concluir */}
               {isPanning && el.frameImageUrl && (
                 <div
-                  style={{ position: "absolute", top: -Math.round(36 * S), left: 0, display: "flex", gap: Math.round(4 * S), zIndex: 15 }}
+                  style={{ position: "absolute", top: -Math.round(52 * S), left: 0, right: 0, display: "flex", flexDirection: "column", gap: Math.round(3 * S), zIndex: 15 }}
                   onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
-                  <div style={{ background: "rgba(0,0,0,0.75)", borderRadius: Math.round(8 * S), padding: `${Math.round(4 * S)}px ${Math.round(10 * S)}px`, color: "#a855f7", fontSize: Math.round(11 * S), fontFamily: "sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
-                    Arraste para ajustar
+                  {/* Linha topo: label + concluir */}
+                  <div style={{ display: "flex", alignItems: "center", gap: Math.round(4 * S) }}>
+                    <div style={{ background: "rgba(0,0,0,0.8)", borderRadius: Math.round(8 * S), padding: `${Math.round(3 * S)}px ${Math.round(8 * S)}px`, color: "#a855f7", fontSize: Math.round(10 * S), fontFamily: "sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      ↕↔ Arraste · Zoom:
+                    </div>
+                    {/* Slider de zoom */}
+                    <input
+                      type="range" min={100} max={400} step={5}
+                      value={imgZoom}
+                      style={{ flex: 1, accentColor: "#a855f7", cursor: "pointer", height: Math.round(4 * S) }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onChange={(e) => updateElement(el.id, { frameImageZoom: Number(e.target.value) })}
+                    />
+                    <div style={{ background: "rgba(0,0,0,0.7)", borderRadius: Math.round(6 * S), padding: `${Math.round(2 * S)}px ${Math.round(6 * S)}px`, color: "#d8b4fe", fontSize: Math.round(10 * S), fontFamily: "monospace", whiteSpace: "nowrap" }}>
+                      {imgZoom}%
+                    </div>
+                    <button
+                      style={{ background: "#1a1a1a", border: "1px solid #444", borderRadius: Math.round(8 * S), padding: `${Math.round(3 * S)}px ${Math.round(8 * S)}px`, color: "#fff", fontSize: Math.round(10 * S), fontFamily: "sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); setFramePanId(null); }}
+                    >
+                      Concluir
+                    </button>
+                    <button
+                      style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: Math.round(8 * S), padding: `${Math.round(3 * S)}px ${Math.round(8 * S)}px`, color: "#888", fontSize: Math.round(10 * S), fontFamily: "sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); updateElement(el.id, { frameImageOffset: { x: 50, y: 50 }, frameImageZoom: 100 }); }}
+                    >
+                      Resetar
+                    </button>
                   </div>
-                  <button
-                    style={{ background: "#222", border: "1px solid #444", borderRadius: Math.round(8 * S), padding: `${Math.round(4 * S)}px ${Math.round(10 * S)}px`, color: "#fff", fontSize: Math.round(11 * S), fontFamily: "sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => { e.stopPropagation(); setFramePanId(null); }}
-                  >
-                    Concluir
-                  </button>
                 </div>
               )}
 
