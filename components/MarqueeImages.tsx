@@ -1,37 +1,46 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
+// 20 cards — cada um com topicId único para buscar imagem gerada pelo Gemini
 const ROW1 = [
-  { id: "1553729651099-f6aece5a0a79", title: "Como sair do vermelho em 90 dias", body: "método comprovado", tag: "FINANÇAS", accent: "#10b981" },
-  { id: "1571019613454-1cb2f99b2d8b", title: "Rotina de treino para iniciantes", body: "sem precisar de academia", tag: "FITNESS", accent: "#f97316" },
-  { id: "1614642264762-d0a3b8bf3700", title: "IA vai substituir sua profissão?", body: "a verdade que poucos falam", tag: "TECNOLOGIA", accent: "#a855f7" },
-  { id: "1611974789855-9c2a0a7236a3", title: "5 hábitos de quem acorda cedo", body: "e transforma a vida", tag: "PRODUTIVIDADE", accent: "#3b82f6" },
-  { id: "1469474968028-56623f02e42e", title: "Os destinos mais baratos de 2025", body: "para viajar esse ano", tag: "VIAGEM", accent: "#06b6d4" },
-  { id: "1507003211169-0a1dd7228f2d", title: "Por que você procrastina tanto?", body: "a ciência por trás do hábito", tag: "PSICOLOGIA", accent: "#ec4899" },
-  { id: "1518770660439-4636190af475", title: "ChatGPT vs Gemini: qual é melhor?", body: "comparação honesta", tag: "IA", accent: "#8b5cf6" },
-  { id: "1579952363873-27f3bade9f55", title: "Copa do Mundo 2026: Brasil tem chance?", body: "dados que surpreendem", tag: "ESPORTES", accent: "#f59e0b" },
-  { id: "1489599849927-2ee91cede3ba", title: "3 erros que estão te impedindo de crescer", body: "no Instagram hoje", tag: "MARKETING", accent: "#ef4444" },
-  { id: "1532094349884-543290f4b8e0", title: "Descobertas científicas de 2025", body: "que vão mudar sua vida", tag: "CIÊNCIA", accent: "#14b8a6" },
+  { topicId: "nutricao",      title: "Plano alimentar para emagrecer",          body: "sem passar fome",                    tag: "NUTRIÇÃO",       accent: "#10b981" },
+  { topicId: "fitness",       title: "Treino completo sem academia",             body: "só com o peso do corpo",            tag: "FITNESS",        accent: "#f97316" },
+  { topicId: "tecnologia",    title: "IA vai substituir sua profissão?",         body: "a verdade que poucos falam",        tag: "TECNOLOGIA",     accent: "#a855f7" },
+  { topicId: "produtividade", title: "5 hábitos de quem acorda às 5h",          body: "e transforma a vida",               tag: "PRODUTIVIDADE",  accent: "#3b82f6" },
+  { topicId: "viagem",        title: "Os destinos mais baratos do Brasil",       body: "para viajar esse ano",              tag: "VIAGEM",         accent: "#06b6d4" },
+  { topicId: "psicologia",    title: "Por que você procrastina tanto?",          body: "a ciência por trás do hábito",      tag: "PSICOLOGIA",     accent: "#ec4899" },
+  { topicId: "futebol",       title: "Copa 2026: Brasil vai ser campeão?",       body: "dados que surpreendem",             tag: "FUTEBOL",        accent: "#f59e0b" },
+  { topicId: "marketing",     title: "3 erros que te impedem de crescer",        body: "no Instagram hoje",                 tag: "MARKETING",      accent: "#ef4444" },
+  { topicId: "ciencia",       title: "Descobertas científicas de 2025",          body: "que vão mudar sua vida",            tag: "CIÊNCIA",        accent: "#14b8a6" },
+  { topicId: "negocios",      title: "Como abrir um negócio do zero",            body: "sem precisar de muito capital",     tag: "NEGÓCIOS",       accent: "#8b5cf6" },
 ];
 
 const ROW2 = [
-  { id: "1593941707882-a5bba14938c7", title: "Tesla ou BYD: quem vai dominar?", body: "guerra dos elétricos", tag: "NEGÓCIOS", accent: "#f97316" },
-  { id: "1466611653911-95081537e5b7", title: "Energia solar: vale a pena em 2025?", body: "números reais do mercado", tag: "SUSTENTABILIDADE", accent: "#10b981" },
-  { id: "1501386761578-eaa54b8657d8", title: "Os artistas que vão explodir em 2025", body: "descubra antes de todo mundo", tag: "MÚSICA", accent: "#ec4899" },
-  { id: "1611162617529-9e6ca79f9900", title: "Como monetizar sua conta no Instagram", body: "do zero à renda extra", tag: "REDES SOCIAIS", accent: "#a855f7" },
-  { id: "1445205170230-053b83016050", title: "Tendências de moda que chegam forte", body: "o que vestir esse ano", tag: "MODA", accent: "#f472b6" },
-  { id: "1677442135703-1787eea5ce01", title: "Alimentação anti-inflamatória", body: "baseado em ciência", tag: "SAÚDE", accent: "#06b6d4" },
-  { id: "1529107386315-e1a2ed48a620", title: "Eleições 2025: o que está em jogo", body: "análise sem filtro", tag: "POLÍTICA", accent: "#ef4444" },
-  { id: "1573164713715-7f8b780c8444", title: "Elon Musk: gênio ou perigo?", body: "análise completa", tag: "TECNOLOGIA", accent: "#8b5cf6" },
-  { id: "1639762681057-408e52192e55", title: "Bitcoin vai a $200k ainda em 2025?", body: "análise do mercado", tag: "CRIPTO", accent: "#f59e0b" },
-  { id: "1559757480424-c126706ca5aa", title: "Saúde mental: sinais que você ignora", body: "e você nem percebe", tag: "SAÚDE MENTAL", accent: "#3b82f6" },
+  { topicId: "sustentabilidade", title: "Energia solar vale a pena em 2025?",   body: "números reais do mercado",          tag: "SUSTENTABILIDADE", accent: "#10b981" },
+  { topicId: "musica",           title: "Os artistas que vão explodir em 2025", body: "descubra antes de todo mundo",      tag: "MÚSICA",           accent: "#ec4899" },
+  { topicId: "moda",             title: "Tendências de moda que chegam forte",   body: "o que vestir esse ano",             tag: "MODA",             accent: "#f472b6" },
+  { topicId: "saude",            title: "Alimentação anti-inflamatória",         body: "baseado em ciência",                tag: "SAÚDE",            accent: "#06b6d4" },
+  { topicId: "politica",         title: "Eleições 2025: o que está em jogo",     body: "análise sem filtro",                tag: "POLÍTICA",         accent: "#ef4444" },
+  { topicId: "fofoca",           title: "Polêmica dos famosos que chocou",       body: "veja o que aconteceu",              tag: "FOFOCA",           accent: "#f97316" },
+  { topicId: "cripto",           title: "Bitcoin vai a $200k em 2025?",          body: "análise completa do mercado",       tag: "CRIPTO",           accent: "#f59e0b" },
+  { topicId: "advocacia",        title: "Seus direitos que poucos conhecem",     body: "saiba o que a lei garante",         tag: "ADVOCACIA",        accent: "#a855f7" },
+  { topicId: "gastronomia",      title: "Receita que virou febre nas redes",     body: "fácil, rápido e delicioso",         tag: "GASTRONOMIA",      accent: "#14b8a6" },
+  { topicId: "educacao",         title: "Como estudar e reter tudo",             body: "método comprovado pela ciência",    tag: "EDUCAÇÃO",         accent: "#3b82f6" },
 ];
 
-function imgUrl(id: string) {
-  // Picsum Photos: imagens estáveis, nunca expiram, mesmo seed = mesma foto
-  return `https://picsum.photos/seed/${id}/400/530`;
-}
+// Todos os topicIds únicos para pré-fetch
+const ALL_TOPIC_IDS = [...new Set([...ROW1, ...ROW2].map((c) => c.topicId))];
 
-function SlideCard({ slide, idx }: { slide: typeof ROW1[0]; idx: number }) {
+function SlideCard({
+  slide,
+  idx,
+  imageUrl,
+}: {
+  slide: typeof ROW1[0];
+  idx: number;
+  imageUrl?: string;
+}) {
   const dots = 5;
   const active = idx % dots;
 
@@ -45,21 +54,32 @@ function SlideCard({ slide, idx }: { slide: typeof ROW1[0]; idx: number }) {
         background: `linear-gradient(135deg, ${slide.accent}22 0%, #0a0a0a 100%)`,
       }}
     >
-      {/* Foto */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={imgUrl(slide.id)}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
-        loading="lazy"
-        draggable={false}
-        referrerPolicy="no-referrer"
-        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-      />
+      {/* Foto IA — fade-in suave quando carregada */}
+      {imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageUrl}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+          style={{ opacity: 1 }}
+          loading="lazy"
+          draggable={false}
+        />
+      )}
 
-      {/* Overlay */}
+      {/* Placeholder animado enquanto carrega */}
+      {!imageUrl && (
+        <div
+          className="absolute inset-0 animate-pulse"
+          style={{ background: `linear-gradient(135deg, ${slide.accent}18 0%, #111 100%)` }}
+        />
+      )}
+
+      {/* Overlay escuro para legibilidade */}
       <div className="absolute inset-0" style={{
-        background: "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.18) 68%, rgba(0,0,0,0.04) 100%)",
+        background: imageUrl
+          ? "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.72) 40%, rgba(0,0,0,0.22) 68%, rgba(0,0,0,0.08) 100%)"
+          : "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.50) 50%, rgba(0,0,0,0.10) 100%)",
       }} />
 
       {/* Barra accent no topo */}
@@ -67,8 +87,10 @@ function SlideCard({ slide, idx }: { slide: typeof ROW1[0]; idx: number }) {
 
       <div className="absolute inset-0 flex flex-col justify-between p-4">
         {/* Tag */}
-        <div className="self-start px-2 py-0.5 rounded-full text-[8px] font-black tracking-widest uppercase"
-          style={{ background: `${slide.accent}28`, color: slide.accent, border: `1px solid ${slide.accent}50` }}>
+        <div
+          className="self-start px-2 py-0.5 rounded-full text-[8px] font-black tracking-widest uppercase"
+          style={{ background: `${slide.accent}28`, color: slide.accent, border: `1px solid ${slide.accent}50` }}
+        >
           {slide.tag}
         </div>
 
@@ -86,13 +108,16 @@ function SlideCard({ slide, idx }: { slide: typeof ROW1[0]; idx: number }) {
           <div className="flex items-center justify-between mt-1">
             <div className="flex items-center gap-[3px]">
               {Array.from({ length: dots }).map((_, i) => (
-                <div key={i} style={{
-                  width: i === active ? 16 : 4,
-                  height: 3.5,
-                  borderRadius: 9999,
-                  background: i === active ? slide.accent : "rgba(255,255,255,0.18)",
-                  transition: "width 0.3s",
-                }} />
+                <div
+                  key={i}
+                  style={{
+                    width: i === active ? 16 : 4,
+                    height: 3.5,
+                    borderRadius: 9999,
+                    background: i === active ? slide.accent : "rgba(255,255,255,0.18)",
+                    transition: "width 0.3s",
+                  }}
+                />
               ))}
             </div>
             <span style={{ fontSize: 7, color: "rgba(255,255,255,0.22)", letterSpacing: "0.12em", fontWeight: 700, textTransform: "uppercase" }}>
@@ -105,17 +130,37 @@ function SlideCard({ slide, idx }: { slide: typeof ROW1[0]; idx: number }) {
   );
 }
 
-function MarqueeRow({ slides, direction, speed }: { slides: typeof ROW1; direction: "left" | "right"; speed: number }) {
+function MarqueeRow({
+  slides,
+  direction,
+  speed,
+  images,
+}: {
+  slides: typeof ROW1;
+  direction: "left" | "right";
+  speed: number;
+  images: Record<string, string>;
+}) {
   const doubled = [...slides, ...slides];
   return (
-    <div className="overflow-hidden w-full"
-      style={{ WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%)", maskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%)" }}>
+    <div
+      className="overflow-hidden w-full"
+      style={{
+        WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%)",
+        maskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%)",
+      }}
+    >
       <div
         className={direction === "left" ? "marquee-left" : "marquee-right"}
         style={{ animationDuration: `${speed}s`, willChange: "transform" }}
       >
         {doubled.map((slide, i) => (
-          <SlideCard key={i} slide={slide} idx={i % slides.length} />
+          <SlideCard
+            key={i}
+            slide={slide}
+            idx={i % slides.length}
+            imageUrl={images[slide.topicId]}
+          />
         ))}
       </div>
     </div>
@@ -123,10 +168,26 @@ function MarqueeRow({ slides, direction, speed }: { slides: typeof ROW1; directi
 }
 
 export default function MarqueeImages() {
+  const [images, setImages] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    // Busca imagens em paralelo, progressivamente (cada uma aparece ao carregar)
+    ALL_TOPIC_IDS.forEach(async (id) => {
+      try {
+        const res = await fetch(`/api/landing-images/${id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.url) {
+          setImages((prev) => ({ ...prev, [id]: data.url }));
+        }
+      } catch {}
+    });
+  }, []);
+
   return (
     <div className="flex flex-col gap-4 w-full select-none py-2">
-      <MarqueeRow slides={ROW1} direction="left"  speed={55} />
-      <MarqueeRow slides={ROW2} direction="right" speed={68} />
+      <MarqueeRow slides={ROW1} direction="left"  speed={55} images={images} />
+      <MarqueeRow slides={ROW2} direction="right" speed={68} images={images} />
     </div>
   );
 }
