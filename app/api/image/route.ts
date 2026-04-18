@@ -54,7 +54,6 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   const MODELS = [
     "gemini-2.0-flash-preview-image-generation",
     "gemini-2.0-flash-exp-image-generation",
-    "gemini-2.0-flash-thinking-exp-image-generation",
   ];
 
   let lastError = "";
@@ -68,7 +67,7 @@ async function fromGemini(prompt: string, style: ImageStyle) {
           contents: [{ parts: [{ text: fullPrompt }] }],
           generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
         }),
-        signal: AbortSignal.timeout(18000),
+        signal: AbortSignal.timeout(22000),
       });
 
       const data = await res.json();
@@ -213,17 +212,17 @@ async function fromOpenRouter(prompt: string, style: ImageStyle) {
     "X-Title": "XPost Zone",
   };
 
-  // Tenta até 2 vezes antes de desistir
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  // Tenta 1 vez com timeout curto para não estourar o maxDuration
+  for (let attempt = 1; attempt <= 1; attempt++) {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST", headers, body,
-      signal: AbortSignal.timeout(52000),
+      signal: AbortSignal.timeout(25000),
     });
 
     const data = await res.json();
     if (!res.ok) {
       console.error(`[image] OpenRouter tentativa ${attempt} HTTP ${res.status}:`, data.error?.message);
-      if (attempt === 2) throw new Error(data.error?.message ?? `OpenRouter HTTP ${res.status}`);
+      throw new Error(data.error?.message ?? `OpenRouter HTTP ${res.status}`);
       continue;
     }
 
