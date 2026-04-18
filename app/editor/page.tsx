@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuid } from "uuid";
-import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle } from "lucide-react";
+import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle, Instagram, Check } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
@@ -446,7 +446,7 @@ export default function EditorPage() {
             <span className="hidden md:inline">{exporting ? "Exportando..." : "Exportar"}</span>
           </button>
           <button onClick={() => setShowProfile(true)}
-            className="flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-[#222] bg-[#111] hover:bg-[#1a1a1a] transition-colors text-gray-300">
+            className="hidden md:flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-[#222] bg-[#111] hover:bg-[#1a1a1a] transition-colors text-gray-300">
             <UserCircle size={15} />
             <span className="hidden md:inline">Perfil</span>
           </button>
@@ -586,11 +586,43 @@ export default function EditorPage() {
       {/* ── Barra inferior mobile ─────────────────────────────── */}
       {isMobile && (
         <div className="shrink-0 bg-[#080808] border-t border-[#161616]"
-          style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", zIndex: 20 }}>
+          style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", zIndex: 20 }}>
           {[
-            { id: "side",  icon: <Sparkles size={20} />,      label: "IA",      action: () => setMobilePanel(mobilePanel === "side" ? null : "side"), active: mobilePanel === "side" },
-            { id: "zora",  icon: <MessageCircle size={20} />, label: "Zora",    action: () => setShowAI(true),                                        active: false },
-            { id: "pub",   icon: <User size={20} />,          label: "Publicar",action: () => setShowPublish(true),                                   active: false },
+            {
+              id: "side",
+              icon: <Sparkles size={20} />,
+              label: "IA",
+              action: () => setMobilePanel(mobilePanel === "side" ? null : "side"),
+              active: mobilePanel === "side",
+            },
+            {
+              id: "zora",
+              icon: <MessageCircle size={20} />,
+              label: "Zora",
+              action: () => setShowAI(true),
+              active: false,
+            },
+            {
+              id: "pub",
+              icon: (
+                <div className="relative">
+                  <Instagram size={20} />
+                  <div className="absolute -bottom-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-blue-500 flex items-center justify-center border border-[#080808]">
+                    <Check size={7} strokeWidth={3} className="text-white" />
+                  </div>
+                </div>
+              ),
+              label: "Publicar",
+              action: () => setShowPublish(true),
+              active: false,
+            },
+            {
+              id: "profile",
+              icon: <UserCircle size={20} />,
+              label: "Perfil",
+              action: () => setShowProfile(true),
+              active: false,
+            },
           ].map((tab) => (
             <button key={tab.id} onClick={tab.action}
               className="flex flex-col items-center justify-center gap-1 py-3.5 transition-colors"
