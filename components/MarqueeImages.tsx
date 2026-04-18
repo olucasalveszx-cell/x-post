@@ -1,7 +1,7 @@
 "use client";
 
 const ROW1 = [
-  { id: "1554224155-6726b3ff858f", title: "Como sair do vermelho em 90 dias", body: "método comprovado", tag: "FINANÇAS", accent: "#10b981" },
+  { id: "1553729651099-f6aece5a0a79", title: "Como sair do vermelho em 90 dias", body: "método comprovado", tag: "FINANÇAS", accent: "#10b981" },
   { id: "1571019613454-1cb2f99b2d8b", title: "Rotina de treino para iniciantes", body: "sem precisar de academia", tag: "FITNESS", accent: "#f97316" },
   { id: "1614642264762-d0a3b8bf3700", title: "IA vai substituir sua profissão?", body: "a verdade que poucos falam", tag: "TECNOLOGIA", accent: "#a855f7" },
   { id: "1611974789855-9c2a0a7236a3", title: "5 hábitos de quem acorda cedo", body: "e transforma a vida", tag: "PRODUTIVIDADE", accent: "#3b82f6" },
@@ -17,13 +17,13 @@ const ROW2 = [
   { id: "1593941707882-a5bba14938c7", title: "Tesla ou BYD: quem vai dominar?", body: "guerra dos elétricos", tag: "NEGÓCIOS", accent: "#f97316" },
   { id: "1466611653911-95081537e5b7", title: "Energia solar: vale a pena em 2025?", body: "números reais do mercado", tag: "SUSTENTABILIDADE", accent: "#10b981" },
   { id: "1501386761578-eaa54b8657d8", title: "Os artistas que vão explodir em 2025", body: "descubra antes de todo mundo", tag: "MÚSICA", accent: "#ec4899" },
-  { id: "1552820728-8b83bb6b773f", title: "Como monetizar sua conta no Instagram", body: "do zero à renda extra", tag: "REDES SOCIAIS", accent: "#a855f7" },
+  { id: "1611162617529-9e6ca79f9900", title: "Como monetizar sua conta no Instagram", body: "do zero à renda extra", tag: "REDES SOCIAIS", accent: "#a855f7" },
   { id: "1445205170230-053b83016050", title: "Tendências de moda que chegam forte", body: "o que vestir esse ano", tag: "MODA", accent: "#f472b6" },
   { id: "1677442135703-1787eea5ce01", title: "Alimentação anti-inflamatória", body: "baseado em ciência", tag: "SAÚDE", accent: "#06b6d4" },
   { id: "1529107386315-e1a2ed48a620", title: "Eleições 2025: o que está em jogo", body: "análise sem filtro", tag: "POLÍTICA", accent: "#ef4444" },
-  { id: "1554080353-a576cf803bda", title: "Elon Musk: gênio ou perigo?", body: "análise completa", tag: "TECNOLOGIA", accent: "#8b5cf6" },
+  { id: "1573164713715-7f8b780c8444", title: "Elon Musk: gênio ou perigo?", body: "análise completa", tag: "TECNOLOGIA", accent: "#8b5cf6" },
   { id: "1639762681057-408e52192e55", title: "Bitcoin vai a $200k ainda em 2025?", body: "análise do mercado", tag: "CRIPTO", accent: "#f59e0b" },
-  { id: "1559757148-5c350d0d3c56", title: "Saúde mental: sinais que você ignora", body: "e você nem percebe", tag: "SAÚDE MENTAL", accent: "#3b82f6" },
+  { id: "1559757480424-c126706ca5aa", title: "Saúde mental: sinais que você ignora", body: "e você nem percebe", tag: "SAÚDE MENTAL", accent: "#3b82f6" },
 ];
 
 function imgUrl(id: string) {
@@ -41,6 +41,7 @@ function SlideCard({ slide, idx }: { slide: typeof ROW1[0]; idx: number }) {
         width: 215,
         height: 300,
         boxShadow: "0 12px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.4)",
+        background: `linear-gradient(135deg, ${slide.accent}22 0%, #0a0a0a 100%)`,
       }}
     >
       {/* Foto */}
@@ -51,6 +52,8 @@ function SlideCard({ slide, idx }: { slide: typeof ROW1[0]; idx: number }) {
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
         loading="lazy"
         draggable={false}
+        referrerPolicy="no-referrer"
+        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
       />
 
       {/* Overlay */}
