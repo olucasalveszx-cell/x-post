@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redisGet, redisSet, redisListAdd } from "@/lib/redis";
 import { hashPassword } from "@/lib/password";
+import { addBonusCredits } from "@/lib/credits";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
@@ -32,6 +33,9 @@ export async function POST(req: NextRequest) {
 
   await redisSet(key, JSON.stringify(user));
   await redisListAdd("users:list", emailNorm);
+
+  // Bônus de boas-vindas: 4 créditos grátis para teste
+  await addBonusCredits(emailNorm, 4).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

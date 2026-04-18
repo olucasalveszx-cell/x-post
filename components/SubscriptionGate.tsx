@@ -44,11 +44,19 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
         if (data?.active) { setAuthorized(true); setChecking(false); return; }
       }
 
-      // 3. Sessão Google → verifica por email
+      // 3. Sessão Google → verifica assinatura ativa por email
       if (session?.user?.email) {
-        const res = await fetch(`/api/stripe/verify?email=${encodeURIComponent(session.user.email)}`).catch(() => null);
-        const data = await res?.json().catch(() => null);
-        if (data?.active) { setAuthorized(true); setChecking(false); return; }
+        const [stripeRes, creditsRes] = await Promise.all([
+          fetch(`/api/stripe/verify?email=${encodeURIComponent(session.user.email)}`).catch(() => null),
+          fetch("/api/credits").catch(() => null),
+        ]);
+        const stripeData  = await stripeRes?.json().catch(() => null);
+        const creditsData = await creditsRes?.json().catch(() => null);
+
+        if (stripeData?.active) { setAuthorized(true); setChecking(false); return; }
+
+        // Libera acesso se o usuário ainda tem créditos disponíveis (plano + bônus)
+        if ((creditsData?.total ?? 0) > 0) { setAuthorized(true); setChecking(false); return; }
       }
 
       setAuthorized(false);
@@ -118,13 +126,15 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
         </div>
 
         <h1 className="text-3xl md:text-4xl font-black text-center mb-3">
-          Escolha seu plano<br />
+          Seus créditos acabaram<br />
           <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            para acessar o editor
+            assine para continuar
           </span>
         </h1>
         <p className="text-gray-500 text-center mb-12 max-w-md">
-          Acesso completo a todos os recursos. IA que pesquisa, escreve e publica por você.
+          Você usou todos os seus créditos gratuitos. Assine um plano ou{" "}
+          <a href="/credits" className="text-purple-400 hover:text-purple-300 underline">compre mais créditos</a>{" "}
+          para continuar criando.
         </p>
 
         {/* Cards de plano */}
