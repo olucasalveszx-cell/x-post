@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard } from "lucide-react";
+import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard, Zap, Crown, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 interface HistoryEntry {
@@ -18,6 +18,22 @@ interface ImageEntry {
   url: string;
   savedAt: string;
 }
+
+interface CreditsInfo {
+  plan: string;
+  used: number;
+  limit: number;
+  remaining: number;
+  bonus: number;
+  total: number;
+}
+
+const PLAN_LABEL: Record<string, string> = {
+  free: "Free", basic: "Basic", pro: "Pro", business: "Business",
+};
+const PLAN_COLOR: Record<string, string> = {
+  free: "#9ca3af", basic: "#60a5fa", pro: "#a855f7", business: "#f59e0b",
+};
 
 interface Props {
   open: boolean;
@@ -35,6 +51,7 @@ export default function ProfileModal({ open, onClose }: Props) {
   const [images,  setImages]  = useState<ImageEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [credits, setCredits] = useState<CreditsInfo | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,6 +70,7 @@ export default function ProfileModal({ open, onClose }: Props) {
     if (!open) return;
     load();
     fetch("/api/admin/me").then(r => r.json()).then(d => setIsAdmin(!!d.isAdmin)).catch(() => {});
+    fetch("/api/credits").then(r => r.ok ? r.json() : null).then(d => { if (d) setCredits(d); }).catch(() => {});
   }, [open, load]);
 
   if (!open) return null;
@@ -83,8 +101,71 @@ export default function ProfileModal({ open, onClose }: Props) {
           </button>
         </div>
 
+        {/* Credits card */}
+        {credits && (
+          <div className="mx-4 mt-3 mb-1 rounded-xl border border-[#1e1e1e] overflow-hidden shrink-0" style={{ background: "#0a0a0a" }}>
+            <div className="flex items-center justify-between px-4 py-3">
+              {/* Plan + total */}
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: `${PLAN_COLOR[credits.plan] ?? "#9ca3af"}18` }}>
+                  <Crown size={13} style={{ color: PLAN_COLOR[credits.plan] ?? "#9ca3af" }} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold" style={{ color: PLAN_COLOR[credits.plan] ?? "#9ca3af" }}>
+                    {PLAN_LABEL[credits.plan] ?? credits.plan}
+                  </p>
+                  <p className="text-[10px] text-gray-600">{credits.used}/{credits.limit} mensais usados</p>
+                </div>
+              </div>
+
+              {/* Total badge */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+                style={{
+                  background: credits.total > 5 ? "rgba(168,85,247,0.12)" : credits.total > 0 ? "rgba(251,191,36,0.12)" : "rgba(239,68,68,0.12)",
+                  color: credits.total > 5 ? "#c084fc" : credits.total > 0 ? "#fbbf24" : "#f87171",
+                }}>
+                <Zap size={11} />
+                <span className="text-xs font-black">{credits.total}</span>
+                <span className="text-[10px] opacity-70">créditos</span>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="px-4 pb-1">
+              <div className="h-1 rounded-full bg-[#1a1a1a] overflow-hidden">
+                <div className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(100, (credits.used / credits.limit) * 100)}%`,
+                    background: credits.used / credits.limit > 0.85 ? "#ef4444" : credits.used / credits.limit > 0.6 ? "#f59e0b" : "#a855f7",
+                  }} />
+              </div>
+            </div>
+
+            {/* Bonus + actions */}
+            <div className="flex items-center justify-between px-4 py-2.5 border-t border-[#111] mt-1">
+              <p className="text-[10px] text-gray-600">
+                {credits.bonus > 0
+                  ? <span className="text-yellow-600">+{credits.bonus} créditos extras</span>
+                  : "Sem créditos extras"}
+              </p>
+              <div className="flex items-center gap-2">
+                <Link href="/credits" onClick={onClose}
+                  className="text-[11px] font-semibold text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-0.5">
+                  Comprar mais <ArrowRight size={10} />
+                </Link>
+                <span className="text-gray-700">·</span>
+                <Link href="/#pricing" onClick={onClose}
+                  className="text-[11px] font-semibold text-yellow-500 hover:text-yellow-400 transition-colors flex items-center gap-0.5">
+                  Upgrade <Crown size={10} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
-        <div className="flex border-b border-[#1e1e1e] shrink-0">
+        <div className="flex border-b border-[#1e1e1e] shrink-0 mt-2">
           {(["history", "images"] as const).map((t) => (
             <button
               key={t}
