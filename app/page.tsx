@@ -186,7 +186,7 @@ function Logo({ className = "" }: { className?: string }) {
         X
       </div>
       <span className="text-[22px] font-black tracking-tight text-white leading-none">
-        x<span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>post</span>
+        xpost
       </span>
     </div>
   );
@@ -360,7 +360,7 @@ export default function LandingPage() {
               <Link href="/editor"
                 className="flex items-center gap-2 px-6 py-4 rounded-2xl text-sm font-semibold text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all"
                 style={{ background: "rgba(255,255,255,0.04)" }}>
-                Ver demo ao vivo →
+                Ver editor →
               </Link>
             </div>
 
@@ -848,9 +848,7 @@ export default function LandingPage() {
         <div className="flex items-center justify-center gap-2 mb-3">
           <div className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-[12px] text-white"
             style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>X</div>
-          <span className="font-black text-gray-400 text-sm">
-            x<span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>post</span>
-          </span>
+          <span className="font-black text-gray-400 text-sm">xpost</span>
         </div>
         <p>© 2025 XPost · Todos os direitos reservados</p>
         <div className="flex justify-center gap-5 mt-3">
