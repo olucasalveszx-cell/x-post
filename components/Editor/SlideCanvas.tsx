@@ -510,8 +510,10 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         body: JSON.stringify({ prompt, imageStyle: "gemini", customerId, activationToken }),
       });
       const data = await res.json();
+      console.log("[generateBg] fonte:", data.source, "| plano:", data.plan, "| erro:", data.error);
       if (data.imageUrl) onUpdate({ ...slide, backgroundImageUrl: data.imageUrl });
-    } catch {}
+      else if (data.error) console.error("[generateBg] falhou:", data.error);
+    } catch (err) { console.error("[generateBg] exception:", err); }
     finally { setGeneratingBg(false); }
   };
 

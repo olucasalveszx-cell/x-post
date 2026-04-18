@@ -314,22 +314,25 @@ export async function POST(req: NextRequest) {
   if (!isPro && customerId) isPro = await hasActiveSubscription(customerId);
   if (!isPro && activationToken) { const { valid } = verifyToken(activationToken); isPro = valid; }
 
-  // ── Plano gratuito: Gemini 3.1 → OpenRouter → Pexels ────────
+  // ── Plano gratuito: Gemini → OpenRouter → Pexels ────────
+  const freeErrors: string[] = [];
   if (!isPro) {
     try {
       return NextResponse.json({ ...await fromGemini(enhancedPrompt, style), plan: "free" });
     } catch (e: any) {
+      freeErrors.push(`Gemini: ${e.message}`);
       console.error("[image] Gemini free falhou:", e.message);
     }
     try {
       return NextResponse.json({ ...await fromOpenRouter(enhancedPrompt, style), plan: "free" });
     } catch (e: any) {
+      freeErrors.push(`OpenRouter: ${e.message}`);
       console.error("[image] OpenRouter free falhou:", e.message);
     }
     try {
-      return NextResponse.json({ ...await fromPexels(enhancedPrompt), plan: "free_fallback" });
+      return NextResponse.json({ ...await fromPexels(enhancedPrompt), plan: "free_fallback", fallbackErrors: freeErrors });
     } catch (e: any) {
-      return NextResponse.json({ error: e.message }, { status: 500 });
+      return NextResponse.json({ error: e.message, fallbackErrors: freeErrors }, { status: 500 });
     }
   }
 
