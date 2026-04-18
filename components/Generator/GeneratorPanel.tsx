@@ -22,6 +22,14 @@ function applyAccent(text: string, accentColor: string): string {
   return text.replace(/\[([^\]]+)\]/g, `<span style="color:${accentColor};font-style:normal">$1</span>`);
 }
 
+// Layout variants: 0 = clássico, 1 = cinemático, 2 = vinheta centralizada
+const LAYOUT_BG_POSITIONS = [
+  { x: 50, y: 50 },  // 0 classic
+  { x: 42, y: 36 },  // 1 cinematic
+  { x: 56, y: 44 },  // 2 vignette
+];
+const LAYOUT_BG_ZOOMS = [100, 115, 108];
+
 function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & { _imagePrompt: string; _searchQuery: string })[] {
   const W = SLIDE_W;
   const H = SLIDE_H;
@@ -33,6 +41,7 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
   return generated.slides.map((gs, i) => {
     const accent = gs.colorScheme.accent;
     const isLast = i === N - 1;
+    const variant = isLast ? 0 : i % 3;
     const elements: any[] = [];
 
     // ── Header ───────────────────────────────────────────
@@ -53,18 +62,68 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
       });
     }
 
+    // ── Layout-specific setup ─────────────────────────────
+    let gradient: string;
+    let titleX = 60, titleY: number, titleW = W - 120;
+    let titleSize = 90;
+    let titleAlign: "left" | "center" | "right" = "center";
+    let bodyY: number;
+
+    if (variant === 1) {
+      // Cinemático: faixas escuras topo+base, número watermark, título alinhado à esquerda no terço superior
+      gradient = "linear-gradient(180deg, rgba(0,0,0,0.86) 0%, rgba(0,0,0,0.14) 30%, rgba(0,0,0,0.14) 55%, rgba(0,0,0,0.93) 100%)";
+      titleY = Math.round(H * 0.28);
+      titleAlign = "left";
+      titleSize = 82;
+      bodyY = Math.min(titleY + 300, H - 210);
+
+      // Número watermark
+      elements.push({
+        id: uuid(), type: "text" as const,
+        x: W - 220, y: 56, width: 200, height: 200,
+        content: String(i + 1).padStart(2, "0"),
+        style: { fontSize: 160, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.06)", textAlign: "right" as const, lineHeight: 1 },
+      });
+      // Linha accent acima do título
+      elements.push({
+        id: uuid(), type: "shape" as const,
+        x: 60, y: titleY - 28, width: 56, height: 6,
+        content: "",
+        style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 3 },
+      });
+    } else if (variant === 2) {
+      // Vinheta: escuridão nas bordas, título centrado verticalmente
+      gradient = "radial-gradient(ellipse 130% 85% at 50% 50%, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.96) 100%)";
+      titleY = Math.round(H / 2 - 170);
+      titleSize = 86;
+      bodyY = Math.min(titleY + 310, H - 210);
+
+      // Linha accent centralizada acima do título
+      elements.push({
+        id: uuid(), type: "shape" as const,
+        x: Math.round(W / 2 - 36), y: titleY - 30, width: 72, height: 5,
+        content: "",
+        style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 3 },
+      });
+    } else {
+      // Clássico: gradiente forte de baixo para cima
+      gradient = "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.97) 28%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.1) 72%, rgba(0,0,0,0) 100%)";
+      titleY = H - 510;
+      bodyY = H - 192;
+    }
+
     // ── Title ─────────────────────────────────────────────
     elements.push({
       id: uuid(), type: "text" as const,
-      x: 60, y: H - 510, width: W - 120, height: 310,
+      x: titleX, y: titleY, width: titleW, height: 310,
       content: applyAccent(gs.title, accent),
-      style: { fontSize: 90, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: "center" as const, lineHeight: 1.0 },
+      style: { fontSize: titleSize, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: titleAlign, lineHeight: 1.0 },
     });
 
     // ── Body ──────────────────────────────────────────────
     elements.push({
       id: uuid(), type: "text" as const,
-      x: 80, y: H - 192, width: W - 160, height: 110,
+      x: 80, y: bodyY, width: W - 160, height: 110,
       content: isLast && gs.callToAction ? gs.callToAction : gs.body,
       style: { fontSize: 28, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.65)", textAlign: "center" as const, lineHeight: 1.4 },
     });
@@ -105,7 +164,9 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
       backgroundColor: "#0a0a0a",
       backgroundImageUrl: undefined,
       backgroundImageLoading: true,
-      backgroundGradient: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.97) 28%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.1) 72%, rgba(0,0,0,0) 100%)",
+      backgroundGradient: gradient,
+      backgroundPosition: LAYOUT_BG_POSITIONS[variant],
+      backgroundZoom: LAYOUT_BG_ZOOMS[variant],
       elements,
       width: W,
       height: H,
