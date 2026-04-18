@@ -3,7 +3,8 @@
 import { useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Slide, SlideElement } from "@/types";
-import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square, MoreVertical } from "lucide-react";
+import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square, MoreVertical, LayoutTemplate } from "lucide-react";
+import { v4 as uuid } from "uuid";
 
 interface Props {
   slide: Slide;
@@ -55,6 +56,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const [loadingFrames, setLoadingFrames] = useState<Set<string>>(new Set());
   const [framePendingId, setFramePendingId] = useState<string | null>(null);
   const [framePanId, setFramePanId] = useState<string | null>(null);
+  const [showLayoutPicker, setShowLayoutPicker] = useState(false);
   const dragRef = useRef<DragState>(null);
   const framePanRef = useRef<{ elementId: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
   const resizeRef = useRef<ResizeState>(null);
@@ -64,6 +66,75 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const containerRef = useRef<HTMLDivElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
   const frameFileInputRef = useRef<HTMLInputElement>(null);
+
+  const applyLayout = useCallback((variant: 0 | 1 | 2 | 3 | 4 | 5) => {
+    const W = slide.width, H = slide.height;
+    const texts = slide.elements
+      .filter((e) => e.type === "text")
+      .sort((a, b) => ((b.style as any)?.fontSize ?? 0) - ((a.style as any)?.fontSize ?? 0));
+    const titleEl = texts[0];
+    const bodyEl  = texts[1];
+    const titleText = titleEl?.content ?? "";
+    const bodyText  = bodyEl?.content  ?? "";
+    const titleStyle = titleEl?.style ?? { fontSize: 80, fontWeight: "bold", fontFamily: "sans-serif", color: "#ffffff", textAlign: "center", lineHeight: 1.05 };
+    const bodyStyle  = bodyEl?.style  ?? { fontSize: 28, fontWeight: "normal", fontFamily: "sans-serif", color: "rgba(255,255,255,0.72)", textAlign: "center", lineHeight: 1.45 };
+    const imgEl  = slide.elements.find((e) => e.type === "image");
+    const imgUrl = slide.backgroundImageUrl || (imgEl as any)?.src || null;
+
+    const useBg  = variant <= 1;
+    const elements: any[] = [];
+
+    let gradient = "";
+    let titleY: number, titleH = 280, bodyY: number, bodyH = 110;
+    let tAlign: "left" | "center" | "right" = "center";
+    let bAlign: "left" | "center" | "right" = "center";
+    let elImgId: string | undefined;
+
+    if (variant === 0) {
+      gradient = "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.97) 28%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.1) 72%, rgba(0,0,0,0) 100%)";
+      titleY = H - 510; bodyY = H - 192;
+    } else if (variant === 1) {
+      gradient = "linear-gradient(180deg, rgba(0,0,0,0.86) 0%, rgba(0,0,0,0.14) 30%, rgba(0,0,0,0.14) 55%, rgba(0,0,0,0.93) 100%)";
+      titleY = Math.round(H * 0.28); titleH = 300; tAlign = "left";
+      bodyY = Math.min(titleY + 310, H - 210);
+      elements.push({ id: uuid(), type: "shape" as const, x: 60, y: titleY - 28, width: 56, height: 6, content: "",
+        style: { fill: "#a855f7", stroke: "transparent", strokeWidth: 0, borderRadius: 3 } });
+    } else if (variant === 2) {
+      elImgId = uuid();
+      titleY = 110; tAlign = "left"; titleH = 230; bodyY = 360; bodyH = 130; bAlign = "left";
+      elements.push({ id: elImgId, type: "image" as const, x: 60, y: 510, width: W - 120, height: 660, src: imgUrl ?? undefined, imageObjectPositionY: 25 });
+    } else if (variant === 3) {
+      elImgId = uuid();
+      titleY = 110; tAlign = "left"; titleH = 210; bodyY = 340; bodyH = 110; bAlign = "left";
+      elements.push({ id: elImgId, type: "image" as const, x: 60, y: 470, width: W - 120, height: 700, src: imgUrl ?? undefined, imageObjectPositionY: 25 });
+    } else if (variant === 4) {
+      elImgId = uuid();
+      const sqSize = Math.round(W * 0.72); const sqX = Math.round((W - sqSize) / 2); const sqY = Math.round(H * 0.3);
+      titleY = 90; titleH = 200; bodyY = sqY + sqSize + 40; bodyH = 130;
+      elements.push({ id: elImgId, type: "image" as const, x: sqX, y: sqY, width: sqSize, height: sqSize, src: imgUrl ?? undefined, imageObjectPositionY: 50 });
+    } else {
+      elImgId = uuid();
+      const imgH = Math.round(H * 0.5);
+      titleY = imgH + 60; tAlign = "left"; titleH = 220; bodyY = titleY + 230; bodyH = 120; bAlign = "left";
+      elements.push({ id: elImgId, type: "image" as const, x: 0, y: 0, width: W, height: imgH, src: imgUrl ?? undefined, imageObjectPositionY: 40 });
+    }
+
+    elements.push({ id: uuid(), type: "text" as const, x: 60, y: titleY, width: W - 120, height: titleH,
+      content: titleText, style: { ...(titleStyle as any), textAlign: tAlign } });
+    if (bodyText) {
+      elements.push({ id: uuid(), type: "text" as const, x: 60, y: bodyY, width: W - 120, height: bodyH,
+        content: bodyText, style: { ...(bodyStyle as any), textAlign: bAlign } });
+    }
+
+    onUpdate({
+      ...slide,
+      backgroundImageUrl: useBg ? (imgUrl ?? undefined) : undefined,
+      backgroundGradient: useBg && gradient ? gradient : undefined,
+      elements,
+    });
+    setShowLayoutPicker(false);
+    closeBgCtx();
+  }, [slide, onUpdate]);
 
   const updateElement = useCallback((id: string, patch: Partial<SlideElement>) => {
     onUpdate({ ...slide, elements: slide.elements.map((el) => el.id === id ? { ...el, ...patch } : el) });
@@ -1211,6 +1282,12 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             </button>
           )}
 
+          {/* Modificar Layout */}
+          <button onClick={() => { setShowLayoutPicker(true); closeBgCtx(); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-purple-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            <LayoutTemplate size={15} /> Modificar layout
+          </button>
+
           {/* Fechar */}
           <button onClick={closeBgCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
             Fechar
@@ -1269,6 +1346,63 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       >
         <MoreVertical size={18} />
       </button>,
+      document.body
+    )}
+
+    {/* Layout picker portal */}
+    {showLayoutPicker && typeof window !== "undefined" && createPortal(
+      <div
+        className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center sm:p-6"
+        style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}
+        onClick={() => setShowLayoutPicker(false)}
+      >
+        <div
+          className="w-full sm:max-w-sm bg-[#111] border-t sm:border border-[#222] rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-2">
+            <LayoutTemplate size={18} className="text-purple-400" />
+            <span className="text-base font-bold text-white">Escolher layout</span>
+            <button onClick={() => setShowLayoutPicker(false)} className="ml-auto text-gray-500 hover:text-white transition-colors"><X size={16} /></button>
+          </div>
+          <p className="text-xs text-gray-500 -mt-2">O texto e imagem existentes serão redistribuídos no novo layout.</p>
+
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              { v: 0, label: "Clássico",    desc: "Texto na base, fundo total" },
+              { v: 1, label: "Cinemático",  desc: "Texto topo esq, fundo total" },
+              { v: 2, label: "Conteúdo",    desc: "Título topo, imagem base" },
+              { v: 3, label: "Misto",       desc: "Título grande, img grande" },
+              { v: 4, label: "Quadrado",    desc: "Img quadrada centralizada" },
+              { v: 5, label: "Topo",        desc: "Img topo, texto abaixo" },
+            ] as { v: 0|1|2|3|4|5; label: string; desc: string }[]).map(({ v, label, desc }) => (
+              <button
+                key={v}
+                onClick={() => applyLayout(v)}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[#222] bg-[#0a0a0a] hover:border-purple-500/50 hover:bg-purple-500/5 transition-all group"
+              >
+                {/* Mini visual preview */}
+                <div className="w-12 h-16 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] relative overflow-hidden">
+                  {v === 0 && (<><div className="absolute inset-0 bg-purple-500/20" /><div className="absolute bottom-0 inset-x-0 h-2/5 bg-black/60" /><div className="absolute bottom-2 inset-x-1.5 h-2 bg-white/40 rounded-sm" /><div className="absolute bottom-5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /></>)}
+                  {v === 1 && (<><div className="absolute inset-0 bg-purple-500/20" /><div className="absolute top-0 inset-x-0 h-2/5 bg-black/50" /><div className="absolute top-3 left-1.5 w-1 h-3 bg-purple-400/60 rounded-sm" /><div className="absolute top-3 left-3.5 right-1.5 h-2 bg-white/40 rounded-sm" /></>)}
+                  {v === 2 && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[#222]" /><div className="absolute top-2 inset-x-1.5 h-2 bg-white/40 rounded-sm" /><div className="absolute top-5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-purple-500/25 rounded-b-lg" /></>)}
+                  {v === 3 && (<><div className="absolute top-0 inset-x-0 h-1/3 bg-[#222]" /><div className="absolute top-2 inset-x-1.5 h-2.5 bg-white/40 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-2/3 bg-purple-500/25 rounded-b-lg" /></>)}
+                  {v === 4 && (<><div className="absolute top-0 inset-x-0 h-1/5 bg-[#222]" /><div className="absolute top-5 inset-x-2 bottom-5 bg-purple-500/30 rounded-md" /><div className="absolute bottom-1.5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /></>)}
+                  {v === 5 && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-purple-500/30" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#222]" /><div className="absolute bottom-4 inset-x-1.5 h-2 bg-white/40 rounded-sm" /><div className="absolute bottom-1.5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /></>)}
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-semibold text-gray-200 group-hover:text-white transition-colors">{label}</p>
+                  <p className="text-[9px] text-gray-600 leading-tight mt-0.5">{desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <button onClick={() => setShowLayoutPicker(false)} className="w-full py-2.5 rounded-xl border border-[#222] text-sm text-gray-500 hover:text-gray-300 transition-colors">
+            Cancelar
+          </button>
+        </div>
+      </div>,
       document.body
     )}
 
