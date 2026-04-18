@@ -29,6 +29,15 @@ const LAYOUT_BG_POSITIONS = [
 ];
 const LAYOUT_BG_ZOOMS = [100, 115];
 
+// Reduz fonte quando o título tem muitas palavras para evitar corte
+function adaptTitleSize(title: string, base: number): number {
+  const plain = title.replace(/<[^>]+>/g, "").replace(/\[|\]/g, "");
+  const words = plain.trim().split(/\s+/).length;
+  if (words <= 5) return base;
+  if (words <= 7) return Math.round(base * 0.88);
+  return Math.round(base * 0.76);
+}
+
 function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & { _imagePrompt: string; _searchQuery: string; _elementImageId?: string })[] {
   const W = SLIDE_W;
   const H = SLIDE_H;
@@ -106,11 +115,12 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
     }
 
     // ── Title ─────────────────────────────────────────────
+    const finalTitleSize = adaptTitleSize(gs.title, titleSize);
     elements.push({
       id: uuid(), type: "text" as const,
       x: 60, y: titleY, width: W - 120, height: titleH,
       content: applyAccent(gs.title, accent),
-      style: { fontSize: titleSize, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: titleAlign, lineHeight: 1.05 },
+      style: { fontSize: finalTitleSize, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: titleAlign, lineHeight: 1.05 },
     });
 
     // ── Body ──────────────────────────────────────────────

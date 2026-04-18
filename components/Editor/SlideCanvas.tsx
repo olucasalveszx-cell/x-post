@@ -12,7 +12,7 @@ interface Props {
   onSelectElement?: (el: SlideElement | null) => void;
 }
 
-type DragState = { elementId: string; startX: number; startY: number; origX: number; origY: number } | null;
+type DragState = { elementId: string; startX: number; startY: number; origX: number; origY: number; origW: number; origH: number } | null;
 type ResizeState = { elementId: string; startX: number; startY: number; origW: number; origH: number } | null;
 type CropState = { elementId: string; startX: number; startY: number; handle: string; origClip: { top: number; right: number; bottom: number; left: number } } | null;
 
@@ -90,14 +90,15 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     let dragging = false;
     const holdTimer = setTimeout(() => {
       dragging = true;
-      dragRef.current = { elementId: el.id, startX: e.clientX, startY: e.clientY, origX: el.x, origY: el.y };
+      dragRef.current = { elementId: el.id, startX: e.clientX, startY: e.clientY, origX: el.x, origY: el.y, origW: el.width, origH: el.height };
     }, 150);
 
     const onMove = (me: MouseEvent) => {
       if (!dragging || !dragRef.current) return;
-      updateElement(dragRef.current.elementId, {
-        x: dragRef.current.origX + (me.clientX - dragRef.current.startX) / scale,
-        y: dragRef.current.origY + (me.clientY - dragRef.current.startY) / scale,
+      const d = dragRef.current;
+      updateElement(d.elementId, {
+        x: Math.max(0, Math.min(slide.width  - d.origW, d.origX + (me.clientX - d.startX) / scale)),
+        y: Math.max(0, Math.min(slide.height - d.origH, d.origY + (me.clientY - d.startY) / scale)),
       });
     };
     const onUp = () => {
@@ -210,13 +211,14 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       const dy = t.clientY - startY;
       if (!dragging && Math.sqrt(dx * dx + dy * dy) > 12) {
         dragging = true;
-        dragRef.current = { elementId: el.id, startX, startY, origX: el.x, origY: el.y };
+        dragRef.current = { elementId: el.id, startX, startY, origX: el.x, origY: el.y, origW: el.width, origH: el.height };
       }
       if (dragging && dragRef.current) {
         te.preventDefault();
-        updateElement(dragRef.current.elementId, {
-          x: dragRef.current.origX + dx / scale,
-          y: dragRef.current.origY + dy / scale,
+        const d = dragRef.current;
+        updateElement(d.elementId, {
+          x: Math.max(0, Math.min(slide.width  - d.origW, d.origX + dx / scale)),
+          y: Math.max(0, Math.min(slide.height - d.origH, d.origY + dy / scale)),
         });
       }
     };
