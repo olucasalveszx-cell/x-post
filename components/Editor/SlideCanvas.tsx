@@ -573,6 +573,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               objectPosition: `${slide.backgroundPosition?.x ?? 50}% ${slide.backgroundPosition?.y ?? 50}%`,
               transform: slide.backgroundZoom && slide.backgroundZoom !== 100 ? `scale(${slide.backgroundZoom / 100})` : undefined,
               transformOrigin: `${slide.backgroundPosition?.x ?? 50}% ${slide.backgroundPosition?.y ?? 50}%`,
+              opacity: slide.backgroundOpacity ?? 1,
               clipPath: slide.backgroundCrop
                 ? `inset(${slide.backgroundCrop.top}% ${slide.backgroundCrop.right}% ${slide.backgroundCrop.bottom}% ${slide.backgroundCrop.left}%)`
                 : undefined,
@@ -1165,6 +1166,19 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             <ImageIcon size={15} className="text-brand-400" />
             <span className="text-sm font-semibold text-gray-300">Imagem de fundo</span>
           </div>
+
+          {/* Transparência — só quando tem imagem */}
+          {slide.backgroundImageUrl && (
+            <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-sm text-gray-400 flex items-center gap-1.5"><Blend size={14} /> Transparência</span>
+                <span className="text-sm text-white font-medium">{Math.round((1 - (slide.backgroundOpacity ?? 1)) * 100)}%</span>
+              </div>
+              <input type="range" min={0} max={100} value={Math.round((1 - (slide.backgroundOpacity ?? 1)) * 100)}
+                onChange={(e) => onUpdate({ ...slide, backgroundOpacity: 1 - Number(e.target.value) / 100 })}
+                className="w-full accent-brand-500" />
+            </div>
+          )}
 
           {/* Degradê — só quando tem imagem */}
           {slide.backgroundImageUrl && (

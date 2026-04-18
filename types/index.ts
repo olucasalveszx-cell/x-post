@@ -7,6 +7,7 @@ export interface Slide {
   backgroundCrop?: { top: number; right: number; bottom: number; left: number };
   backgroundPosition?: { x: number; y: number };
   backgroundZoom?: number;
+  backgroundOpacity?: number;
   elements: SlideElement[];
   width: number;
   height: number;

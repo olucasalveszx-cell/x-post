@@ -123,7 +123,9 @@ export async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
       const scale = Math.max(W / img.width, H / img.height);
       const sw = img.width * scale;
       const sh = img.height * scale;
+      ctx.globalAlpha = slide.backgroundOpacity ?? 1;
       ctx.drawImage(img, (W - sw) / 2, 0, sw, sh);
+      ctx.globalAlpha = 1;
     } catch {}
     const gradCss = slide.backgroundGradient
       ?? "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.75) 35%, rgba(0,0,0,0.35) 65%, rgba(0,0,0,0.15) 100%)";
