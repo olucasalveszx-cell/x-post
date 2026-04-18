@@ -6,59 +6,48 @@ export async function GET() {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return NextResponse.json({ error: "GEMINI_API_KEY não configurada" }, { status: 500 });
 
-  // Testa cada modelo individualmente com prompt simples
-  const MODELS = [
-    "gemini-2.0-flash-preview-image-generation",
-    "gemini-2.0-flash-exp-image-generation",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-001",
-    "gemini-2.5-flash-preview-04-17",
-  ];
+  // Lista todos os modelos disponíveis na chave
+  const listRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models?key=${key}&pageSize=100`,
+    { signal: AbortSignal.timeout(10000) }
+  );
+  const listData = await listRes.json();
 
-  const results: Record<string, string> = {};
-
-  for (const model of MODELS) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: "Generate a simple red circle image" }] }],
-          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-        }),
-        signal: AbortSignal.timeout(8000),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        results[model] = `HTTP ${res.status}: ${data.error?.message ?? "erro desconhecido"}`;
-        continue;
-      }
-      const parts = data.candidates?.[0]?.content?.parts ?? [];
-      const hasImage = parts.some((p: any) => p.inlineData);
-      results[model] = hasImage ? "✅ OK — gerou imagem" : `⚠️ sem imagem na resposta (${parts.length} parts)`;
-    } catch (e: any) {
-      results[model] = `❌ ${e.message}`;
-    }
+  if (!listRes.ok) {
+    return NextResponse.json({ error: listData.error?.message ?? "Erro ao listar modelos", keyPrefix: key.slice(0, 8) + "..." }, { status: 500 });
   }
 
-  // Testa também Imagen 3
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${key}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        instances: [{ prompt: "a red circle" }],
-        parameters: { sampleCount: 1, aspectRatio: "3:4" },
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
-    const data = await res.json();
-    results["imagen-3.0-generate-002"] = res.ok ? "✅ OK" : `HTTP ${res.status}: ${data.error?.message}`;
-  } catch (e: any) {
-    results["imagen-3.0-generate-002"] = `❌ ${e.message}`;
-  }
+  const models: any[] = listData.models ?? [];
 
-  return NextResponse.json({ results, keyPrefix: key.slice(0, 8) + "..." });
+  // Filtra apenas os que suportam geração de imagem
+  const imageModels = models
+    .filter((m: any) =>
+      m.supportedGenerationMethods?.includes("generateContent") ||
+      m.supportedGenerationMethods?.includes("predict")
+    )
+    .filter((m: any) =>
+      m.name?.toLowerCase().includes("image") ||
+      m.name?.toLowerCase().includes("imagen") ||
+      m.displayName?.toLowerCase().includes("image") ||
+      m.outputTokenLimit === 0 // modelos de imagem geralmente não têm tokens de saída
+    )
+    .map((m: any) => ({
+      name: m.name,
+      displayName: m.displayName,
+      methods: m.supportedGenerationMethods,
+    }));
+
+  // Todos os modelos disponíveis (resumido)
+  const allModels = models.map((m: any) => ({
+    name: m.name,
+    displayName: m.displayName,
+    methods: m.supportedGenerationMethods,
+  }));
+
+  return NextResponse.json({
+    keyPrefix: key.slice(0, 8) + "...",
+    totalModels: models.length,
+    imageModels,
+    allModels,
+  });
 }
