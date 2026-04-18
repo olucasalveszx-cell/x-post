@@ -18,6 +18,16 @@ interface Props {
 const SLIDE_W = 1080;
 const SLIDE_H = 1350;
 
+/* ── Selos de oferta ── */
+const BADGES = [
+  { label: "🔥 SALE",             title: "SALE",               sub: "Promoção imperdível" },
+  { label: "🚚 Frete Grátis",     title: "FRETE GRÁTIS",       sub: "Compre agora" },
+  { label: "⚡ 50% OFF",          title: "50% OFF",             sub: "Oferta por tempo limitado" },
+  { label: "🆕 Lançamento",       title: "LANÇAMENTO",          sub: "Chegou o novo" },
+  { label: "⏰ Últimas unidades", title: "ÚLTIMAS UNIDADES",    sub: "Corre, acabando!" },
+  { label: "💎 Exclusivo",        title: "EXCLUSIVO",           sub: "Edição limitada" },
+] as const;
+
 /* ── Presets de cor para flyer ── */
 const PRESETS = [
   { name: "Teal",   bg: "linear-gradient(135deg,#00C9FF 0%,#00B894 100%)", accent: "#FFB300", bar: "#005f4b" },
@@ -73,6 +83,10 @@ export default function PromoPanel({ onGenerate }: Props) {
   /* ── Status (flyer IA) ── */
   const [flyerStatus, setFlyerStatus] = useState<"idle" | "generating" | "done" | "error">("idle");
   const [flyerError, setFlyerError] = useState("");
+
+  /* ── 3 variações ── */
+  const [flyerVariations, setFlyerVariations] = useState<Array<string | null>>([]);
+  const [variationsStatus, setVariationsStatus] = useState<"idle" | "generating" | "done" | "error">("idle");
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -354,6 +368,56 @@ export default function PromoPanel({ onGenerate }: Props) {
     return withImages;
   };
 
+  const buildFlyerBody = (preset: number) => {
+    const body: Record<string, any> = {
+      productName, price, promoTitle, promoSubtitle,
+      colorPreset: preset, website, instagram, phone,
+      customerId, activationToken,
+    };
+    if (photoBase64 && photoMime) {
+      body.productPhotoBase64 = photoBase64;
+      body.productPhotoMime = photoMime;
+    }
+    return body;
+  };
+
+  const handleGenerateVariations = async () => {
+    if (!promoTitle.trim() && !productName.trim()) return;
+    if (!session?.user) { setLoginOpen(true); return; }
+    setVariationsStatus("generating");
+    setFlyerVariations([null, null, null]);
+
+    const presets = [colorPreset, (colorPreset + 2) % 6, (colorPreset + 4) % 6];
+    const results = await Promise.all(presets.map(async (preset) => {
+      try {
+        const res = await fetch("/api/generate-flyer-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildFlyerBody(preset)),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Erro");
+        return data.imageUrl as string;
+      } catch { return null; }
+    }));
+    setFlyerVariations(results);
+    setVariationsStatus("done");
+  };
+
+  const selectVariation = (url: string) => {
+    onGenerate([{
+      id: uuid(),
+      backgroundColor: "#000000",
+      backgroundImageUrl: url,
+      backgroundImageLoading: false,
+      elements: [],
+      width: 1080,
+      height: 1080,
+    }]);
+    setVariationsStatus("idle");
+    setFlyerVariations([]);
+  };
+
   /* Gerar flyer com IA (Imagen3 / Gemini) */
   const handleGenerateFlyerAI = async () => {
     if (!promoTitle.trim() && !productName.trim()) return;
@@ -363,20 +427,10 @@ export default function PromoPanel({ onGenerate }: Props) {
     setFlyerError("");
 
     try {
-      const body: Record<string, any> = {
-        productName, price, promoTitle, promoSubtitle,
-        colorPreset, website, instagram, phone,
-        customerId, activationToken,
-      };
-      if (photoBase64 && photoMime) {
-        body.productPhotoBase64 = photoBase64;
-        body.productPhotoMime = photoMime;
-      }
-
       const res = await fetch("/api/generate-flyer-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(buildFlyerBody(colorPreset)),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erro ao gerar imagem");
@@ -553,6 +607,28 @@ export default function PromoPanel({ onGenerate }: Props) {
           {/* Foto */}
           {photoSection}
 
+          {/* Selos rápidos */}
+          <div>
+            <label className="text-sm text-gray-400 mb-2 block flex items-center gap-1.5">
+              <Zap size={13} className="text-yellow-400" /> Selos de oferta
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {BADGES.map((b) => (
+                <button
+                  key={b.label}
+                  onClick={() => { setPromoTitle(b.title); setPromoSubtitle(b.sub); }}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                    promoTitle === b.title
+                      ? "bg-brand-600 border-brand-500 text-white"
+                      : "bg-[#0f0f0f] border-[#1e1e1e] text-gray-400 hover:border-brand-500/50 hover:text-gray-200"
+                  }`}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Subtítulo */}
           <div>
             <label className="text-sm text-gray-400 mb-1 block">Texto acima do título</label>
@@ -636,7 +712,7 @@ export default function PromoPanel({ onGenerate }: Props) {
 
           {flyerStatus === "generating" && (
             <p className="text-center text-[11px] text-gray-500 -mt-2">
-              Imagen3 / Gemini gerando seu flyer... pode levar ~20s
+              Gemini / Imagen4 gerando... ~20s
             </p>
           )}
 
@@ -649,6 +725,58 @@ export default function PromoPanel({ onGenerate }: Props) {
           {flyerStatus === "error" && (
             <div className="flex items-start gap-2 bg-red-900/30 border border-red-800/50 rounded-lg p-3 text-xs text-red-300">
               <AlertCircle size={13} className="mt-0.5 shrink-0" /> {flyerError}
+            </div>
+          )}
+
+          {/* Gerar 3 variações */}
+          <button
+            onClick={handleGenerateVariations}
+            disabled={(!promoTitle.trim() && !productName.trim()) || variationsStatus === "generating"}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-brand-500/40 bg-brand-500/10 hover:bg-brand-500/20 font-medium text-sm text-brand-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {variationsStatus === "generating"
+              ? <><Loader2 size={15} className="animate-spin" /> Gerando 3 versões...</>
+              : <><Layers size={15} /> Gerar 3 versões (escolha a melhor)</>}
+          </button>
+
+          {variationsStatus === "generating" && (
+            <p className="text-center text-[11px] text-gray-500 -mt-2">
+              3 paletas diferentes em paralelo... pode levar ~30s
+            </p>
+          )}
+
+          {/* Grid de variações */}
+          {variationsStatus === "done" && flyerVariations.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-400 mb-2">Escolha uma versão:</p>
+              <div className="grid grid-cols-3 gap-2">
+                {flyerVariations.map((url, i) => (
+                  <div key={i} className="flex flex-col gap-1">
+                    {url ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Variação ${i + 1}`} className="w-full aspect-square object-cover rounded-lg border border-[#2a2a2a]" />
+                        <button
+                          onClick={() => selectVariation(url)}
+                          className="py-1 rounded-md bg-brand-600 hover:bg-brand-700 text-[11px] font-medium text-white transition-colors"
+                        >
+                          Usar esta
+                        </button>
+                      </>
+                    ) : (
+                      <div className="w-full aspect-square rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center">
+                        <AlertCircle size={16} className="text-gray-600" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => { setVariationsStatus("idle"); setFlyerVariations([]); }}
+                className="mt-2 text-[11px] text-gray-600 hover:text-gray-400 underline w-full text-center"
+              >
+                Fechar variações
+              </button>
             </div>
           )}
 
