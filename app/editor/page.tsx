@@ -350,8 +350,13 @@ export default function EditorPage() {
           <Link href="/" className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-colors">
             <ArrowLeft size={18} />
           </Link>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="XPost Zone" className="h-8 md:h-11 w-auto object-contain" />
+          <div className="flex items-center gap-1.5 select-none">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-[15px] text-white"
+              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 0 10px rgba(124,58,237,0.4)" }}>
+              X
+            </div>
+            <span className="hidden sm:block text-[18px] font-black tracking-tight text-white leading-none">xpost</span>
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5">
