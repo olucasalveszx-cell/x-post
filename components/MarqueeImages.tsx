@@ -27,7 +27,8 @@ const ROW2 = [
 ];
 
 function imgUrl(id: string) {
-  return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=400&h=530&q=85`;
+  // Picsum Photos: imagens estáveis, nunca expiram, mesmo seed = mesma foto
+  return `https://picsum.photos/seed/${id}/400/530`;
 }
 
 function SlideCard({ slide, idx }: { slide: typeof ROW1[0]; idx: number }) {

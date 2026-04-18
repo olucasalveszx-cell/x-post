@@ -140,20 +140,34 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
   };
 
   /* ── draft actions ── */
+  // Remove data: URLs para evitar estourar o limite de 4MB do body da API
+  const stripDataUrls = (slides: Slide[]) => slides.map((s) => ({
+    ...s,
+    backgroundImageUrl: s.backgroundImageUrl?.startsWith("data:") ? undefined : s.backgroundImageUrl,
+    elements: s.elements.map((el) => ({
+      ...el,
+      src: el.src?.startsWith("data:") ? undefined : el.src,
+      frameImageUrl: el.frameImageUrl?.startsWith("data:") ? undefined : el.frameImageUrl,
+    })),
+  }));
+
   const saveDraft = async () => {
     if (!session?.user?.email) return;
     setSaving(true);
     try {
       const id = uuid();
       const name = draftName.trim() || `Rascunho ${new Date().toLocaleDateString("pt-BR")}`;
-      await fetch("/api/drafts", {
+      const res = await fetch("/api/drafts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, name, slides: currentSlides }),
+        body: JSON.stringify({ id, name, slides: stripDataUrls(currentSlides) }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setDraftName(""); setShowNameInput(false);
       await loadDrafts();
-    } catch {}
+    } catch (err: any) {
+      alert(`Erro ao salvar rascunho: ${err.message ?? "tente novamente"}`);
+    }
     setSaving(false);
   };
 

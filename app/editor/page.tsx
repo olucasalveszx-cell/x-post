@@ -29,6 +29,23 @@ type Format = typeof FORMATS[number];
 
 const AUTO_SAVE_KEY = "xpz_autosave_projects";
 
+// Remove data: URLs antes de salvar (base64 de imagens Gemini são >1MB cada
+// e estourariam o limite de localStorage de 5MB silenciosamente)
+function stripDataUrls(projects: Project[]): Project[] {
+  return projects.map((p) => ({
+    ...p,
+    slides: p.slides.map((s) => ({
+      ...s,
+      backgroundImageUrl: s.backgroundImageUrl?.startsWith("data:") ? undefined : s.backgroundImageUrl,
+      elements: s.elements.map((el) => ({
+        ...el,
+        src: el.src?.startsWith("data:") ? undefined : el.src,
+        frameImageUrl: el.frameImageUrl?.startsWith("data:") ? undefined : el.frameImageUrl,
+      })),
+    })),
+  }));
+}
+
 export default function EditorPage() {
   const [format, setFormat] = useState<Format>(FORMATS[1]);
   const SLIDE_W = format.width;
@@ -159,7 +176,7 @@ export default function EditorPage() {
     if (!hasContent) return;
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
-      try { localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(projects)); } catch {}
+      try { localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(stripDataUrls(projects))); } catch {}
     }, 1500);
   }, [projects]);
 
@@ -396,7 +413,7 @@ export default function EditorPage() {
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-brand-600/20 border-b border-brand-500/30 text-sm text-brand-300 shrink-0">
           <div className="flex items-center gap-2">
             <RotateCcw size={14} className="shrink-0" />
-            <span>Você tem projetos não salvos. Deseja restaurá-los?</span>
+            <span>Projetos recuperados. Imagens IA precisarão ser regeradas.</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={restoreAutosave} className="px-3 py-1 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium transition-colors">Restaurar</button>
