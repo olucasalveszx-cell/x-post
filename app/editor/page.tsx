@@ -16,6 +16,7 @@ import PublishModal from "@/components/Actions/PublishModal";
 import AIAssistant from "@/components/AIAssistant";
 import SubscriptionGate from "@/components/SubscriptionGate";
 import ProfilePickerModal, { UserProfile, getStoredProfile, saveProfile, PROFILE_STORAGE_KEY } from "@/components/Editor/ProfilePickerModal";
+import { autosaveWrite, autosaveRead, autosaveClear } from "@/lib/autosave-db";
 
 interface IGAccount { token: string; accountId: string; username: string; }
 
@@ -27,24 +28,6 @@ const FORMATS = [
 ] as const;
 type Format = typeof FORMATS[number];
 
-const AUTO_SAVE_KEY = "xpz_autosave_projects";
-
-// Remove data: URLs antes de salvar (base64 de imagens Gemini são >1MB cada
-// e estourariam o limite de localStorage de 5MB silenciosamente)
-function stripDataUrls(projects: Project[]): Project[] {
-  return projects.map((p) => ({
-    ...p,
-    slides: p.slides.map((s) => ({
-      ...s,
-      backgroundImageUrl: s.backgroundImageUrl?.startsWith("data:") ? undefined : s.backgroundImageUrl,
-      elements: s.elements.map((el) => ({
-        ...el,
-        src: el.src?.startsWith("data:") ? undefined : el.src,
-        frameImageUrl: el.frameImageUrl?.startsWith("data:") ? undefined : el.frameImageUrl,
-      })),
-    })),
-  }));
-}
 
 export default function EditorPage() {
   const [format, setFormat] = useState<Format>(FORMATS[1]);
@@ -169,42 +152,40 @@ export default function EditorPage() {
     else { setTimeout(() => setShowProfilePicker(true), 800); }
   }, []);
 
-  // ── Auto-save ─────────────────────────────────────────────────
+  // ── Auto-save (IndexedDB — sem limite de tamanho, preserva imagens) ──
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const hasContent = projects.some((p) => p.slides.some((s) => s.elements.length > 0 || s.backgroundImageUrl));
     if (!hasContent) return;
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
-      try { localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(stripDataUrls(projects))); } catch {}
+      autosaveWrite(projects).catch(() => {});
     }, 1500);
   }, [projects]);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(AUTO_SAVE_KEY);
+    autosaveRead().then((saved) => {
       if (!saved) return;
-      const parsed: Project[] = JSON.parse(saved);
+      const parsed = saved as Project[];
       if (parsed.some((p) => p.slides.some((s) => s.elements.length > 0 || s.backgroundImageUrl))) {
         setShowRestoreBanner(true);
       }
-    } catch {}
+    }).catch(() => {});
   }, []);
 
   const restoreAutosave = () => {
-    try {
-      const saved = localStorage.getItem(AUTO_SAVE_KEY);
+    autosaveRead().then((saved) => {
       if (!saved) return;
-      const parsed: Project[] = JSON.parse(saved);
+      const parsed = saved as Project[];
       setProjects(parsed);
       setActiveProjectId(parsed[0].id);
       setCurrentIndex(0);
-    } catch {}
+    }).catch(() => {});
     setShowRestoreBanner(false);
   };
 
   const dismissAutosave = () => {
-    localStorage.removeItem(AUTO_SAVE_KEY);
+    autosaveClear().catch(() => {});
     setShowRestoreBanner(false);
   };
 
@@ -426,7 +407,7 @@ export default function EditorPage() {
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-brand-600/20 border-b border-brand-500/30 text-sm text-brand-300 shrink-0">
           <div className="flex items-center gap-2">
             <RotateCcw size={14} className="shrink-0" />
-            <span>Projetos recuperados. Imagens IA precisarão ser regeradas.</span>
+            <span>Você tem projetos salvos. Deseja restaurar?</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={restoreAutosave} className="px-3 py-1 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium transition-colors">Restaurar</button>
