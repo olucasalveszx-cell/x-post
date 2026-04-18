@@ -10,23 +10,23 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export const maxDuration = 60;
 
-const anthropic = new Anthropic();
-
 async function enhancePrompt(raw: string): Promise<string> {
   try {
-    const msg = await anthropic.messages.create({
+    const anthropic = new Anthropic();
+    const timeout = new Promise<string>((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), 4000)
+    );
+    const call = anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 120,
+      max_tokens: 100,
       messages: [{
         role: "user",
-        content: `You are an expert at writing AI image generation prompts. Transform the input below into a vivid, cinematic English description optimized for AI image generation. If not in English, translate it first. Add specific visual details: lighting quality, mood, composition, color palette, atmosphere. Keep it under 55 words. Return ONLY the enhanced prompt, nothing else.
-
-Input: "${raw}"`,
+        content: `Transform this into a vivid cinematic English image prompt (max 50 words). Translate if needed. Add lighting, mood, composition details. Return ONLY the prompt.\n\nInput: "${raw}"`,
       }],
-    });
-    const enhanced = ((msg.content[0] as any).text ?? "").trim();
-    if (enhanced) console.log(`[image] prompt enhanced: "${raw}" → "${enhanced}"`);
-    return enhanced || raw;
+    }).then((msg) => ((msg.content[0] as any).text ?? "").trim() || raw);
+    const enhanced = await Promise.race([call, timeout]);
+    console.log(`[image] prompt: "${raw}" → "${enhanced}"`);
+    return enhanced;
   } catch {
     return raw;
   }
@@ -52,9 +52,9 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   const fullPrompt = buildPrompt(prompt, style);
 
   const MODELS = [
-    "gemini-3.1-flash-image-preview",
     "gemini-2.0-flash-preview-image-generation",
     "gemini-2.0-flash-exp-image-generation",
+    "gemini-2.0-flash-thinking-exp-image-generation",
   ];
 
   let lastError = "";
@@ -68,7 +68,7 @@ async function fromGemini(prompt: string, style: ImageStyle) {
           contents: [{ parts: [{ text: fullPrompt }] }],
           generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
         }),
-        signal: AbortSignal.timeout(40000),
+        signal: AbortSignal.timeout(18000),
       });
 
       const data = await res.json();
@@ -294,12 +294,14 @@ export async function POST(req: NextRequest) {
   const style: ImageStyle = (imageStyle === "foto_real") ? "foto_real" : "gemini";
   const hasReference = !!(referenceImageBase64 && referenceImageMime);
 
-  const enhancedPrompt = await enhancePrompt(prompt);
+  // Rodam em paralelo para economizar tempo
+  const [enhancedPrompt, session] = await Promise.all([
+    enhancePrompt(prompt),
+    getServerSession(authOptions),
+  ]);
 
   // ── Verificar plano ───────────────────────────────────────────
   let isPro = false;
-
-  const session = await getServerSession(authOptions);
   const email = session?.user?.email;
   if (email) {
     const kirvano = await isEmailActive(email).catch(() => false);
