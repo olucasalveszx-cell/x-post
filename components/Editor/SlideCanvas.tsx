@@ -125,7 +125,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       const newH = Math.max(40, resizeRef.current.origH + (me.clientY - resizeRef.current.startY) / scale);
       const patch: Partial<SlideElement> = { width: newW, height: newH };
       if (origFontSize > 0) {
-        const ratio = newH / resizeRef.current.origH;
+        const ratio = Math.sqrt(newW * newH) / Math.sqrt(resizeRef.current.origW * resizeRef.current.origH);
         patch.style = { ...(el.style as any), fontSize: Math.max(8, Math.round(origFontSize * ratio)) };
       }
       updateElement(resizeRef.current.elementId, patch);
@@ -175,6 +175,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       const startDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
       const origW = el.width;
       const origH = el.height;
+      const origFontSize = el.type === "text" ? ((el.style as any)?.fontSize ?? 0) : 0;
 
       const onMove = (te: TouchEvent) => {
         if (te.touches.length < 2) return;
@@ -183,10 +184,14 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         const b = te.touches[1];
         const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
         const ratio = dist / startDist;
-        updateElement(el.id, {
+        const patch: Partial<SlideElement> = {
           width: Math.max(60, origW * ratio),
           height: Math.max(40, origH * ratio),
-        });
+        };
+        if (origFontSize > 0) {
+          patch.style = { ...(el.style as any), fontSize: Math.max(8, Math.round(origFontSize * ratio)) };
+        }
+        updateElement(el.id, patch);
       };
       const onEnd = () => {
         window.removeEventListener("touchmove", onMove);
@@ -248,7 +253,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       const newH = Math.max(40, resizeRef.current.origH + (t.clientY - resizeRef.current.startY) / scale);
       const patch: Partial<SlideElement> = { width: newW, height: newH };
       if (origFontSize > 0) {
-        const ratio = newH / resizeRef.current.origH;
+        const ratio = Math.sqrt(newW * newH) / Math.sqrt(resizeRef.current.origW * resizeRef.current.origH);
         patch.style = { ...(el.style as any), fontSize: Math.max(8, Math.round(origFontSize * ratio)) };
       }
       updateElement(resizeRef.current.elementId, patch);
