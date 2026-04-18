@@ -28,6 +28,7 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   const fullPrompt = buildPrompt(prompt, style);
 
   const MODELS = [
+    "gemini-3.1-flash-image-preview",
     "gemini-2.0-flash-preview-image-generation",
     "gemini-2.0-flash-exp-image-generation",
   ];
@@ -283,17 +284,17 @@ export async function POST(req: NextRequest) {
   if (!isPro && customerId) isPro = await hasActiveSubscription(customerId);
   if (!isPro && activationToken) { const { valid } = verifyToken(activationToken); isPro = valid; }
 
-  // ── Plano gratuito: OpenRouter → Gemini → Pexels ────────────
+  // ── Plano gratuito: Gemini 3.1 → OpenRouter → Pexels ────────
   if (!isPro) {
-    try {
-      return NextResponse.json({ ...await fromOpenRouter(prompt, style), plan: "free" });
-    } catch (e: any) {
-      console.error("[image] OpenRouter free falhou:", e.message);
-    }
     try {
       return NextResponse.json({ ...await fromGemini(prompt, style), plan: "free" });
     } catch (e: any) {
       console.error("[image] Gemini free falhou:", e.message);
+    }
+    try {
+      return NextResponse.json({ ...await fromOpenRouter(prompt, style), plan: "free" });
+    } catch (e: any) {
+      console.error("[image] OpenRouter free falhou:", e.message);
     }
     try {
       return NextResponse.json({ ...await fromPexels(prompt), plan: "free_fallback" });
@@ -302,15 +303,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Plano Pro: OpenRouter → GeminiRef → Imagen4 → Imagen3 → Gemini → Pexels
+  // ── Plano Pro: Gemini 3.1 → GeminiRef → Imagen4 → Imagen3 → OpenRouter → Pexels
   const errors: string[] = [];
 
-  // OpenRouter como principal
+  // Gemini 3.1 como principal
   try {
-    return NextResponse.json({ ...await fromOpenRouter(prompt, style), plan: "pro" });
+    return NextResponse.json({ ...await fromGemini(prompt, style), plan: "pro" });
   } catch (e: any) {
-    errors.push(`OpenRouter: ${e.message}`);
-    console.error("[image] OpenRouter pro falhou:", e.message);
+    errors.push(`Gemini: ${e.message}`);
+    console.error("[image] Gemini pro falhou:", e.message);
   }
 
   // Com imagem de referência → Gemini multimodal
@@ -337,10 +338,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    return NextResponse.json({ ...await fromGemini(prompt, style), plan: "pro" });
+    return NextResponse.json({ ...await fromOpenRouter(prompt, style), plan: "pro" });
   } catch (e: any) {
-    errors.push(`Gemini: ${e.message}`);
-    console.error("[image] Gemini falhou:", e.message);
+    errors.push(`OpenRouter: ${e.message}`);
+    console.error("[image] OpenRouter pro falhou:", e.message);
   }
 
   try {
