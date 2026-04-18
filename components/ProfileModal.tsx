@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { X, Download, Trash2, Loader2, ImageIcon, Layers, RefreshCw } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
+import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard } from "lucide-react";
+import Link from "next/link";
 
 interface HistoryEntry {
   id: string;
@@ -27,10 +29,12 @@ function fmt(iso: string) {
 }
 
 export default function ProfileModal({ open, onClose }: Props) {
-  const [tab, setTab] = useState<"history" | "images">("history");
+  const { data: session } = useSession();
+  const [tab, setTab]         = useState<"history" | "images">("history");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [images,  setImages]  = useState<ImageEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -45,7 +49,11 @@ export default function ProfileModal({ open, onClose }: Props) {
     }
   }, []);
 
-  useEffect(() => { if (open) load(); }, [open, load]);
+  useEffect(() => {
+    if (!open) return;
+    load();
+    fetch("/api/admin/me").then(r => r.json()).then(d => setIsAdmin(!!d.isAdmin)).catch(() => {});
+  }, [open, load]);
 
   if (!open) return null;
 
@@ -61,9 +69,16 @@ export default function ProfileModal({ open, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e] shrink-0">
-          <p className="font-bold text-sm text-white">Meu Perfil</p>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[#1e1e1e] shrink-0">
+          {session?.user?.image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={session.user.image} alt="" className="w-8 h-8 rounded-full border border-white/10 shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-sm text-white truncate">{session?.user?.name ?? "Meu Perfil"}</p>
+            <p className="text-[10px] text-gray-500 truncate">{session?.user?.email}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors shrink-0">
             <X size={18} />
           </button>
         </div>
@@ -106,7 +121,6 @@ export default function ProfileModal({ open, onClose }: Props) {
                       key={item.id}
                       className="rounded-xl overflow-hidden border border-[#1e1e1e] bg-[#141414] flex flex-col"
                     >
-                      {/* Cover */}
                       <div className="relative aspect-[4/5] bg-[#111]">
                         {item.coverUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -121,7 +135,6 @@ export default function ProfileModal({ open, onClose }: Props) {
                           {item.slideCount} slide{item.slideCount !== 1 ? "s" : ""}
                         </div>
                       </div>
-                      {/* Info */}
                       <div className="px-2.5 py-2 flex flex-col gap-1">
                         <p className="text-xs font-semibold text-white truncate">{item.title}</p>
                         <p className="text-[10px] text-gray-600">{fmt(item.createdAt)}</p>
@@ -179,12 +192,27 @@ export default function ProfileModal({ open, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#1e1e1e] shrink-0 flex justify-between items-center">
-          <p className="text-[10px] text-gray-600">
+        <div className="px-5 py-3 border-t border-[#1e1e1e] shrink-0 flex items-center gap-3">
+          <p className="text-[10px] text-gray-600 flex-1">
             {tab === "history" ? `${history.length}/30 carrosséis` : `${images.length}/100 imagens`}
           </p>
           <button onClick={load} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors">
-            <RefreshCw size={12} /> Atualizar
+            <RefreshCw size={12} />
+          </button>
+          {isAdmin && (
+            <Link
+              href="/admin"
+              onClick={onClose}
+              className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 font-semibold transition-colors border border-purple-500/30 hover:border-purple-500/60 px-2.5 py-1.5 rounded-lg"
+            >
+              <LayoutDashboard size={13} /> Dashboard
+            </Link>
+          )}
+          <button
+            onClick={() => signOut()}
+            className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors border border-red-500/20 hover:border-red-500/40 px-2.5 py-1.5 rounded-lg"
+          >
+            <LogOut size={13} /> Sair
           </button>
         </div>
       </div>
