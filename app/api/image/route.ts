@@ -6,8 +6,31 @@ import { verifyToken } from "@/lib/activation";
 import { isEmailActive } from "@/lib/kv";
 import { stripe } from "@/lib/stripe";
 import { redisIncr } from "@/lib/redis";
+import Anthropic from "@anthropic-ai/sdk";
 
 export const maxDuration = 60;
+
+const anthropic = new Anthropic();
+
+async function enhancePrompt(raw: string): Promise<string> {
+  try {
+    const msg = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 120,
+      messages: [{
+        role: "user",
+        content: `You are an expert at writing AI image generation prompts. Transform the input below into a vivid, cinematic English description optimized for AI image generation. If not in English, translate it first. Add specific visual details: lighting quality, mood, composition, color palette, atmosphere. Keep it under 55 words. Return ONLY the enhanced prompt, nothing else.
+
+Input: "${raw}"`,
+      }],
+    });
+    const enhanced = ((msg.content[0] as any).text ?? "").trim();
+    if (enhanced) console.log(`[image] prompt enhanced: "${raw}" → "${enhanced}"`);
+    return enhanced || raw;
+  } catch {
+    return raw;
+  }
+}
 
 type ImageStyle = "gemini" | "foto_real";
 
@@ -271,6 +294,8 @@ export async function POST(req: NextRequest) {
   const style: ImageStyle = (imageStyle === "foto_real") ? "foto_real" : "gemini";
   const hasReference = !!(referenceImageBase64 && referenceImageMime);
 
+  const enhancedPrompt = await enhancePrompt(prompt);
+
   // ── Verificar plano ───────────────────────────────────────────
   let isPro = false;
 
@@ -291,17 +316,17 @@ export async function POST(req: NextRequest) {
   // ── Plano gratuito: Gemini 3.1 → OpenRouter → Pexels ────────
   if (!isPro) {
     try {
-      return NextResponse.json({ ...await fromGemini(prompt, style), plan: "free" });
+      return NextResponse.json({ ...await fromGemini(enhancedPrompt, style), plan: "free" });
     } catch (e: any) {
       console.error("[image] Gemini free falhou:", e.message);
     }
     try {
-      return NextResponse.json({ ...await fromOpenRouter(prompt, style), plan: "free" });
+      return NextResponse.json({ ...await fromOpenRouter(enhancedPrompt, style), plan: "free" });
     } catch (e: any) {
       console.error("[image] OpenRouter free falhou:", e.message);
     }
     try {
-      return NextResponse.json({ ...await fromPexels(prompt), plan: "free_fallback" });
+      return NextResponse.json({ ...await fromPexels(enhancedPrompt), plan: "free_fallback" });
     } catch (e: any) {
       return NextResponse.json({ error: e.message }, { status: 500 });
     }
@@ -310,46 +335,44 @@ export async function POST(req: NextRequest) {
   // ── Plano Pro: Gemini 3.1 → GeminiRef → Imagen4 → Imagen3 → OpenRouter → Pexels
   const errors: string[] = [];
 
-  // Gemini 3.1 como principal
   try {
-    return NextResponse.json({ ...await fromGemini(prompt, style), plan: "pro" });
+    return NextResponse.json({ ...await fromGemini(enhancedPrompt, style), plan: "pro" });
   } catch (e: any) {
     errors.push(`Gemini: ${e.message}`);
     console.error("[image] Gemini pro falhou:", e.message);
   }
 
-  // Com imagem de referência → Gemini multimodal
   if (hasReference) {
     try {
-      return NextResponse.json({ ...await fromGeminiWithReference(prompt, style, referenceImageBase64, referenceImageMime), plan: "pro_ref" });
+      return NextResponse.json({ ...await fromGeminiWithReference(enhancedPrompt, style, referenceImageBase64, referenceImageMime), plan: "pro_ref" });
     } catch (e: any) {
       errors.push(`GeminiRef: ${e.message}`);
     }
   }
 
   try {
-    return NextResponse.json({ ...await fromImagen4(prompt, style), plan: "pro" });
+    return NextResponse.json({ ...await fromImagen4(enhancedPrompt, style), plan: "pro" });
   } catch (e: any) {
     errors.push(`Imagen4: ${e.message}`);
     console.error("[image] Imagen4 falhou:", e.message);
   }
 
   try {
-    return NextResponse.json({ ...await fromImagen3(prompt, style), plan: "pro" });
+    return NextResponse.json({ ...await fromImagen3(enhancedPrompt, style), plan: "pro" });
   } catch (e: any) {
     errors.push(`Imagen3: ${e.message}`);
     console.error("[image] Imagen3 falhou:", e.message);
   }
 
   try {
-    return NextResponse.json({ ...await fromOpenRouter(prompt, style), plan: "pro" });
+    return NextResponse.json({ ...await fromOpenRouter(enhancedPrompt, style), plan: "pro" });
   } catch (e: any) {
     errors.push(`OpenRouter: ${e.message}`);
     console.error("[image] OpenRouter pro falhou:", e.message);
   }
 
   try {
-    return NextResponse.json({ ...await fromPexels(prompt), plan: "fallback" });
+    return NextResponse.json({ ...await fromPexels(enhancedPrompt), plan: "fallback" });
   } catch (e: any) {
     errors.push(`Pexels: ${e.message}`);
     return NextResponse.json({ error: errors.join(" | ") }, { status: 500 });

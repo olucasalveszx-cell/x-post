@@ -704,7 +704,7 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
           STORY IA — Assistente de Storytelling
       ══════════════════════════════ */}
       {section === "storytelling" && (
-        <StorytellingAssistant />
+        <StorytellingAssistant onGenerate={onLoad} />
       )}
     </div>
   );

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, Sparkles, Loader2, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { BookOpen, Sparkles, Loader2, Copy, Check, ChevronDown, ChevronUp, Play } from "lucide-react";
+import { Slide } from "@/types";
+import { v4 as uuid } from "uuid";
 
 interface StoryScript {
   hook: string;
@@ -9,10 +11,44 @@ interface StoryScript {
   cta: string;
 }
 
+interface Props {
+  onGenerate?: (slides: Slide[]) => void;
+}
+
 const TONES = ["Inspirador", "Educativo", "Divertido", "Emocional", "Urgente"];
 const FORMATS = ["Tutorial passo a passo", "Antes & depois", "Revelação/twist", "Pergunta + resposta", "Bastidores"];
 
-export default function StorytellingAssistant() {
+const W = 1080, H = 1920;
+
+function buildStorySlide(text: string, sub: string, accent: string, bg: string): Slide {
+  return {
+    id: uuid(),
+    backgroundColor: bg,
+    elements: [
+      {
+        id: uuid(), type: "shape" as const,
+        x: W / 2 - 50, y: 555, width: 100, height: 8,
+        style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 4 } as any,
+      },
+      {
+        id: uuid(), type: "text" as const,
+        x: 80, y: 600, width: W - 160, height: 460,
+        content: text,
+        style: { fontSize: 86, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: "center" as const, lineHeight: 1.12 },
+      },
+      {
+        id: uuid(), type: "text" as const,
+        x: 80, y: 1130, width: W - 160, height: 120,
+        content: sub,
+        style: { fontSize: 34, fontWeight: "normal" as const, fontFamily: "sans-serif", color: accent + "cc", textAlign: "center" as const, lineHeight: 1.3 },
+      },
+    ],
+    width: W,
+    height: H,
+  };
+}
+
+export default function StorytellingAssistant({ onGenerate }: Props) {
   const [topic, setTopic]       = useState("");
   const [tone, setTone]         = useState("Inspirador");
   const [format, setFormat]     = useState("Tutorial passo a passo");
@@ -22,6 +58,7 @@ export default function StorytellingAssistant() {
   const [error, setError]       = useState("");
   const [copied, setCopied]     = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
+  const [building, setBuilding] = useState(false);
 
   const generate = async () => {
     if (!topic.trim()) return;
@@ -41,6 +78,21 @@ export default function StorytellingAssistant() {
       setError(e.message ?? "Erro desconhecido");
     }
     setLoading(false);
+  };
+
+  const generateProject = () => {
+    if (!result || !onGenerate) return;
+    setBuilding(true);
+
+    const items = [
+      { text: result.hook, sub: "Hook — Abertura", accent: "#fbbf24", bg: "#0a0800" },
+      ...result.scenes.map((s) => ({ text: s.text, sub: s.tip || "", accent: "#a855f7", bg: "#06000f" })),
+      { text: result.cta, sub: "Chamada para ação", accent: "#10b981", bg: "#00080a" },
+    ];
+
+    const storySlides = items.map(item => buildStorySlide(item.text, item.sub, item.accent, item.bg));
+    onGenerate(storySlides);
+    setBuilding(false);
   };
 
   const copyText = (text: string, key: string) => {
@@ -168,6 +220,17 @@ export default function StorytellingAssistant() {
               >
                 {copied === "all" ? <><Check size={11} className="text-green-400" /> Copiado!</> : <><Copy size={11} /> Copiar roteiro completo</>}
               </button>
+
+              {/* Gerar Projeto 9:16 */}
+              {onGenerate && (
+                <button
+                  onClick={generateProject}
+                  disabled={building}
+                  className="w-full py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 transition-all disabled:opacity-40"
+                >
+                  {building ? <><Loader2 size={13} className="animate-spin" /> Criando projeto...</> : <><Play size={13} /> Gerar Projeto 9:16 no Editor</>}
+                </button>
+              )}
             </div>
           )}
         </div>

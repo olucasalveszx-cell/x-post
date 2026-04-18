@@ -30,6 +30,8 @@ export default function TranslatePanel({ onGenerate }: Props) {
   const [status, setStatus] = useState<"idle" | "translating" | "images" | "done" | "error">("idle");
   const [error, setError] = useState("");
   const [imageProgress, setImageProgress] = useState(0);
+  const [translatedData, setTranslatedData] = useState<GeneratedContent | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const buildSlides = (generated: GeneratedContent): Slide[] => {
     return generated.slides.map((gs, i) => {
@@ -170,17 +172,26 @@ export default function TranslatePanel({ onGenerate }: Props) {
       const data: GeneratedContent = await res.json();
       if (!res.ok) throw new Error((data as any).error);
 
-      setStatus("images");
-      const slidesRaw = buildSlides(data);
-      onGenerate(slidesRaw);
-
-      const slidesWithImages = await generateImages(slidesRaw);
-      onGenerate(slidesWithImages);
-      setStatus("done");
+      setTranslatedData(data);
+      setShowConfirm(true);
+      setStatus("idle");
     } catch (err: any) {
       setError(err.message ?? "Erro desconhecido");
       setStatus("error");
     }
+  };
+
+  const confirmGenerate = async () => {
+    if (!translatedData) return;
+    setShowConfirm(false);
+    setStatus("images");
+    setImageProgress(0);
+    const slidesRaw = buildSlides(translatedData);
+    onGenerate(slidesRaw);
+    const slidesWithImages = await generateImages(slidesRaw);
+    onGenerate(slidesWithImages);
+    setStatus("done");
+    setTranslatedData(null);
   };
 
   const isLoading = ["translating", "images"].includes(status);
@@ -344,8 +355,28 @@ export default function TranslatePanel({ onGenerate }: Props) {
         {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Languages size={16} />}
         {status === "translating" && "Traduzindo com IA..."}
         {status === "images" && `Gerando imagens... (${imageProgress}/${slideCount})`}
-        {(status === "idle" || status === "done" || status === "error") && "Traduzir e Criar Slides"}
+        {(status === "idle" || status === "done" || status === "error") && "Traduzir"}
       </button>
+
+      {/* Confirmação: gerar slide? */}
+      {showConfirm && translatedData && (
+        <div className="rounded-xl border border-brand-500/30 bg-brand-500/5 p-3 flex flex-col gap-2.5">
+          <div>
+            <p className="text-xs text-white font-semibold">Conteúdo traduzido!</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{translatedData.slides.length} slides prontos. Deseja gerá-los agora?</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={confirmGenerate}
+              className="flex-1 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-xs text-white font-medium transition-colors flex items-center justify-center gap-1.5">
+              <Sparkles size={11} /> Gerar slides
+            </button>
+            <button onClick={() => { setShowConfirm(false); setTranslatedData(null); }}
+              className="px-3 py-1.5 rounded-lg border border-[#2a2a2a] text-xs text-gray-400 hover:text-white transition-colors">
+              Não
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Progress bar imagens */}
       {status === "images" && (

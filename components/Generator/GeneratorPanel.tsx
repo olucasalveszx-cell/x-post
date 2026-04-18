@@ -249,6 +249,8 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   const [imageProgress, setImageProgress] = useState(0);
   const [totalImages, setTotalImages] = useState(0);
   const [lastSettings, setLastSettings] = useState<WizardSettings | null>(null);
+  const [lastGenContent, setLastGenContent] = useState<GeneratedContent | null>(null);
+  const [slideImages, setSlideImages] = useState<Array<string | null>>([]);
 
   const { data: session } = useSession();
   const [isPro, setIsPro] = useState(false);
@@ -321,6 +323,13 @@ export default function GeneratorPanel({ onGenerate }: Props) {
     setLastSettings(ws);
     setError(""); setSources([]); setImageProgress(0); setTotalImages(ws.slideCount);
 
+    const extractImages = (slides: Slide[]): Array<string | null> =>
+      slides.map((s) => {
+        if (s.backgroundImageUrl) return s.backgroundImageUrl;
+        const el = s.elements.find((e: any) => e.type === "image" && e.src);
+        return (el as any)?.src ?? null;
+      });
+
     if (ws.inputMode === "prompt") {
       try {
         setStatus("generating");
@@ -335,6 +344,8 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         onGenerate(rawSlides);
         const withImages = await generateImages(rawSlides, ws, customerId, activationToken, (n) => setImageProgress(n));
         onGenerate(withImages);
+        setLastGenContent(genData);
+        setSlideImages(extractImages(withImages));
         setStatus("done");
       } catch (err: any) { setError(err.message ?? "Erro desconhecido"); setStatus("error"); }
       return;
@@ -364,6 +375,8 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       onGenerate(rawSlides);
       const withImages = await generateImages(rawSlides, ws, customerId, activationToken, (n) => setImageProgress(n));
       onGenerate(withImages);
+      setLastGenContent(genData);
+      setSlideImages(extractImages(withImages));
       setStatus("done");
 
       const prev = credits;
@@ -371,6 +384,29 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       const cost = ws.imageStyle === "foto_real" ? 1 : 2;
       if (prev && !prev.unlimited) setCreditToast({ spent: cost, remaining: Math.max(0, prev.remaining - cost) });
     } catch (err: any) { setError(err.message ?? "Erro desconhecido"); setStatus("error"); }
+  };
+
+  const handleLayoutChange = (newLayout: ImageLayout) => {
+    if (!lastGenContent || !lastSettings) return;
+    const newSettings: WizardSettings = { ...lastSettings, imageLayout: newLayout };
+    setLastSettings(newSettings);
+    const rawSlides = buildSlides(lastGenContent, newSettings);
+    const slidesWithImages = rawSlides.map((s, i) => {
+      const imgUrl = slideImages[i] ?? null;
+      const { _imagePrompt, _searchQuery, _elementImageId, ...clean } = s as any;
+      if (!imgUrl) return { ...clean, backgroundImageLoading: false };
+      if (_elementImageId) {
+        return {
+          ...clean,
+          backgroundImageLoading: false,
+          elements: clean.elements.map((el: any) =>
+            el.id === _elementImageId ? { ...el, src: imgUrl } : el
+          ),
+        };
+      }
+      return { ...clean, backgroundImageUrl: imgUrl, backgroundImageLoading: false };
+    });
+    onGenerate(slidesWithImages);
   };
 
   const loadingPopup = isLoading && typeof window !== "undefined"
@@ -514,13 +550,51 @@ export default function GeneratorPanel({ onGenerate }: Props) {
             </button>
 
             {status === "done" && lastSettings && (
-              <div className="flex items-start gap-2 bg-brand-500/8 border border-brand-500/20 rounded-xl p-3 text-xs text-brand-400">
-                <CheckCircle2 size={13} className="mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-medium">Carrossel gerado!</p>
-                  {lastSettings.topic && <p className="text-brand-400/60 mt-0.5 truncate">"{lastSettings.topic}"</p>}
+              <>
+                <div className="flex items-start gap-2 bg-brand-500/8 border border-brand-500/20 rounded-xl p-3 text-xs text-brand-400">
+                  <CheckCircle2 size={13} className="mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Carrossel gerado!</p>
+                    {lastSettings.topic && <p className="text-brand-400/60 mt-0.5 truncate">"{lastSettings.topic}"</p>}
+                  </div>
                 </div>
-              </div>
+
+                {/* Layout switcher pós-geração */}
+                {lastGenContent && (
+                  <div className="flex flex-col gap-2 px-1">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Trocar layout</p>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {([
+                        { value: "mixed",  label: "Auto"    },
+                        { value: "full",   label: "Fundo"   },
+                        { value: "square", label: "Quad."   },
+                        { value: "top",    label: "Topo"    },
+                        { value: "base",   label: "Base"    },
+                      ] as { value: ImageLayout; label: string }[]).map((lyt) => {
+                        const active = (lastSettings.imageLayout ?? "mixed") === lyt.value;
+                        return (
+                          <button
+                            key={lyt.value}
+                            onClick={() => handleLayoutChange(lyt.value)}
+                            className={`flex flex-col items-center gap-1 py-2 rounded-xl border transition-all ${
+                              active ? "border-brand-500 bg-brand-500/10" : "border-[#222] bg-[#0a0a0a] hover:border-brand-500/30"
+                            }`}
+                          >
+                            <div className="w-6 h-8 rounded-sm overflow-hidden bg-[#111] border border-[#2a2a2a] relative">
+                              {lyt.value === "full"   && <div className="absolute inset-0 bg-purple-500/30" />}
+                              {lyt.value === "mixed"  && (<><div className="absolute inset-0 bg-purple-500/20" /><div className="absolute bottom-0 inset-x-0 h-1/3 bg-[#111]" /></>)}
+                              {lyt.value === "square" && (<><div className="absolute inset-x-0.5 top-0.5 bottom-2 bg-purple-500/30 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-1.5 bg-[#111]" /></>)}
+                              {lyt.value === "top"    && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-purple-500/30" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#111]" /></>)}
+                              {lyt.value === "base"   && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[#111]" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-purple-500/30" /></>)}
+                            </div>
+                            <span className={`text-[8px] font-medium ${active ? "text-white" : "text-gray-500"}`}>{lyt.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {status === "error" && (

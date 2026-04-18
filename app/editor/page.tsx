@@ -271,6 +271,11 @@ export default function EditorPage() {
     slidesRef.current = generated;
     setCurrentIndex(0);
     pushHistory(generated);
+    // Auto-detect format from slide dimensions
+    if (generated[0]) {
+      const matched = FORMATS.find(f => f.width === generated[0].width && f.height === generated[0].height);
+      if (matched) setFormat(matched);
+    }
   }, [setProjects, pushHistory]);
 
   const handleFormatChange = (f: Format) => {
