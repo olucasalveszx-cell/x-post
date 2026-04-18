@@ -326,49 +326,72 @@ export default function LandingPage() {
 
           {/* Coluna texto */}
           <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-purple-500/30 text-purple-300 text-xs font-bold mb-8 tracking-wide"
-              style={{ background: "rgba(124,58,237,0.12)" }}>
-              <Sparkles size={11} className="text-yellow-400 animate-pulse" />
-              IA que pesquisa, escreve e publica por você
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-green-500/30 text-green-300 text-xs font-bold mb-6 tracking-wide"
+              style={{ background: "rgba(16,185,129,0.08)" }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              4 créditos grátis · Sem cartão de crédito
             </div>
 
-            <h1 className="text-[42px] md:text-[68px] lg:text-[78px] font-black leading-[1.05] tracking-tighter max-w-2xl">
+            <h1 className="text-[40px] md:text-[64px] lg:text-[72px] font-black leading-[1.0] tracking-tighter max-w-2xl">
               Carrosséis{" "}
               <span style={{ background: "linear-gradient(135deg,#c084fc 0%,#ec4899 55%,#f97316 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
                 virais
               </span>
               <br />
               no Instagram em{" "}
-              <span style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
-                segundos
+              <span className="relative inline-block">
+                <span style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
+                  segundos
+                </span>
+                <span className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full"
+                  style={{ background: "linear-gradient(90deg,#818cf8,#a855f7)", opacity: 0.5 }} />
               </span>
             </h1>
 
-            <p className="mt-6 text-gray-400 text-lg max-w-md leading-relaxed">
-              IA que pesquisa na web, escreve o texto e gera as imagens.
+            <p className="mt-5 text-gray-400 text-lg max-w-md leading-relaxed">
+              IA que pesquisa na web, escreve o copy e gera as imagens.
               Do zero ao carrossel publicado — sem Canva, sem ChatGPT.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 mt-10">
-              <button onClick={scrollToPricing}
+            {/* Social proof */}
+            <div className="flex items-center gap-3 mt-6">
+              <div className="flex -space-x-2">
+                {["#7c3aed","#ec4899","#f97316","#10b981","#3b82f6"].map((c, i) => (
+                  <div key={i} className="w-7 h-7 rounded-full border-2 border-[#060606] flex items-center justify-center text-[10px] font-bold text-white"
+                    style={{ background: c }}>
+                    {["L","M","R","A","K"][i]}
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div className="flex items-center gap-0.5">
+                  {[1,2,3,4,5].map(i => <Star key={i} size={11} className="text-yellow-400 fill-yellow-400" />)}
+                </div>
+                <p className="text-[11px] text-gray-500">+2.000 criadores já usam</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 mt-8">
+              <Link href="/editor"
                 className="flex items-center gap-2.5 px-9 py-4 rounded-2xl font-bold text-[16px] transition-all hover:scale-105 hover:brightness-110"
                 style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 40px rgba(124,58,237,0.5)" }}>
                 <Sparkles size={18} />
-                Criar meu carrossel agora
+                Começar grátis agora
                 <ArrowRight size={18} />
-              </button>
-              <Link href="/editor"
+              </Link>
+              <button onClick={scrollToPricing}
                 className="flex items-center gap-2 px-6 py-4 rounded-2xl text-sm font-semibold text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all"
                 style={{ background: "rgba(255,255,255,0.04)" }}>
-                Ver editor →
-              </Link>
+                Ver planos →
+              </button>
             </div>
 
-            <div className="flex flex-wrap justify-center lg:justify-start gap-5 mt-8 text-xs text-gray-500">
+            <div className="flex flex-wrap justify-center lg:justify-start gap-5 mt-6 text-xs text-gray-500">
               {[
-                { icon: <Shield size={12} className="text-green-400" />, text: "Pagamento seguro" },
-                { icon: <Star size={12} className="text-yellow-400" />,  text: "Cancele quando quiser" },
-                { icon: <Zap size={12} className="text-purple-400" />,   text: "Acesso imediato" },
+                { icon: <Shield size={12} className="text-green-400" />,  text: "Sem cartão de crédito" },
+                { icon: <Zap size={12} className="text-yellow-400" />,    text: "4 créditos grátis" },
+                { icon: <Check size={12} className="text-purple-400" />,  text: "Cancele quando quiser" },
               ].map((b) => (
                 <span key={b.text} className="flex items-center gap-1.5">{b.icon}{b.text}</span>
               ))}

@@ -100,14 +100,15 @@ export default function AIAssistant({ open, onClose }: Props) {
   const [micStarting, setMicStarting] = useState(false); // entre clique e onstart
   const [isOpera, setIsOpera]     = useState(false);
 
-  const bottomRef      = useRef<HTMLDivElement>(null);
-  const inputRef       = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
-  const transcriptRef  = useRef("");
-  const messagesRef    = useRef<Message[]>([]);
-  const autoListenRef  = useRef(false);
-  const startListenRef = useRef<() => void>(() => {});
-  const isOperaRef     = useRef(false);
+  const bottomRef        = useRef<HTMLDivElement>(null);
+  const inputRef         = useRef<HTMLInputElement>(null);
+  const recognitionRef   = useRef<any>(null);
+  const transcriptRef    = useRef("");
+  const messagesRef      = useRef<Message[]>([]);
+  const autoListenRef    = useRef(false);
+  const startListenRef   = useRef<() => void>(() => {});
+  const isOperaRef       = useRef(false);
+  const audioUnlockedRef = useRef(false);
 
   /* ── Carregar histórico do localStorage + detectar Opera ── */
   useEffect(() => {
@@ -191,38 +192,49 @@ export default function AIAssistant({ open, onClose }: Props) {
     .replace(/\n+/g, ". ").replace(/\s{2,}/g, " ").trim()
     .slice(0, 700);
 
-  /* ── TTS com voz feminina ── */
+  /* ── Desbloqueia áudio no iOS (deve ser chamado de gesto do usuário) ── */
+  const unlockAudio = useCallback(() => {
+    if (audioUnlockedRef.current || !window.speechSynthesis) return;
+    try {
+      const silent = new SpeechSynthesisUtterance(" ");
+      silent.volume = 0;
+      silent.rate = 10;
+      window.speechSynthesis.speak(silent);
+      setTimeout(() => window.speechSynthesis.cancel(), 50);
+      audioUnlockedRef.current = true;
+    } catch {}
+  }, []);
+
+  /* ── TTS com voz humanizada ── */
   const speak = useCallback((text: string, onDone?: () => void) => {
     if (!ttsEnabled || !window.speechSynthesis) { onDone?.(); return; }
 
-    // Para qualquer fala anterior
     window.speechSynthesis.cancel();
     setSpeaking(false);
 
     const clean = cleanForSpeech(text);
     if (!clean) { onDone?.(); return; }
 
+    const MALE_NAMES = ["daniel", "ricardo", "reed", "male", "masculino", "jorge", "carlos", "fred"];
+    const isMale = (v: SpeechSynthesisVoice) =>
+      MALE_NAMES.some(n => v.name.toLowerCase().includes(n));
+
+    // Vozes preferidas — em ordem de qualidade/naturalidade
+    const PRIORITY = ["luciana", "joana", "fernanda", "samantha", "google português do brasil", "google"];
+
     const doSpeak = (voices: SpeechSynthesisVoice[]) => {
       const utt = new SpeechSynthesisUtterance(clean);
-      utt.lang = "pt-BR";
-      utt.rate = 0.95;   // ligeiramente mais lento — voz centrada e calma
-      utt.pitch = 1.2;   // feminina e natural, sem soar aguda/artificial
+      utt.lang  = "pt-BR";
+      utt.rate  = 0.88;  // cadência natural, menos robótico
+      utt.pitch = 1.0;   // deixa a voz soar como ela mesma, sem exagerar feminilidade
 
-      const MALE_NAMES = ["daniel", "ricardo", "reed", "male", "masculino", "jorge", "carlos"];
-
-      const isMale = (v: SpeechSynthesisVoice) =>
-        MALE_NAMES.some(n => v.name.toLowerCase().includes(n));
-
-      // Prioridade de voz:
-      // 1) "Google português do Brasil" — melhor qualidade no Chrome desktop
-      // 2) Qualquer voz pt-BR online (networkd = mais natural)
-      // 3) Qualquer pt-BR que não seja masculina
-      // 4) Qualquer voz pt
       const ptBR = voices.filter(v => v.lang === "pt-BR" || v.lang === "pt-br");
-
       const voice =
-        ptBR.find(v => v.name.toLowerCase().includes("google português do brasil")) ||
-        ptBR.find(v => v.name.toLowerCase().includes("google")) ||
+        // 1. Voz de alta prioridade (Luciana iOS, Joana macOS, Google desktop)
+        ptBR.find(v => PRIORITY.some(p => v.name.toLowerCase().includes(p)) && !isMale(v)) ||
+        // 2. Voz local (mais natural, sem latência de rede)
+        ptBR.find(v => !isMale(v) && v.localService) ||
+        // 3. Qualquer voz pt-BR feminina
         ptBR.find(v => !isMale(v)) ||
         ptBR[0] ||
         voices.find(v => v.lang.startsWith("pt") && !isMale(v)) ||
@@ -232,21 +244,17 @@ export default function AIAssistant({ open, onClose }: Props) {
       utt.onstart = () => setSpeaking(true);
       utt.onend   = () => { setSpeaking(false); onDone?.(); };
       utt.onerror = (ev) => {
-        // "interrupted" é normal quando cancel() é chamado — não é erro
         if ((ev as any).error !== "interrupted") setSpeaking(false);
         onDone?.();
       };
 
-      // Bug do Chrome: speak() logo após cancel() trava silenciosamente.
-      // Pequeno delay garante que o cancel foi processado.
+      // Bug do Chrome: delay de 80ms após cancel() para não travar
       setTimeout(() => {
-        // Bug do Chrome: speechSynthesis pausa quando aba perde foco — resume antes
         if (window.speechSynthesis.paused) window.speechSynthesis.resume();
         window.speechSynthesis.speak(utt);
       }, 80);
     };
 
-    // Vozes podem não estar carregadas ainda — aguarda se necessário
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) {
       doSpeak(voices);
@@ -262,6 +270,7 @@ export default function AIAssistant({ open, onClose }: Props) {
   /* ── Enviar mensagem ── */
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || loading) return;
+    unlockAudio(); // desbloqueia áudio iOS (chamada síncrona antes do await)
     const userMsg: Message = { role: "user", content: content.trim() };
     const next = [...messagesRef.current, userMsg];
     setMessages(next);
@@ -297,6 +306,7 @@ export default function AIAssistant({ open, onClose }: Props) {
 
   /* ── Reconhecimento de voz ── */
   const startListening = useCallback(() => {
+    unlockAudio(); // desbloqueia áudio iOS antes de qualquer await
     setMicError(null);
     setMicStarting(true); // feedback imediato ao clicar
 

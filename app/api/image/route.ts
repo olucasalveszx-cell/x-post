@@ -260,6 +260,55 @@ async function fromOpenRouter(prompt: string, style: ImageStyle) {
   throw new Error("OpenRouter: falha inesperada");
 }
 
+// ── Unsplash (fallback) ───────────────────────────────────────
+async function fromUnsplash(prompt: string) {
+  const key = process.env.UNSPLASH_ACCESS_KEY;
+  if (!key) throw new Error("UNSPLASH_ACCESS_KEY não configurada");
+
+  const query = prompt.replace(/<[^>]+>/g, "").replace(/[^\w\sÀ-ÿ]/g, "").trim()
+    .split(/\s+/).slice(0, 5).join(" ") || "business technology";
+
+  const res = await fetch(
+    `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=portrait&per_page=15&page=${Math.ceil(Math.random() * 3)}`,
+    { headers: { Authorization: `Client-ID ${key}` } }
+  );
+  if (!res.ok) throw new Error(`Unsplash HTTP ${res.status}`);
+
+  const data = await res.json();
+  const results = data.results ?? [];
+  if (!results.length) throw new Error("Unsplash: sem resultados");
+
+  const photo = results[Math.floor(Math.random() * results.length)];
+  const url = photo.urls?.regular ?? photo.urls?.full;
+  if (!url) throw new Error("Unsplash: URL inválida");
+  console.log("[image] Unsplash fallback OK");
+  return { imageUrl: url, source: "unsplash" };
+}
+
+// ── Pixabay (fallback) ────────────────────────────────────────
+async function fromPixabay(prompt: string) {
+  const key = process.env.PIXABAY_API_KEY;
+  if (!key) throw new Error("PIXABAY_API_KEY não configurada");
+
+  const query = prompt.replace(/<[^>]+>/g, "").replace(/[^\w\sÀ-ÿ]/g, "").trim()
+    .split(/\s+/).slice(0, 5).join(" ") || "business technology";
+
+  const res = await fetch(
+    `https://pixabay.com/api/?key=${key}&q=${encodeURIComponent(query)}&image_type=photo&orientation=vertical&per_page=15&page=${Math.ceil(Math.random() * 3)}`
+  );
+  if (!res.ok) throw new Error(`Pixabay HTTP ${res.status}`);
+
+  const data = await res.json();
+  const hits = data.hits ?? [];
+  if (!hits.length) throw new Error("Pixabay: sem resultados");
+
+  const photo = hits[Math.floor(Math.random() * hits.length)];
+  const url = photo.largeImageURL ?? photo.webformatURL;
+  if (!url) throw new Error("Pixabay: URL inválida");
+  console.log("[image] Pixabay fallback OK");
+  return { imageUrl: url, source: "pixabay" };
+}
+
 // ── Pexels (fallback final) ───────────────────────────────────
 async function fromPexels(prompt: string) {
   const key = process.env.PEXELS_API_KEY;
@@ -331,6 +380,16 @@ export async function POST(req: NextRequest) {
       console.error("[image] OpenRouter free falhou:", e.message);
     }
     try {
+      return NextResponse.json({ ...await fromUnsplash(enhancedPrompt), plan: "free_fallback", fallbackErrors: freeErrors });
+    } catch (e: any) {
+      freeErrors.push(`Unsplash: ${e.message}`);
+    }
+    try {
+      return NextResponse.json({ ...await fromPixabay(enhancedPrompt), plan: "free_fallback", fallbackErrors: freeErrors });
+    } catch (e: any) {
+      freeErrors.push(`Pixabay: ${e.message}`);
+    }
+    try {
       return NextResponse.json({ ...await fromPexels(enhancedPrompt), plan: "free_fallback", fallbackErrors: freeErrors });
     } catch (e: any) {
       return NextResponse.json({ error: e.message, fallbackErrors: freeErrors }, { status: 500 });
@@ -374,6 +433,20 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     errors.push(`OpenRouter: ${e.message}`);
     console.error("[image] OpenRouter pro falhou:", e.message);
+  }
+
+  try {
+    return NextResponse.json({ ...await fromUnsplash(enhancedPrompt), plan: "fallback" });
+  } catch (e: any) {
+    errors.push(`Unsplash: ${e.message}`);
+    console.error("[image] Unsplash pro falhou:", e.message);
+  }
+
+  try {
+    return NextResponse.json({ ...await fromPixabay(enhancedPrompt), plan: "fallback" });
+  } catch (e: any) {
+    errors.push(`Pixabay: ${e.message}`);
+    console.error("[image] Pixabay pro falhou:", e.message);
   }
 
   try {
