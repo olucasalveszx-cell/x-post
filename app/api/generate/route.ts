@@ -3,6 +3,7 @@ import { GenerateRequest, GeneratedContent, WritingStyle } from "@/types";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { consumeCredits } from "@/lib/credits";
+import { redisIncr } from "@/lib/redis";
 
 export const maxDuration = 60;
 
@@ -176,6 +177,8 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
     }
 
     const generated: GeneratedContent = JSON.parse(jsonMatch[0]);
+    const today = new Date().toISOString().slice(0, 10);
+    redisIncr(`stats:carousels:${today}`).catch(() => {});
     return NextResponse.json(generated);
   } catch (err: any) {
     console.error("[generate] catch:", err);

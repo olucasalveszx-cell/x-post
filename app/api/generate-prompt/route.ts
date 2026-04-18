@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GeneratedContent } from "@/types";
+import { redisIncr } from "@/lib/redis";
 
 export const maxDuration = 60;
 
@@ -80,6 +81,8 @@ ${customPrompt}`;
     }
 
     const generated: GeneratedContent = JSON.parse(jsonMatch[0]);
+    const today = new Date().toISOString().slice(0, 10);
+    redisIncr(`stats:carousels:${today}`).catch(() => {});
     return NextResponse.json(generated);
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? "Erro desconhecido" }, { status: 500 });

@@ -208,6 +208,14 @@ export default function EditorPage() {
     setShowRestoreBanner(false);
   };
 
+  // ── Heartbeat (presença em tempo real) ───────────────────────
+  useEffect(() => {
+    const ping = () => fetch("/api/heartbeat", { method: "POST" }).catch(() => {});
+    ping();
+    const id = setInterval(ping, 45_000);
+    return () => clearInterval(id);
+  }, []);
+
   // ── Instagram ─────────────────────────────────────────────────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

@@ -5,6 +5,7 @@ import { hasActiveSubscription } from "@/lib/stripe";
 import { verifyToken } from "@/lib/activation";
 import { isEmailActive } from "@/lib/kv";
 import { stripe } from "@/lib/stripe";
+import { redisIncr } from "@/lib/redis";
 
 export const maxDuration = 60;
 
@@ -263,6 +264,9 @@ async function fromPexels(prompt: string) {
 export async function POST(req: NextRequest) {
   const { prompt, imageStyle = "gemini", customerId, activationToken, referenceImageBase64, referenceImageMime } = await req.json();
   if (!prompt) return NextResponse.json({ error: "prompt obrigatório" }, { status: 400 });
+
+  const today = new Date().toISOString().slice(0, 10);
+  redisIncr(`stats:images:${today}`).catch(() => {});
 
   const style: ImageStyle = (imageStyle === "foto_real") ? "foto_real" : "gemini";
   const hasReference = !!(referenceImageBase64 && referenceImageMime);

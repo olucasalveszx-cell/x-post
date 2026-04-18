@@ -761,6 +761,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                   handleTouchStart(e, el);
                 }
               }}
+              onDoubleClick={(e) => { if (el.frameImageUrl) { e.stopPropagation(); setFramePanId(el.id); } }}
               onContextMenu={(e) => handleFrameContextMenu(e, el)}
             >
               <div style={innerStyle}>
@@ -881,7 +882,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                     value={stripHtml(el.content ?? "")} onChange={(e) => updateElement(el.id, { content: e.target.value })}
                     onBlur={() => setEditingId(null)} onClick={(e) => e.stopPropagation()} />
                 ) : (
-                  <div className="w-full overflow-visible" style={{ ...textStyle(el), padding: 4, whiteSpace: "pre-wrap" }} dangerouslySetInnerHTML={{ __html: el.content ?? "" }} />
+                  <div className="w-full h-full overflow-hidden" style={{ ...textStyle(el), padding: 4, whiteSpace: "pre-wrap" }} dangerouslySetInnerHTML={{ __html: el.content ?? "" }} />
                 )}
               </>
             )}
@@ -987,35 +988,6 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         );
       })}
 
-      {/* ── Botão 3 pontos (mobile) — abre o menu de contexto ── */}
-      <button
-        className="absolute z-[60] flex items-center justify-center rounded-xl transition-all active:scale-90 md:hidden"
-        style={{
-          top: 14,
-          right: 14,
-          width: 40,
-          height: 40,
-          transform: `scale(${1 / scale})`,
-          transformOrigin: "top right",
-          background: "rgba(0,0,0,0.60)",
-          border: "1px solid rgba(255,255,255,0.18)",
-          color: "rgba(255,255,255,0.85)",
-          backdropFilter: "blur(8px)",
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          closeCtx(); closeBgCtx(); closeFrameCtx();
-          if (selectedId) {
-            const el = slide.elements.find((el) => el.id === selectedId);
-            if (el?.type === "image") { setCtxMenu({ x: 20, y: 70, el }); return; }
-            if (el?.type === "frame") { setFrameCtxMenu({ x: 20, y: 70, el }); return; }
-          }
-          setBgCtxMenu({ x: 20, y: 70 });
-        }}
-      >
-        <MoreVertical size={18} />
-      </button>
-
       {/* Context menu — scale invertido para aparecer no tamanho real na tela */}
       {ctxMenu && (
         <div
@@ -1034,7 +1006,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             onMouseDown={(e) => startMenuDrag(e, () => ({ x: ctxMenu!.x, y: ctxMenu!.y }), (x, y) => setCtxMenu(m => m ? { ...m, x, y } : null))}
             onTouchStart={(e) => startMenuDrag(e, () => ({ x: ctxMenu!.x, y: ctxMenu!.y }), (x, y) => setCtxMenu(m => m ? { ...m, x, y } : null))}>
             <ImageIcon size={15} className="text-brand-400" />
-            <span className="text-sm font-semibold text-gray-300">Editar imagem</span>
+            <span className="text-sm font-semibold text-gray-300 flex-1">Editar imagem</span>
+            <button onClick={(e) => { e.stopPropagation(); closeCtx(); }} className="ml-auto text-gray-500 hover:text-gray-200 transition-colors p-0.5"><X size={15} /></button>
           </div>
 
           {/* Transparência */}
@@ -1108,7 +1081,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         >
           <div className="px-4 py-2.5 border-b border-[#2a2a2a] flex items-center gap-2">
             <Square size={15} className="text-brand-400" />
-            <span className="text-sm font-semibold text-gray-300">Moldura</span>
+            <span className="text-sm font-semibold text-gray-300 flex-1">Moldura</span>
+            <button onClick={(e) => { e.stopPropagation(); closeFrameCtx(); }} className="ml-auto text-gray-500 hover:text-gray-200 transition-colors p-0.5"><X size={15} /></button>
           </div>
           <button
             onClick={() => generateFrameImage(frameCtxMenu.el)}
@@ -1164,7 +1138,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             onMouseDown={(e) => startMenuDrag(e, () => ({ x: bgCtxMenu!.x, y: bgCtxMenu!.y }), (x, y) => setBgCtxMenu(m => m ? { ...m, x, y } : null))}
             onTouchStart={(e) => startMenuDrag(e, () => ({ x: bgCtxMenu!.x, y: bgCtxMenu!.y }), (x, y) => setBgCtxMenu(m => m ? { ...m, x, y } : null))}>
             <ImageIcon size={15} className="text-brand-400" />
-            <span className="text-sm font-semibold text-gray-300">Imagem de fundo</span>
+            <span className="text-sm font-semibold text-gray-300 flex-1">Imagem de fundo</span>
+            <button onClick={(e) => { e.stopPropagation(); closeBgCtx(); }} className="ml-auto text-gray-500 hover:text-gray-200 transition-colors p-0.5"><X size={15} /></button>
           </div>
 
           {/* Transparência — só quando tem imagem */}
@@ -1257,6 +1232,37 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         </div>
       )}
     </div>
+
+    {/* Botão 3 pontos (mobile) — fora do canvas para não atrapalhar edição */}
+    {typeof window !== "undefined" && createPortal(
+      <button
+        className="fixed z-[200] flex items-center justify-center rounded-xl transition-all active:scale-90 md:hidden"
+        style={{
+          bottom: 92,
+          right: 16,
+          width: 44,
+          height: 44,
+          background: "rgba(0,0,0,0.70)",
+          border: "1px solid rgba(255,255,255,0.20)",
+          color: "rgba(255,255,255,0.90)",
+          backdropFilter: "blur(10px)",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          closeCtx(); closeBgCtx(); closeFrameCtx();
+          if (selectedId) {
+            const el = slide.elements.find((el) => el.id === selectedId);
+            if (el?.type === "image") { setCtxMenu({ x: 20, y: 70, el }); return; }
+            if (el?.type === "frame") { setFrameCtxMenu({ x: 20, y: 70, el }); return; }
+          }
+          setBgCtxMenu({ x: 20, y: 70 });
+        }}
+      >
+        <MoreVertical size={18} />
+      </button>,
+      document.body
+    )}
 
     {/* theme input portal — fora do canvas para evitar stacking context do transform:scale */}
     {showThemeInput && !generatingBg && typeof window !== "undefined" && createPortal(
