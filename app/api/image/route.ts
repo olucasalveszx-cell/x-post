@@ -52,8 +52,9 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   const fullPrompt = buildPrompt(prompt, style);
 
   const MODELS = [
-    "gemini-2.0-flash-preview-image-generation",
-    "gemini-2.0-flash-exp-image-generation",
+    "gemini-2.5-flash-image",
+    "gemini-3.1-flash-image-preview",
+    "gemini-3-pro-image-preview",
   ];
 
   let lastError = "";
@@ -118,12 +119,12 @@ async function fromImagen4(prompt: string, style: ImageStyle) {
   return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen4" };
 }
 
-// ── Imagen 3 ──────────────────────────────────────────────────
+// ── Imagen 4 Fast ─────────────────────────────────────────────
 async function fromImagen3(prompt: string, style: ImageStyle) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${key}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict?key=${key}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -138,7 +139,7 @@ async function fromImagen3(prompt: string, style: ImageStyle) {
   if (!res.ok) throw new Error(data.error?.message ?? `Imagen3 HTTP ${res.status}`);
   const pred = data.predictions?.[0];
   if (!pred?.bytesBase64Encoded) throw new Error("Imagen3: sem imagem");
-  console.log("[image] Imagen 3 OK");
+  console.log("[image] Imagen 4 Fast OK");
   return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen3" };
 }
 
