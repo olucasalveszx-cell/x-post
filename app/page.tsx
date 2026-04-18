@@ -279,7 +279,7 @@ export default function LandingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#060606] text-white overflow-x-hidden">
+    <main className="min-h-screen bg-[#060606] text-white">
 
       {/* ── HEADER ─────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 flex items-center justify-between px-5 md:px-10 py-3 border-b border-white/5"
