@@ -499,7 +499,7 @@ export default function EditorPage() {
               className="shadow-2xl rounded overflow-hidden">
               {slides.map((slide, i) => (
                 <div key={slide.id} id={`slide-render-${slide.id}`} style={{ display: i === safeIndex ? "block" : "none", width: SLIDE_W, height: SLIDE_H }}>
-                  <SlideCanvas slide={slide} onUpdate={updateSlide} scale={displayScale} onSelectElement={(el) => setSelectedElementId(el?.id ?? null)} />
+                  <SlideCanvas slide={slide} onUpdate={updateSlide} scale={displayScale} onSelectElement={(el) => setSelectedElementId(el?.id ?? null)} isActive={i === safeIndex} />
                 </div>
               ))}
             </div>

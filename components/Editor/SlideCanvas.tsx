@@ -10,6 +10,7 @@ interface Props {
   onUpdate: (slide: Slide) => void;
   scale?: number;
   onSelectElement?: (el: SlideElement | null) => void;
+  isActive?: boolean;
 }
 
 type DragState = { elementId: string; startX: number; startY: number; origX: number; origY: number; origW: number; origH: number } | null;
@@ -40,7 +41,7 @@ const GRADIENTS = [
   { label: "Sem degradê",   value: "" },
 ];
 
-export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElement }: Props) {
+export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElement, isActive = false }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<CtxMenu>(null);
@@ -1236,7 +1237,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     </div>
 
     {/* Botão 3 pontos (mobile) — fora do canvas para não atrapalhar edição */}
-    {typeof window !== "undefined" && createPortal(
+    {isActive && typeof window !== "undefined" && createPortal(
       <button
         className="fixed z-[200] flex items-center justify-center rounded-xl transition-all active:scale-90 md:hidden"
         style={{
