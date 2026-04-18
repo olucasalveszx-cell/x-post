@@ -22,6 +22,10 @@ export const redisZAdd   = (key: string, score: number, member: string): Promise
 export const redisZCount = (key: string, min: number | "-inf", max: number | "+inf"): Promise<number> => call(["ZCOUNT", key, min, max]);
 export const redisZRemRangeByScore = (key: string, min: number | "-inf", max: number): Promise<void> => call(["ZREMRANGEBYSCORE", key, min, max]);
 
+export const redisLPush = (key: string, value: string): Promise<number> => call(["LPUSH", key, value]);
+export const redisLTrim = (key: string, start: number, stop: number): Promise<void> => call(["LTRIM", key, start, stop]);
+export const redisLRange = (key: string, start: number, stop: number): Promise<string[]> => call(["LRANGE", key, start, stop]);
+
 /** Adiciona item ao fim de uma lista (sem duplicatas via LREM + RPUSH) */
 export async function redisListAdd(key: string, value: string): Promise<void> {
   await call(["LREM", key, "0", value]);

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuid } from "uuid";
-import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap } from "lucide-react";
+import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle } from "lucide-react";
 import Link from "next/link";
 import { Slide, Project } from "@/types";
 import { renderSlide } from "@/lib/render-slide";
@@ -17,6 +17,7 @@ import AIAssistant from "@/components/AIAssistant";
 import SubscriptionGate from "@/components/SubscriptionGate";
 import ProfilePickerModal, { UserProfile, getStoredProfile, saveProfile, PROFILE_STORAGE_KEY } from "@/components/Editor/ProfilePickerModal";
 import { autosaveWrite, autosaveRead, autosaveClear } from "@/lib/autosave-db";
+import ProfileModal from "@/components/ProfileModal";
 
 interface IGAccount { token: string; accountId: string; username: string; }
 
@@ -86,6 +87,7 @@ export default function EditorPage() {
   const [displayScale, setDisplayScale] = useState(560 / 1350);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [showProfilePicker, setShowProfilePicker] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -285,16 +287,64 @@ export default function EditorPage() {
   const handleExport = async () => {
     setExporting(true);
     try {
+      const canvases: HTMLCanvasElement[] = [];
       for (let i = 0; i < slides.length; i++) {
         const canvas = await renderSlide(slides[i]);
+        canvases.push(canvas);
         const a = document.createElement("a");
         a.href = canvas.toDataURL("image/jpeg", 0.95);
         a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
         a.click();
         await new Promise((r) => setTimeout(r, 150));
       }
+
+      // Salva no histórico e biblioteca em background (não bloqueia)
+      saveToProfile(canvases).catch(() => {});
     } catch { alert("Erro ao exportar."); }
     finally { setExporting(false); }
+  };
+
+  const saveToProfile = async (canvases: HTMLCanvasElement[]) => {
+    const activeProject = projects.find((p) => p.id === activeProjectId);
+    const title = activeProject?.name ?? "Carrossel";
+
+    // Upload de cada slide para Vercel Blob
+    const uploadSlide = async (canvas: HTMLCanvasElement) => {
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const base64 = dataUrl.split(",")[1];
+      const res = await fetch("/api/blob-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, mimeType: "image/jpeg", filename: `xpost-${Date.now()}.jpg` }),
+      });
+      if (!res.ok) return null;
+      const { url } = await res.json();
+      return url as string;
+    };
+
+    // Upload de todos os slides em paralelo
+    const urls = await Promise.all(canvases.map(uploadSlide));
+    const validUrls = urls.filter(Boolean) as string[];
+    if (!validUrls.length) return;
+
+    // Salva carrossel no histórico (capa = primeiro slide)
+    await fetch("/api/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "history",
+        entry: { id: crypto.randomUUID(), title, coverUrl: validUrls[0], slideCount: canvases.length },
+      }),
+    });
+
+    // Salva cada slide na biblioteca de imagens
+    await Promise.all(validUrls.map((url) =>
+      fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "image", entry: { id: crypto.randomUUID(), url } }),
+      })
+    ));
   };
 
   // ── Créditos + responsividade ─────────────────────────────────
@@ -385,6 +435,11 @@ export default function EditorPage() {
             className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-[#111] hover:bg-[#1a1a1a] text-sm border border-[#222] disabled:opacity-40 transition-colors">
             <Download size={15} />
             <span className="hidden md:inline">{exporting ? "Exportando..." : "Exportar"}</span>
+          </button>
+          <button onClick={() => setShowProfile(true)}
+            className="flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-[#222] bg-[#111] hover:bg-[#1a1a1a] transition-colors text-gray-300">
+            <UserCircle size={15} />
+            <span className="hidden md:inline">Perfil</span>
           </button>
           <div className="hidden md:block">
             {igAccount ? (
@@ -540,6 +595,7 @@ export default function EditorPage() {
 
       {showPublish && <PublishModal slides={slides} account={igAccount} onClose={() => setShowPublish(false)} onLoginClick={handleIGLogin} />}
       <AIAssistant open={showAI} onClose={() => setShowAI(false)} />
+      <ProfileModal open={showProfile} onClose={() => setShowProfile(false)} />
       <OnboardingModal
         onConfirm={(topic) => {
           window.dispatchEvent(new CustomEvent("open-generator-wizard", { detail: { topic } }));
