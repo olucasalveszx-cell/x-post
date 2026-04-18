@@ -408,15 +408,16 @@ export default function EditorPage() {
 
         <div className="flex items-center gap-1.5">
           {credits && (
-            <div className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-semibold"
+            <Link href="/credits"
+              className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-semibold transition-opacity hover:opacity-80"
               style={{
-                background: credits.unlimited || credits.remaining > 10 ? "rgba(168,85,247,0.1)" : credits.remaining > 0 ? "rgba(251,191,36,0.1)" : "rgba(239,68,68,0.1)",
-                borderColor: credits.unlimited || credits.remaining > 10 ? "rgba(168,85,247,0.3)" : credits.remaining > 0 ? "rgba(251,191,36,0.3)" : "rgba(239,68,68,0.3)",
-                color: credits.unlimited || credits.remaining > 10 ? "#c084fc" : credits.remaining > 0 ? "#fbbf24" : "#f87171",
+                background: (credits as any).total > 10 ? "rgba(168,85,247,0.1)" : (credits as any).total > 0 ? "rgba(251,191,36,0.1)" : "rgba(239,68,68,0.1)",
+                borderColor: (credits as any).total > 10 ? "rgba(168,85,247,0.3)" : (credits as any).total > 0 ? "rgba(251,191,36,0.3)" : "rgba(239,68,68,0.3)",
+                color: (credits as any).total > 10 ? "#c084fc" : (credits as any).total > 0 ? "#fbbf24" : "#f87171",
               }}>
               <Zap size={11} />
-              {credits.unlimited ? "∞ créditos" : `${credits.remaining}/${credits.limit}`}
-            </div>
+              {`${(credits as any).total ?? credits.remaining}/${credits.limit}`}
+            </Link>
           )}
           {/* Badge de perfil */}
           {userProfile && (

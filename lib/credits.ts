@@ -10,13 +10,22 @@ async function redis(cmd: string[]) {
   return res.json();
 }
 
-/* ── Limites por plano ── */
+/* ── Limites mensais por plano ── */
 export const PLAN_LIMITS: Record<string, number> = {
   basic:    30,
   pro:      45,
-  business: -1, // -1 = ilimitado
+  business: 100,
   free:      5,
 };
+
+/* ── Pacotes de créditos extras ── */
+export const CREDIT_PACKS = [
+  { id: "10",  credits: 10,  label: "Starter" },
+  { id: "25",  credits: 25,  label: "Plus"    },
+  { id: "50",  credits: 50,  label: "Pro"     },
+  { id: "100", credits: 100, label: "Max"     },
+] as const;
+export type CreditPackId = typeof CREDIT_PACKS[number]["id"];
 
 /* ── Custo por ação ── */
 export const ACTION_COST: Record<string, number> = {
@@ -72,6 +81,18 @@ export async function getUserPlan(email: string): Promise<string> {
   }
 }
 
+/* ── Bônus: créditos extras comprados ── */
+function bonusKey(email: string) { return `credits:bonus:${email.toLowerCase()}`; }
+
+export async function getBonusCredits(email: string): Promise<number> {
+  const data = await redis(["get", bonusKey(email)]);
+  return parseInt((data.result as string) ?? "0") || 0;
+}
+
+export async function addBonusCredits(email: string, amount: number): Promise<void> {
+  await redis(["incrby", bonusKey(email), String(amount)]);
+}
+
 /* ── Retorna info de créditos do usuário ── */
 export async function getCreditsInfo(email: string): Promise<{
   plan: string;
@@ -79,28 +100,32 @@ export async function getCreditsInfo(email: string): Promise<{
   limit: number;
   remaining: number;
   unlimited: boolean;
+  bonus: number;
+  total: number;
 }> {
   const plan  = await getUserPlan(email);
   const limit = PLAN_LIMITS[plan] ?? 5;
 
-  if (limit === -1) {
-    return { plan, used: 0, limit: -1, remaining: -1, unlimited: true };
-  }
-
   const key  = monthKey(email);
-  const data = await redis(["get", key]);
-  const used = parseInt((data.result as string) ?? "0") || 0;
+  const [monthData, bonus] = await Promise.all([
+    redis(["get", key]),
+    getBonusCredits(email),
+  ]);
+  const used = parseInt((monthData.result as string) ?? "0") || 0;
+  const remaining = Math.max(0, limit - used);
 
   return {
     plan,
     used,
     limit,
-    remaining: Math.max(0, limit - used),
+    remaining,
     unlimited: false,
+    bonus,
+    total: remaining + bonus,
   };
 }
 
-/* ── Consome créditos — retorna ok: false se não tiver saldo ── */
+/* ── Consome créditos — usa mensal primeiro, depois bônus ── */
 export async function consumeCredits(
   email: string,
   action: keyof typeof ACTION_COST = "carousel"
@@ -109,20 +134,26 @@ export async function consumeCredits(
   const limit = PLAN_LIMITS[plan] ?? 5;
   const cost  = ACTION_COST[action] ?? 1;
 
-  if (limit === -1) {
-    return { ok: true, remaining: -1, unlimited: true, plan };
-  }
-
   const key  = monthKey(email);
-  const data = await redis(["get", key]);
-  const used = parseInt((data.result as string) ?? "0") || 0;
+  const [monthData, bonus] = await Promise.all([
+    redis(["get", key]),
+    getBonusCredits(email),
+  ]);
+  const used = parseInt((monthData.result as string) ?? "0") || 0;
+  const monthlyRemaining = Math.max(0, limit - used);
 
-  if (used + cost > limit) {
-    return { ok: false, remaining: Math.max(0, limit - used), unlimited: false, plan };
+  // Usa créditos mensais primeiro
+  if (monthlyRemaining >= cost) {
+    await redis(["incrby", key, String(cost)]);
+    await redis(["expire", key, String(35 * 24 * 60 * 60)]);
+    return { ok: true, remaining: monthlyRemaining - cost + bonus, unlimited: false, plan };
   }
 
-  await redis(["incrby", key, String(cost)]);
-  await redis(["expire", key, String(35 * 24 * 60 * 60)]);
+  // Mensal esgotado — usa bônus
+  if (bonus >= cost) {
+    await redis(["incrby", bonusKey(email), String(-cost)]);
+    return { ok: true, remaining: bonus - cost, unlimited: false, plan };
+  }
 
-  return { ok: true, remaining: limit - used - cost, unlimited: false, plan };
+  return { ok: false, remaining: monthlyRemaining + bonus, unlimited: false, plan };
 }
