@@ -6,7 +6,9 @@ import {
   FileText, Calendar, Send, Loader2, Trash2, FolderOpen, Clock,
   Save, ChevronLeft, ChevronRight, CheckCircle, XCircle, Music,
   Search, Play, Pause, Hash, Image as ImageIcon, X, CalendarClock,
+  Layers, BookOpen,
 } from "lucide-react";
+import StorytellingAssistant from "@/components/Calendar/StorytellingAssistant";
 import { Slide } from "@/types";
 import { renderSlide } from "@/lib/render-slide";
 import { v4 as uuid } from "uuid";
@@ -37,7 +39,7 @@ const WEEKDAYS  = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate(); }
 function getFirstWeekday(y: number, m: number) { return new Date(y, m, 1).getDay(); }
 
-type Section = "drafts" | "schedule" | "calendar";
+type Section = "drafts" | "schedule" | "calendar" | "storytelling";
 
 export default function PostsPanel({ currentSlides, onLoad }: Props) {
   const { data: session } = useSession();
@@ -55,7 +57,8 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
   /* ── schedule ── */
   const [caption, setCaption]       = useState("");
   const [hashtags, setHashtags]     = useState("");
-  const [schedAt, setSchedAt]       = useState("");   // datetime-local
+  const [schedAt, setSchedAt]       = useState("");
+  const [postType, setPostType]     = useState<"carousel" | "story">("carousel");
   const [schedStatus, setSchedStatus] = useState<"idle"|"exporting"|"uploading"|"scheduling"|"done"|"error">("idle");
   const [schedMsg, setSchedMsg]     = useState("");
 
@@ -213,12 +216,13 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
     }
 
     const fullCaption = [caption.trim(), hashtags.trim()].filter(Boolean).join("\n\n");
+    const slidesToExport = postType === "story" ? currentSlides.slice(0, 1) : currentSlides;
 
     try {
       /* 1. Export */
       setSchedStatus("exporting"); setSchedMsg("Exportando slides...");
       const dataUrls: string[] = [];
-      for (const slide of currentSlides) {
+      for (const slide of slidesToExport) {
         const canvas = await renderSlide(slide);
         dataUrls.push(canvas.toDataURL("image/jpeg", 0.92));
       }
@@ -249,6 +253,7 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
           scheduledAt: scheduledDate.toISOString(),
           igToken: igAccount.token,
           igAccountId: igAccount.accountId,
+          mediaType: postType,
         }),
       });
       const result = await res.json();
@@ -313,8 +318,8 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
     <div className="flex flex-col gap-0">
       {/* ── Section tabs ── */}
       <div className="flex border-b border-[#1e1e1e] mb-4">
-        {(["drafts", "schedule", "calendar"] as Section[]).map((s) => {
-          const labels: Record<Section, string> = { drafts: "Rascunhos", schedule: "Agendar", calendar: "Calendário" };
+        {(["drafts", "schedule", "calendar", "storytelling"] as Section[]).map((s) => {
+          const labels: Record<Section, string> = { drafts: "Rascunhos", schedule: "Agendar", calendar: "Calendário", storytelling: "Story IA" };
           return (
             <button key={s} onClick={() => setSection(s)}
               className={`flex-1 py-2 text-[11px] font-medium transition-colors border-b-2 ${
@@ -411,9 +416,27 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
 
           {hasContent && (
             <>
+              {/* Tipo de post */}
+              <div className="flex rounded-xl overflow-hidden border border-[#2a2a2a] text-xs font-medium">
+                <button onClick={() => setPostType("carousel")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 transition-colors ${postType === "carousel" ? "bg-brand-600 text-white" : "text-gray-500 hover:text-gray-300"}`}>
+                  <Layers size={12} /> Carrossel
+                </button>
+                <button onClick={() => setPostType("story")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 transition-colors ${postType === "story" ? "bg-brand-600 text-white" : "text-gray-500 hover:text-gray-300"}`}>
+                  <BookOpen size={12} /> Story
+                </button>
+              </div>
+
+              {postType === "story" && (
+                <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-3 py-2 text-[10px] text-yellow-400">
+                  Apenas o 1º slide será usado como Story. Slides adicionais serão ignorados.
+                </div>
+              )}
+
               {/* Preview slides */}
               <div className="flex gap-1.5 overflow-x-auto pb-1">
-                {currentSlides.slice(0, 8).map((s, i) => (
+                {(postType === "story" ? currentSlides.slice(0, 1) : currentSlides.slice(0, 8)).map((s, i) => (
                   <div key={s.id} className="w-12 h-14 shrink-0 rounded-lg overflow-hidden bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center relative">
                     {s.backgroundImageUrl
                       ? <img src={s.backgroundImageUrl} alt="" className="w-full h-full object-cover" />
@@ -421,7 +444,7 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
                     <span className="absolute bottom-0.5 right-1 text-[8px] text-white/60 font-bold">{i + 1}</span>
                   </div>
                 ))}
-                {currentSlides.length > 8 && (
+                {postType === "carousel" && currentSlides.length > 8 && (
                   <div className="w-12 h-14 shrink-0 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-[10px] text-gray-500">
                     +{currentSlides.length - 8}
                   </div>
@@ -534,7 +557,7 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
                 style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white", boxShadow: "0 0 20px rgba(168,85,247,0.3)" }}>
                 {["exporting","uploading","scheduling"].includes(schedStatus)
                   ? <><Loader2 size={16} className="animate-spin" /> Agendando...</>
-                  : <><Send size={16} /> Agendar post</>}
+                  : <><Send size={16} /> {postType === "story" ? "Agendar Story" : "Agendar post"}</>}
               </button>
 
               {schedStatus === "done" && (
@@ -620,6 +643,9 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
                             {post.status === "published" ? "Publicado" : post.status === "failed" ? "Falhou" : "Agendado"}
                           </span>
                           <span className="text-[9px] text-gray-500">{time}</span>
+                          {(post as any).mediaType === "story" && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded border text-purple-400 border-purple-400/20 bg-purple-400/10">Story</span>
+                          )}
                         </div>
                         <p className="text-[10px] text-gray-400 truncate">{post.caption || "Sem legenda"}</p>
                       </div>
@@ -672,6 +698,13 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
             </div>
           )}
         </div>
+      )}
+
+      {/* ══════════════════════════════
+          STORY IA — Assistente de Storytelling
+      ══════════════════════════════ */}
+      {section === "storytelling" && (
+        <StorytellingAssistant />
       )}
     </div>
   );

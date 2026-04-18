@@ -9,14 +9,15 @@ interface ScheduledPost {
   id: string;
   userId: string;
   caption: string;
-  imageUrls: string[];       // URLs públicas no Vercel Blob
-  scheduledAt: string;       // ISO string
+  imageUrls: string[];
+  scheduledAt: string;
   igAccountId: string;
   igToken: string;
   status: "scheduled" | "published" | "failed";
   createdAt: string;
   errorMsg?: string;
   igMediaId?: string;
+  mediaType?: "carousel" | "story";
 }
 
 function postKey(id: string) { return `schedule:post:${id}`; }
@@ -45,11 +46,13 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  const { caption, imageUrls, scheduledAt, igAccountId, igToken } = await req.json();
+  const { caption, imageUrls, scheduledAt, igAccountId, igToken, mediaType } = await req.json();
 
   if (!imageUrls?.length || !scheduledAt || !igAccountId || !igToken) {
     return NextResponse.json({ error: "Campos obrigatórios: imageUrls, scheduledAt, igAccountId, igToken" }, { status: 400 });
   }
+
+  const isStory = mediaType === "story";
 
   const scheduledDate = new Date(scheduledAt);
   const now = new Date();
@@ -70,7 +73,23 @@ export async function POST(req: NextRequest) {
   let carouselContainerId: string | null = null;
 
   try {
-    if (imageUrls.length === 1) {
+    if (isStory) {
+      // Story: apenas 1 imagem, media_type STORIES
+      const r = await fetch(`https://graph.facebook.com/v21.0/${igAccountId}/media`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_url: imageUrls[0],
+          media_type: "STORIES",
+          published: false,
+          scheduled_publish_time: scheduledUnix,
+          access_token: igToken,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error?.message ?? "Erro ao criar container do story");
+      carouselContainerId = d.id;
+    } else if (imageUrls.length === 1) {
       // Post simples
       const r = await fetch(`https://graph.facebook.com/v21.0/${igAccountId}/media`, {
         method: "POST",
@@ -139,13 +158,14 @@ export async function POST(req: NextRequest) {
       id,
       userId: session.user.email,
       caption,
-      imageUrls,
+      imageUrls: isStory ? [imageUrls[0]] : imageUrls,
       scheduledAt,
       igAccountId,
-      igToken: "", // não salva o token por segurança
+      igToken: "",
       status: "scheduled",
       createdAt: new Date().toISOString(),
       igMediaId: pubData.id,
+      mediaType: isStory ? "story" : "carousel",
     };
 
     await redisSet(postKey(id), JSON.stringify(post));

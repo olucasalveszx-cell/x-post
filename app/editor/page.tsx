@@ -2,8 +2,9 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuid } from "uuid";
-import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle } from "lucide-react";
+import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { Slide, Project } from "@/types";
 import { renderSlide } from "@/lib/render-slide";
 import SidePanel from "@/components/Generator/SidePanel";
@@ -30,7 +31,11 @@ const FORMATS = [
 type Format = typeof FORMATS[number];
 
 
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
+
 export default function EditorPage() {
+  const { data: session } = useSession();
+  const isAdmin = ADMIN_EMAIL && session?.user?.email === ADMIN_EMAIL;
   const [format, setFormat] = useState<Format>(FORMATS[1]);
   const SLIDE_W = format.width;
   const SLIDE_H = format.height;
@@ -426,6 +431,13 @@ export default function EditorPage() {
             </button>
           )}
           <AuthButton />
+          {isAdmin && (
+            <Link href="/admin"
+              className="flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-purple-700/50 bg-purple-900/20 hover:bg-purple-800/30 text-purple-400 transition-colors">
+              <LayoutDashboard size={15} />
+              <span className="hidden md:inline">Dashboard</span>
+            </Link>
+          )}
           <button onClick={() => setShowAI(true)}
             className="flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-purple-700 bg-purple-900/30 hover:bg-purple-800/40 text-purple-300 transition-colors">
             <MessageCircle size={15} />
