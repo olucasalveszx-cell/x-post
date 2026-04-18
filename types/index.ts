@@ -36,6 +36,7 @@ export interface SlideElement {
   frameShape?: string;
   frameImageOffset?: { x: number; y: number }; // objectPosition em %, default 50 50
   frameImageZoom?: number; // escala do corte, 100 = preencher, >100 = zoom in
+  imageObjectPositionY?: number; // objectPosition Y% para object-fit:cover (default 50, use 25 para focar no rosto)
 }
 
 export interface TextStyle {

@@ -890,7 +890,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             {el.type === "image" && el.src && (
               <div className="w-full h-full relative overflow-hidden" style={{ clipPath }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={el.src} alt="" className="w-full h-full object-cover" draggable={false} />
+                <img src={el.src} alt="" className="w-full h-full object-cover" style={{ objectPosition: `50% ${el.imageObjectPositionY ?? 50}%` }} draggable={false} />
                 {/* Degradê sobre a imagem */}
                 {el.gradient && <div className="absolute inset-0 pointer-events-none" style={{ background: el.gradient }} />}
 

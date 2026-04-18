@@ -22,15 +22,14 @@ function applyAccent(text: string, accentColor: string): string {
   return text.replace(/\[([^\]]+)\]/g, `<span style="color:${accentColor};font-style:normal">$1</span>`);
 }
 
-// Layout variants: 0 = clássico, 1 = cinemático, 2 = vinheta centralizada
+// Templates: 0=Cover(full bg), 1=Cinematic(full bg), 2=Content(solid+img element), 3=Mixed(solid+img element)
 const LAYOUT_BG_POSITIONS = [
   { x: 50, y: 50 },  // 0 classic
   { x: 42, y: 36 },  // 1 cinematic
-  { x: 56, y: 44 },  // 2 vignette
 ];
-const LAYOUT_BG_ZOOMS = [100, 115, 108];
+const LAYOUT_BG_ZOOMS = [100, 115];
 
-function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & { _imagePrompt: string; _searchQuery: string })[] {
+function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & { _imagePrompt: string; _searchQuery: string; _elementImageId?: string })[] {
   const W = SLIDE_W;
   const H = SLIDE_H;
   const N = generated.slides.length;
@@ -41,7 +40,12 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
   return generated.slides.map((gs, i) => {
     const accent = gs.colorScheme.accent;
     const isLast = i === N - 1;
-    const variant = isLast ? 0 : i % 3;
+
+    // 0=Cover 1=Cinematic 2=Content 3=Mixed — capa e última sempre 0
+    const variant = (i === 0 || isLast) ? 0 : (((i - 1) % 3) + 1) as 1 | 2 | 3;
+    const useBgImage = variant <= 1;
+    const elementImageId = !useBgImage ? uuid() : undefined;
+
     const elements: any[] = [];
 
     // ── Header ───────────────────────────────────────────
@@ -62,116 +66,90 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
       });
     }
 
-    // ── Layout-specific setup ─────────────────────────────
-    let gradient: string;
-    let titleX = 60, titleY: number, titleW = W - 120;
-    let titleSize = 90;
+    // ── Layout-specific ───────────────────────────────────
+    let gradient = "";
+    let titleY: number, titleH = 280, titleSize = 90;
     let titleAlign: "left" | "center" | "right" = "center";
-    let bodyY: number;
+    let bodyY: number, bodyH = 110, bodySize = 28;
+    let bodyAlign: "left" | "center" | "right" = "center";
 
     if (variant === 1) {
-      // Cinemático: faixas escuras topo+base, número watermark, título alinhado à esquerda no terço superior
+      // Cinemático: imagem de fundo, faixas escuras, título esquerda no 1/3 superior
       gradient = "linear-gradient(180deg, rgba(0,0,0,0.86) 0%, rgba(0,0,0,0.14) 30%, rgba(0,0,0,0.14) 55%, rgba(0,0,0,0.93) 100%)";
-      titleY = Math.round(H * 0.28);
-      titleAlign = "left";
-      titleSize = 82;
-      bodyY = Math.min(titleY + 300, H - 210);
-
-      // Número watermark
-      elements.push({
-        id: uuid(), type: "text" as const,
-        x: W - 220, y: 56, width: 200, height: 200,
-        content: String(i + 1).padStart(2, "0"),
-        style: { fontSize: 160, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.06)", textAlign: "right" as const, lineHeight: 1 },
-      });
-      // Linha accent acima do título
-      elements.push({
-        id: uuid(), type: "shape" as const,
-        x: 60, y: titleY - 28, width: 56, height: 6,
-        content: "",
-        style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 3 },
-      });
-    } else if (variant === 2) {
-      // Vinheta: escuridão nas bordas, título centrado verticalmente
-      gradient = "radial-gradient(ellipse 130% 85% at 50% 50%, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.96) 100%)";
-      titleY = Math.round(H / 2 - 170);
-      titleSize = 86;
+      titleY = Math.round(H * 0.28); titleAlign = "left"; titleSize = 82; titleH = 300;
       bodyY = Math.min(titleY + 310, H - 210);
+      elements.push({ id: uuid(), type: "text" as const, x: W - 220, y: 56, width: 200, height: 200,
+        content: String(i + 1).padStart(2, "0"),
+        style: { fontSize: 160, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.06)", textAlign: "right" as const, lineHeight: 1 } });
+      elements.push({ id: uuid(), type: "shape" as const, x: 60, y: titleY - 28, width: 56, height: 6, content: "",
+        style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 3 } });
 
-      // Linha accent centralizada acima do título
-      elements.push({
-        id: uuid(), type: "shape" as const,
-        x: Math.round(W / 2 - 36), y: titleY - 30, width: 72, height: 5,
-        content: "",
-        style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 3 },
-      });
+    } else if (variant === 2) {
+      // Content: fundo sólido, título grande esquerda, corpo, imagem contida na base
+      titleY = 110; titleAlign = "left"; titleSize = 76; titleH = 230;
+      bodyY = 360; bodyH = 130; bodySize = 30; bodyAlign = "left";
+      // Imagem como elemento (landscape, base do slide)
+      elements.push({ id: elementImageId, type: "image" as const,
+        x: 60, y: 510, width: W - 120, height: 660, imageObjectPositionY: 25 });
+
+    } else if (variant === 3) {
+      // Mixed: fundo sólido, título bold grande, texto curto, imagem maior no centro-base
+      titleY = 110; titleAlign = "left"; titleSize = 84; titleH = 210;
+      bodyY = 340; bodyH = 110; bodySize = 30; bodyAlign = "left";
+      elements.push({ id: elementImageId, type: "image" as const,
+        x: 60, y: 470, width: W - 120, height: 700, imageObjectPositionY: 25 });
+
     } else {
-      // Clássico: gradiente forte de baixo para cima
+      // Clássico (Cover/CTA): gradiente forte, título base
       gradient = "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.97) 28%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.1) 72%, rgba(0,0,0,0) 100%)";
-      titleY = H - 510;
-      bodyY = H - 192;
+      titleY = H - 510; bodyY = H - 192;
     }
 
     // ── Title ─────────────────────────────────────────────
     elements.push({
       id: uuid(), type: "text" as const,
-      x: titleX, y: titleY, width: titleW, height: 310,
+      x: 60, y: titleY, width: W - 120, height: titleH,
       content: applyAccent(gs.title, accent),
-      style: { fontSize: titleSize, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: titleAlign, lineHeight: 1.0 },
+      style: { fontSize: titleSize, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: titleAlign, lineHeight: 1.05 },
     });
 
     // ── Body ──────────────────────────────────────────────
     elements.push({
       id: uuid(), type: "text" as const,
-      x: 80, y: bodyY, width: W - 160, height: 110,
+      x: 60, y: bodyY, width: W - 120, height: bodyH,
       content: isLast && gs.callToAction ? gs.callToAction : gs.body,
-      style: { fontSize: 28, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.65)", textAlign: "center" as const, lineHeight: 1.4 },
+      style: { fontSize: bodySize, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.72)", textAlign: bodyAlign, lineHeight: 1.45 },
     });
 
     // ── Footer ────────────────────────────────────────────
     const FY = H - 82;
-
     if (brand) {
-      elements.push({
-        id: uuid(), type: "text" as const,
-        x: 60, y: FY, width: W * 0.32, height: 70,
-        content: brand,
-        style: { fontSize: 25, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.4)", textAlign: "left" as const, lineHeight: 1 },
-      });
+      elements.push({ id: uuid(), type: "text" as const, x: 60, y: FY, width: W * 0.32, height: 70, content: brand,
+        style: { fontSize: 25, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.4)", textAlign: "left" as const, lineHeight: 1 } });
     }
-
-    // Dots
     const dots = Array.from({ length: N }, (_, di) =>
       di === i ? `<span style="color:rgba(255,255,255,0.9)">●</span>` : `<span style="color:rgba(255,255,255,0.18)">●</span>`
     ).join(" ");
-    elements.push({
-      id: uuid(), type: "text" as const,
-      x: W * 0.28, y: FY + 8, width: W * 0.44, height: 56,
-      content: dots,
-      style: { fontSize: 20, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.25)", textAlign: "center" as const, lineHeight: 1 },
-    });
-
-    // Arrasta / Salva
-    elements.push({
-      id: uuid(), type: "text" as const,
-      x: W * 0.6, y: FY, width: W * 0.35, height: 70,
+    elements.push({ id: uuid(), type: "text" as const, x: W * 0.28, y: FY + 8, width: W * 0.44, height: 56, content: dots,
+      style: { fontSize: 20, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.25)", textAlign: "center" as const, lineHeight: 1 } });
+    elements.push({ id: uuid(), type: "text" as const, x: W * 0.6, y: FY, width: W * 0.35, height: 70,
       content: isLast ? "salva ❤️" : "arrasta →",
-      style: { fontSize: 25, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.4)", textAlign: "right" as const, lineHeight: 1 },
-    });
+      style: { fontSize: 25, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.4)", textAlign: "right" as const, lineHeight: 1 } });
 
     return {
       id: uuid(),
-      backgroundColor: "#0a0a0a",
+      backgroundColor: useBgImage ? "#0a0a0a" : "#0d0d0d",
       backgroundImageUrl: undefined,
-      backgroundImageLoading: true,
-      backgroundGradient: gradient,
-      backgroundPosition: LAYOUT_BG_POSITIONS[variant],
-      backgroundZoom: LAYOUT_BG_ZOOMS[variant],
+      backgroundImageLoading: useBgImage,
+      backgroundGradient: useBgImage && gradient ? gradient : undefined,
+      backgroundPosition: useBgImage ? LAYOUT_BG_POSITIONS[variant] : undefined,
+      backgroundZoom: useBgImage ? LAYOUT_BG_ZOOMS[variant] : undefined,
       elements,
       width: W,
       height: H,
       _imagePrompt: gs.imagePrompt || ws.topic,
       _searchQuery: gs.searchQuery || ws.topic,
+      _elementImageId: elementImageId,
     };
   });
 }
@@ -205,13 +183,18 @@ async function generateImages(
         });
         const data = await res.json();
         done++; onProgress(done);
-        const { _imagePrompt, _searchQuery, ...clean } = slide as any;
+        const { _imagePrompt, _searchQuery, _elementImageId, ...clean } = slide as any;
+        if (data.imageUrl && _elementImageId) {
+          return { ...clean, elements: clean.elements.map((el: any) =>
+            el.id === _elementImageId ? { ...el, src: data.imageUrl } : el
+          ), backgroundImageLoading: false };
+        }
         return data.imageUrl
           ? { ...clean, backgroundImageUrl: data.imageUrl, backgroundImageLoading: false }
           : { ...clean, backgroundImageLoading: false };
       } catch {
         done++; onProgress(done);
-        const { _imagePrompt, _searchQuery, ...clean } = slide as any;
+        const { _imagePrompt, _searchQuery, _elementImageId, ...clean } = slide as any;
         return { ...clean, backgroundImageLoading: false };
       }
     })

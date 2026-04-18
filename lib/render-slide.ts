@@ -140,7 +140,18 @@ export async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
     } else if (el.type === "image" && el.src) {
       try {
         const img = await loadImg(el.src);
-        ctx.drawImage(img, el.x, el.y, el.width, el.height);
+        const objPosY = (el as any).imageObjectPositionY ?? 50;
+        const imgAspect = img.width / img.height;
+        const destAspect = el.width / el.height;
+        let sx = 0, sy = 0, sw = img.width, sh = img.height;
+        if (imgAspect > destAspect) {
+          sw = img.height * destAspect;
+          sx = (img.width - sw) * 0.5;
+        } else {
+          sh = img.width / destAspect;
+          sy = (img.height - sh) * (objPosY / 100);
+        }
+        ctx.drawImage(img, sx, sy, sw, sh, el.x, el.y, el.width, el.height);
       } catch {}
     } else if (el.type === "shape") {
       const s = el.style as any;
