@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redisGet, redisSet } from "@/lib/redis";
-import { put } from "@vercel/blob";
+import { put, list } from "@vercel/blob";
 
 export const maxDuration = 60;
 
@@ -78,6 +78,8 @@ async function generateWithGemini(prompt: string): Promise<string | null> {
   return null;
 }
 
+const HEADERS = { "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800" };
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -85,37 +87,42 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Tópico não encontrado" }, { status: 404 });
   }
 
-  // Verifica cache no Redis (Blob URL)
+  // 1. Redis cache (mais rápido)
   try {
     const cached = await redisGet(`${CACHE_PREFIX}${id}`);
-    if (cached) {
-      return NextResponse.json({ url: cached }, {
-        headers: { "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800" },
-      });
+    if (cached) return NextResponse.json({ url: cached }, { headers: HEADERS });
+  } catch {}
+
+  // 2. Vercel Blob — busca imagem já existente mesmo sem Redis
+  // Garante que se o Redis for limpo a imagem não precisa ser regerada
+  try {
+    const { blobs } = await list({ prefix: `landing/${id}` });
+    if (blobs.length > 0) {
+      const url = blobs[0].url;
+      redisSet(`${CACHE_PREFIX}${id}`, url).catch(() => {}); // repopula Redis
+      return NextResponse.json({ url }, { headers: HEADERS });
     }
   } catch {}
 
-  // Gera com Gemini
+  // 3. Gera nova imagem com Gemini (só quando não existe nenhuma cópia)
   const dataUrl = await generateWithGemini(TOPICS[id]);
   if (!dataUrl) return NextResponse.json({ error: "Falha na geração" }, { status: 500 });
 
-  // Faz upload para Vercel Blob e salva URL permanente no Redis
+  // 4. Upload permanente para Vercel Blob
   try {
     const [header, b64] = dataUrl.split(",");
     const mimeType = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
     const ext = mimeType.split("/")[1]?.split("+")[0] ?? "jpg";
     const buffer = Buffer.from(b64, "base64");
-    const blob = await put(`landing/${id}-${Date.now()}.${ext}`, buffer, {
+    const blob = await put(`landing/${id}.${ext}`, buffer, {
       access: "public",
       contentType: mimeType,
+      allowedOrigins: ["*"],
     });
     redisSet(`${CACHE_PREFIX}${id}`, blob.url).catch(() => {});
-    return NextResponse.json({ url: blob.url }, {
-      headers: { "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800" },
-    });
+    return NextResponse.json({ url: blob.url }, { headers: HEADERS });
   } catch (e: any) {
     console.error("[landing-img] Blob upload falhou:", e.message);
-    // Fallback: retorna base64 direto sem salvar no cache
     return NextResponse.json({ url: dataUrl });
   }
 }
