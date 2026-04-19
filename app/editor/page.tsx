@@ -283,62 +283,11 @@ export default function EditorPage() {
     });
   }, [safeIndex, setProjects]);
 
-  const generateWaveGrid = useCallback((width: number, height: number): string => {
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d")!;
-
-    ctx.fillStyle = "#f8f8f8";
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.strokeStyle = "rgba(0,0,0,0.09)";
-    ctx.lineWidth = 0.9;
-
-    const cols = 18;
-    const rows = Math.round(cols * height / width);
-    const cSp = width / cols;
-    const rSp = height / rows;
-    const steps = 140;
-    const wX = cSp * 0.48;
-    const wY = rSp * 0.42;
-
-    for (let r = 0; r <= rows; r++) {
-      ctx.beginPath();
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps;
-        const x = t * width;
-        const base = r * rSp;
-        const wave = Math.sin(t * Math.PI * 2.3 + r * 0.28) * wY * 0.6
-                   + Math.sin(t * Math.PI * 0.9 - r * 0.14) * wY * 0.4;
-        const y = base + wave;
-        s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-
-    for (let c = 0; c <= cols; c++) {
-      ctx.beginPath();
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps;
-        const y = t * height;
-        const base = c * cSp;
-        const wave = Math.sin(t * Math.PI * 2.6 + c * 0.22) * wX * 0.55
-                   + Math.sin(t * Math.PI * 1.1 - c * 0.12) * wX * 0.35;
-        const x = base + wave;
-        s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-
-    return canvas.toDataURL("image/jpeg", 0.92);
-  }, []);
-
   const applyTwitterStyle = useCallback(async (slides: Slide[]): Promise<Slide[]> => {
     if (slides.length <= 1) return slides;
     const W = slides[0].width;
     const H = slides[0].height;
-    const gridBg = generateWaveGrid(W, H);
+    const { v4: uuidv4 } = await import("uuid");
 
     let profileData: { name?: string; handle?: string; avatarSrc?: string; verified?: boolean } | null = null;
     try {
@@ -346,51 +295,113 @@ export default function EditorPage() {
       if (saved) profileData = JSON.parse(saved);
     } catch {}
 
-    const [firstSlide, ...rest] = slides;
-    const twitterSlides = rest.map((slide) => {
-      const newElements = slide.elements
-        .filter((el) => el.type !== "profile")
-        .map((el) => {
-          if (el.type === "text") {
-            return {
-              ...el,
-              style: { ...(el.style as any), color: "#111111", fontFamily: "'Inter', sans-serif" },
-            };
-          }
-          return el;
-        });
+    const PAD = Math.round(W * 0.055);         // margem lateral ~5.5%
+    const PROFILE_H = Math.round(H * 0.075);   // altura do bloco de perfil
+    const PROFILE_Y = Math.round(H * 0.03);    // topo
 
-      const profileEls: import("@/types").SlideElement[] = [];
-      if (profileData?.name || profileData?.handle) {
-        profileEls.push({
-          id: require("uuid").v4(),
-          type: "profile" as const,
-          x: 40,
-          y: H - 180,
-          width: Math.min(700, W - 80),
-          height: 150,
-          src: profileData.avatarSrc || undefined,
-          profileName: profileData.name ?? "",
-          profileHandle: profileData.handle ?? "",
-          profileVerified: profileData.verified ?? false,
-          zIndex: 10,
-        });
-      }
+    const makeProfile = (): import("@/types").SlideElement => ({
+      id: uuidv4(),
+      type: "profile" as const,
+      x: PAD,
+      y: PROFILE_Y,
+      width: W - PAD * 2,
+      height: PROFILE_H,
+      src: profileData?.avatarSrc || undefined,
+      profileName: profileData?.name ?? "",
+      profileHandle: profileData?.handle ?? "",
+      profileVerified: profileData?.verified ?? false,
+      zIndex: 10,
+    });
+
+    // ── Slide 1 (capa): foto retangular contida + perfil no topo ──
+    const [coverSlide, ...rest] = slides;
+    const coverImgUrl = coverSlide.backgroundImageUrl;
+    const IMG_TOP    = PROFILE_Y + PROFILE_H + Math.round(H * 0.025);
+    const IMG_H      = Math.round(H * 0.36);
+    const TEXT_TOP   = IMG_TOP + IMG_H + Math.round(H * 0.025);
+    const TEXT_H     = Math.round(H * 0.18);
+    const BODY_TOP   = TEXT_TOP + TEXT_H + Math.round(H * 0.015);
+    const BODY_H     = Math.round(H * 0.10);
+
+    const coverTexts = coverSlide.elements
+      .filter(el => el.type === "text")
+      .map((el, i) => ({
+        ...el,
+        x: PAD,
+        y: i === 0 ? TEXT_TOP : BODY_TOP,
+        width: W - PAD * 2,
+        height: i === 0 ? TEXT_H : BODY_H,
+        style: {
+          ...(el.style as any),
+          color: "#111111",
+          fontFamily: "'Inter', sans-serif",
+          fontSize: i === 0 ? Math.round(H * 0.038) : Math.round(H * 0.020),
+          fontWeight: i === 0 ? "bold" : "normal",
+        },
+      }));
+
+    const coverImgEl: import("@/types").SlideElement | null = coverImgUrl ? {
+      id: uuidv4(),
+      type: "image" as const,
+      x: PAD,
+      y: IMG_TOP,
+      width: W - PAD * 2,
+      height: IMG_H,
+      src: coverImgUrl,
+      zIndex: 2,
+      imageObjectPositionY: 30,
+    } : null;
+
+    const coverSlideOut: Slide = {
+      ...coverSlide,
+      backgroundColor: "#ffffff",
+      backgroundImageUrl: undefined,
+      backgroundGradient: undefined,
+      backgroundCrop: undefined,
+      elements: [
+        makeProfile(),
+        ...(coverImgEl ? [coverImgEl] : []),
+        ...coverTexts,
+      ],
+    };
+
+    // ── Slides 2+ (conteúdo): fundo branco, perfil no topo, texto no meio ──
+    const CTOP_TITLE = PROFILE_Y + PROFILE_H + Math.round(H * 0.06);
+    const CTOP_BODY  = CTOP_TITLE + Math.round(H * 0.22) + Math.round(H * 0.02);
+
+    const contentSlides = rest.map((slide) => {
+      const texts = slide.elements
+        .filter(el => el.type === "text")
+        .map((el, i) => ({
+          ...el,
+          x: PAD,
+          y: i === 0 ? CTOP_TITLE : CTOP_BODY,
+          width: W - PAD * 2,
+          height: i === 0 ? Math.round(H * 0.22) : Math.round(H * 0.30),
+          style: {
+            ...(el.style as any),
+            color: "#111111",
+            fontFamily: "'Inter', sans-serif",
+            fontSize: i === 0 ? Math.round(H * 0.046) : Math.round(H * 0.022),
+            fontWeight: i === 0 ? "bold" : "normal",
+            lineHeight: i === 0 ? 1.15 : 1.5,
+          },
+        }));
 
       return {
         ...slide,
-        backgroundColor: "#f8f8f8",
-        backgroundImageUrl: gridBg,
+        backgroundColor: "#f7f7f7",
+        backgroundImageUrl: undefined,
         backgroundGradient: undefined,
-        backgroundPosition: { x: 50, y: 50 },
-        backgroundZoom: 100,
         backgroundCrop: undefined,
-        elements: [...newElements, ...profileEls],
+        backgroundPosition: undefined,
+        backgroundZoom: 100,
+        elements: [makeProfile(), ...texts],
       };
     });
 
-    return [firstSlide, ...twitterSlides];
-  }, [generateWaveGrid]);
+    return [coverSlideOut, ...contentSlides];
+  }, []);
 
   const handleGenerate = useCallback(async (generated: Slide[]) => {
     const pid = activeProjectIdRef.current;
