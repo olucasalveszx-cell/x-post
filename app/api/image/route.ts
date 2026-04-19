@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { waitUntil } from "@vercel/functions";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { hasActiveSubscription } from "@/lib/stripe";
 import { verifyToken } from "@/lib/activation";
-import { isEmailActive } from "@/lib/kv";
-import { stripe } from "@/lib/stripe";
+import { getUserPlan } from "@/lib/credits";
 import { redisIncr, redisLPush, redisLTrim } from "@/lib/redis";
 import { put } from "@vercel/blob";
 import Anthropic from "@anthropic-ai/sdk";
@@ -389,15 +387,9 @@ export async function POST(req: NextRequest) {
   let isPro = false;
   const email = session?.user?.email;
   if (email) {
-    const kirvano = await isEmailActive(email).catch(() => false);
-    if (kirvano) {
-      isPro = true;
-    } else {
-      const customers = await stripe.customers.list({ email, limit: 1 });
-      if (customers.data.length > 0) isPro = await hasActiveSubscription(customers.data[0].id);
-    }
+    const plan = await getUserPlan(email).catch(() => "free");
+    isPro = plan !== "free";
   }
-  if (!isPro && customerId) isPro = await hasActiveSubscription(customerId);
   if (!isPro && activationToken) { const { valid } = verifyToken(activationToken); isPro = valid; }
 
   type ImageResult = { imageUrl: string; source: string };

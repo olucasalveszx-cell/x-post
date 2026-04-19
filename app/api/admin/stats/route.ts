@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminToken, ADMIN_COOKIE } from "@/lib/adminAuth";
 import { redisListAll, redisGet, redisZCount, redisSCard } from "@/lib/redis";
-import { stripe } from "@/lib/stripe";
 
 export const maxDuration = 30;
 
@@ -29,45 +28,40 @@ export async function GET(req: NextRequest) {
     carouselsTodayRaw,
     imagesTodayRaw,
     weekCarousels,
-    stripeSubs,
   ] = await Promise.all([
     redisListAll("users:list"),
-    redisZCount("xpz:presence", now - 120_000, now),      // online nos últimos 2min
-    redisSCard(`xpz:active:${t}`),                         // ativos hoje
+    redisZCount("xpz:presence", now - 120_000, now),
+    redisSCard(`xpz:active:${t}`),
     redisGet(`stats:carousels:${t}`),
     redisGet(`stats:images:${t}`),
     Promise.all(weekDates().map((d) => redisGet(`stats:carousels:${d}`))),
-    stripe.subscriptions.list({ status: "active", limit: 100, expand: ["data.plan"] }).catch(() => ({ data: [] })),
   ]);
 
-  const totalUsers = emails.length;
-  const proCount   = stripeSubs.data.length;
-
-  // MRR estimado — soma dos planos ativos
-  let mrr = 0;
-  for (const sub of stripeSubs.data) {
-    const item = (sub as any).items?.data?.[0];
-    if (item?.price?.unit_amount) mrr += item.price.unit_amount / 100;
+  // Conta usuários com plano pago via Kirvano (Redis plan:email)
+  let proCount = 0;
+  if (emails.length > 0) {
+    const planChecks = await Promise.all(
+      emails.map((e: string) => redisGet(`plan:${e.toLowerCase()}`).catch(() => null))
+    );
+    proCount = planChecks.filter((p) => p && ["basic", "pro", "business"].includes(p as string)).length;
   }
 
-  // Últimos 10 usuários
   const recentEmails = [...emails].reverse().slice(0, 10);
   const recentUsers = (
-    await Promise.all(recentEmails.map((e) => redisGet(`user:${e}`).then((r) => r ? JSON.parse(r) : null)))
+    await Promise.all(recentEmails.map((e: string) => redisGet(`user:${e}`).then((r) => r ? JSON.parse(r) : null)))
   ).filter(Boolean);
 
-  // Carrosséis por dia (semana)
   const weekData = weekDates().map((date, i) => ({
     date,
     count: parseInt(weekCarousels[i] || "0"),
   }));
 
   return NextResponse.json({
-    totalUsers,
+    totalUsers: emails.length,
     onlineNow,
     activeToday,
     proCount,
-    mrr: mrr.toFixed(2),
+    mrr: "—",
     carouselsToday: parseInt(carouselsTodayRaw || "0"),
     imagesToday:    parseInt(imagesTodayRaw    || "0"),
     weekData,

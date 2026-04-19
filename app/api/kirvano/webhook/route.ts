@@ -1,13 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
-import { activateEmail } from "@/lib/kv";
+import { setEmailPlan } from "@/lib/kv";
+
+// Mapeia offer/product ID para plano
+const PLAN_MAP: Record<string, string> = {
+  "d3f6da72-a6be-4d54-8268-20c725e4ab5b": "basic",
+  "2743febe-6d27-41b7-ad3f-593a637a6b90": "pro",
+  "0ffb8064-d5da-47ba-82ee-a2cc1ea6aafe": "business",
+};
+
+function detectPlan(body: any): string {
+  const offerId =
+    body?.data?.purchase?.offer?.id ??
+    body?.data?.offer?.id ??
+    body?.data?.product?.id ??
+    body?.offer_id ??
+    body?.product_id ??
+    null;
+
+  if (offerId && PLAN_MAP[offerId]) return PLAN_MAP[offerId];
+
+  // Fallback: detecta pelo nome do produto
+  const name: string = (
+    body?.data?.purchase?.offer?.name ??
+    body?.data?.offer?.name ??
+    body?.data?.product?.name ??
+    body?.offer_name ??
+    ""
+  ).toLowerCase();
+
+  if (name.includes("business") || name.includes("empresa")) return "business";
+  if (name.includes("pro"))                                    return "pro";
+  if (name.includes("basic") || name.includes("básico"))       return "basic";
+
+  return "pro"; // padrão se não identificado
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    console.log("[kirvano] webhook recebido:", JSON.stringify(body).slice(0, 300));
+    // Validação do token (configurado em KIRVANO_WEBHOOK_TOKEN)
+    const expectedToken = process.env.KIRVANO_WEBHOOK_TOKEN;
+    if (expectedToken) {
+      const receivedToken =
+        req.headers.get("Authorization") ??
+        req.headers.get("x-kirvano-token") ??
+        req.headers.get("token") ??
+        null;
+      if (receivedToken !== expectedToken) {
+        console.warn("[kirvano] token inválido");
+        return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+      }
+    }
 
-    // Kirvano envia em vários formatos — tentamos todos
-    const email =
+    const body = await req.json();
+    console.log("[kirvano] webhook:", JSON.stringify(body).slice(0, 400));
+
+    // Extrai email do cliente
+    const email: string | null =
       body?.data?.customer?.email ??
       body?.data?.buyer?.email ??
       body?.customer?.email ??
@@ -15,20 +63,30 @@ export async function POST(req: NextRequest) {
       body?.email ??
       null;
 
-    const status =
-      body?.data?.purchase?.status ??
-      body?.data?.order?.status ??
-      body?.status ??
-      "approved";
-
     if (!email) {
       console.warn("[kirvano] email não encontrado no payload");
       return NextResponse.json({ ok: false, error: "email not found" }, { status: 400 });
     }
 
-    if (["approved", "complete", "paid", "active"].includes(String(status).toLowerCase())) {
-      await activateEmail(email);
-      console.log("[kirvano] ativado:", email);
+    // Extrai status da compra
+    const status: string = String(
+      body?.data?.purchase?.status ??
+      body?.data?.order?.status ??
+      body?.event ??
+      body?.status ??
+      "approved"
+    ).toLowerCase();
+
+    const isActive = ["approved", "complete", "paid", "active", "purchase.approved", "subscription.active"].some(
+      (s) => status.includes(s)
+    );
+
+    if (isActive) {
+      const plan = detectPlan(body);
+      await setEmailPlan(email.toLowerCase().trim(), plan);
+      console.log(`[kirvano] ativado: ${email} → plano ${plan}`);
+    } else {
+      console.log(`[kirvano] evento ignorado (status: ${status})`);
     }
 
     return NextResponse.json({ ok: true });

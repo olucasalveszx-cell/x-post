@@ -1,4 +1,4 @@
-import { stripe } from "./stripe";
+import { getEmailPlan, isEmailActive } from "./kv";
 
 const REST_URL   = process.env.UPSTASH_REDIS_REST_URL!;
 const REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN!;
@@ -18,31 +18,14 @@ export const PLAN_LIMITS: Record<string, number> = {
   free:      3,
 };
 
-/* ── Pacotes de créditos extras ── */
-export const CREDIT_PACKS = [
-  { id: "10",  credits: 10,  label: "Starter" },
-  { id: "25",  credits: 25,  label: "Plus"    },
-  { id: "50",  credits: 50,  label: "Pro"     },
-  { id: "100", credits: 100, label: "Max"     },
-] as const;
-export type CreditPackId = typeof CREDIT_PACKS[number]["id"];
-
 /* ── Custo por ação ── */
 export const ACTION_COST: Record<string, number> = {
-  carousel:    1,  // foto real (Google)
-  carousel_ai: 2,  // imagens geradas por IA
+  carousel:    1,
+  carousel_ai: 2,
   flyer:       2,
   promo:       1,
   translate:   1,
 };
-
-/* ── Detecta plano pelo price ID ── */
-function planFromPriceId(priceId: string): string {
-  if (priceId === process.env.STRIPE_PRICE_BASIC)    return "basic";
-  if (priceId === process.env.STRIPE_PRICE_PRO)      return "pro";
-  if (priceId === process.env.STRIPE_PRICE_BUSINESS) return "business";
-  return "free";
-}
 
 /* ── Chave Redis para o mês atual ── */
 function monthKey(email: string): string {
@@ -50,38 +33,36 @@ function monthKey(email: string): string {
   return `credits:${email.toLowerCase()}:${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/* ── Busca plano do usuário (com cache 1h) ── */
+/* ── Busca plano do usuário ── */
 export async function getUserPlan(email: string): Promise<string> {
-  // Admin sempre tem plano business (ilimitado)
   const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
   if (adminEmail && email.toLowerCase().trim() === adminEmail) return "business";
 
-  const cacheKey = `plan:${email.toLowerCase()}`;
+  // Cache de 1h para evitar múltiplas consultas ao Redis
+  const cacheKey = `plan_cache:${email.toLowerCase()}`;
   const cached = await redis(["get", cacheKey]);
-  if (cached.result) return cached.result as string;
+  if (cached.result && ["basic", "pro", "business"].includes(cached.result as string)) {
+    return cached.result as string;
+  }
 
-  try {
-    const customers = await stripe.customers.list({ email, limit: 1 });
-    if (!customers.data.length) return "free";
-
-    const subs = await stripe.subscriptions.list({
-      customer: customers.data[0].id,
-      status: "active",
-      limit: 1,
-    });
-    if (!subs.data.length) return "free";
-
-    const priceId = subs.data[0].items.data[0].price.id;
-    const plan = planFromPriceId(priceId);
-
+  // Busca plano salvo pelo webhook do Kirvano
+  const plan = await getEmailPlan(email).catch(() => null);
+  if (plan && ["basic", "pro", "business"].includes(plan)) {
     await redis(["set", cacheKey, plan, "ex", "3600"]);
     return plan;
-  } catch {
-    return "free";
   }
+
+  // Fallback: verifica ativação genérica (Pro)
+  const active = await isEmailActive(email).catch(() => false);
+  if (active) {
+    await redis(["set", cacheKey, "pro", "ex", "3600"]);
+    return "pro";
+  }
+
+  return "free";
 }
 
-/* ── Bônus: créditos extras comprados ── */
+/* ── Bônus: créditos extras ── */
 function bonusKey(email: string) { return `credits:bonus:${email.toLowerCase()}`; }
 
 export async function getBonusCredits(email: string): Promise<number> {
@@ -93,7 +74,7 @@ export async function addBonusCredits(email: string, amount: number): Promise<vo
   await redis(["incrby", bonusKey(email), String(amount)]);
 }
 
-/* ── Retorna info de créditos do usuário ── */
+/* ── Info completa de créditos ── */
 export async function getCreditsInfo(email: string): Promise<{
   plan: string;
   used: number;
@@ -104,7 +85,7 @@ export async function getCreditsInfo(email: string): Promise<{
   total: number;
 }> {
   const plan  = await getUserPlan(email);
-  const limit = PLAN_LIMITS[plan] ?? 5;
+  const limit = PLAN_LIMITS[plan] ?? 3;
 
   const key  = monthKey(email);
   const [monthData, bonus] = await Promise.all([
@@ -114,24 +95,16 @@ export async function getCreditsInfo(email: string): Promise<{
   const used = parseInt((monthData.result as string) ?? "0") || 0;
   const remaining = Math.max(0, limit - used);
 
-  return {
-    plan,
-    used,
-    limit,
-    remaining,
-    unlimited: false,
-    bonus,
-    total: remaining + bonus,
-  };
+  return { plan, used, limit, remaining, unlimited: false, bonus, total: remaining + bonus };
 }
 
-/* ── Consome créditos — usa mensal primeiro, depois bônus ── */
+/* ── Consome créditos ── */
 export async function consumeCredits(
   email: string,
   action: keyof typeof ACTION_COST = "carousel"
 ): Promise<{ ok: boolean; remaining: number; unlimited: boolean; plan: string }> {
   const plan  = await getUserPlan(email);
-  const limit = PLAN_LIMITS[plan] ?? 5;
+  const limit = PLAN_LIMITS[plan] ?? 3;
   const cost  = ACTION_COST[action] ?? 1;
 
   const key  = monthKey(email);
@@ -142,14 +115,12 @@ export async function consumeCredits(
   const used = parseInt((monthData.result as string) ?? "0") || 0;
   const monthlyRemaining = Math.max(0, limit - used);
 
-  // Usa créditos mensais primeiro
   if (monthlyRemaining >= cost) {
     await redis(["incrby", key, String(cost)]);
     await redis(["expire", key, String(35 * 24 * 60 * 60)]);
     return { ok: true, remaining: monthlyRemaining - cost + bonus, unlimited: false, plan };
   }
 
-  // Mensal esgotado — usa bônus
   if (bonus >= cost) {
     await redis(["incrby", bonusKey(email), String(-cost)]);
     return { ok: true, remaining: bonus - cost, unlimited: false, plan };

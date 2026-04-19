@@ -1,13 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Zap, ArrowLeft, Loader2, CheckCircle, Crown, Sparkles, ShoppingCart,
-  AlertCircle,
-} from "lucide-react";
+import { Zap, ArrowLeft, Loader2, Crown, Sparkles, ExternalLink, Check } from "lucide-react";
 import Link from "next/link";
-import { CREDIT_PACKS, type CreditPackId } from "@/lib/credits";
 
 interface CreditsInfo {
   plan: string;
@@ -26,72 +21,52 @@ const PLAN_LABELS: Record<string, { label: string; color: string; bg: string }> 
   business: { label: "Business", color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
 };
 
-const PACK_STYLES = [
-  { accent: "#60a5fa", bg: "rgba(96,165,250,0.08)",   highlight: false },
-  { accent: "#a855f7", bg: "rgba(168,85,247,0.08)",   highlight: false },
-  { accent: "#10b981", bg: "rgba(16,185,129,0.08)",   highlight: true  },
-  { accent: "#f59e0b", bg: "rgba(245,158,11,0.08)",   highlight: false },
-];
+const KIRVANO_PLANS = [
+  {
+    id: "basic",
+    label: "Basic",
+    credits: 30,
+    color: "#60a5fa",
+    bg: "rgba(96,165,250,0.08)",
+    border: "rgba(96,165,250,0.2)",
+    url: "https://pay.kirvano.com/d3f6da72-a6be-4d54-8268-20c725e4ab5b",
+    features: ["30 créditos/mês", "Imagens por IA", "Todos os layouts", "Suporte padrão"],
+    highlight: false,
+  },
+  {
+    id: "pro",
+    label: "Pro",
+    credits: 45,
+    color: "#a855f7",
+    bg: "rgba(168,85,247,0.08)",
+    border: "rgba(168,85,247,0.35)",
+    url: "https://pay.kirvano.com/2743febe-6d27-41b7-ad3f-593a637a6b90",
+    features: ["45 créditos/mês", "Imagen 4 (Google)", "Edição com IA", "Suporte prioritário"],
+    highlight: true,
+  },
+  {
+    id: "business",
+    label: "Business",
+    credits: 100,
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.08)",
+    border: "rgba(245,158,11,0.2)",
+    url: "https://pay.kirvano.com/0ffb8064-d5da-47ba-82ee-a2cc1ea6aafe",
+    features: ["100 créditos/mês", "Todos os modelos", "Acesso prioritário", "Suporte VIP"],
+    highlight: false,
+  },
+] as const;
 
 export default function CreditsPage() {
-  const router = useRouter();
-  const params = useSearchParams();
-
   const [info, setInfo]       = useState<CreditsInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [buying, setBuying]   = useState<CreditPackId | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [successCredits, setSuccessCredits] = useState(0);
-  const [error, setError]     = useState("");
 
-  const fetchInfo = async () => {
-    setLoading(true);
-    const res = await fetch("/api/credits");
-    if (res.ok) setInfo(await res.json());
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchInfo(); }, []);
-
-  /* Fulfill after Stripe success redirect */
   useEffect(() => {
-    const sessionId = params.get("session_id");
-    if (!sessionId || params.get("success") !== "1") return;
-
-    fetch("/api/credits/fulfill", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.ok) {
-          setSuccessCredits(d.credits ?? 0);
-          setSuccess(true);
-          fetchInfo();
-          window.history.replaceState({}, "", "/credits");
-        }
-      })
-      .catch(() => {});
-  }, [params]);
-
-  const handleBuy = async (packId: CreditPackId) => {
-    setBuying(packId);
-    setError("");
-    try {
-      const res = await fetch("/api/credits/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Erro");
-      window.location.href = data.url;
-    } catch (e: any) {
-      setError(e.message);
-      setBuying(null);
-    }
-  };
+    fetch("/api/credits")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setInfo(d); })
+      .finally(() => setLoading(false));
+  }, []);
 
   const planStyle = PLAN_LABELS[info?.plan ?? "free"] ?? PLAN_LABELS.free;
   const pct = info ? Math.min(100, (info.used / info.limit) * 100) : 0;
@@ -112,37 +87,16 @@ export default function CreditsPage() {
           <span className="font-black text-sm tracking-tight">xpost</span>
         </div>
         <span className="text-gray-600">·</span>
-        <span className="text-sm text-gray-400 font-medium">Créditos</span>
+        <span className="text-sm text-gray-400 font-medium">Planos & Créditos</span>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-10 space-y-8">
-
-        {/* Success banner */}
-        {success && (
-          <div className="flex items-center gap-3 rounded-xl px-4 py-3.5 border border-green-500/30 bg-green-500/10">
-            <CheckCircle size={18} className="text-green-400 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-green-300">Compra confirmada!</p>
-              {successCredits > 0 && (
-                <p className="text-xs text-green-600 mt-0.5">+{successCredits} créditos adicionados à sua conta</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="flex items-center gap-3 rounded-xl px-4 py-3.5 border border-red-500/30 bg-red-500/10">
-            <AlertCircle size={16} className="text-red-400 shrink-0" />
-            <p className="text-sm text-red-300">{error}</p>
-          </div>
-        )}
+      <main className="max-w-3xl mx-auto px-4 py-10 space-y-10">
 
         {/* Credits overview */}
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 size={28} className="animate-spin text-purple-400" /></div>
         ) : info && (
-          <div className="rounded-2xl p-6 space-y-6" style={{ background: "#0d0d0d", border: "1px solid #1e1e1e" }}>
-            {/* Plan badge */}
+          <div className="rounded-2xl p-6 space-y-5" style={{ background: "#0d0d0d", border: "1px solid #1e1e1e" }}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-1">Plano atual</p>
@@ -152,34 +106,29 @@ export default function CreditsPage() {
                 </span>
               </div>
               <div className="text-right">
-                <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-1">Total disponível</p>
+                <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-1">Disponível</p>
                 <p className="text-3xl font-black" style={{ color: "#a855f7" }}>{info.total}</p>
                 <p className="text-[11px] text-gray-600">créditos</p>
               </div>
             </div>
 
-            {/* Monthly bar */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-gray-400">Créditos do plano <span className="text-gray-600">(reset mensal)</span></p>
-                <p className="text-xs font-semibold" style={{ color: barColor }}>{info.used} / {info.limit} usados</p>
+                <p className="text-xs text-gray-400">Uso mensal <span className="text-gray-600">(reset todo mês)</span></p>
+                <p className="text-xs font-semibold" style={{ color: barColor }}>{info.used} / {info.limit}</p>
               </div>
               <div className="h-2 rounded-full bg-[#1a1a1a] overflow-hidden">
                 <div className="h-full rounded-full transition-all duration-700"
                   style={{ width: `${pct}%`, background: barColor }} />
               </div>
-              <p className="text-[11px] text-gray-600 mt-1.5">{info.remaining} restantes este mês</p>
+              <p className="text-[11px] text-gray-600 mt-1.5">{info.remaining} créditos restantes este mês</p>
             </div>
 
-            {/* Bonus credits */}
             {info.bonus > 0 && (
               <div className="flex items-center justify-between rounded-xl px-4 py-3 border border-yellow-500/20 bg-yellow-500/5">
                 <div className="flex items-center gap-2">
                   <Zap size={14} className="text-yellow-400" />
-                  <div>
-                    <p className="text-xs font-semibold text-yellow-300">Créditos extras comprados</p>
-                    <p className="text-[11px] text-yellow-700">Usados após os do plano esgotarem</p>
-                  </div>
+                  <p className="text-xs font-semibold text-yellow-300">Créditos bônus</p>
                 </div>
                 <p className="text-xl font-black text-yellow-400">+{info.bonus}</p>
               </div>
@@ -187,55 +136,74 @@ export default function CreditsPage() {
           </div>
         )}
 
-        {/* Buy more */}
+        {/* Plans */}
         <div>
-          <div className="mb-5">
+          <div className="mb-6">
             <h2 className="text-lg font-bold flex items-center gap-2">
-              <ShoppingCart size={18} className="text-purple-400" /> Comprar mais créditos
+              <Sparkles size={18} className="text-purple-400" /> Escolha seu plano
             </h2>
-            <p className="text-xs text-gray-500 mt-1">Créditos extras não expiram e são usados quando o plano mensal esgota.</p>
+            <p className="text-xs text-gray-500 mt-1">Pagamento processado com segurança pelo Kirvano. Ativação automática após confirmação.</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            {CREDIT_PACKS.map((pack, i) => {
-              const style = PACK_STYLES[i];
-              const isBuying = buying === pack.id;
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {KIRVANO_PLANS.map((plan) => {
+              const isCurrent = info?.plan === plan.id;
               return (
-                <div key={pack.id}
-                  className="relative rounded-2xl p-5 flex flex-col gap-4 border transition-all"
+                <div key={plan.id}
+                  className="relative rounded-2xl p-5 flex flex-col gap-4"
                   style={{
-                    background: style.bg,
-                    border: style.highlight ? `1px solid ${style.accent}44` : "1px solid #1e1e1e",
+                    background: plan.bg,
+                    border: `1px solid ${plan.highlight ? plan.border : "#1e1e1e"}`,
                   }}>
-                  {style.highlight && (
-                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2.5 py-0.5 rounded-full"
-                      style={{ background: style.accent, color: "#000" }}>
-                      POPULAR
+                  {plan.highlight && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-bold px-3 py-1 rounded-full"
+                      style={{ background: plan.color, color: "#fff" }}>
+                      MAIS POPULAR
                     </span>
                   )}
+
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: style.accent }}>
-                      {pack.label}
+                    <p className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: plan.color }}>
+                      {plan.label}
                     </p>
-                    <p className="text-4xl font-black text-white">{pack.credits}</p>
-                    <p className="text-xs text-gray-500">créditos</p>
+                    <div className="flex items-baseline gap-1">
+                      <p className="text-4xl font-black text-white">{plan.credits}</p>
+                      <p className="text-sm text-gray-500">créditos/mês</p>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleBuy(pack.id as CreditPackId)}
-                    disabled={!!buying}
-                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
-                    style={{ background: style.accent, color: "#000" }}>
-                    {isBuying ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                    {isBuying ? "Abrindo..." : "Comprar"}
-                  </button>
+
+                  <ul className="space-y-1.5">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-xs text-gray-400">
+                        <Check size={12} style={{ color: plan.color }} className="shrink-0" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {isCurrent ? (
+                    <div className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold border"
+                      style={{ borderColor: plan.color, color: plan.color }}>
+                      <Check size={14} /> Plano atual
+                    </div>
+                  ) : (
+                    <a
+                      href={plan.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-95"
+                      style={{ background: plan.color, color: plan.highlight ? "#fff" : "#000" }}>
+                      <ExternalLink size={14} /> Assinar agora
+                    </a>
+                  )}
                 </div>
               );
             })}
           </div>
 
-          <p className="text-[11px] text-gray-600 text-center mt-4">
-            Os preços são definidos na sua dashboard do Stripe. Configure as env vars:{" "}
-            <code className="text-gray-500">STRIPE_PRICE_CREDITS_10 / 25 / 50 / 100</code>
+          <p className="text-[11px] text-gray-600 text-center mt-5">
+            Após o pagamento, seu plano é ativado automaticamente em até 1 minuto.
+            Dúvidas? Entre em contato pelo Instagram.
           </p>
         </div>
 

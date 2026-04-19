@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { hasActiveSubscription } from "@/lib/stripe";
-import { isEmailActive } from "@/lib/kv";
-import { stripe } from "@/lib/stripe";
 import { verifyToken } from "@/lib/activation";
+import { getUserPlan } from "@/lib/credits";
 import { consumeCredits } from "@/lib/credits";
 
 export const maxDuration = 55;
@@ -166,15 +164,9 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
   if (email) {
-    const kirvano = await isEmailActive(email).catch(() => false);
-    if (kirvano) {
-      isPro = true;
-    } else {
-      const customers = await stripe.customers.list({ email, limit: 1 });
-      if (customers.data.length > 0) isPro = await hasActiveSubscription(customers.data[0].id);
-    }
+    const plan = await getUserPlan(email).catch(() => "free");
+    isPro = plan !== "free";
   }
-  if (!isPro && customerId) isPro = await hasActiveSubscription(customerId).catch(() => false);
   if (!isPro && activationToken) { const { valid } = verifyToken(activationToken); isPro = valid; }
 
   /* Créditos */
