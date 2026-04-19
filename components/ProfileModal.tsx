@@ -359,7 +359,10 @@ export default function ProfileModal({ open, onClose }: Props) {
             </Link>
           )}
           <button
-            onClick={() => signOut()}
+            onClick={() => {
+              localStorage.removeItem("ig_account");
+              signOut();
+            }}
             className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors border border-red-500/20 hover:border-red-500/40 px-2.5 py-1.5 rounded-lg"
           >
             <LogOut size={13} /> Sair

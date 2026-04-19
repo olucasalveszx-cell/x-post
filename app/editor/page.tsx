@@ -206,11 +206,13 @@ export default function EditorPage() {
     return () => clearInterval(id);
   }, []);
 
-  // ── Instagram ─────────────────────────────────────────────────
+  // ── Instagram — vinculado ao e-mail do usuário ───────────────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const success = params.get("ig_success");
     const error = params.get("ig_error");
+    const currentEmail = session?.user?.email ?? null;
+
     if (success === "1") {
       const account: IGAccount = {
         token: params.get("ig_token") ?? "",
@@ -218,7 +220,8 @@ export default function EditorPage() {
         username: params.get("ig_username") ?? "",
       };
       setIgAccount(account);
-      localStorage.setItem("ig_account", JSON.stringify(account));
+      // Salva junto com o email do dono para não vazar entre sessões
+      localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail }));
       window.history.replaceState({}, "", "/editor");
     } else if (error) {
       if (error === "no_business_account") {
@@ -227,9 +230,24 @@ export default function EditorPage() {
       }
       window.history.replaceState({}, "", "/editor");
     }
-    const saved = localStorage.getItem("ig_account");
-    if (saved && !success) { try { setIgAccount(JSON.parse(saved)); } catch {} }
-  }, []);
+
+    if (!success) {
+      try {
+        const raw = localStorage.getItem("ig_account");
+        if (raw) {
+          const saved = JSON.parse(raw);
+          // Só carrega se pertencer ao usuário atual (ou não tiver dono registrado)
+          if (!saved._owner || saved._owner === currentEmail) {
+            const { _owner, ...account } = saved;
+            setIgAccount(account);
+          } else {
+            // Pertence a outro usuário — limpa
+            localStorage.removeItem("ig_account");
+          }
+        }
+      } catch {}
+    }
+  }, [session?.user?.email]);
 
   const handleIGLogin = () => { window.location.href = "/api/instagram/auth"; };
 
