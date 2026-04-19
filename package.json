@@ -11,6 +11,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",
     "@vercel/blob": "^2.3.3",
+    "@vercel/functions": "^3.4.3",
     "axios": "^1.7.7",
     "clsx": "^2.1.1",
     "fabric": "^6.4.3",

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { hasActiveSubscription } from "@/lib/stripe";
@@ -435,8 +436,8 @@ export async function POST(req: NextRequest) {
 
   if (!result) return NextResponse.json({ error: errors.join(" | ") }, { status: 500 });
 
-  // Salva no banco de imagens em background (não bloqueia a resposta)
-  saveToGallery(result.imageUrl, email, enhancedPrompt, result.source).catch(() => {});
+  // waitUntil garante que o Vercel mantém a função viva até o salvamento completar
+  waitUntil(saveToGallery(result.imageUrl, email, enhancedPrompt, result.source));
 
   return NextResponse.json({ ...result, plan, ...(errors.length ? { fallbackErrors: errors } : {}) });
 }
