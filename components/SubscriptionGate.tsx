@@ -40,7 +40,7 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
       if (session?.user?.email) {
         const res = await fetch("/api/credits").catch(() => null);
         const data = await res?.json().catch(() => null);
-        if ((data?.total ?? 0) > 0 || ["basic","pro","business"].includes(data?.plan)) {
+        if ((data?.total ?? 0) > 0 || ["god","basic","pro","business"].includes(data?.plan)) {
           setAuthorized(true); setChecking(false); return;
         }
       }

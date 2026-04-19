@@ -12,6 +12,7 @@ async function redis(cmd: string[]) {
 
 /* ── Limites mensais por plano ── */
 export const PLAN_LIMITS: Record<string, number> = {
+  god:      1000,
   basic:    30,
   pro:      45,
   business: 100,
@@ -36,18 +37,18 @@ function monthKey(email: string): string {
 /* ── Busca plano do usuário ── */
 export async function getUserPlan(email: string): Promise<string> {
   const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
-  if (adminEmail && email.toLowerCase().trim() === adminEmail) return "business";
+  if (adminEmail && email.toLowerCase().trim() === adminEmail) return "god";
 
   // Cache de 1h para evitar múltiplas consultas ao Redis
   const cacheKey = `plan_cache:${email.toLowerCase()}`;
   const cached = await redis(["get", cacheKey]);
-  if (cached.result && ["basic", "pro", "business"].includes(cached.result as string)) {
+  if (cached.result && ["god", "basic", "pro", "business"].includes(cached.result as string)) {
     return cached.result as string;
   }
 
   // Busca plano salvo pelo webhook do Kirvano
   const plan = await getEmailPlan(email).catch(() => null);
-  if (plan && ["basic", "pro", "business"].includes(plan)) {
+  if (plan && ["god", "basic", "pro", "business"].includes(plan)) {
     await redis(["set", cacheKey, plan, "ex", "3600"]);
     return plan;
   }
