@@ -177,6 +177,17 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
     }
 
     const generated: GeneratedContent = JSON.parse(jsonMatch[0]);
+
+    // Remove numeração/bullets que o modelo às vezes adiciona mesmo sendo proibido
+    const stripNumbering = (text: string) =>
+      text.replace(/^(\d+[\.\)]\s*|[•\-\*]\s*|#\d+\s*|Slide\s*\d+:?\s*|Passo\s*\d+:?\s*)/gim, "").trim();
+
+    generated.slides = generated.slides.map((s) => ({
+      ...s,
+      title: stripNumbering(s.title ?? ""),
+      body:  stripNumbering(s.body  ?? ""),
+    }));
+
     const today = new Date().toISOString().slice(0, 10);
     redisIncr(`stats:carousels:${today}`).catch(() => {});
     return NextResponse.json(generated);
