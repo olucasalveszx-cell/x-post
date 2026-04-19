@@ -1,23 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Music, Search, Play, Pause, ChevronRight, ChevronLeft, Upload, Pencil, Download, LayoutGrid, BookImage, Calendar, Clock } from "lucide-react";
+import { useState } from "react";
+import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Upload, Pencil, LayoutGrid, BookImage, Calendar, Clock, Music, ChevronRight, ChevronLeft } from "lucide-react";
 import { renderSlide } from "@/lib/render-slide";
 
 interface IGAccount {
   token: string;
   accountId: string;
   username: string;
-}
-
-interface Track {
-  id: number;
-  title: string;
-  artist: string;
-  album: string;
-  cover: string;
-  preview: string;
-  duration: number;
 }
 
 interface Props {
@@ -27,12 +17,21 @@ interface Props {
   onLoginClick: () => void;
 }
 
-type Step = "music" | "caption" | "mode" | "publish";
+type Step = "caption" | "mode" | "publish";
 type PublishMode = "api" | "manual";
 type PostType = "carousel" | "stories";
 
+const STEPS: { key: Step; label: string }[] = [
+  { key: "caption", label: "Legenda" },
+  { key: "mode",    label: "Modo" },
+  { key: "publish", label: "Publicar" },
+];
+
+const nextStep: Record<Step, Step | null> = { caption: "mode", mode: "publish", publish: null };
+const prevStep: Record<Step, Step | null> = { caption: null, mode: "caption", publish: "mode" };
+
 export default function PublishModal({ slides, account, onClose, onLoginClick }: Props) {
-  const [step, setStep] = useState<Step>("music");
+  const [step, setStep] = useState<Step>("caption");
   const [caption, setCaption] = useState("");
   const [publishMode, setPublishMode] = useState<PublishMode>("api");
   const [postType, setPostType] = useState<PostType>("carousel");
@@ -42,62 +41,16 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
   const [permalink, setPermalink] = useState("");
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
+  const [showMusicConfirm, setShowMusicConfirm] = useState(false);
 
-  // Música
-  const [musicQuery, setMusicQuery] = useState("");
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
-  const [playingId, setPlayingId] = useState<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!musicQuery.trim()) { setTracks([]); return; }
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const res = await fetch(`/api/music?q=${encodeURIComponent(musicQuery)}`);
-        const data = await res.json();
-        setTracks(data.tracks ?? []);
-      } finally {
-        setSearching(false);
-      }
-    }, 500);
-  }, [musicQuery]);
-
-  const togglePlay = (track: Track) => {
-    if (playingId === track.id) {
-      audioRef.current?.pause();
-      setPlayingId(null);
-    } else {
-      if (audioRef.current) audioRef.current.pause();
-      const audio = new Audio(track.preview);
-      audio.onended = () => setPlayingId(null);
-      audio.play();
-      audioRef.current = audio;
-      setPlayingId(track.id);
-    }
+  const isLoading = ["exporting", "uploading", "publishing", "scheduling"].includes(status);
+  const statusLabel: Record<string, string> = {
+    exporting: "Exportando slides...",
+    uploading: "Enviando para o servidor...",
+    publishing: "Publicando no Instagram...",
+    scheduling: "Agendando post...",
   };
 
-  const selectTrack = (track: Track) => {
-    setSelectedTrack(track);
-    const mention = `\n\n🎵 ${track.title} — ${track.artist}`;
-    setCaption((prev) => prev.includes(mention.trim()) ? prev : prev + mention);
-  };
-
-  const clearTrack = () => {
-    if (selectedTrack) {
-      const mention = `\n\n🎵 ${selectedTrack.title} — ${selectedTrack.artist}`;
-      setCaption((prev) => prev.replace(mention, ""));
-    }
-    setSelectedTrack(null);
-    audioRef.current?.pause();
-    setPlayingId(null);
-  };
-
-  // Export via Canvas 2D
   const exportSlides = async (): Promise<string[]> => {
     const urls: string[] = [];
     for (let i = 0; i < slides.length; i++) {
@@ -125,92 +78,6 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     return publicUrls;
   };
 
-  // Modo: upload direto via API
-  const handlePublishApi = async () => {
-    if (!account) return;
-    setStatus("exporting");
-    setMessage("");
-    setProgress(0);
-    try {
-      const dataUrls = await exportSlides();
-      if (dataUrls.length < 2) throw new Error("O carrossel precisa ter pelo menos 2 slides");
-
-      setStatus("uploading");
-      const publicUrls = await uploadImages(dataUrls);
-      setProgress(80);
-
-      setStatus("publishing");
-      const res = await fetch("/api/instagram/publish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrls: publicUrls, caption, igToken: account.token, igAccountId: account.accountId, postType }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      setProgress(100);
-      setStatus("success");
-      setMessage(data.message);
-      setPermalink(data.permalink ?? "");
-    } catch (err: any) {
-      setStatus("error");
-      setMessage(err.message ?? "Erro ao publicar");
-    }
-  };
-
-  // Modo: compartilha direto via Web Share API → abre Instagram nativo
-  const handlePublishManual = async () => {
-    setStatus("exporting");
-    setMessage("");
-    setProgress(0);
-    try {
-      const dataUrls = await exportSlides();
-      setProgress(80);
-
-      // Converte dataURLs em Files
-      const files: File[] = dataUrls.map((url, i) => {
-        const arr = url.split(",");
-        const mime = arr[0].match(/:(.*?);/)?.[1] ?? "image/jpeg";
-        const bstr = atob(arr[1]);
-        const u8 = new Uint8Array(bstr.length);
-        for (let j = 0; j < bstr.length; j++) u8[j] = bstr.charCodeAt(j);
-        return new File([u8], `slide-${String(i + 1).padStart(2, "0")}.jpg`, { type: mime });
-      });
-
-      setProgress(90);
-
-      // Web Share API — abre share sheet nativo (Instagram, WhatsApp, etc)
-      const canShare = typeof navigator.share === "function" && navigator.canShare?.({ files });
-      if (canShare) {
-        await navigator.share({ files, title: "XPost Zone Carrossel" });
-        setProgress(100);
-        setStatus("success");
-        setMessage("Imagens enviadas para o Instagram!");
-      } else {
-        // Fallback: baixa os arquivos
-        for (let i = 0; i < dataUrls.length; i++) {
-          const a = document.createElement("a");
-          a.href = dataUrls[i];
-          a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
-          a.click();
-          await new Promise((r) => setTimeout(r, 200));
-        }
-        setProgress(100);
-        setStatus("success");
-        setMessage("Imagens baixadas! Abra o Instagram para publicar.");
-      }
-    } catch (err: any) {
-      if ((err as any)?.name === "AbortError") {
-        // Usuário fechou o share sheet — não é erro
-        setStatus("idle");
-        return;
-      }
-      setStatus("error");
-      setMessage(err.message ?? "Erro ao exportar");
-    }
-  };
-
-  // Upload para Vercel Blob (URLs públicas para o Instagram)
   const uploadToBlob = async (dataUrls: string[]): Promise<string[]> => {
     const urls: string[] = [];
     for (let i = 0; i < dataUrls.length; i++) {
@@ -228,65 +95,160 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     return urls;
   };
 
+  const handlePublishApi = async () => {
+    if (!account) return;
+    setStatus("exporting"); setMessage(""); setProgress(0);
+    try {
+      const dataUrls = await exportSlides();
+      if (dataUrls.length < 2) throw new Error("O carrossel precisa ter pelo menos 2 slides");
+      setStatus("uploading");
+      const publicUrls = await uploadImages(dataUrls);
+      setProgress(80);
+      setStatus("publishing");
+      const res = await fetch("/api/instagram/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrls: publicUrls, caption, igToken: account.token, igAccountId: account.accountId, postType }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setProgress(100); setStatus("success"); setMessage(data.message);
+      setPermalink(data.permalink ?? "");
+    } catch (err: any) {
+      setStatus("error"); setMessage(err.message ?? "Erro ao publicar");
+    }
+  };
+
+  const handlePublishManual = async () => {
+    setStatus("exporting"); setMessage(""); setProgress(0);
+    try {
+      const dataUrls = await exportSlides();
+      setProgress(80);
+      const files: File[] = dataUrls.map((url, i) => {
+        const arr = url.split(",");
+        const mime = arr[0].match(/:(.*?);/)?.[1] ?? "image/jpeg";
+        const bstr = atob(arr[1]);
+        const u8 = new Uint8Array(bstr.length);
+        for (let j = 0; j < bstr.length; j++) u8[j] = bstr.charCodeAt(j);
+        return new File([u8], `slide-${String(i + 1).padStart(2, "0")}.jpg`, { type: mime });
+      });
+      setProgress(90);
+      const canShare = typeof navigator.share === "function" && navigator.canShare?.({ files });
+      if (canShare) {
+        await navigator.share({ files, title: "XPost Zone Carrossel" });
+        setProgress(100); setStatus("success");
+        setMessage("Imagens enviadas para o Instagram!");
+      } else {
+        for (let i = 0; i < dataUrls.length; i++) {
+          const a = document.createElement("a");
+          a.href = dataUrls[i]; a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
+          a.click();
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        setProgress(100); setStatus("success");
+        setMessage("Imagens baixadas! Abra o Instagram para publicar.");
+      }
+    } catch (err: any) {
+      if ((err as any)?.name === "AbortError") { setStatus("idle"); return; }
+      setStatus("error"); setMessage(err.message ?? "Erro ao exportar");
+    }
+  };
+
   const handleSchedule = async () => {
     if (!account || !scheduledAt) return;
-    setStatus("exporting");
-    setMessage("");
-    setProgress(0);
+    setStatus("exporting"); setMessage(""); setProgress(0);
     try {
       const dataUrls = await exportSlides();
       setStatus("uploading");
       const blobUrls = await uploadToBlob(dataUrls);
-      setProgress(80);
-      setStatus("scheduling");
+      setProgress(80); setStatus("scheduling");
       const res = await fetch("/api/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          caption,
-          imageUrls: blobUrls,
-          scheduledAt,
-          igAccountId: account.accountId,
-          igToken: account.token,
-        }),
+        body: JSON.stringify({ caption, imageUrls: blobUrls, scheduledAt, igAccountId: account.accountId, igToken: account.token }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setProgress(100);
-      setStatus("success");
+      setProgress(100); setStatus("success");
       setMessage(`Post agendado para ${new Date(scheduledAt).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`);
     } catch (err: any) {
-      setStatus("error");
-      setMessage(err.message ?? "Erro ao agendar");
+      setStatus("error"); setMessage(err.message ?? "Erro ao agendar");
     }
   };
 
-  const handleAction = () => {
-    if (publishMode === "api") handlePublishApi();
-    else handlePublishManual();
+  // "Sim" no pop-up de música: abre Instagram com as imagens para o usuário adicionar música nativamente
+  const handleShareWithMusic = async () => {
+    setShowMusicConfirm(false);
+    setStatus("exporting"); setMessage(""); setProgress(0);
+    try {
+      const dataUrls = await exportSlides();
+      setProgress(80);
+      const files: File[] = dataUrls.map((url, i) => {
+        const arr = url.split(",");
+        const mime = arr[0].match(/:(.*?);/)?.[1] ?? "image/jpeg";
+        const bstr = atob(arr[1]);
+        const u8 = new Uint8Array(bstr.length);
+        for (let j = 0; j < bstr.length; j++) u8[j] = bstr.charCodeAt(j);
+        return new File([u8], `slide-${String(i + 1).padStart(2, "0")}.jpg`, { type: mime });
+      });
+      // Copia legenda para área de transferência
+      if (caption) navigator.clipboard.writeText(caption).catch(() => {});
+      setProgress(90);
+      const canShare = typeof navigator.share === "function" && navigator.canShare?.({ files });
+      if (canShare) {
+        await navigator.share({ files, text: caption, title: "XPost Zone" });
+      } else {
+        // Fallback: baixa as imagens
+        for (let i = 0; i < dataUrls.length; i++) {
+          const a = document.createElement("a");
+          a.href = dataUrls[i]; a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
+          a.click();
+          await new Promise((r) => setTimeout(r, 200));
+        }
+      }
+      onClose(); // Volta para o editor
+    } catch (err: any) {
+      if ((err as any)?.name === "AbortError") { setStatus("idle"); setShowMusicConfirm(false); return; }
+      setStatus("error"); setMessage(err.message ?? "Erro ao abrir Instagram");
+    }
   };
-
-  const isLoading = ["exporting", "uploading", "publishing", "scheduling"].includes(status);
-  const statusLabel = {
-    exporting: "Exportando slides...",
-    uploading: "Enviando para o servidor...",
-    publishing: "Publicando no Instagram...",
-    scheduling: "Agendando post...",
-  }[status as string] ?? "";
-
-  const STEPS: { key: Step; label: string }[] = [
-    { key: "music",   label: "Música" },
-    { key: "caption", label: "Legenda" },
-    { key: "mode",    label: "Modo" },
-    { key: "publish", label: "Publicar" },
-  ];
-
-  const nextStep: Record<Step, Step | null> = { music: "caption", caption: "mode", mode: "publish", publish: null };
-  const prevStep: Record<Step, Step | null> = { music: null, caption: "music", mode: "caption", publish: "mode" };
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl w-full max-w-md flex flex-col max-h-[90vh]">
+      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl w-full max-w-md flex flex-col max-h-[90vh] relative overflow-hidden">
+
+        {/* Pop-up confirmação de música (overlay) */}
+        {showMusicConfirm && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/75 backdrop-blur-sm p-6">
+            <div className="bg-[#1e1e1e] border border-[#333] rounded-2xl p-6 flex flex-col items-center gap-4 w-full max-w-xs text-center">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)" }}>
+                <Music size={22} className="text-white" />
+              </div>
+              <div>
+                <p className="font-bold text-white text-base mb-1">Adicionar música?</p>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  Deseja adicionar música ao post agendado? Você escolherá a música direto no Instagram.
+                </p>
+              </div>
+              <div className="flex gap-2 w-full">
+                <button
+                  onClick={async () => { setShowMusicConfirm(false); await handleSchedule(); }}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-[#333] text-gray-300 hover:bg-[#2a2a2a] transition-colors"
+                >
+                  Não, agendar
+                </button>
+                <button
+                  onClick={handleShareWithMusic}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)" }}
+                >
+                  Sim, abrir IG
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a] shrink-0">
@@ -314,73 +276,14 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
 
-          {/* ── Step 1: Música ── */}
-          {step === "music" && (
-            <>
-              <p className="text-sm text-gray-400">Escolha uma música para adicionar ao post:</p>
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="text" value={musicQuery} onChange={(e) => setMusicQuery(e.target.value)}
-                  placeholder="Buscar artista ou música..."
-                  className="w-full bg-[#111] border border-[#333] rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600" autoFocus />
-                {searching && <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 animate-spin" />}
-              </div>
-
-              {selectedTrack && (
-                <div className="flex items-center gap-3 bg-brand-500/10 border border-brand-500/30 rounded-xl p-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={selectedTrack.cover} alt="" className="w-10 h-10 rounded-lg object-cover" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{selectedTrack.title}</p>
-                    <p className="text-xs text-brand-400 truncate">{selectedTrack.artist}</p>
-                  </div>
-                  <button onClick={clearTrack} className="text-gray-500 hover:text-red-400 shrink-0"><X size={15} /></button>
-                </div>
-              )}
-
-              {tracks.length > 0 && (
-                <div className="flex flex-col gap-1.5">
-                  {tracks.map((track) => (
-                    <div key={track.id} onClick={() => selectTrack(track)}
-                      className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-colors border ${selectedTrack?.id === track.id ? "border-brand-500/50 bg-brand-500/10" : "border-transparent hover:bg-[#222]"}`}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={track.cover} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white truncate">{track.title}</p>
-                        <p className="text-xs text-gray-400 truncate">{track.artist} · {track.album}</p>
-                      </div>
-                      <button onClick={(e) => { e.stopPropagation(); togglePlay(track); }}
-                        className="w-8 h-8 rounded-full bg-[#333] hover:bg-brand-600 flex items-center justify-center shrink-0 transition-colors">
-                        {playingId === track.id ? <Pause size={13} /> : <Play size={13} />}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {!musicQuery && !selectedTrack && (
-                <p className="text-xs text-gray-600 text-center py-4">
-                  Pule esta etapa se não quiser música.<br />
-                  <span className="text-gray-700">Preview de 30s via Deezer.</span>
-                </p>
-              )}
-            </>
-          )}
-
-          {/* ── Step 2: Legenda ── */}
+          {/* ── Step 1: Legenda ── */}
           {step === "caption" && (
             <>
-              {selectedTrack && (
-                <div className="flex items-center gap-2 bg-[#111] rounded-lg p-2.5 text-xs text-gray-400">
-                  <Music size={12} className="text-brand-400 shrink-0" />
-                  <span className="truncate">🎵 {selectedTrack.title} — {selectedTrack.artist}</span>
-                </div>
-              )}
               <div>
                 <label className="text-sm text-gray-400 mb-1 block">Legenda</label>
                 <textarea value={caption} onChange={(e) => setCaption(e.target.value)}
                   placeholder="Digite a legenda, hashtags..."
-                  rows={5}
+                  rows={6}
                   className="w-full bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600 resize-none"
                   autoFocus />
                 <p className="text-xs text-gray-600 mt-1">{caption.length} caracteres</p>
@@ -388,10 +291,9 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
             </>
           )}
 
-          {/* ── Step 3: Modo de publicação ── */}
+          {/* ── Step 2: Modo de publicação ── */}
           {step === "mode" && (
             <>
-              {/* Tipo de post */}
               <div>
                 <p className="text-sm text-gray-400 mb-2">Tipo de post:</p>
                 <div className="grid grid-cols-2 gap-2">
@@ -412,9 +314,6 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                     </div>
                   </button>
                 </div>
-                {postType === "stories" && (
-                  <p className="text-[10px] text-yellow-500/80 mt-1.5">Recomendado: use formato 9:16 para stories</p>
-                )}
               </div>
 
               <div className="w-full h-px bg-[#2a2a2a]" />
@@ -427,7 +326,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white mb-0.5">Upload direto</p>
-                  <p className="text-xs text-gray-400">Publica automaticamente via API. Rápido, sem abrir o Instagram. Música é adicionada na legenda.</p>
+                  <p className="text-xs text-gray-400">Publica automaticamente via API. Rápido, sem abrir o Instagram.</p>
                 </div>
                 <div className={`w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 ml-auto ${publishMode === "api" ? "border-brand-500 bg-brand-500" : "border-[#444]"}`} />
               </button>
@@ -439,18 +338,16 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white mb-0.5">Editar no Instagram</p>
-                  <p className="text-xs text-gray-400">Envia direto para o Instagram sem baixar. Você escolhe música, legenda, localização e tags no próprio app.</p>
-                  {selectedTrack && <p className="text-xs text-brand-400 mt-1">Recomendado — adiciona música nativa do Instagram</p>}
+                  <p className="text-xs text-gray-400">Envia para o Instagram onde você adiciona música, localização e finaliza.</p>
                 </div>
                 <div className={`w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 ml-auto ${publishMode === "manual" ? "border-brand-500 bg-brand-500" : "border-[#444]"}`} />
               </button>
             </>
           )}
 
-          {/* ── Step 4: Publicar ── */}
+          {/* ── Step 3: Publicar ── */}
           {step === "publish" && (
             <>
-              {/* Conta */}
               {publishMode === "api" && (
                 account ? (
                   <div className="flex items-center gap-3 bg-green-900/20 border border-green-800/40 rounded-xl p-3">
@@ -474,7 +371,6 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 )
               )}
 
-              {/* Resumo */}
               <div className="bg-[#111] rounded-xl p-3 flex flex-col gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Slides</span>
@@ -488,12 +384,6 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                   <span className="text-gray-500">Modo</span>
                   <span className="text-white font-medium">{publishMode === "api" ? "Upload direto" : "Editar no Instagram"}</span>
                 </div>
-                {selectedTrack && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Música</span>
-                    <span className="text-brand-400 truncate ml-2 text-right max-w-[55%]">{selectedTrack.title}</span>
-                  </div>
-                )}
                 {caption && (
                   <div className="flex justify-between gap-2">
                     <span className="text-gray-500 shrink-0">Legenda</span>
@@ -508,90 +398,34 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
 
               {isLoading && (
                 <div>
-                  <p className="text-xs text-gray-400 mb-1.5">{statusLabel}</p>
+                  <p className="text-xs text-gray-400 mb-1.5">{statusLabel[status] ?? ""}</p>
                   <div className="w-full bg-[#333] rounded-full h-1.5">
                     <div className="bg-brand-500 h-full rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
                   </div>
                 </div>
               )}
 
-              {/* Erro */}
               {status === "error" && (
                 <div className="flex items-start gap-2 rounded-lg p-3 text-sm bg-red-900/30 border border-red-800/50 text-red-300">
                   <AlertCircle size={14} className="mt-0.5 shrink-0" />{message}
                 </div>
               )}
 
-              {/* Sucesso — upload direto */}
-              {status === "success" && publishMode === "api" && (
+              {status === "success" && (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-2 rounded-lg p-3 text-sm bg-green-900/30 border border-green-800/50 text-green-300">
                     <CheckCircle size={14} className="shrink-0" />{message}
                   </div>
-                  {selectedTrack && (
-                    <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-4 flex flex-col gap-3">
-                      <p className="text-sm font-medium text-white flex items-center gap-2"><Music size={14} className="text-brand-400" />Adicionar música ao post</p>
-                      <div className="flex items-center gap-3 bg-[#1a1a1a] rounded-lg p-2.5">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={selectedTrack.cover} alt="" className="w-9 h-9 rounded object-cover" />
-                        <div className="min-w-0">
-                          <p className="text-sm text-white truncate">{selectedTrack.title}</p>
-                          <p className="text-xs text-gray-400">{selectedTrack.artist}</p>
-                        </div>
-                      </div>
-                      <ol className="flex flex-col gap-1.5">
-                        {[`Abra o post no Instagram`, `Toque nos "..." no canto`, `Selecione "Editar"`, `Toque no ícone de música 🎵`, `Busque "${selectedTrack.title}"`, "Salve"].map((s, i) => (
-                          <li key={i} className="flex items-start gap-2 text-xs text-gray-400">
-                            <span className="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>{s}
-                          </li>
-                        ))}
-                      </ol>
-                      {permalink && (
-                        <a href={permalink} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm">
-                          <Instagram size={15} />Abrir post no Instagram
-                        </a>
-                      )}
-                    </div>
-                  )}
-                  {!selectedTrack && permalink && (
+                  {permalink && (
                     <a href={permalink} target="_blank" rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm">
-                      <Instagram size={15} />Ver post no Instagram
+                      <Instagram size={15} /><ExternalLink size={13} />Ver post no Instagram
                     </a>
                   )}
                 </div>
               )}
 
-              {/* Sucesso — manual */}
-              {status === "success" && publishMode === "manual" && (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2 rounded-lg p-3 text-sm bg-green-900/30 border border-green-800/50 text-green-300">
-                    <CheckCircle size={14} className="shrink-0" />{message}
-                  </div>
-                  {selectedTrack && (
-                    <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-3 flex flex-col gap-2">
-                      <p className="text-xs font-medium text-white flex items-center gap-1.5">
-                        <Music size={12} className="text-brand-400" /> No Instagram, adicione a música:
-                      </p>
-                      <div className="flex items-center gap-2.5">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={selectedTrack.cover} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs text-white truncate font-medium">{selectedTrack.title}</p>
-                          <p className="text-[10px] text-gray-400">{selectedTrack.artist}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm">
-                    <Instagram size={15} />Abrir Instagram
-                  </a>
-                </div>
-              )}
-
-              {/* Agendamento (só no modo API com conta conectada) */}
+              {/* Agendamento */}
               {status !== "success" && publishMode === "api" && account && (
                 <div className="flex flex-col gap-2">
                   {!showSchedule ? (
@@ -616,11 +450,12 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                           className="flex-1 py-2 rounded-lg border border-[#333] text-xs text-gray-400 hover:text-white transition-colors">
                           Cancelar
                         </button>
-                        <button onClick={handleSchedule}
+                        <button
+                          onClick={() => setShowMusicConfirm(true)}
                           disabled={!scheduledAt || isLoading}
                           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium disabled:opacity-40 transition-colors">
                           {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Calendar size={12} />}
-                          {isLoading ? statusLabel : "Confirmar agendamento"}
+                          {isLoading ? (statusLabel[status] ?? "") : "Confirmar agendamento"}
                         </button>
                       </div>
                     </div>
@@ -629,11 +464,12 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
               )}
 
               {status !== "success" && (
-                <button onClick={handleAction}
+                <button
+                  onClick={publishMode === "api" ? handlePublishApi : handlePublishManual}
                   disabled={isLoading || (publishMode === "api" && (!account || (postType === "carousel" && slides.length < 2)))}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all">
                   {isLoading ? <Loader2 size={16} className="animate-spin" /> : publishMode === "api" ? <Upload size={16} /> : <Instagram size={16} />}
-                  {isLoading ? statusLabel : publishMode === "api" ? "Publicar Agora" : "Enviar para o Instagram"}
+                  {isLoading ? (statusLabel[status] ?? "") : publishMode === "api" ? "Publicar Agora" : "Enviar para o Instagram"}
                 </button>
               )}
             </>
