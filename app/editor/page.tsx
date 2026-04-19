@@ -20,6 +20,7 @@ import SubscriptionGate from "@/components/SubscriptionGate";
 import ProfilePickerModal, { UserProfile, getStoredProfile, saveProfile, PROFILE_STORAGE_KEY } from "@/components/Editor/ProfilePickerModal";
 import { autosaveWrite, autosaveRead, autosaveClear } from "@/lib/autosave-db";
 import ProfileModal from "@/components/ProfileModal";
+import StyleSelectorModal from "@/components/Editor/StyleSelectorModal";
 
 interface IGAccount { token: string; accountId: string; username: string; }
 
@@ -91,6 +92,9 @@ export default function EditorPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [showProfilePicker, setShowProfilePicker] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showStyleSelector, setShowStyleSelector] = useState(false);
+  const twitterStyleRef = useRef(false);
+  const pendingTopicRef = useRef<string | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -229,6 +233,14 @@ export default function EditorPage() {
 
   const handleIGLogin = () => { window.location.href = "/api/instagram/auth"; };
 
+  const handleStyleSelect = useCallback((style: "layouts" | "twitter") => {
+    setShowStyleSelector(false);
+    twitterStyleRef.current = style === "twitter";
+    const topic = pendingTopicRef.current;
+    pendingTopicRef.current = null;
+    window.dispatchEvent(new CustomEvent("open-generator-wizard", topic ? { detail: { topic } } : undefined));
+  }, []);
+
   // ── Operações de slide ────────────────────────────────────────
   const updateSlide = useCallback((updated: Slide) => {
     const pid = activeProjectIdRef.current;
@@ -265,18 +277,131 @@ export default function EditorPage() {
     });
   }, [safeIndex, setProjects]);
 
-  const handleGenerate = useCallback((generated: Slide[]) => {
+  const generateWaveGrid = useCallback((width: number, height: number): string => {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d")!;
+
+    ctx.fillStyle = "#f8f8f8";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = "rgba(0,0,0,0.09)";
+    ctx.lineWidth = 0.9;
+
+    const cols = 18;
+    const rows = Math.round(cols * height / width);
+    const cSp = width / cols;
+    const rSp = height / rows;
+    const steps = 140;
+    const wX = cSp * 0.48;
+    const wY = rSp * 0.42;
+
+    for (let r = 0; r <= rows; r++) {
+      ctx.beginPath();
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const x = t * width;
+        const base = r * rSp;
+        const wave = Math.sin(t * Math.PI * 2.3 + r * 0.28) * wY * 0.6
+                   + Math.sin(t * Math.PI * 0.9 - r * 0.14) * wY * 0.4;
+        const y = base + wave;
+        s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    for (let c = 0; c <= cols; c++) {
+      ctx.beginPath();
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const y = t * height;
+        const base = c * cSp;
+        const wave = Math.sin(t * Math.PI * 2.6 + c * 0.22) * wX * 0.55
+                   + Math.sin(t * Math.PI * 1.1 - c * 0.12) * wX * 0.35;
+        const x = base + wave;
+        s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    return canvas.toDataURL("image/jpeg", 0.92);
+  }, []);
+
+  const applyTwitterStyle = useCallback(async (slides: Slide[]): Promise<Slide[]> => {
+    if (slides.length <= 1) return slides;
+    const W = slides[0].width;
+    const H = slides[0].height;
+    const gridBg = generateWaveGrid(W, H);
+
+    let profileData: { name?: string; handle?: string; avatarSrc?: string; verified?: boolean } | null = null;
+    try {
+      const saved = localStorage.getItem("xpz_profile");
+      if (saved) profileData = JSON.parse(saved);
+    } catch {}
+
+    const [firstSlide, ...rest] = slides;
+    const twitterSlides = rest.map((slide) => {
+      const newElements = slide.elements
+        .filter((el) => el.type !== "profile")
+        .map((el) => {
+          if (el.type === "text") {
+            return {
+              ...el,
+              style: { ...(el.style as any), color: "#111111", fontFamily: "'Inter', sans-serif" },
+            };
+          }
+          return el;
+        });
+
+      const profileEls: import("@/types").SlideElement[] = [];
+      if (profileData?.name || profileData?.handle) {
+        profileEls.push({
+          id: require("uuid").v4(),
+          type: "profile" as const,
+          x: 40,
+          y: H - 180,
+          width: Math.min(700, W - 80),
+          height: 150,
+          src: profileData.avatarSrc || undefined,
+          profileName: profileData.name ?? "",
+          profileHandle: profileData.handle ?? "",
+          profileVerified: profileData.verified ?? false,
+          zIndex: 10,
+        });
+      }
+
+      return {
+        ...slide,
+        backgroundColor: "#f8f8f8",
+        backgroundImageUrl: gridBg,
+        backgroundGradient: undefined,
+        backgroundPosition: { x: 50, y: 50 },
+        backgroundZoom: 100,
+        backgroundCrop: undefined,
+        elements: [...newElements, ...profileEls],
+      };
+    });
+
+    return [firstSlide, ...twitterSlides];
+  }, [generateWaveGrid]);
+
+  const handleGenerate = useCallback(async (generated: Slide[]) => {
     const pid = activeProjectIdRef.current;
-    setProjects((prev) => prev.map((p) => p.id !== pid ? p : { ...p, slides: generated }));
-    slidesRef.current = generated;
+    const isTwitter = twitterStyleRef.current;
+    twitterStyleRef.current = false;
+
+    const final = isTwitter ? await applyTwitterStyle(generated) : generated;
+
+    setProjects((prev) => prev.map((p) => p.id !== pid ? p : { ...p, slides: final }));
+    slidesRef.current = final;
     setCurrentIndex(0);
-    pushHistory(generated);
-    // Auto-detect format from slide dimensions
-    if (generated[0]) {
-      const matched = FORMATS.find(f => f.width === generated[0].width && f.height === generated[0].height);
+    pushHistory(final);
+    if (final[0]) {
+      const matched = FORMATS.find(f => f.width === final[0].width && f.height === final[0].height);
       if (matched) setFormat(matched);
     }
-  }, [setProjects, pushHistory]);
+  }, [setProjects, pushHistory, applyTwitterStyle]);
 
   const handleFormatChange = (f: Format) => {
     setFormat(f);
@@ -550,7 +675,7 @@ export default function EditorPage() {
                     <p className="text-sm text-gray-500">Gere um carrossel incrível com IA em segundos</p>
                   </div>
                   <button
-                    onClick={() => window.dispatchEvent(new CustomEvent("open-generator-wizard"))}
+                    onClick={() => setShowStyleSelector(true)}
                     className="flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold text-base transition-all shadow-2xl shadow-brand-500/30"
                     style={{ minWidth: 200, touchAction: "manipulation" }}>
                     <Sparkles size={20} /> Gerar Ideias
@@ -637,9 +762,15 @@ export default function EditorPage() {
       {showPublish && <PublishModal slides={slides} account={igAccount} onClose={() => setShowPublish(false)} onLoginClick={handleIGLogin} />}
       <AIAssistant open={showAI} onClose={() => setShowAI(false)} />
       <ProfileModal open={showProfile} onClose={() => setShowProfile(false)} />
+      <StyleSelectorModal
+        open={showStyleSelector}
+        onClose={() => setShowStyleSelector(false)}
+        onSelect={handleStyleSelect}
+      />
       <OnboardingModal
         onConfirm={(topic) => {
-          window.dispatchEvent(new CustomEvent("open-generator-wizard", { detail: { topic } }));
+          pendingTopicRef.current = topic;
+          setShowStyleSelector(true);
         }}
       />
       <ProfilePickerModal
