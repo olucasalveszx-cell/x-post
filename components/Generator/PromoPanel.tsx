@@ -89,22 +89,14 @@ export default function PromoPanel({ onGenerate }: Props) {
   const [variationsStatus, setVariationsStatus] = useState<"idle" | "generating" | "done" | "error">("idle");
 
   useEffect(() => {
-    if (session?.user?.email) {
-      fetch(`/api/stripe/verify?email=${encodeURIComponent(session.user.email)}`)
-        .then((r) => r.json())
-        .then((d) => setIsPro(d.active ?? false))
-        .catch(() => {});
-      return;
-    }
     const token = localStorage.getItem("xpz_activation_token");
     if (token) { setActivationToken(token); setIsPro(true); return; }
-    const cid = localStorage.getItem("xpz_customer_id");
-    if (!cid) return;
-    setCustomerId(cid);
-    fetch(`/api/stripe/verify?customer_id=${cid}`)
-      .then((r) => r.json())
-      .then((d) => setIsPro(d.active ?? false))
-      .catch(() => {});
+    if (session?.user?.email) {
+      fetch("/api/credits")
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => { if (d?.plan && d.plan !== "free") setIsPro(true); })
+        .catch(() => {});
+    }
   }, [session]);
 
   const handleFileChange = (file: File) => {
@@ -488,14 +480,8 @@ export default function PromoPanel({ onGenerate }: Props) {
     }
   };
 
-  const goToCheckout = async () => {
-    try {
-      const res = await fetch("/api/stripe/checkout", { method: "POST" });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-    } catch (e: any) {
-      alert("Erro: " + e.message);
-    }
+  const goToCheckout = () => {
+    window.open("https://pay.kirvano.com/e5bdb60b-3d05-4338-bbb7-59e17b1b636f", "_blank");
   };
 
   const isLoading = status === "generating" || status === "images";

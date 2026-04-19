@@ -284,21 +284,17 @@ export default function GeneratorPanel({ onGenerate }: Props) {
     return () => window.removeEventListener("zora-prompt", handler);
   }, []);
 
-  // Pro check
+  // Pro check via Kirvano
   useEffect(() => {
     if ((session?.user as any)?.role === "admin") { setIsPro(true); return; }
-    if (session?.user?.email) {
-      fetch(`/api/stripe/verify?email=${encodeURIComponent(session.user.email)}`)
-        .then((r) => r.json()).then((d) => setIsPro(d.active ?? false)).catch(() => {});
-      return;
-    }
     const token = localStorage.getItem("xpz_activation_token");
     if (token) { setActivationToken(token); setIsPro(true); return; }
-    const cid = localStorage.getItem("xpz_customer_id");
-    if (!cid) return;
-    setCustomerId(cid);
-    fetch(`/api/stripe/verify?customer_id=${cid}`)
-      .then((r) => r.json()).then((d) => setIsPro(d.active ?? false)).catch(() => {});
+    if (session?.user?.email) {
+      fetch("/api/credits")
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => { if (d?.plan && d.plan !== "free") setIsPro(true); })
+        .catch(() => {});
+    }
   }, [session]);
 
   const fetchCredits = () => {
@@ -310,13 +306,14 @@ export default function GeneratorPanel({ onGenerate }: Props) {
 
   const isLoading = ["searching", "generating", "images"].includes(status);
 
-  const goToCheckout = async (plan = "pro") => {
-    try {
-      const res = await fetch("/api/stripe/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan }) });
-      const data = await res.json();
-      if (!res.ok || !data.url) { alert("Erro: " + (data.error ?? res.status)); return; }
-      window.location.href = data.url;
-    } catch (e: any) { alert("Erro: " + e.message); }
+  const KIRVANO_URLS: Record<string, string> = {
+    basic:    "https://pay.kirvano.com/d3f6da72-a6be-4d54-8268-20c725e4ab5b",
+    pro:      "https://pay.kirvano.com/e5bdb60b-3d05-4338-bbb7-59e17b1b636f",
+    business: "https://pay.kirvano.com/2aca1343-9b14-48d4-aedc-8f532b509abd",
+  };
+
+  const goToCheckout = (plan = "pro") => {
+    window.open(KIRVANO_URLS[plan] ?? KIRVANO_URLS.pro, "_blank");
   };
 
   const handleWizardConfirm = async (ws: WizardSettings) => {
@@ -486,17 +483,12 @@ export default function GeneratorPanel({ onGenerate }: Props) {
             <span className="flex items-center gap-1.5 text-xs text-yellow-400 font-medium">
               <Crown size={12} /> Pro · {session.user.name?.split(" ")[0]}
             </span>
-            <button
-              onClick={async () => {
-                if (!customerId) return;
-                const res = await fetch("/api/stripe/portal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customerId }) });
-                const { url } = await res.json();
-                window.location.href = url;
-              }}
+            <a
+              href="/credits"
               className="text-[11px] text-yellow-500/60 hover:text-yellow-400 underline transition-colors"
             >
               Gerenciar
-            </button>
+            </a>
           </div>
         ) : (
           <div className="flex items-center justify-between bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2">

@@ -32,31 +32,17 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
         setAuthorized(true); setChecking(false); return;
       }
 
-      // 1. Token Kirvano
+      // 1. Token local (legado)
       const kirvanoToken = localStorage.getItem("xpz_activation_token");
       if (kirvanoToken) { setAuthorized(true); setChecking(false); return; }
 
-      // 2. Stripe customer ID local
-      const customerId = localStorage.getItem("xpz_customer_id");
-      if (customerId) {
-        const res = await fetch(`/api/stripe/verify?customer_id=${customerId}`).catch(() => null);
-        const data = await res?.json().catch(() => null);
-        if (data?.active) { setAuthorized(true); setChecking(false); return; }
-      }
-
-      // 3. Sessão Google → verifica assinatura ativa por email
+      // 2. Sessão → verifica créditos/plano via Kirvano
       if (session?.user?.email) {
-        const [stripeRes, creditsRes] = await Promise.all([
-          fetch(`/api/stripe/verify?email=${encodeURIComponent(session.user.email)}`).catch(() => null),
-          fetch("/api/credits").catch(() => null),
-        ]);
-        const stripeData  = await stripeRes?.json().catch(() => null);
-        const creditsData = await creditsRes?.json().catch(() => null);
-
-        if (stripeData?.active) { setAuthorized(true); setChecking(false); return; }
-
-        // Libera acesso se o usuário ainda tem créditos disponíveis (plano + bônus)
-        if ((creditsData?.total ?? 0) > 0) { setAuthorized(true); setChecking(false); return; }
+        const res = await fetch("/api/credits").catch(() => null);
+        const data = await res?.json().catch(() => null);
+        if ((data?.total ?? 0) > 0 || ["basic","pro","business"].includes(data?.plan)) {
+          setAuthorized(true); setChecking(false); return;
+        }
       }
 
       setAuthorized(false);
@@ -66,22 +52,14 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
     run();
   }, [session, status]);
 
-  const goToCheckout = async (plan: string) => {
-    setLoadingPlan(plan);
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
-      });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else alert("Erro ao abrir checkout: " + (data.error ?? "tente novamente"));
-    } catch {
-      alert("Erro de conexão.");
-    } finally {
-      setLoadingPlan(null);
-    }
+  const KIRVANO_URLS: Record<string, string> = {
+    basic:    "https://pay.kirvano.com/d3f6da72-a6be-4d54-8268-20c725e4ab5b",
+    pro:      "https://pay.kirvano.com/e5bdb60b-3d05-4338-bbb7-59e17b1b636f",
+    business: "https://pay.kirvano.com/2aca1343-9b14-48d4-aedc-8f532b509abd",
+  };
+
+  const goToCheckout = (plan: string) => {
+    window.open(KIRVANO_URLS[plan] ?? KIRVANO_URLS.pro, "_blank");
   };
 
   // Carregando verificação

@@ -260,22 +260,15 @@ export default function LandingPage() {
   const scrollToPricing = () =>
     pricingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-  const goToCheckout = async (plan: string) => {
-    setLoadingPlan(plan);
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
-      });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else alert("Erro: " + (data.error ?? "tente novamente"));
-    } catch {
-      alert("Erro de conexão. Tente novamente.");
-    } finally {
-      setLoadingPlan(null);
-    }
+  const KIRVANO_URLS: Record<string, string> = {
+    basic:    "https://pay.kirvano.com/d3f6da72-a6be-4d54-8268-20c725e4ab5b",
+    pro:      "https://pay.kirvano.com/e5bdb60b-3d05-4338-bbb7-59e17b1b636f",
+    business: "https://pay.kirvano.com/2aca1343-9b14-48d4-aedc-8f532b509abd",
+  };
+
+  const goToCheckout = (plan: string) => {
+    const url = KIRVANO_URLS[plan] ?? KIRVANO_URLS.pro;
+    window.open(url, "_blank");
   };
 
   return (
