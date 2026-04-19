@@ -38,12 +38,16 @@ export async function GET(req: NextRequest) {
   ]);
 
   // Conta usuários com plano pago via Kirvano (Redis plan:email)
-  let proCount = 0;
+  let basicCount = 0, proCount = 0, businessCount = 0;
   if (emails.length > 0) {
     const planChecks = await Promise.all(
       emails.map((e: string) => redisGet(`plan:${e.toLowerCase()}`).catch(() => null))
     );
-    proCount = planChecks.filter((p) => p && ["basic", "pro", "business"].includes(p as string)).length;
+    for (const p of planChecks) {
+      if (p === "basic")    basicCount++;
+      else if (p === "pro") proCount++;
+      else if (p === "business") businessCount++;
+    }
   }
 
   const recentEmails = [...emails].reverse().slice(0, 10);
@@ -60,7 +64,9 @@ export async function GET(req: NextRequest) {
     totalUsers: emails.length,
     onlineNow,
     activeToday,
+    basicCount,
     proCount,
+    businessCount,
     mrr: "—",
     carouselsToday: parseInt(carouselsTodayRaw || "0"),
     imagesToday:    parseInt(imagesTodayRaw    || "0"),

@@ -15,7 +15,9 @@ interface Stats {
   totalUsers: number;
   onlineNow: number;
   activeToday: number;
+  basicCount: number;
   proCount: number;
+  businessCount: number;
   mrr: string;
   carouselsToday: number;
   imagesToday: number;
@@ -429,8 +431,12 @@ export default function AdminDashboard() {
                   <KpiCard label="Usuários" value={stats.totalUsers} icon={Users} accent="#a855f7" sub="total cadastrados" />
                   <KpiCard label="Online agora" value={stats.onlineNow} icon={Activity} accent="#22c55e" sub="últimos 2 min" />
                   <KpiCard label="Ativos hoje" value={stats.activeToday} icon={TrendingUp} accent="#3b82f6" sub="usuários únicos" />
-                  <KpiCard label="Pro" value={stats.proCount} icon={Crown} accent="#f59e0b" sub="assinaturas ativas" />
-                  <KpiCard label="MRR" value={`R$ ${parseFloat(stats.mrr).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`} icon={DollarSign} accent="#10b981" sub="receita mensal" />
+                  <KpiCard label="Básico" value={stats.basicCount} icon={Crown} accent="#60a5fa" sub="plano básico" />
+                  <KpiCard label="Pro" value={stats.proCount} icon={Crown} accent="#ec4899" sub="plano pro" />
+                  <KpiCard label="Business" value={stats.businessCount} icon={Crown} accent="#f59e0b" sub="plano business" />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
+                  <KpiCard label="MRR" value="—" icon={DollarSign} accent="#10b981" sub="receita mensal" />
                   <KpiCard label="Carrosséis hoje" value={stats.carouselsToday} icon={Layers} accent="#ec4899" sub={`${stats.imagesToday} imagens geradas`} />
                 </div>
 
