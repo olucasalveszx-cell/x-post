@@ -256,7 +256,8 @@ export default function EditorPage() {
     twitterStyleRef.current = style === "twitter";
     const topic = pendingTopicRef.current;
     pendingTopicRef.current = null;
-    window.dispatchEvent(new CustomEvent("open-generator-wizard", topic ? { detail: { topic } } : undefined));
+    const isTwitter = style === "twitter";
+    window.dispatchEvent(new CustomEvent("open-generator-wizard", { detail: { topic: topic ?? undefined, isTwitter } }));
   }, []);
 
   // ── Operações de slide ────────────────────────────────────────

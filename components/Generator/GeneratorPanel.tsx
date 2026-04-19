@@ -261,12 +261,14 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   const [credits, setCredits] = useState<{ remaining: number; limit: number; unlimited: boolean } | null>(null);
   const [creditToast, setCreditToast] = useState<{ spent: number; remaining: number } | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [wizardTwitterMode, setWizardTwitterMode] = useState(false);
 
   // Listen for external trigger (canvas overlay button / onboarding)
   useEffect(() => {
     const handler = (e: Event) => {
-      const topic = (e as CustomEvent).detail?.topic;
-      if (topic) setLastSettings((prev) => ({ ...(prev ?? defaultSettings()), topic, inputMode: "topic" }));
+      const detail = (e as CustomEvent).detail ?? {};
+      if (detail.topic) setLastSettings((prev) => ({ ...(prev ?? defaultSettings()), topic: detail.topic, inputMode: "topic" }));
+      setWizardTwitterMode(!!detail.isTwitter);
       setShowWizard(true);
     };
     window.addEventListener("open-generator-wizard", handler);
@@ -676,6 +678,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
         onConfirm={handleWizardConfirm}
         isPro={isPro}
         initial={lastSettings ?? undefined}
+        isTwitterMode={wizardTwitterMode}
       />
     </div>
   );

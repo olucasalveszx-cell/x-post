@@ -32,6 +32,7 @@ interface Props {
   onConfirm: (settings: WizardSettings) => void;
   isPro: boolean;
   initial?: Partial<WizardSettings>;
+  isTwitterMode?: boolean;
 }
 
 const WRITING_STYLES: { value: WritingStyle; emoji: string; label: string; desc: string }[] = [
@@ -44,7 +45,7 @@ const WRITING_STYLES: { value: WritingStyle; emoji: string; label: string; desc:
 
 const SLIDE_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initial }: Props) {
+export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initial, isTwitterMode }: Props) {
   const [step, setStep] = useState(0);
   const [inputMode, setInputMode] = useState<"topic" | "prompt">(initial?.inputMode ?? "topic");
   const [topic, setTopic] = useState(initial?.topic ?? "");
@@ -116,13 +117,17 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
   };
 
   const handleConfirm = () => {
-    // Persist branding
     try {
       localStorage.setItem("xpz_handle", handle);
       localStorage.setItem("xpz_brand", brandName);
       localStorage.setItem("xpz_carousel_title", carouselTitle);
     } catch {}
-    onConfirm({ topic, inputMode, customPrompt, slideCount, writingStyle, imageStyle, imageLayout, refImageBase64, refImageMime, refImagePreview, handle, brandName, carouselTitle });
+    onConfirm({
+      topic, inputMode, customPrompt, slideCount, writingStyle,
+      imageStyle: isTwitterMode ? "foto_real" : imageStyle,
+      imageLayout: isTwitterMode ? "top" : imageLayout,
+      refImageBase64, refImageMime, refImagePreview, handle, brandName, carouselTitle,
+    });
     onClose();
   };
 
@@ -144,7 +149,7 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
 
         {/* Step dots */}
         <div className="flex items-center justify-center gap-2 pt-6 pb-1 shrink-0">
-          {[0, 1].map((i) => (
+          {(isTwitterMode ? [0] : [0, 1]).map((i) => (
             <div
               key={i}
               className="h-1.5 rounded-full transition-all duration-300"
@@ -163,8 +168,8 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
           {step === 0 && (
             <div className="flex flex-col gap-5">
               <div className="text-center">
-                <h2 className="text-xl font-bold">Configurar IA</h2>
-                <p className="text-sm text-gray-500 mt-1">Diga sobre o que é o conteúdo e como quer o carrossel</p>
+                <h2 className="text-xl font-bold">{isTwitterMode ? "Post X / Twitter" : "Configurar IA"}</h2>
+                <p className="text-sm text-gray-500 mt-1">{isTwitterMode ? "Sobre o que será o post? A IA cria o conteúdo no estilo X." : "Diga sobre o que é o conteúdo e como quer o carrossel"}</p>
               </div>
 
               {/* Input mode toggle */}
@@ -303,6 +308,28 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                   ))}
                 </div>
               </div>
+
+              {/* Tom de escrita — exibido no step 0 apenas em modo Twitter */}
+              {isTwitterMode && (
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-3">Tom da escrita</p>
+                  <div className="flex flex-wrap gap-2">
+                    {WRITING_STYLES.map((ws) => (
+                      <button
+                        key={ws.value}
+                        onClick={() => setWritingStyle(ws.value)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
+                          writingStyle === ws.value
+                            ? "border-sky-500 bg-sky-500/10 text-white"
+                            : "border-[#222] bg-[#0a0a0a] text-gray-400 hover:border-sky-500/30 hover:text-white"
+                        }`}
+                      >
+                        <span>{ws.emoji}</span> {ws.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -422,7 +449,7 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
             <div />
           )}
 
-          {step === 0 ? (
+          {step === 0 && !isTwitterMode ? (
             <button
               onClick={() => setStep(1)}
               disabled={!canContinue}
@@ -433,9 +460,14 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
           ) : (
             <button
               onClick={handleConfirm}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors shadow-lg shadow-brand-500/20"
+              disabled={!canContinue}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors shadow-lg disabled:opacity-30 disabled:cursor-not-allowed ${
+                isTwitterMode
+                  ? "bg-sky-600 hover:bg-sky-700 shadow-sky-500/20"
+                  : "bg-brand-600 hover:bg-brand-700 shadow-brand-500/20"
+              }`}
             >
-              <Sparkles size={14} /> Gerar Carrossel
+              <Sparkles size={14} /> {isTwitterMode ? "Gerar Post X / Twitter" : "Gerar Carrossel"}
             </button>
           )}
         </div>
