@@ -1177,6 +1177,14 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           >
             <RefreshCw size={15} className="text-blue-400" /> {frameCtxMenu.el.frameImageUrl ? "Trocar foto" : "Adicionar foto"}
           </button>
+          {slide.backgroundImageUrl && (
+            <button
+              onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: slide.backgroundImageUrl, frameImageOffset: { x: 50, y: 50 }, frameImageZoom: 100 }); closeFrameCtx(); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-green-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
+            >
+              <ImageIcon size={15} /> Usar imagem de fundo
+            </button>
+          )}
           {frameCtxMenu.el.frameImageUrl && (
             <button
               onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: undefined }); closeFrameCtx(); }}
@@ -1253,6 +1261,42 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Posição e zoom — só quando tem imagem */}
+          {slide.backgroundImageUrl && (
+            <div className="px-4 py-3 border-b border-[#2a2a2a] space-y-2.5">
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Posição & Zoom</p>
+              <label className="flex items-center gap-2 text-xs text-gray-400">
+                <span className="w-3">X</span>
+                <input type="range" min={0} max={100} step={1}
+                  value={slide.backgroundPosition?.x ?? 50}
+                  onChange={(e) => onUpdate({ ...slide, backgroundPosition: { x: Number(e.target.value), y: slide.backgroundPosition?.y ?? 50 } })}
+                  className="flex-1 accent-brand-500" />
+                <span className="text-gray-600 w-6 text-right">{slide.backgroundPosition?.x ?? 50}</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs text-gray-400">
+                <span className="w-3">Y</span>
+                <input type="range" min={0} max={100} step={1}
+                  value={slide.backgroundPosition?.y ?? 50}
+                  onChange={(e) => onUpdate({ ...slide, backgroundPosition: { x: slide.backgroundPosition?.x ?? 50, y: Number(e.target.value) } })}
+                  className="flex-1 accent-brand-500" />
+                <span className="text-gray-600 w-6 text-right">{slide.backgroundPosition?.y ?? 50}</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs text-gray-400">
+                <span className="w-3">🔍</span>
+                <input type="range" min={80} max={250} step={5}
+                  value={slide.backgroundZoom ?? 100}
+                  onChange={(e) => onUpdate({ ...slide, backgroundZoom: Number(e.target.value) })}
+                  className="flex-1 accent-brand-500" />
+                <span className="text-gray-600 w-8 text-right">{slide.backgroundZoom ?? 100}%</span>
+              </label>
+              <button
+                onClick={() => onUpdate({ ...slide, backgroundPosition: { x: 50, y: 50 }, backgroundZoom: 100 })}
+                className="text-[11px] text-gray-600 hover:text-gray-400 underline">
+                Resetar posição
+              </button>
             </div>
           )}
 
