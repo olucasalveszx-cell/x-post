@@ -233,6 +233,12 @@ export default function EditorPage() {
 
   const handleIGLogin = () => { window.location.href = "/api/instagram/auth"; };
 
+  useEffect(() => {
+    const handler = () => { twitterStyleRef.current = false; };
+    window.addEventListener("generator-new-run", handler);
+    return () => window.removeEventListener("generator-new-run", handler);
+  }, []);
+
   const handleStyleSelect = useCallback((style: "layouts" | "twitter") => {
     setShowStyleSelector(false);
     twitterStyleRef.current = style === "twitter";
@@ -389,7 +395,8 @@ export default function EditorPage() {
   const handleGenerate = useCallback(async (generated: Slide[]) => {
     const pid = activeProjectIdRef.current;
     const isTwitter = twitterStyleRef.current;
-    twitterStyleRef.current = false;
+    // não reseta o ref aqui pois onGenerate é chamado 2x (rawSlides + withImages)
+    // o ref é resetado em handleStyleSelect na próxima geração
 
     const final = isTwitter ? await applyTwitterStyle(generated) : generated;
 

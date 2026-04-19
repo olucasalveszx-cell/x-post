@@ -6,6 +6,7 @@ import {
   Sparkles, LogOut, Users, Loader2, RefreshCw,
   Activity, TrendingUp, Image, Layers, DollarSign, Crown, ArrowLeft,
   LayoutGrid, ImageOff, Download, ExternalLink, Eye, X, ChevronLeft, ChevronRight,
+  Trash2, Plus, RotateCcw, Zap,
 } from "lucide-react";
 import Link from "next/link";
 import type { AdminDraftMeta } from "@/app/api/admin/carousels/route";
@@ -116,7 +117,18 @@ function fmt(iso: string) {
   });
 }
 
-type Tab = "overview" | "carousels" | "images";
+interface AdminUser {
+  name: string;
+  email: string;
+  createdAt: string;
+  plan: string;
+  used: number;
+  limit: number;
+  bonus: number;
+  total: number;
+}
+
+type Tab = "overview" | "carousels" | "images" | "users";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -143,6 +155,12 @@ export default function AdminDashboard() {
   const [previewSlides, setPreviewSlides] = useState<any[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewIdx, setPreviewIdx] = useState(0);
+
+  /* ── Usuários ── */
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [creditInputs, setCreditInputs] = useState<Record<string, string>>({});
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   /* ── Novo carrossel indicator ── */
   const prevDraftsCount = useRef(0);
@@ -201,6 +219,31 @@ export default function AdminDashboard() {
     }
   }, [router]);
 
+  const fetchUsers = useCallback(async () => {
+    setUsersLoading(true);
+    try {
+      const res = await fetch("/api/admin/user-action");
+      if (res.status === 401) { router.push("/admin/login"); return; }
+      const data = await res.json();
+      if (data.users) setAdminUsers(data.users);
+    } catch {}
+    finally { setUsersLoading(false); }
+  }, [router]);
+
+  const userAction = async (action: string, email: string, amount?: number) => {
+    const key = `${action}:${email}`;
+    setActionLoading(key);
+    try {
+      await fetch("/api/admin/user-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, email, amount }),
+      });
+      await fetchUsers();
+    } catch {}
+    finally { setActionLoading(null); }
+  };
+
   useEffect(() => {
     if (tab === "carousels") {
       fetchCarousels();
@@ -208,7 +251,8 @@ export default function AdminDashboard() {
       return () => clearInterval(id);
     }
     if (tab === "images" && images.length === 0) fetchImages();
-  }, [tab, images.length, fetchCarousels, fetchImages]);
+    if (tab === "users") fetchUsers();
+  }, [tab, images.length, fetchCarousels, fetchImages, fetchUsers]);
 
   // detecta novos carrosséis
   useEffect(() => {
@@ -385,7 +429,7 @@ export default function AdminDashboard() {
       {/* Tabs */}
       <div className="border-b border-white/5 px-6" style={{ background: "#0d0d0d" }}>
         <div className="flex gap-1 max-w-5xl mx-auto">
-          {(["overview", "carousels", "images"] as Tab[]).map((t) => (
+          {(["overview", "users", "carousels", "images"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -395,8 +439,8 @@ export default function AdminDashboard() {
                   : "border-transparent text-gray-500 hover:text-gray-300"
               }`}
             >
-              {t === "overview" ? <Activity size={12} /> : t === "carousels" ? <LayoutGrid size={12} /> : <Image size={12} />}
-              {t === "overview" ? "Visão geral" : t === "carousels" ? "Carrosséis" : "Imagens"}
+              {t === "overview" ? <Activity size={12} /> : t === "users" ? <Users size={12} /> : t === "carousels" ? <LayoutGrid size={12} /> : <Image size={12} />}
+              {t === "overview" ? "Visão geral" : t === "users" ? "Usuários" : t === "carousels" ? "Carrosséis" : "Imagens"}
               {t === "carousels" && draftsTotal > 0 && (
                 <span className="ml-1 bg-purple-500/20 text-purple-300 text-[10px] px-1.5 py-0.5 rounded-full">
                   {draftsTotal}
@@ -436,7 +480,7 @@ export default function AdminDashboard() {
                   <KpiCard label="Business" value={stats.businessCount} icon={Crown} accent="#f59e0b" sub="plano business" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
-                  <KpiCard label="MRR" value="—" icon={DollarSign} accent="#10b981" sub="receita mensal" />
+                  <KpiCard label="MRR estimado" value={`R$ ${parseFloat(stats.mrr).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`} icon={DollarSign} accent="#10b981" sub={`${parseInt(stats.basicCount as any) + parseInt(stats.proCount as any) + parseInt(stats.businessCount as any)} assinaturas`} />
                   <KpiCard label="Carrosséis hoje" value={stats.carouselsToday} icon={Layers} accent="#ec4899" sub={`${stats.imagesToday} imagens geradas`} />
                 </div>
 
@@ -482,6 +526,126 @@ export default function AdminDashboard() {
                   )}
                 </div>
               </>
+            )}
+          </>
+        )}
+
+        {/* ═══ ABA USUÁRIOS ═══ */}
+        {tab === "users" && (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-bold text-sm">Gerenciar Usuários</p>
+                <p className="text-[11px] text-gray-600 mt-0.5">{adminUsers.length} usuários cadastrados</p>
+              </div>
+              <button onClick={fetchUsers} disabled={usersLoading}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-40">
+                <RefreshCw size={12} className={usersLoading ? "animate-spin" : ""} /> Atualizar
+              </button>
+            </div>
+
+            {usersLoading && adminUsers.length === 0 && (
+              <div className="flex justify-center py-20">
+                <Loader2 size={28} className="text-purple-400 animate-spin" />
+              </div>
+            )}
+
+            {adminUsers.length > 0 && (
+              <div className="rounded-2xl overflow-hidden" style={{ background: "#0d0d0d", border: "1px solid #1e1e1e" }}>
+                {(() => {
+                  const PLAN_COLOR: Record<string, string> = {
+                    god: "#a855f7", business: "#f59e0b", pro: "#ec4899", basic: "#60a5fa", free: "#6b7280",
+                  };
+                  const PLAN_LABEL: Record<string, string> = {
+                    god: "God", business: "Business", pro: "Pro", basic: "Básico", free: "Grátis",
+                  };
+                  return adminUsers.map((u, i) => {
+                    const color = PLAN_COLOR[u.plan] ?? "#6b7280";
+                    const addKey = `add_credits:${u.email}`;
+                    const resetKey = `reset_credits:${u.email}`;
+                    const delKey = `delete_user:${u.email}`;
+                    return (
+                      <div key={u.email} className={`p-4 ${i > 0 ? "border-t border-[#1a1a1a]" : ""}`}>
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          {/* Info */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+                              style={{ background: `${color}20`, color }}>
+                              {u.name?.charAt(0)?.toUpperCase() || "?"}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-white truncate">{u.name || "—"}</p>
+                              <p className="text-[10px] text-gray-500 truncate">{u.email}</p>
+                            </div>
+                          </div>
+
+                          {/* Plano + créditos */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                              style={{ background: `${color}18`, color }}>
+                              {PLAN_LABEL[u.plan] ?? u.plan}
+                            </span>
+                            <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                              <Zap size={10} className="text-purple-400" />
+                              <span className="font-bold text-white">{u.total}</span>
+                              <span className="text-gray-600">restantes</span>
+                              <span className="text-gray-700 mx-0.5">·</span>
+                              <span>{u.used}/{u.limit} usados</span>
+                              {u.bonus > 0 && <span className="text-yellow-500 ml-0.5">+{u.bonus} bônus</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Ações */}
+                        <div className="flex items-center gap-2 mt-3 flex-wrap">
+                          {/* Add créditos */}
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="1"
+                              placeholder="Qtd"
+                              value={creditInputs[u.email] ?? ""}
+                              onChange={e => setCreditInputs(prev => ({ ...prev, [u.email]: e.target.value }))}
+                              className="w-16 bg-[#111] border border-[#252525] rounded-lg px-2 py-1 text-xs text-white outline-none"
+                            />
+                            <button
+                              onClick={() => {
+                                const n = parseInt(creditInputs[u.email] ?? "0");
+                                if (n > 0) { userAction("add_credits", u.email, n); setCreditInputs(prev => ({ ...prev, [u.email]: "" })); }
+                              }}
+                              disabled={actionLoading === addKey || !creditInputs[u.email]}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-green-400 border border-green-500/20 hover:bg-green-500/10 transition-colors disabled:opacity-40"
+                            >
+                              {actionLoading === addKey ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />} Add créditos
+                            </button>
+                          </div>
+
+                          {/* Zerar créditos */}
+                          <button
+                            onClick={() => userAction("reset_credits", u.email)}
+                            disabled={actionLoading === resetKey}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/10 transition-colors disabled:opacity-40"
+                          >
+                            {actionLoading === resetKey ? <Loader2 size={10} className="animate-spin" /> : <RotateCcw size={10} />} Zerar créditos
+                          </button>
+
+                          {/* Remover usuário */}
+                          <button
+                            onClick={() => {
+                              if (confirm(`Remover ${u.email}? Esta ação não pode ser desfeita.`))
+                                userAction("delete_user", u.email);
+                            }}
+                            disabled={actionLoading === delKey}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                          >
+                            {actionLoading === delKey ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />} Remover
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
             )}
           </>
         )}

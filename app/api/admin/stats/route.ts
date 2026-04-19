@@ -60,6 +60,10 @@ export async function GET(req: NextRequest) {
     count: parseInt(weekCarousels[i] || "0"),
   }));
 
+  // Preços dos planos em R$
+  const PLAN_PRICE: Record<string, number> = { basic: 27, pro: 47, business: 97 };
+  const mrr = basicCount * PLAN_PRICE.basic + proCount * PLAN_PRICE.pro + businessCount * PLAN_PRICE.business;
+
   return NextResponse.json({
     totalUsers: emails.length,
     onlineNow,
@@ -67,7 +71,7 @@ export async function GET(req: NextRequest) {
     basicCount,
     proCount,
     businessCount,
-    mrr: "—",
+    mrr: mrr.toFixed(2),
     carouselsToday: parseInt(carouselsTodayRaw || "0"),
     imagesToday:    parseInt(imagesTodayRaw    || "0"),
     weekData,
