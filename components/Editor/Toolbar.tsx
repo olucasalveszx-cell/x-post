@@ -151,13 +151,16 @@ export default function Toolbar({
 
     let newElements = [...slide.elements];
 
-    const positions: Record<string, { ty: number; by: number; fs: number; ba: "left" | "center" }> = {
-      impacto:   { ty: Math.round(H * 0.57), by: Math.round(H * 0.84), fs: Math.round(H * 0.075), ba: "left" },
-      capa:      { ty: Math.round(H * 0.66), by: Math.round(H * 0.89), fs: Math.round(H * 0.068), ba: "left" },
-      topo:      { ty: Math.round(H * 0.05), by: Math.round(H * 0.32), fs: Math.round(H * 0.062), ba: "left" },
-      poster:    { ty: Math.round(H * 0.20), by: Math.round(H * 0.73), fs: Math.round(H * 0.095), ba: "left" },
-      elegante:  { ty: Math.round(H * 0.32), by: Math.round(H * 0.58), fs: Math.round(H * 0.062), ba: "center" },
-      editorial: { ty: Math.round(H * 0.53), by: Math.round(H * 0.79), fs: Math.round(H * 0.070), ba: "left" },
+    // ty/th = posição Y e altura do título; by/bh = posição Y e altura do corpo
+    // fs = fontSize do título; bfs = fontSize do corpo; ba = alinhamento
+    // Valores calibrados para corresponder ao preview visual de cada template
+    const positions: Record<string, { ty: number; th: number; by: number; bh: number; fs: number; bfs: number; ba: "left" | "center" }> = {
+      impacto:   { ty: Math.round(H*0.57), th: Math.round(H*0.24), by: Math.round(H*0.84), bh: Math.round(H*0.07), fs: Math.round(H*0.046), bfs: Math.round(H*0.020), ba: "left" },
+      capa:      { ty: Math.round(H*0.66), th: Math.round(H*0.20), by: Math.round(H*0.89), bh: Math.round(H*0.05), fs: Math.round(H*0.042), bfs: Math.round(H*0.018), ba: "left" },
+      topo:      { ty: Math.round(H*0.05), th: Math.round(H*0.24), by: Math.round(H*0.32), bh: Math.round(H*0.07), fs: Math.round(H*0.038), bfs: Math.round(H*0.020), ba: "left" },
+      poster:    { ty: Math.round(H*0.20), th: Math.round(H*0.48), by: Math.round(H*0.73), bh: Math.round(H*0.06), fs: Math.round(H*0.058), bfs: Math.round(H*0.020), ba: "left" },
+      elegante:  { ty: Math.round(H*0.32), th: Math.round(H*0.22), by: Math.round(H*0.58), bh: Math.round(H*0.07), fs: Math.round(H*0.038), bfs: Math.round(H*0.020), ba: "center" },
+      editorial: { ty: Math.round(H*0.53), th: Math.round(H*0.22), by: Math.round(H*0.79), bh: Math.round(H*0.07), fs: Math.round(H*0.042), bfs: Math.round(H*0.020), ba: "left" },
     };
 
     const p = positions[layoutId];
@@ -165,14 +168,14 @@ export default function Toolbar({
 
     if (titleEl) {
       newElements = newElements.map(e => e.id === titleEl.id ? {
-        ...e, x: 64, y: p.ty, width: W - 128, height: Math.round(H * 0.26),
+        ...e, x: 64, y: p.ty, width: W - 128, height: p.th,
         style: { ...(e.style as any), fontSize: p.fs, textAlign: p.ba },
       } : e);
     }
     if (bodyEl) {
       newElements = newElements.map(e => e.id === bodyEl.id ? {
-        ...e, x: 64, y: p.by, width: W - 128, height: Math.round(H * 0.09),
-        style: { ...(e.style as any), fontSize: Math.round(H * 0.019), textAlign: p.ba },
+        ...e, x: 64, y: p.by, width: W - 128, height: p.bh,
+        style: { ...(e.style as any), fontSize: p.bfs, textAlign: p.ba },
       } : e);
     }
 
