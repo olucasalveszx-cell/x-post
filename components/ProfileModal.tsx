@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard, Zap, Crown, ArrowRight, Instagram, Check, Trash2, Eye, EyeOff } from "lucide-react";
+import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard, Zap, Crown, ArrowRight, Instagram, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 interface HistoryEntry {
@@ -54,12 +54,7 @@ export default function ProfileModal({ open, onClose }: Props) {
   const [credits, setCredits] = useState<CreditsInfo | null>(null);
 
   /* ── Instagram ── */
-  const [igUsername, setIgUsername] = useState("");
-  const [igPassword, setIgPassword] = useState("");
-  const [igConnected, setIgConnected] = useState(false);
-  const [igLoading, setIgLoading]   = useState(false);
-  const [igError, setIgError]       = useState("");
-  const [igShowPw, setIgShowPw]     = useState(false);
+  const [igAccount, setIgAccount] = useState<{ username: string; accountId: string; token: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,18 +69,11 @@ export default function ProfileModal({ open, onClose }: Props) {
     }
   }, []);
 
-  const loadInstagram = useCallback(async () => {
+  const loadInstagram = useCallback(() => {
     try {
-      const res = await fetch("/api/instagram/credentials");
-      if (!res.ok) return;
-      const d = await res.json();
-      if (d.connected) {
-        setIgConnected(true);
-        setIgUsername(d.username ?? "");
-        setIgPassword(d.password ?? "");
-      } else {
-        setIgConnected(false);
-      }
+      const saved = localStorage.getItem("ig_account");
+      if (saved) setIgAccount(JSON.parse(saved));
+      else setIgAccount(null);
     } catch {}
   }, []);
 
@@ -261,85 +249,59 @@ export default function ProfileModal({ open, onClose }: Props) {
           )}
 
           {tab === "instagram" && (
-            <div className="flex flex-col gap-4 max-w-sm mx-auto w-full py-2">
-              {/* Status badge */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold ${igConnected ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-[#1a1a1a] text-gray-500 border border-[#222]"}`}>
-                <div className={`w-2 h-2 rounded-full ${igConnected ? "bg-green-400 animate-pulse" : "bg-gray-600"}`} />
-                {igConnected ? `Conectado como @${igUsername}` : "Nenhuma conta conectada"}
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div>
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold block mb-1">Usuário do Instagram</label>
-                  <div className="flex items-center rounded-xl overflow-hidden border border-[#252525] bg-[#111]">
-                    <span className="pl-3 text-gray-600 text-sm">@</span>
-                    <input
-                      type="text"
-                      placeholder="seu_usuario"
-                      value={igUsername}
-                      onChange={e => setIgUsername(e.target.value.replace(/^@/, ""))}
-                      className="flex-1 bg-transparent px-2 py-2.5 text-sm text-white outline-none placeholder-gray-700"
-                    />
+            <div className="flex flex-col items-center gap-5 max-w-sm mx-auto w-full py-6">
+              {igAccount ? (
+                <>
+                  {/* Conectado */}
+                  <div className="flex flex-col items-center gap-3 w-full">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                      style={{ background: "linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" }}>
+                      <Instagram size={28} color="white" />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-white text-sm">@{igAccount.username}</p>
+                      <p className="text-[11px] text-green-400 mt-0.5 flex items-center justify-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
+                        Conta conectada
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold block mb-1">Senha do Instagram</label>
-                  <div className="flex items-center rounded-xl overflow-hidden border border-[#252525] bg-[#111]">
-                    <input
-                      type={igShowPw ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={igPassword}
-                      onChange={e => setIgPassword(e.target.value)}
-                      className="flex-1 bg-transparent pl-3 pr-2 py-2.5 text-sm text-white outline-none placeholder-gray-700"
-                    />
-                    <button onClick={() => setIgShowPw(v => !v)} className="pr-3 text-gray-600 hover:text-gray-400 transition-colors">
-                      {igShowPw ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  </div>
-                </div>
 
-                {igError && <p className="text-[11px] text-red-400">{igError}</p>}
-
-                <div className="flex gap-2 mt-1">
                   <button
-                    disabled={igLoading || !igUsername.trim() || !igPassword.trim()}
-                    onClick={async () => {
-                      setIgLoading(true); setIgError("");
-                      try {
-                        const res = await fetch("/api/instagram/credentials", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ username: igUsername, password: igPassword }),
-                        });
-                        const d = await res.json();
-                        if (!res.ok) { setIgError(d.error ?? "Erro ao salvar"); return; }
-                        setIgConnected(true);
-                      } catch { setIgError("Erro de conexão"); }
-                      finally { setIgLoading(false); }
+                    onClick={() => {
+                      localStorage.removeItem("ig_account");
+                      setIgAccount(null);
+                      window.dispatchEvent(new CustomEvent("ig-disconnected"));
                     }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all hover:opacity-90 disabled:opacity-40"
-                    style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white" }}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-colors"
                   >
-                    {igLoading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-                    Salvar conta
+                    <Trash2 size={14} /> Desconectar Instagram
                   </button>
-                  {igConnected && (
-                    <button
-                      onClick={async () => {
-                        await fetch("/api/instagram/credentials", { method: "DELETE" });
-                        setIgConnected(false); setIgUsername(""); setIgPassword("");
-                      }}
-                      className="px-3 py-2.5 rounded-xl text-xs font-medium text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-colors"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  )}
-                </div>
-              </div>
+                </>
+              ) : (
+                <>
+                  {/* Desconectado */}
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center bg-[#1a1a1a] border border-[#2a2a2a]">
+                    <Instagram size={28} className="text-gray-600" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold text-white text-sm">Nenhuma conta conectada</p>
+                    <p className="text-[11px] text-gray-500 mt-1">Conecte seu Instagram para publicar diretamente.</p>
+                  </div>
 
-              <p className="text-[10px] text-gray-700 leading-relaxed text-center">
-                Suas credenciais são criptografadas e usadas apenas para publicar no Instagram.
-              </p>
+                  <a
+                    href="/api/instagram/auth"
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95"
+                    style={{ background: "linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" }}
+                  >
+                    <Instagram size={15} /> Conectar com Instagram
+                  </a>
+
+                  <p className="text-[10px] text-gray-700 text-center leading-relaxed">
+                    Você será redirecionado para o Facebook para autorizar o acesso.
+                  </p>
+                </>
+              )}
             </div>
           )}
 
