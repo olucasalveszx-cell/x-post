@@ -842,6 +842,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                   handleTouchStart(e, el);
                 }
               }}
+              onClick={(e) => e.stopPropagation()}
               onDoubleClick={(e) => { if (el.frameImageUrl) { e.stopPropagation(); setFramePanId(el.id); } }}
               onContextMenu={(e) => handleFrameContextMenu(e, el)}
             >
@@ -952,6 +953,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               ...(isSelected ? { outline: `${oW}px solid #a855f7`, outlineOffset: `${Math.round(2 * S)}px` } : {}),
             }}
             onMouseDown={(e) => handleMouseDown(e, el)}
+            onClick={(e) => e.stopPropagation()}
             onTouchStart={(e) => handleTouchStart(e, el)}
             onContextMenu={(e) => handleContextMenu(e, el)}
           >
