@@ -54,7 +54,6 @@ export default function Toolbar({
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
   const [showLayouts, setShowLayouts] = useState(false);
-  const [showFrame, setShowFrame] = useState(false);
   const [showMolds, setShowMolds] = useState(false);
 
   const MOLD_SHAPES = [
@@ -88,161 +87,53 @@ export default function Toolbar({
     setShowMolds(false);
   };
 
-  const FRAME_PRESETS: {
-    id: string; label: string; desc: string;
-    crop: { top: number; right: number; bottom: number; left: number };
-    gradient: string;
-    imgArea: { top: string; height: string }; // para mini-preview
-  }[] = [
-    {
-      id: "full",
-      label: "Full",
-      desc: "Imagem de fundo total",
-      crop: { top: 0, right: 0, bottom: 0, left: 0 },
-      gradient: "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.80) 40%, rgba(0,0,0,0.20) 70%, rgba(0,0,0,0.05) 100%)",
-      imgArea: { top: "0%", height: "100%" },
-    },
-    {
-      id: "top55",
-      label: "Topo 55%",
-      desc: "Imagem no topo, texto embaixo",
-      crop: { top: 0, right: 0, bottom: 45, left: 0 },
-      gradient: "linear-gradient(to top, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.0) 45%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.15) 100%)",
-      imgArea: { top: "0%", height: "55%" },
-    },
-    {
-      id: "top40",
-      label: "Topo 40%",
-      desc: "Quadro compacto no topo",
-      crop: { top: 0, right: 0, bottom: 60, left: 0 },
-      gradient: "linear-gradient(to top, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.0) 40%, rgba(0,0,0,0.40) 55%, rgba(0,0,0,0.10) 100%)",
-      imgArea: { top: "0%", height: "40%" },
-    },
-    {
-      id: "bottom55",
-      label: "Inferior 55%",
-      desc: "Texto em cima, imagem embaixo",
-      crop: { top: 45, right: 0, bottom: 0, left: 0 },
-      gradient: "linear-gradient(to bottom, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.0) 45%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.15) 100%)",
-      imgArea: { top: "45%", height: "55%" },
-    },
-    {
-      id: "bottom40",
-      label: "Inferior 40%",
-      desc: "Quadro compacto embaixo",
-      crop: { top: 60, right: 0, bottom: 0, left: 0 },
-      gradient: "linear-gradient(to bottom, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.0) 60%, rgba(0,0,0,0.40) 75%, rgba(0,0,0,0.10) 100%)",
-      imgArea: { top: "60%", height: "40%" },
-    },
-    {
-      id: "center",
-      label: "Centro",
-      desc: "Quadro centralizado com margens",
-      crop: { top: 18, right: 4, bottom: 18, left: 4 },
-      gradient: "linear-gradient(to top, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.0) 100%)",
-      imgArea: { top: "18%", height: "64%" },
-    },
-  ];
-
-  const applyFrame = (presetId: string) => {
-    const preset = FRAME_PRESETS.find((p) => p.id === presetId);
-    if (!preset) return;
-
-    const W = slide.width;
-    const H = slide.height;
-    // Ignora elementos de header (y < 12%) e footer (y > 82%) — são @handle, marca, dots, etc.
-    const contentEls = slide.elements.filter((e) =>
-      e.type === "text" && e.y >= H * 0.12 && e.y <= H * 0.82
-    );
-    const [titleEl, bodyEl] = contentEls;
-    let newElements = [...slide.elements];
-
-    if (presetId === "top55" || presetId === "top40") {
-      const imgBottom = presetId === "top55" ? 0.55 : 0.40;
-      if (titleEl) {
-        newElements = newElements.map((e) => e.id === titleEl.id ? {
-          ...e, x: 64, y: Math.round(H * (imgBottom + 0.04)), width: W - 128, height: Math.round(H * 0.22),
-          style: { ...(e.style as any), fontSize: Math.round(H * 0.062), textAlign: "left" },
-        } : e);
-      }
-      if (bodyEl) {
-        newElements = newElements.map((e) => e.id === bodyEl.id ? {
-          ...e, x: 64, y: Math.round(H * (imgBottom + 0.28)), width: W - 128, height: Math.round(H * 0.10),
-          style: { ...(e.style as any), fontSize: Math.round(H * 0.020), textAlign: "left" },
-        } : e);
-      }
-    } else if (presetId === "bottom55" || presetId === "bottom40") {
-      const imgTop = presetId === "bottom55" ? 0.45 : 0.60;
-      if (titleEl) {
-        newElements = newElements.map((e) => e.id === titleEl.id ? {
-          ...e, x: 64, y: Math.round(H * 0.06), width: W - 128, height: Math.round(H * 0.26),
-          style: { ...(e.style as any), fontSize: Math.round(H * 0.068), textAlign: "center" },
-        } : e);
-      }
-      if (bodyEl) {
-        newElements = newElements.map((e) => e.id === bodyEl.id ? {
-          ...e, x: 64, y: Math.round(H * 0.34), width: W - 128, height: Math.round(H * 0.09),
-          style: { ...(e.style as any), fontSize: Math.round(H * 0.020), textAlign: "center" },
-        } : e);
-      }
-    }
-
-    onUpdate({
-      ...slide,
-      elements: newElements,
-      backgroundCrop: preset.crop,
-      backgroundGradient: preset.gradient,
-    });
-    setShowFrame(false);
-  };
-
   const LAYOUTS: {
     id: string; label: string; desc: string; gradient: string;
     bgPosition: { x: number; y: number }; bgZoom: number;
     textBlocks: { top: string; left: string; w: string; h: string; bold?: boolean }[];
-    photoCover: string; // gradiente que simula a foto no preview
+    photoCover: string;
   }[] = [
     {
-      id: "classic", label: "Clássico", desc: "Foto cheia, texto embaixo",
-      gradient: "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.80) 40%, rgba(0,0,0,0.30) 70%, rgba(0,0,0,0.10) 100%)",
-      bgPosition: { x: 50, y: 40 }, bgZoom: 110,
-      textBlocks: [{ top: "62%", left: "6%", w: "88%", h: "18%", bold: true }, { top: "84%", left: "6%", w: "68%", h: "7%" }],
-      photoCover: "linear-gradient(160deg, #4f46e5 0%, #7c3aed 40%, #db2777 100%)",
+      id: "impacto", label: "Impacto", desc: "Foto cheia, texto marcante embaixo",
+      gradient: "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.88) 40%, rgba(0,0,0,0.30) 68%, rgba(0,0,0,0.04) 100%)",
+      bgPosition: { x: 50, y: 38 }, bgZoom: 112,
+      textBlocks: [{ top: "57%", left: "5%", w: "90%", h: "24%", bold: true }, { top: "84%", left: "5%", w: "62%", h: "7%" }],
+      photoCover: "linear-gradient(160deg, #4f46e5 0%, #7c3aed 45%, #db2777 100%)",
     },
     {
-      id: "top", label: "Topo", desc: "Texto no topo, foto abaixo",
-      gradient: "linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.70) 40%, rgba(0,0,0,0.15) 70%, rgba(0,0,0,0.05) 100%)",
+      id: "capa", label: "Capa", desc: "Foto no topo, base sólida escura",
+      gradient: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 34%, rgba(0,0,0,0.55) 46%, rgba(0,0,0,0.0) 62%, rgba(0,0,0,0.0) 100%)",
+      bgPosition: { x: 50, y: 28 }, bgZoom: 112,
+      textBlocks: [{ top: "66%", left: "5%", w: "90%", h: "20%", bold: true }, { top: "89%", left: "5%", w: "58%", h: "5%" }],
+      photoCover: "linear-gradient(200deg, #0c4a6e 0%, #1e3a8a 40%, #312e81 100%)",
+    },
+    {
+      id: "topo", label: "Topo", desc: "Título no alto, foto domina a base",
+      gradient: "linear-gradient(to bottom, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.72) 34%, rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.0) 100%)",
       bgPosition: { x: 50, y: 65 }, bgZoom: 110,
-      textBlocks: [{ top: "8%", left: "6%", w: "88%", h: "20%", bold: true }, { top: "32%", left: "6%", w: "68%", h: "7%" }],
-      photoCover: "linear-gradient(200deg, #0f172a 0%, #1e3a8a 40%, #4f46e5 100%)",
+      textBlocks: [{ top: "5%", left: "5%", w: "90%", h: "24%", bold: true }, { top: "32%", left: "5%", w: "64%", h: "7%" }],
+      photoCover: "linear-gradient(160deg, #064e3b 0%, #065f46 45%, #047857 100%)",
     },
     {
-      id: "center", label: "Centralizado", desc: "Foto + texto no meio",
-      gradient: "linear-gradient(to bottom, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.88) 40%, rgba(0,0,0,0.88) 60%, rgba(0,0,0,0.70) 100%)",
+      id: "poster", label: "Poster", desc: "Título gigante, visual dramático",
+      gradient: "linear-gradient(to top, rgba(0,0,0,0.99) 0%, rgba(0,0,0,0.93) 55%, rgba(0,0,0,0.75) 100%)",
+      bgPosition: { x: 50, y: 35 }, bgZoom: 122,
+      textBlocks: [{ top: "20%", left: "3%", w: "94%", h: "48%", bold: true }, { top: "73%", left: "3%", w: "58%", h: "6%" }],
+      photoCover: "linear-gradient(160deg, #7f1d1d 0%, #991b1b 45%, #b91c1c 100%)",
+    },
+    {
+      id: "elegante", label: "Elegante", desc: "Texto centralizado, clean",
+      gradient: "linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.90) 38%, rgba(0,0,0,0.90) 62%, rgba(0,0,0,0.72) 100%)",
       bgPosition: { x: 50, y: 50 }, bgZoom: 105,
-      textBlocks: [{ top: "35%", left: "10%", w: "80%", h: "18%", bold: true }, { top: "57%", left: "14%", w: "72%", h: "7%" }],
-      photoCover: "linear-gradient(135deg, #064e3b 0%, #065f46 40%, #047857 100%)",
-    },
-    {
-      id: "bold", label: "Bold", desc: "Título gigante, foto de fundo",
-      gradient: "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.90) 50%, rgba(0,0,0,0.70) 100%)",
-      bgPosition: { x: 50, y: 35 }, bgZoom: 115,
-      textBlocks: [{ top: "28%", left: "4%", w: "92%", h: "40%", bold: true }, { top: "74%", left: "4%", w: "62%", h: "7%" }],
-      photoCover: "linear-gradient(160deg, #78350f 0%, #92400e 40%, #b45309 100%)",
-    },
-    {
-      id: "cinematic", label: "Cinemático", desc: "Foto no topo, texto baixo",
-      gradient: "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.40) 70%, rgba(0,0,0,0.10) 100%)",
-      bgPosition: { x: 50, y: 40 }, bgZoom: 112,
-      textBlocks: [{ top: "60%", left: "4%", w: "92%", h: "20%", bold: true }, { top: "84%", left: "4%", w: "58%", h: "7%" }],
-      photoCover: "linear-gradient(180deg, #0c4a6e 0%, #075985 50%, #0369a1 100%)",
-    },
-    {
-      id: "minimal", label: "Minimalista", desc: "Clean, foto desfocada",
-      gradient: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.15) 100%)",
-      bgPosition: { x: 50, y: 50 }, bgZoom: 100,
-      textBlocks: [{ top: "55%", left: "6%", w: "88%", h: "16%", bold: true }, { top: "75%", left: "6%", w: "62%", h: "7%" }],
+      textBlocks: [{ top: "32%", left: "8%", w: "84%", h: "22%", bold: true }, { top: "58%", left: "12%", w: "76%", h: "7%" }],
       photoCover: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)",
+    },
+    {
+      id: "editorial", label: "Editorial", desc: "Metade foto, metade escuro",
+      gradient: "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.94) 46%, rgba(0,0,0,0.52) 58%, rgba(0,0,0,0.08) 72%, rgba(0,0,0,0.0) 100%)",
+      bgPosition: { x: 50, y: 22 }, bgZoom: 108,
+      textBlocks: [{ top: "53%", left: "5%", w: "90%", h: "22%", bold: true }, { top: "79%", left: "5%", w: "68%", h: "7%" }],
+      photoCover: "linear-gradient(160deg, #78350f 0%, #92400e 45%, #b45309 100%)",
     },
   ];
 
@@ -261,12 +152,12 @@ export default function Toolbar({
     let newElements = [...slide.elements];
 
     const positions: Record<string, { ty: number; by: number; fs: number; ba: "left" | "center" }> = {
-      classic:   { ty: H - 520, by: H - 172, fs: Math.round(H * 0.068), ba: "left" },
-      top:       { ty: 80,      by: 390,     fs: Math.round(H * 0.058), ba: "left" },
-      center:    { ty: Math.round(H * 0.30), by: Math.round(H * 0.58), fs: Math.round(H * 0.060), ba: "center" },
-      bold:      { ty: Math.round(H * 0.25), by: Math.round(H * 0.74), fs: Math.round(H * 0.085), ba: "left" },
-      cinematic: { ty: Math.round(H * 0.60), by: Math.round(H * 0.88), fs: Math.round(H * 0.072), ba: "left" },
-      minimal:   { ty: Math.round(H * 0.55), by: Math.round(H * 0.80), fs: Math.round(H * 0.052), ba: "left" },
+      impacto:   { ty: Math.round(H * 0.57), by: Math.round(H * 0.84), fs: Math.round(H * 0.075), ba: "left" },
+      capa:      { ty: Math.round(H * 0.66), by: Math.round(H * 0.89), fs: Math.round(H * 0.068), ba: "left" },
+      topo:      { ty: Math.round(H * 0.05), by: Math.round(H * 0.32), fs: Math.round(H * 0.062), ba: "left" },
+      poster:    { ty: Math.round(H * 0.20), by: Math.round(H * 0.73), fs: Math.round(H * 0.095), ba: "left" },
+      elegante:  { ty: Math.round(H * 0.32), by: Math.round(H * 0.58), fs: Math.round(H * 0.062), ba: "center" },
+      editorial: { ty: Math.round(H * 0.53), by: Math.round(H * 0.79), fs: Math.round(H * 0.070), ba: "left" },
     };
 
     const p = positions[layoutId];
@@ -481,24 +372,16 @@ export default function Toolbar({
         </button>
 
         {/* Layout */}
-        <button onClick={() => { setShowLayouts(v => !v); setShowProfile(false); setShowEditAI(false); setShowFrame(false); setShowMolds(false); }}
+        <button onClick={() => { setShowLayouts(v => !v); setShowProfile(false); setShowEditAI(false); setShowMolds(false); }}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showLayouts ? "bg-brand-600 text-white" : "bg-[#2a2a2a] hover:bg-[#333] text-gray-300"}`}>
           <LayoutTemplate size={14} /> Layout
         </button>
 
         {/* Molduras */}
-        <button onClick={() => { setShowMolds(v => !v); setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowFrame(false); }}
+        <button onClick={() => { setShowMolds(v => !v); setShowLayouts(false); setShowProfile(false); setShowEditAI(false); }}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showMolds ? "bg-violet-600 text-white" : "bg-[#2a2a2a] hover:bg-[#333] text-gray-300"}`}>
           <FrameIcon size={14} /> Molduras
         </button>
-
-        {/* Frame da imagem */}
-        {slide.backgroundImageUrl && (
-          <button onClick={() => { setShowFrame(v => !v); setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showFrame ? "bg-indigo-600 text-white" : "bg-[#2a2a2a] hover:bg-[#333] text-gray-300"}`}>
-            <FrameIcon size={14} /> Frame
-          </button>
-        )}
 
         {/* Gerar fundo IA */}
         <button onClick={generateBackground} disabled={generating}
@@ -694,63 +577,6 @@ export default function Toolbar({
                   {s.path}
                 </svg>
                 <span className="text-[11px] text-gray-400 group-hover:text-violet-300 transition-colors">{s.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Painel de Frame da imagem */}
-      {showFrame && slide.backgroundImageUrl && (
-        <div className="absolute top-full left-0 z-50 mt-1 ml-2 bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl p-4 w-[400px]">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
-              <FrameIcon size={14} className="text-indigo-400" /> Quadro da Imagem
-            </span>
-            <button onClick={() => setShowFrame(false)} className="text-gray-500 hover:text-gray-300"><X size={16} /></button>
-          </div>
-          <p className="text-[11px] text-gray-600 mb-3">Escolha onde a imagem aparece no slide. O texto é reposicionado automaticamente.</p>
-          <div className="grid grid-cols-3 gap-2">
-            {FRAME_PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                onClick={() => applyFrame(preset.id)}
-                className="flex flex-col gap-2 p-2 rounded-xl border border-[#2a2a2a] hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all text-left"
-              >
-                {/* Mini preview do frame */}
-                <div className="relative w-full rounded-lg overflow-hidden bg-[#0a0a0a] border border-[#2a2a2a]" style={{ aspectRatio: "4/5" }}>
-                  {/* Área da imagem */}
-                  <div
-                    className="absolute left-[4%] right-[4%] rounded-sm"
-                    style={{
-                      top: preset.imgArea.top,
-                      height: preset.imgArea.height,
-                      background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%)",
-                      opacity: 0.85,
-                    }}
-                  />
-                  {/* Linhas de texto simuladas */}
-                  {(preset.id === "bottom55" || preset.id === "bottom40") ? (
-                    <>
-                      <div className="absolute left-[8%] right-[8%] rounded" style={{ top: "8%", height: "10%", background: "rgba(255,255,255,0.8)" }} />
-                      <div className="absolute left-[10%] right-[20%] rounded" style={{ top: "21%", height: "5%", background: "rgba(255,255,255,0.4)" }} />
-                    </>
-                  ) : preset.id !== "full" ? (
-                    <>
-                      <div className="absolute left-[8%] right-[8%] rounded" style={{ bottom: "18%", height: "10%", background: "rgba(255,255,255,0.8)" }} />
-                      <div className="absolute left-[10%] right-[20%] rounded" style={{ bottom: "10%", height: "5%", background: "rgba(255,255,255,0.4)" }} />
-                    </>
-                  ) : (
-                    <>
-                      <div className="absolute left-[8%] right-[8%] rounded" style={{ bottom: "14%", height: "10%", background: "rgba(255,255,255,0.8)" }} />
-                      <div className="absolute left-[10%] right-[20%] rounded" style={{ bottom: "8%", height: "5%", background: "rgba(255,255,255,0.4)" }} />
-                    </>
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-white">{preset.label}</p>
-                  <p className="text-[10px] text-gray-500 leading-tight">{preset.desc}</p>
-                </div>
               </button>
             ))}
           </div>
