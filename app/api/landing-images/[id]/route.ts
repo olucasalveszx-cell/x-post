@@ -117,7 +117,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const blob = await put(`landing/${id}.${ext}`, buffer, {
       access: "public",
       contentType: mimeType,
-      allowedOrigins: ["*"],
     });
     redisSet(`${CACHE_PREFIX}${id}`, blob.url).catch(() => {});
     return NextResponse.json({ url: blob.url }, { headers: HEADERS });
