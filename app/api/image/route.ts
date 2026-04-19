@@ -5,7 +5,8 @@ import { hasActiveSubscription } from "@/lib/stripe";
 import { verifyToken } from "@/lib/activation";
 import { isEmailActive } from "@/lib/kv";
 import { stripe } from "@/lib/stripe";
-import { redisIncr } from "@/lib/redis";
+import { redisIncr, redisLPush, redisLTrim } from "@/lib/redis";
+import { put } from "@vercel/blob";
 import Anthropic from "@anthropic-ai/sdk";
 
 export const maxDuration = 60;
@@ -332,6 +333,40 @@ async function fromPexels(prompt: string) {
   return { imageUrl: photo.src?.large2x ?? photo.src?.original, source: "pexels" };
 }
 
+// ── Salva imagem no banco global (Blob + Redis) ───────────────
+async function saveToGallery(imageUrl: string, email: string | null | undefined, prompt: string, source: string) {
+  try {
+    let finalUrl = imageUrl;
+
+    if (imageUrl.startsWith("data:")) {
+      const [header, b64] = imageUrl.split(",");
+      const mimeType = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
+      const ext = mimeType.split("/")[1]?.split("+")[0] ?? "jpg";
+      const buffer = Buffer.from(b64, "base64");
+      const blob = await put(
+        `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`,
+        buffer,
+        { access: "public", contentType: mimeType }
+      );
+      finalUrl = blob.url;
+    }
+
+    const globalEntry = JSON.stringify({ url: finalUrl, email: email ?? "anon", prompt, source, createdAt: new Date().toISOString() });
+    await redisLPush("images:global", globalEntry);
+    await redisLTrim("images:global", 0, 499);
+
+    if (email) {
+      const userEntry = JSON.stringify({ url: finalUrl, savedAt: new Date().toISOString() });
+      await redisLPush(`user:imgs:${email}`, userEntry);
+      await redisLTrim(`user:imgs:${email}`, 0, 99);
+    }
+
+    console.log(`[image] gallery saved (${source}): ${finalUrl.slice(0, 80)}`);
+  } catch (e: any) {
+    console.error("[image] gallery save failed:", e.message);
+  }
+}
+
 // ── Handler principal ─────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const { prompt, imageStyle = "gemini", customerId, activationToken, referenceImageBase64, referenceImageMime } = await req.json();
@@ -364,95 +399,44 @@ export async function POST(req: NextRequest) {
   if (!isPro && customerId) isPro = await hasActiveSubscription(customerId);
   if (!isPro && activationToken) { const { valid } = verifyToken(activationToken); isPro = valid; }
 
-  // ── Plano gratuito: Gemini → OpenRouter → Pexels ────────
-  const freeErrors: string[] = [];
-  if (!isPro) {
-    try {
-      return NextResponse.json({ ...await fromGemini(enhancedPrompt, style), plan: "free" });
-    } catch (e: any) {
-      freeErrors.push(`Gemini: ${e.message}`);
-      console.error("[image] Gemini free falhou:", e.message);
-    }
-    try {
-      return NextResponse.json({ ...await fromOpenRouter(enhancedPrompt, style), plan: "free" });
-    } catch (e: any) {
-      freeErrors.push(`OpenRouter: ${e.message}`);
-      console.error("[image] OpenRouter free falhou:", e.message);
-    }
-    try {
-      return NextResponse.json({ ...await fromUnsplash(enhancedPrompt), plan: "free_fallback", fallbackErrors: freeErrors });
-    } catch (e: any) {
-      freeErrors.push(`Unsplash: ${e.message}`);
-    }
-    try {
-      return NextResponse.json({ ...await fromPixabay(enhancedPrompt), plan: "free_fallback", fallbackErrors: freeErrors });
-    } catch (e: any) {
-      freeErrors.push(`Pixabay: ${e.message}`);
-    }
-    try {
-      return NextResponse.json({ ...await fromPexels(enhancedPrompt), plan: "free_fallback", fallbackErrors: freeErrors });
-    } catch (e: any) {
-      return NextResponse.json({ error: e.message, fallbackErrors: freeErrors }, { status: 500 });
-    }
-  }
-
-  // ── Plano Pro: Gemini 3.1 → GeminiRef → Imagen4 → Imagen3 → OpenRouter → Pexels
+  type ImageResult = { imageUrl: string; source: string };
+  let result: ImageResult | null = null;
+  let plan = "free";
   const errors: string[] = [];
 
-  try {
-    return NextResponse.json({ ...await fromGemini(enhancedPrompt, style), plan: "pro" });
-  } catch (e: any) {
-    errors.push(`Gemini: ${e.message}`);
-    console.error("[image] Gemini pro falhou:", e.message);
-  }
-
-  if (hasReference) {
-    try {
-      return NextResponse.json({ ...await fromGeminiWithReference(enhancedPrompt, style, referenceImageBase64, referenceImageMime), plan: "pro_ref" });
-    } catch (e: any) {
-      errors.push(`GeminiRef: ${e.message}`);
+  if (!isPro) {
+    const tries: Array<() => Promise<ImageResult>> = [
+      () => fromGemini(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
+      () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
+      () => fromUnsplash(enhancedPrompt).then(r => { plan = "free_fallback"; return r; }),
+      () => fromPixabay(enhancedPrompt).then(r => { plan = "free_fallback"; return r; }),
+      () => fromPexels(enhancedPrompt).then(r => { plan = "free_fallback"; return r; }),
+    ];
+    for (const fn of tries) {
+      if (result) break;
+      try { result = await fn(); } catch (e: any) { errors.push(e.message); }
+    }
+  } else {
+    const tries: Array<() => Promise<ImageResult>> = [
+      () => fromGemini(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
+      ...(hasReference ? [() => fromGeminiWithReference(enhancedPrompt, style, referenceImageBase64, referenceImageMime).then(r => { plan = "pro_ref"; return r; })] : []),
+      () => fromImagen4(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
+      () => fromImagen3(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
+      () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
+      () => fromUnsplash(enhancedPrompt).then(r => { plan = "fallback"; return r; }),
+      () => fromPixabay(enhancedPrompt).then(r => { plan = "fallback"; return r; }),
+      () => fromPexels(enhancedPrompt).then(r => { plan = "fallback"; return r; }),
+    ];
+    for (const fn of tries) {
+      if (result) break;
+      try { result = await fn(); } catch (e: any) { errors.push(e.message); }
     }
   }
 
-  try {
-    return NextResponse.json({ ...await fromImagen4(enhancedPrompt, style), plan: "pro" });
-  } catch (e: any) {
-    errors.push(`Imagen4: ${e.message}`);
-    console.error("[image] Imagen4 falhou:", e.message);
-  }
+  if (!result) return NextResponse.json({ error: errors.join(" | ") }, { status: 500 });
 
-  try {
-    return NextResponse.json({ ...await fromImagen3(enhancedPrompt, style), plan: "pro" });
-  } catch (e: any) {
-    errors.push(`Imagen3: ${e.message}`);
-    console.error("[image] Imagen3 falhou:", e.message);
-  }
+  // Salva no banco de imagens em background (não bloqueia a resposta)
+  saveToGallery(result.imageUrl, email, enhancedPrompt, result.source).catch(() => {});
 
-  try {
-    return NextResponse.json({ ...await fromOpenRouter(enhancedPrompt, style), plan: "pro" });
-  } catch (e: any) {
-    errors.push(`OpenRouter: ${e.message}`);
-    console.error("[image] OpenRouter pro falhou:", e.message);
-  }
-
-  try {
-    return NextResponse.json({ ...await fromUnsplash(enhancedPrompt), plan: "fallback" });
-  } catch (e: any) {
-    errors.push(`Unsplash: ${e.message}`);
-    console.error("[image] Unsplash pro falhou:", e.message);
-  }
-
-  try {
-    return NextResponse.json({ ...await fromPixabay(enhancedPrompt), plan: "fallback" });
-  } catch (e: any) {
-    errors.push(`Pixabay: ${e.message}`);
-    console.error("[image] Pixabay pro falhou:", e.message);
-  }
-
-  try {
-    return NextResponse.json({ ...await fromPexels(enhancedPrompt), plan: "fallback" });
-  } catch (e: any) {
-    errors.push(`Pexels: ${e.message}`);
-    return NextResponse.json({ error: errors.join(" | ") }, { status: 500 });
-  }
+  return NextResponse.json({ ...result, plan, ...(errors.length ? { fallbackErrors: errors } : {}) });
 }

@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import {
   Sparkles, LogOut, Users, Loader2, RefreshCw,
   Activity, TrendingUp, Image, Layers, DollarSign, Crown, ArrowLeft,
-  LayoutGrid, ImageOff,
+  LayoutGrid, ImageOff, Download, ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 import type { AdminDraftMeta } from "@/app/api/admin/carousels/route";
+import type { AdminImageEntry } from "@/app/api/admin/images/route";
 
 interface Stats {
   totalUsers: number;
@@ -113,7 +114,7 @@ function fmt(iso: string) {
   });
 }
 
-type Tab = "overview" | "carousels";
+type Tab = "overview" | "carousels" | "images";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -128,6 +129,12 @@ export default function AdminDashboard() {
   const [draftsTotal, setDraftsTotal] = useState(0);
   const [draftsLoading, setDraftsLoading] = useState(false);
   const [draftsError, setDraftsError] = useState("");
+
+  /* ── Imagens ── */
+  const [images, setImages] = useState<AdminImageEntry[]>([]);
+  const [imagesTotal, setImagesTotal] = useState(0);
+  const [imagesLoading, setImagesLoading] = useState(false);
+  const [imagesError, setImagesError] = useState("");
 
   const fetchStats = useCallback(async () => {
     setLoading(true); setError("");
@@ -167,9 +174,26 @@ export default function AdminDashboard() {
     }
   }, [router]);
 
+  const fetchImages = useCallback(async () => {
+    setImagesLoading(true); setImagesError("");
+    try {
+      const res = await fetch("/api/admin/images");
+      if (res.status === 401) { router.push("/admin/login"); return; }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro");
+      setImages(data.images);
+      setImagesTotal(data.total);
+    } catch (e: any) {
+      setImagesError(e.message);
+    } finally {
+      setImagesLoading(false);
+    }
+  }, [router]);
+
   useEffect(() => {
     if (tab === "carousels" && drafts.length === 0) fetchCarousels();
-  }, [tab, drafts.length, fetchCarousels]);
+    if (tab === "images" && images.length === 0) fetchImages();
+  }, [tab, drafts.length, images.length, fetchCarousels, fetchImages]);
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -225,7 +249,7 @@ export default function AdminDashboard() {
       {/* Tabs */}
       <div className="border-b border-white/5 px-6" style={{ background: "#0d0d0d" }}>
         <div className="flex gap-1 max-w-5xl mx-auto">
-          {(["overview", "carousels"] as Tab[]).map((t) => (
+          {(["overview", "carousels", "images"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -235,11 +259,16 @@ export default function AdminDashboard() {
                   : "border-transparent text-gray-500 hover:text-gray-300"
               }`}
             >
-              {t === "overview" ? <Activity size={12} /> : <LayoutGrid size={12} />}
-              {t === "overview" ? "Visão geral" : "Carrosséis"}
+              {t === "overview" ? <Activity size={12} /> : t === "carousels" ? <LayoutGrid size={12} /> : <Image size={12} />}
+              {t === "overview" ? "Visão geral" : t === "carousels" ? "Carrosséis" : "Imagens"}
               {t === "carousels" && draftsTotal > 0 && (
                 <span className="ml-1 bg-purple-500/20 text-purple-300 text-[10px] px-1.5 py-0.5 rounded-full">
                   {draftsTotal}
+                </span>
+              )}
+              {t === "images" && imagesTotal > 0 && (
+                <span className="ml-1 bg-blue-500/20 text-blue-300 text-[10px] px-1.5 py-0.5 rounded-full">
+                  {imagesTotal}
                 </span>
               )}
             </button>
@@ -311,6 +340,63 @@ export default function AdminDashboard() {
                   )}
                 </div>
               </>
+            )}
+          </>
+        )}
+
+        {/* ═══ ABA IMAGENS ═══ */}
+        {tab === "images" && (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-bold text-sm">Banco de imagens geradas</p>
+                <p className="text-[11px] text-gray-600 mt-0.5">{imagesTotal} imagens salvas (últimas 300)</p>
+              </div>
+              <button onClick={fetchImages} disabled={imagesLoading}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-40">
+                <RefreshCw size={12} className={imagesLoading ? "animate-spin" : ""} /> Atualizar
+              </button>
+            </div>
+
+            {imagesLoading && images.length === 0 && (
+              <div className="flex justify-center py-20">
+                <Loader2 size={28} className="text-purple-400 animate-spin" />
+              </div>
+            )}
+
+            {imagesError && <p className="text-center text-sm text-red-400 py-10">{imagesError}</p>}
+
+            {!imagesLoading && images.length === 0 && !imagesError && (
+              <div className="text-center py-16 text-gray-600 text-sm">
+                <Image size={32} className="mx-auto mb-3 opacity-30" />
+                Nenhuma imagem salva ainda.<br />
+                <span className="text-xs">As imagens são salvas automaticamente ao serem geradas.</span>
+              </div>
+            )}
+
+            {images.length > 0 && (
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                {images.map((img, i) => (
+                  <div key={i} className="relative group rounded-xl overflow-hidden aspect-[3/4] bg-[#111] border border-[#1e1e1e]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.url} alt={img.prompt} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+                      <a href={img.url} target="_blank" rel="noreferrer"
+                        className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                        <ExternalLink size={13} className="text-white" />
+                      </a>
+                      <a href={img.url} download target="_blank" rel="noreferrer"
+                        className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                        <Download size={13} className="text-white" />
+                      </a>
+                    </div>
+                    <div className="absolute bottom-0 inset-x-0 p-1.5 text-[8px] text-gray-400 truncate"
+                      style={{ background: "linear-gradient(to top, rgba(0,0,0,0.9), transparent)" }}>
+                      <span className="text-blue-400">{img.source}</span> · {img.email !== "anon" ? img.email.split("@")[0] : "anon"}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </>
         )}
