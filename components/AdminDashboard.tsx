@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles, LogOut, Users, Loader2, RefreshCw,
   Activity, TrendingUp, Image, Layers, DollarSign, Crown, ArrowLeft,
-  LayoutGrid, ImageOff, Download, ExternalLink,
+  LayoutGrid, ImageOff, Download, ExternalLink, Eye, X, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import type { AdminDraftMeta } from "@/app/api/admin/carousels/route";
@@ -136,6 +136,15 @@ export default function AdminDashboard() {
   const [imagesLoading, setImagesLoading] = useState(false);
   const [imagesError, setImagesError] = useState("");
 
+  /* ── Preview modal ── */
+  const [previewDraft, setPreviewDraft] = useState<AdminDraftMeta | null>(null);
+  const [previewSlides, setPreviewSlides] = useState<any[]>([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewIdx, setPreviewIdx] = useState(0);
+
+  /* ── Novo carrossel indicator ── */
+  const prevDraftsCount = useRef(0);
+
   const fetchStats = useCallback(async () => {
     setLoading(true); setError("");
     try {
@@ -191,13 +200,138 @@ export default function AdminDashboard() {
   }, [router]);
 
   useEffect(() => {
-    if (tab === "carousels" && drafts.length === 0) fetchCarousels();
+    if (tab === "carousels") {
+      fetchCarousels();
+      const id = setInterval(fetchCarousels, 30_000);
+      return () => clearInterval(id);
+    }
     if (tab === "images" && images.length === 0) fetchImages();
-  }, [tab, drafts.length, images.length, fetchCarousels, fetchImages]);
+  }, [tab, images.length, fetchCarousels, fetchImages]);
+
+  // detecta novos carrosséis
+  useEffect(() => {
+    if (draftsTotal > 0 && prevDraftsCount.current > 0 && draftsTotal > prevDraftsCount.current) {
+      // novo carrossel chegou — já refletido no badge
+    }
+    prevDraftsCount.current = draftsTotal;
+  }, [draftsTotal]);
+
+  const openPreview = useCallback(async (draft: AdminDraftMeta) => {
+    setPreviewDraft(draft);
+    setPreviewIdx(0);
+    setPreviewSlides([]);
+    setPreviewLoading(true);
+    try {
+      const res = await fetch(`/api/admin/carousels/detail?email=${encodeURIComponent(draft.email)}&id=${encodeURIComponent(draft.id)}`);
+      const data = await res.json();
+      if (data.slides) setPreviewSlides(data.slides);
+    } catch {}
+    finally { setPreviewLoading(false); }
+  }, []);
+
+  const closePreview = useCallback(() => {
+    setPreviewDraft(null);
+    setPreviewSlides([]);
+  }, []);
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
     router.push("/admin/login");
+  };
+
+  /* ── Preview modal ── */
+  const PreviewModal = () => {
+    if (!previewDraft) return null;
+    const slide = previewSlides[previewIdx];
+    const titleEl = slide?.elements?.find((e: any) => e.type === "text" && (e.style as any)?.fontWeight === "bold") ?? slide?.elements?.find((e: any) => e.type === "text");
+    const bodyEl  = slide?.elements?.filter((e: any) => e.type === "text")[1];
+    const stripHtml = (s: string) => s?.replace(/<[^>]+>/g, "") ?? "";
+
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}
+        onClick={closePreview}>
+        <div className="relative w-full max-w-2xl rounded-2xl overflow-hidden" style={{ background: "#0d0d0d", border: "1px solid #2a2a2a" }}
+          onClick={(e) => e.stopPropagation()}>
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e]">
+            <div>
+              <p className="font-bold text-sm text-white">{previewDraft.name || "Sem nome"}</p>
+              <p className="text-[11px] text-purple-400 mt-0.5">{previewDraft.email}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-500">{previewIdx + 1} / {previewDraft.slideCount}</span>
+              <button onClick={closePreview} className="text-gray-500 hover:text-white transition-colors"><X size={18} /></button>
+            </div>
+          </div>
+
+          {/* Slide preview */}
+          <div className="p-5">
+            {previewLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 size={28} className="animate-spin text-purple-400" />
+              </div>
+            ) : slide ? (
+              <div className="relative rounded-xl overflow-hidden mx-auto" style={{ maxWidth: 360, aspectRatio: "4/5", background: slide.backgroundColor ?? "#111" }}>
+                {slide.backgroundImageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={slide.backgroundImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                )}
+                {slide.backgroundGradient && (
+                  <div className="absolute inset-0" style={{ background: slide.backgroundGradient }} />
+                )}
+                {/* Textos */}
+                <div className="absolute inset-0 p-5 flex flex-col justify-end gap-2">
+                  {titleEl && (
+                    <p className="font-black text-white leading-tight" style={{ fontSize: 16 }}>
+                      {stripHtml(titleEl.content ?? "")}
+                    </p>
+                  )}
+                  {bodyEl && (
+                    <p className="text-gray-300" style={{ fontSize: 11 }}>
+                      {stripHtml(bodyEl.content ?? "")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-center text-gray-600 text-sm py-16">Sem dados de slides.</p>
+            )}
+          </div>
+
+          {/* Navegação */}
+          {previewSlides.length > 1 && (
+            <div className="flex items-center justify-between px-5 pb-5 gap-3">
+              <button onClick={() => setPreviewIdx(i => Math.max(0, i - 1))} disabled={previewIdx === 0}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm text-gray-300 hover:text-white disabled:opacity-30 transition-colors"
+                style={{ background: "#1a1a1a" }}>
+                <ChevronLeft size={15} /> Anterior
+              </button>
+
+              {/* Miniaturas */}
+              <div className="flex gap-1.5 overflow-x-auto">
+                {previewSlides.map((s, i) => (
+                  <button key={i} onClick={() => setPreviewIdx(i)}
+                    className="shrink-0 rounded-lg overflow-hidden transition-all"
+                    style={{ width: 36, height: 46, border: i === previewIdx ? "2px solid #a855f7" : "2px solid transparent", background: s.backgroundColor ?? "#111" }}>
+                    {s.backgroundImageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={s.backgroundImageUrl} alt="" className="w-full h-full object-cover" />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <button onClick={() => setPreviewIdx(i => Math.min(previewSlides.length - 1, i + 1))} disabled={previewIdx === previewSlides.length - 1}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm text-gray-300 hover:text-white disabled:opacity-30 transition-colors"
+                style={{ background: "#1a1a1a" }}>
+                Próximo <ChevronRight size={15} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -275,6 +409,8 @@ export default function AdminDashboard() {
           ))}
         </div>
       </div>
+
+      <PreviewModal />
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
         {/* ═══ ABA OVERVIEW ═══ */}
@@ -431,8 +567,9 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {drafts.map((d) => (
                   <div key={`${d.email}-${d.id}`}
-                    className="rounded-xl overflow-hidden border border-[#1e1e1e] hover:border-purple-500/40 transition-colors group"
+                    className="rounded-xl overflow-hidden border border-[#1e1e1e] hover:border-purple-500/40 transition-colors group cursor-pointer"
                     style={{ background: "#0d0d0d" }}
+                    onClick={() => openPreview(d)}
                   >
                     {/* Thumbnail */}
                     <div className="relative aspect-square bg-[#111] flex items-center justify-center overflow-hidden">
@@ -443,10 +580,12 @@ export default function AdminDashboard() {
                       ) : (
                         <ImageOff size={24} className="text-gray-700" />
                       )}
-                      {/* Slide count badge */}
                       <span className="absolute top-2 right-2 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
                         {d.slideCount} slides
                       </span>
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Eye size={20} className="text-white" />
+                      </div>
                     </div>
 
                     {/* Info */}
