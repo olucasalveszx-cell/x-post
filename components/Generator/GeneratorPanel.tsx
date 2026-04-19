@@ -254,6 +254,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
 
   const { data: session } = useSession();
   const [isPro, setIsPro] = useState(false);
+  const [userPlan, setUserPlan] = useState<string>("free");
   const [loginOpen, setLoginOpen] = useState(false);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [activationToken, setActivationToken] = useState<string | null>(null);
@@ -286,13 +287,18 @@ export default function GeneratorPanel({ onGenerate }: Props) {
 
   // Pro check via Kirvano
   useEffect(() => {
-    if ((session?.user as any)?.role === "admin") { setIsPro(true); return; }
+    if ((session?.user as any)?.role === "admin") { setIsPro(true); setUserPlan("god"); return; }
     const token = localStorage.getItem("xpz_activation_token");
     if (token) { setActivationToken(token); setIsPro(true); return; }
     if (session?.user?.email) {
       fetch("/api/credits")
         .then((r) => r.ok ? r.json() : null)
-        .then((d) => { if (d?.plan && d.plan !== "free") setIsPro(true); })
+        .then((d) => {
+          if (d?.plan) {
+            setUserPlan(d.plan);
+            if (d.plan !== "free") setIsPro(true);
+          }
+        })
         .catch(() => {});
     }
   }, [session]);
@@ -478,26 +484,36 @@ export default function GeneratorPanel({ onGenerate }: Props) {
           >
             <LogIn size={14} /> Entrar para gerar
           </button>
-        ) : isPro ? (
-          <div className="flex items-center justify-between bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
-            <span className="flex items-center gap-1.5 text-xs text-yellow-400 font-medium">
-              <Crown size={12} /> Pro · {session.user.name?.split(" ")[0]}
-            </span>
-            <a
-              href="/credits"
-              className="text-[11px] text-yellow-500/60 hover:text-yellow-400 underline transition-colors"
+        ) : (() => {
+          const PLAN_STYLE: Record<string, { label: string; color: string; bg: string; border: string }> = {
+            god:      { label: "God",      color: "#a855f7", bg: "rgba(168,85,247,0.10)",  border: "rgba(168,85,247,0.25)" },
+            business: { label: "Business", color: "#f59e0b", bg: "rgba(245,158,11,0.10)",  border: "rgba(245,158,11,0.25)" },
+            pro:      { label: "Pro",      color: "#ec4899", bg: "rgba(236,72,153,0.10)",  border: "rgba(236,72,153,0.25)" },
+            basic:    { label: "Básico",   color: "#60a5fa", bg: "rgba(96,165,250,0.10)",  border: "rgba(96,165,250,0.25)" },
+            free:     { label: "Grátis",  color: "#6b7280", bg: "rgba(107,114,128,0.08)", border: "rgba(107,114,128,0.15)" },
+          };
+          const ps = PLAN_STYLE[userPlan] ?? PLAN_STYLE.free;
+          const firstName = session.user.name?.split(" ")[0];
+          return (
+            <div
+              className="flex items-center justify-between rounded-lg px-3 py-2"
+              style={{ background: ps.bg, border: `1px solid ${ps.border}` }}
             >
-              Gerenciar
-            </a>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2">
-            <span className="text-xs text-gray-500">Grátis · {session.user.name?.split(" ")[0]}</span>
-            <button onClick={() => goToCheckout()} className="text-[11px] text-brand-400 hover:text-brand-300 underline transition-colors">
-              Upgrade Pro
-            </button>
-          </div>
-        )}
+              <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: ps.color }}>
+                <Crown size={12} /> {ps.label} · {firstName}
+              </span>
+              {userPlan === "free" ? (
+                <button onClick={() => goToCheckout()} className="text-[11px] underline transition-colors" style={{ color: ps.color, opacity: 0.7 }}>
+                  Upgrade
+                </button>
+              ) : (
+                <a href="/credits" className="text-[11px] underline transition-colors" style={{ color: ps.color, opacity: 0.7 }}>
+                  Gerenciar
+                </a>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Main area */}
