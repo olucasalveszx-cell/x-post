@@ -4,8 +4,8 @@ import { setEmailPlan } from "@/lib/kv";
 // Mapeia offer/product ID para plano
 const PLAN_MAP: Record<string, string> = {
   "d3f6da72-a6be-4d54-8268-20c725e4ab5b": "basic",
-  "2743febe-6d27-41b7-ad3f-593a637a6b90": "pro",
-  "0ffb8064-d5da-47ba-82ee-a2cc1ea6aafe": "business",
+  "e5bdb60b-3d05-4338-bbb7-59e17b1b636f": "pro",
+  "2aca1343-9b14-48d4-aedc-8f532b509abd": "business",
 };
 
 function detectPlan(body: any): string {
