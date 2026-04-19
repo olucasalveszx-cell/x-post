@@ -15,7 +15,7 @@ export const PLAN_LIMITS: Record<string, number> = {
   basic:    30,
   pro:      45,
   business: 100,
-  free:      5,
+  free:      3,
 };
 
 /* ── Pacotes de créditos extras ── */

@@ -3,7 +3,6 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { redisGet, redisSet, redisListAdd } from "@/lib/redis";
 import { verifyPassword } from "@/lib/password";
-import { addBonusCredits } from "@/lib/credits";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -76,7 +75,6 @@ export const authOptions: NextAuthOptions = {
             };
             await redisSet(key, JSON.stringify(newUser));
             await redisListAdd("users:list", emailNorm);
-            await addBonusCredits(emailNorm, 4).catch(() => {});
             console.log(`[auth] novo usuário Google: ${emailNorm}`);
           }
         } catch (e: any) {
