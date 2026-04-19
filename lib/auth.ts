@@ -1,19 +1,18 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { redisGet } from "@/lib/redis";
+import { redisGet, redisSet, redisListAdd } from "@/lib/redis";
 import { verifyPassword } from "@/lib/password";
+import { addBonusCredits } from "@/lib/credits";
 
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      // Permite que o mesmo e-mail seja usado com Google e Credentials
       allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
-          // Força sempre a tela de seleção de conta (evita loop em mobile)
           prompt: "select_account",
           access_type: "online",
           response_type: "code",
@@ -30,7 +29,6 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        // Verifica se é o admin
         const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
         const adminPassword = process.env.ADMIN_PASSWORD;
         if (
@@ -41,7 +39,6 @@ export const authOptions: NextAuthOptions = {
           return { id: adminEmail, email: adminEmail, name: "Admin", image: null, role: "admin" } as any;
         }
 
-        // Usuário comum via Redis
         const key = `user:${credentials.email.toLowerCase().trim()}`;
         const raw = await redisGet(key);
         if (!raw) return null;
@@ -59,11 +56,36 @@ export const authOptions: NextAuthOptions = {
 
   secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt" },
-
-  // Cookies explícitos melhoram compatibilidade com Safari/iOS
   useSecureCookies: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
 
   callbacks: {
+    // Auto-registra usuários Google no Redis e dá 4 créditos de boas-vindas
+    async signIn({ user, account }) {
+      if (account?.provider === "google" && user.email) {
+        const emailNorm = user.email.toLowerCase().trim();
+        const key = `user:${emailNorm}`;
+        try {
+          const existing = await redisGet(key);
+          if (!existing) {
+            const newUser = {
+              name: user.name ?? emailNorm.split("@")[0],
+              email: emailNorm,
+              passwordHash: "",
+              createdAt: new Date().toISOString(),
+              provider: "google",
+            };
+            await redisSet(key, JSON.stringify(newUser));
+            await redisListAdd("users:list", emailNorm);
+            await addBonusCredits(emailNorm, 4).catch(() => {});
+            console.log(`[auth] novo usuário Google: ${emailNorm}`);
+          }
+        } catch (e: any) {
+          console.error("[auth] signIn Google erro:", e.message);
+        }
+      }
+      return true;
+    },
+
     async jwt({ token, user }) {
       if (user) {
         token.email   = user.email;
@@ -71,13 +93,13 @@ export const authOptions: NextAuthOptions = {
         token.picture = (user as any).image ?? null;
         token.role    = (user as any).role ?? "user";
       }
-      // Admin pelo email — funciona com Google e credentials
       const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
       if (adminEmail && token.email?.toLowerCase() === adminEmail) {
         token.role = "admin";
       }
       return token;
     },
+
     async session({ session, token }) {
       if (session.user) {
         session.user.email = token.email as string;

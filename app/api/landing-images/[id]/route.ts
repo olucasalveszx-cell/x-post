@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redisGet, redisSet } from "@/lib/redis";
+import { put } from "@vercel/blob";
 
 export const maxDuration = 60;
 
-// Tópicos criativos para o marquee da landing page
 const TOPICS: Record<string, string> = {
   nutricao:        "Colorful healthy meal prep bowls with açaí, tropical fruits, green salads and smoothies beautifully arranged, vibrant Brazilian food photography, white marble background",
   fitness:         "Brazilian athlete doing intense CrossFit workout in modern gym, dramatic rim lighting, determination in eyes, sweat and muscle definition, sports photography",
@@ -27,7 +27,8 @@ const TOPICS: Record<string, string> = {
   educacao:        "University campus with students studying outdoors, books and laptops, knowledge and learning atmosphere, bright academic future, campus life photography",
 };
 
-const CACHE_PREFIX = "landing:img:v4:";
+// v5 = Blob URLs (não mais base64 no Redis)
+const CACHE_PREFIX = "landing:img:v5:";
 
 async function generateWithGemini(prompt: string): Promise<string | null> {
   const key = process.env.GEMINI_API_KEY;
@@ -36,9 +37,9 @@ async function generateWithGemini(prompt: string): Promise<string | null> {
   const fullPrompt = `${prompt}. Cinematic ultra-high-quality Instagram editorial image, dramatic lighting, rich saturated colors, professional photography style, portrait 4:5 aspect ratio, no text overlay, no watermarks, no logos.`;
 
   const MODELS = [
+    "gemini-2.5-flash-image",
     "gemini-3.1-flash-image-preview",
-    "gemini-2.0-flash-preview-image-generation",
-    "gemini-2.0-flash-exp-image-generation",
+    "gemini-3-pro-image-preview",
   ];
 
   for (const model of MODELS) {
@@ -68,7 +69,7 @@ async function generateWithGemini(prompt: string): Promise<string | null> {
       if (!imgPart?.inlineData) continue;
 
       const { data: b64, mimeType } = imgPart.inlineData;
-      console.log(`[landing-img] OK (${model}) topic=${MODELS[0]}`);
+      console.log(`[landing-img] Gemini OK (${model})`);
       return `data:${mimeType};base64,${b64}`;
     } catch (e: any) {
       console.error(`[landing-img] ${model} erro:`, e.message);
@@ -77,14 +78,14 @@ async function generateWithGemini(prompt: string): Promise<string | null> {
   return null;
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
   if (!TOPICS[id]) {
     return NextResponse.json({ error: "Tópico não encontrado" }, { status: 404 });
   }
 
-  // Verifica cache no Redis
+  // Verifica cache no Redis (Blob URL)
   try {
     const cached = await redisGet(`${CACHE_PREFIX}${id}`);
     if (cached) {
@@ -95,15 +96,26 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   } catch {}
 
   // Gera com Gemini
-  const url = await generateWithGemini(TOPICS[id]);
+  const dataUrl = await generateWithGemini(TOPICS[id]);
+  if (!dataUrl) return NextResponse.json({ error: "Falha na geração" }, { status: 500 });
 
-  if (url) {
-    // Salva no Redis em background (não bloqueia a resposta)
-    redisSet(`${CACHE_PREFIX}${id}`, url).catch(() => {});
-    return NextResponse.json({ url }, {
+  // Faz upload para Vercel Blob e salva URL permanente no Redis
+  try {
+    const [header, b64] = dataUrl.split(",");
+    const mimeType = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
+    const ext = mimeType.split("/")[1]?.split("+")[0] ?? "jpg";
+    const buffer = Buffer.from(b64, "base64");
+    const blob = await put(`landing/${id}-${Date.now()}.${ext}`, buffer, {
+      access: "public",
+      contentType: mimeType,
+    });
+    redisSet(`${CACHE_PREFIX}${id}`, blob.url).catch(() => {});
+    return NextResponse.json({ url: blob.url }, {
       headers: { "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800" },
     });
+  } catch (e: any) {
+    console.error("[landing-img] Blob upload falhou:", e.message);
+    // Fallback: retorna base64 direto sem salvar no cache
+    return NextResponse.json({ url: dataUrl });
   }
-
-  return NextResponse.json({ error: "Falha na geração" }, { status: 500 });
 }

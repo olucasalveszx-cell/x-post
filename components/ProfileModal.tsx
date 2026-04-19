@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard, Zap, Crown, ArrowRight } from "lucide-react";
+import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard, Zap, Crown, ArrowRight, Instagram, Check, Trash2, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 interface HistoryEntry {
@@ -46,12 +46,20 @@ function fmt(iso: string) {
 
 export default function ProfileModal({ open, onClose }: Props) {
   const { data: session } = useSession();
-  const [tab, setTab]         = useState<"history" | "images">("history");
+  const [tab, setTab]         = useState<"history" | "images" | "instagram">("history");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [images,  setImages]  = useState<ImageEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [credits, setCredits] = useState<CreditsInfo | null>(null);
+
+  /* ── Instagram ── */
+  const [igUsername, setIgUsername] = useState("");
+  const [igPassword, setIgPassword] = useState("");
+  const [igConnected, setIgConnected] = useState(false);
+  const [igLoading, setIgLoading]   = useState(false);
+  const [igError, setIgError]       = useState("");
+  const [igShowPw, setIgShowPw]     = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,12 +74,28 @@ export default function ProfileModal({ open, onClose }: Props) {
     }
   }, []);
 
+  const loadInstagram = useCallback(async () => {
+    try {
+      const res = await fetch("/api/instagram/credentials");
+      if (!res.ok) return;
+      const d = await res.json();
+      if (d.connected) {
+        setIgConnected(true);
+        setIgUsername(d.username ?? "");
+        setIgPassword(d.password ?? "");
+      } else {
+        setIgConnected(false);
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     load();
     fetch("/api/admin/me").then(r => r.json()).then(d => setIsAdmin(!!d.isAdmin)).catch(() => {});
     fetch("/api/credits").then(r => r.ok ? r.json() : null).then(d => { if (d) setCredits(d); }).catch(() => {});
-  }, [open, load]);
+    loadInstagram();
+  }, [open, load, loadInstagram]);
 
   if (!open) return null;
 
@@ -166,7 +190,7 @@ export default function ProfileModal({ open, onClose }: Props) {
 
         {/* Tabs */}
         <div className="flex border-b border-[#1e1e1e] shrink-0 mt-2">
-          {(["history", "images"] as const).map((t) => (
+          {(["history", "images", "instagram"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -174,7 +198,7 @@ export default function ProfileModal({ open, onClose }: Props) {
                 tab === t ? "text-white border-b-2 border-purple-500" : "text-gray-500 hover:text-gray-300"
               }`}
             >
-              {t === "history" ? <><Layers size={13} /> Histórico</> : <><ImageIcon size={13} /> Biblioteca</>}
+              {t === "history" ? <><Layers size={13} /> Histórico</> : t === "images" ? <><ImageIcon size={13} /> Biblioteca</> : <><Instagram size={13} /> Instagram</>}
             </button>
           ))}
         </div>
@@ -234,6 +258,89 @@ export default function ProfileModal({ open, onClose }: Props) {
                 </div>
               )}
             </>
+          )}
+
+          {tab === "instagram" && (
+            <div className="flex flex-col gap-4 max-w-sm mx-auto w-full py-2">
+              {/* Status badge */}
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold ${igConnected ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-[#1a1a1a] text-gray-500 border border-[#222]"}`}>
+                <div className={`w-2 h-2 rounded-full ${igConnected ? "bg-green-400 animate-pulse" : "bg-gray-600"}`} />
+                {igConnected ? `Conectado como @${igUsername}` : "Nenhuma conta conectada"}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold block mb-1">Usuário do Instagram</label>
+                  <div className="flex items-center rounded-xl overflow-hidden border border-[#252525] bg-[#111]">
+                    <span className="pl-3 text-gray-600 text-sm">@</span>
+                    <input
+                      type="text"
+                      placeholder="seu_usuario"
+                      value={igUsername}
+                      onChange={e => setIgUsername(e.target.value.replace(/^@/, ""))}
+                      className="flex-1 bg-transparent px-2 py-2.5 text-sm text-white outline-none placeholder-gray-700"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold block mb-1">Senha do Instagram</label>
+                  <div className="flex items-center rounded-xl overflow-hidden border border-[#252525] bg-[#111]">
+                    <input
+                      type={igShowPw ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={igPassword}
+                      onChange={e => setIgPassword(e.target.value)}
+                      className="flex-1 bg-transparent pl-3 pr-2 py-2.5 text-sm text-white outline-none placeholder-gray-700"
+                    />
+                    <button onClick={() => setIgShowPw(v => !v)} className="pr-3 text-gray-600 hover:text-gray-400 transition-colors">
+                      {igShowPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                {igError && <p className="text-[11px] text-red-400">{igError}</p>}
+
+                <div className="flex gap-2 mt-1">
+                  <button
+                    disabled={igLoading || !igUsername.trim() || !igPassword.trim()}
+                    onClick={async () => {
+                      setIgLoading(true); setIgError("");
+                      try {
+                        const res = await fetch("/api/instagram/credentials", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ username: igUsername, password: igPassword }),
+                        });
+                        const d = await res.json();
+                        if (!res.ok) { setIgError(d.error ?? "Erro ao salvar"); return; }
+                        setIgConnected(true);
+                      } catch { setIgError("Erro de conexão"); }
+                      finally { setIgLoading(false); }
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all hover:opacity-90 disabled:opacity-40"
+                    style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white" }}
+                  >
+                    {igLoading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                    Salvar conta
+                  </button>
+                  {igConnected && (
+                    <button
+                      onClick={async () => {
+                        await fetch("/api/instagram/credentials", { method: "DELETE" });
+                        setIgConnected(false); setIgUsername(""); setIgPassword("");
+                      }}
+                      className="px-3 py-2.5 rounded-xl text-xs font-medium text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-colors"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <p className="text-[10px] text-gray-700 leading-relaxed text-center">
+                Suas credenciais são criptografadas e usadas apenas para publicar no Instagram.
+              </p>
+            </div>
           )}
 
           {!loading && tab === "images" && (
