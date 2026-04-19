@@ -13,8 +13,6 @@ export async function GET() {
     "instagram_basic",
     "instagram_content_publish",
     "pages_show_list",
-    "pages_read_engagement",
-    "business_management",
   ].join(",");
 
   const oauthUrl =
