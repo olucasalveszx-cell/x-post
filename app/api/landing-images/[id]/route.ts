@@ -27,7 +27,30 @@ const TOPICS: Record<string, string> = {
   educacao:        "University campus with students studying outdoors, books and laptops, knowledge and learning atmosphere, bright academic future, campus life photography",
 };
 
-// v5 = Blob URLs (não mais base64 no Redis)
+// Query Unsplash por tópico (inglês, termos simples que geram bons resultados)
+const UNSPLASH_QUERY: Record<string, string> = {
+  nutricao:        "healthy food nutrition",
+  fitness:         "workout gym fitness",
+  tecnologia:      "technology artificial intelligence",
+  produtividade:   "home office productivity",
+  viagem:          "travel beach paradise",
+  psicologia:      "meditation mindfulness",
+  futebol:         "soccer football sport",
+  marketing:       "social media content creator",
+  ciencia:         "science laboratory research",
+  negocios:        "business entrepreneur office",
+  sustentabilidade:"solar energy sustainability",
+  musica:          "music concert stage",
+  moda:            "fashion style editorial",
+  saude:           "healthcare medical doctor",
+  politica:        "politics democracy crowd",
+  fofoca:          "celebrity red carpet glamour",
+  cripto:          "cryptocurrency bitcoin finance",
+  advocacia:       "law justice lawyer",
+  gastronomia:     "gourmet food restaurant",
+  educacao:        "education university students",
+};
+
 const CACHE_PREFIX = "landing:img:v5:";
 
 async function generateWithGemini(prompt: string): Promise<string | null> {
@@ -78,6 +101,56 @@ async function generateWithGemini(prompt: string): Promise<string | null> {
   return null;
 }
 
+async function fetchFromUnsplash(id: string): Promise<string | null> {
+  const key = process.env.UNSPLASH_ACCESS_KEY;
+  if (!key) return null;
+  const query = UNSPLASH_QUERY[id] ?? "photography";
+  try {
+    const res = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=portrait&per_page=10`,
+      { headers: { Authorization: `Client-ID ${key}` }, signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const results = data.results ?? [];
+    if (!results.length) return null;
+    const photo = results[Math.floor(Math.random() * Math.min(results.length, 5))];
+    const url = photo.urls?.regular ?? photo.urls?.full;
+    console.log(`[landing-img] Unsplash fallback OK (${id})`);
+    return url ?? null;
+  } catch { return null; }
+}
+
+async function fetchFromPexels(id: string): Promise<string | null> {
+  const key = process.env.PEXELS_API_KEY;
+  if (!key) return null;
+  const query = UNSPLASH_QUERY[id] ?? "photography";
+  try {
+    const res = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=portrait&per_page=10`,
+      { headers: { Authorization: key }, signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const photos = data.photos ?? [];
+    if (!photos.length) return null;
+    const photo = photos[Math.floor(Math.random() * Math.min(photos.length, 5))];
+    const url = photo.src?.large2x ?? photo.src?.original;
+    console.log(`[landing-img] Pexels fallback OK (${id})`);
+    return url ?? null;
+  } catch { return null; }
+}
+
+async function saveToBlobAndCache(id: string, dataUrl: string): Promise<string> {
+  const [header, b64] = dataUrl.split(",");
+  const mimeType = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
+  const ext = mimeType.split("/")[1]?.split("+")[0] ?? "jpg";
+  const buffer = Buffer.from(b64, "base64");
+  const blob = await put(`landing/${id}.${ext}`, buffer, { access: "public", contentType: mimeType });
+  redisSet(`${CACHE_PREFIX}${id}`, blob.url).catch(() => {});
+  return blob.url;
+}
+
 const HEADERS = { "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800" };
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -87,41 +160,46 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Tópico não encontrado" }, { status: 404 });
   }
 
-  // 1. Redis cache (mais rápido)
+  // 1. Redis cache
   try {
     const cached = await redisGet(`${CACHE_PREFIX}${id}`);
     if (cached) return NextResponse.json({ url: cached }, { headers: HEADERS });
   } catch {}
 
-  // 2. Vercel Blob — busca imagem já existente mesmo sem Redis
-  // Garante que se o Redis for limpo a imagem não precisa ser regerada
+  // 2. Vercel Blob (persistência mesmo sem Redis)
   try {
     const { blobs } = await list({ prefix: `landing/${id}` });
     if (blobs.length > 0) {
       const url = blobs[0].url;
-      redisSet(`${CACHE_PREFIX}${id}`, url).catch(() => {}); // repopula Redis
+      redisSet(`${CACHE_PREFIX}${id}`, url).catch(() => {});
       return NextResponse.json({ url }, { headers: HEADERS });
     }
   } catch {}
 
-  // 3. Gera nova imagem com Gemini (só quando não existe nenhuma cópia)
-  const dataUrl = await generateWithGemini(TOPICS[id]);
-  if (!dataUrl) return NextResponse.json({ error: "Falha na geração" }, { status: 500 });
-
-  // 4. Upload permanente para Vercel Blob
-  try {
-    const [header, b64] = dataUrl.split(",");
-    const mimeType = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
-    const ext = mimeType.split("/")[1]?.split("+")[0] ?? "jpg";
-    const buffer = Buffer.from(b64, "base64");
-    const blob = await put(`landing/${id}.${ext}`, buffer, {
-      access: "public",
-      contentType: mimeType,
-    });
-    redisSet(`${CACHE_PREFIX}${id}`, blob.url).catch(() => {});
-    return NextResponse.json({ url: blob.url }, { headers: HEADERS });
-  } catch (e: any) {
-    console.error("[landing-img] Blob upload falhou:", e.message);
-    return NextResponse.json({ url: dataUrl });
+  // 3. Gera com Gemini
+  const geminiDataUrl = await generateWithGemini(TOPICS[id]);
+  if (geminiDataUrl) {
+    try {
+      const url = await saveToBlobAndCache(id, geminiDataUrl);
+      return NextResponse.json({ url }, { headers: HEADERS });
+    } catch {
+      return NextResponse.json({ url: geminiDataUrl }, { headers: HEADERS });
+    }
   }
+
+  // 4. Fallback Unsplash (URL externa — não salva no Blob, mas funciona)
+  const unsplashUrl = await fetchFromUnsplash(id);
+  if (unsplashUrl) {
+    redisSet(`${CACHE_PREFIX}${id}`, unsplashUrl).catch(() => {});
+    return NextResponse.json({ url: unsplashUrl }, { headers: HEADERS });
+  }
+
+  // 5. Fallback Pexels
+  const pexelsUrl = await fetchFromPexels(id);
+  if (pexelsUrl) {
+    redisSet(`${CACHE_PREFIX}${id}`, pexelsUrl).catch(() => {});
+    return NextResponse.json({ url: pexelsUrl }, { headers: HEADERS });
+  }
+
+  return NextResponse.json({ error: "Falha na geração" }, { status: 500 });
 }
