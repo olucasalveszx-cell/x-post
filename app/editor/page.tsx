@@ -251,12 +251,6 @@ export default function EditorPage() {
 
   const handleIGLogin = () => { window.location.href = "/api/instagram/auth"; };
 
-  useEffect(() => {
-    const handler = () => { twitterStyleRef.current = false; };
-    window.addEventListener("generator-new-run", handler);
-    return () => window.removeEventListener("generator-new-run", handler);
-  }, []);
-
   const handleStyleSelect = useCallback((style: "layouts" | "twitter") => {
     setShowStyleSelector(false);
     twitterStyleRef.current = style === "twitter";

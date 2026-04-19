@@ -323,7 +323,6 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   };
 
   const handleWizardConfirm = async (ws: WizardSettings) => {
-    window.dispatchEvent(new CustomEvent("generator-new-run"));
     setLastSettings(ws);
     setError(""); setSources([]); setImageProgress(0); setTotalImages(ws.slideCount);
 
