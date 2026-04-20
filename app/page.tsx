@@ -6,7 +6,7 @@ import {
   Instagram, Sparkles, ArrowRight, Check, X,
   Zap, Star, ChevronDown,
   Loader2, Crown, Brain, Globe, Image as ImageIcon,
-  MousePointer, TrendingUp, Shield,
+  MousePointer, TrendingUp, Shield, PenLine, Cpu, Send,
 } from "lucide-react";
 import MarqueeImages from "@/components/MarqueeImages";
 import LoginModal from "@/components/LoginModal";
@@ -83,100 +83,6 @@ function ZoraAvatar({ size = 48 }: { size?: number }) {
   );
 }
 
-// ── [SVG mascote removido] — mantido apenas como guard de TS ──
-function __LegacySVG({ size = 200, className = "" }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 -35 200 255" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <filter id="pxglow" x="-80%" y="-80%" width="260%" height="260%">
-          <feGaussianBlur stdDeviation="5" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <radialGradient id="pbodyg" cx="38%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#8b5cf6" />
-          <stop offset="100%" stopColor="#3b0764" />
-        </radialGradient>
-        <radialGradient id="pheadg" cx="35%" cy="28%" r="65%">
-          <stop offset="0%" stopColor="#a78bfa" />
-          <stop offset="100%" stopColor="#4c1d95" />
-        </radialGradient>
-        <radialGradient id="pwingg" cx="50%" cy="40%" r="70%">
-          <stop offset="0%" stopColor="#6d28d9" />
-          <stop offset="100%" stopColor="#2e1065" />
-        </radialGradient>
-      </defs>
-
-      {/* Sombra */}
-      <ellipse cx="102" cy="215" rx="50" ry="7" fill="rgba(124,58,237,0.18)" />
-
-      {/* Penas da cauda */}
-      <path d="M82 170 Q58 200 50 216" stroke="#0d9488" strokeWidth="16" strokeLinecap="round" fill="none" />
-      <path d="M96 176 Q89 210 86 220" stroke="#6d28d9" strokeWidth="13" strokeLinecap="round" fill="none" />
-      <path d="M116 170 Q134 200 144 214" stroke="#f59e0b" strokeWidth="15" strokeLinecap="round" fill="none" />
-
-      {/* Asa esquerda */}
-      <path d="M44 118 Q8 92 6 126 Q5 162 40 168 Q62 166 68 146 Z" fill="url(#pwingg)" />
-      <path d="M18 110 Q12 128 15 146" stroke="#a855f7" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.35" />
-
-      {/* Asa direita */}
-      <path d="M156 118 Q192 92 194 126 Q195 162 160 168 Q138 166 132 146 Z" fill="url(#pwingg)" />
-      <path d="M182 110 Q188 128 185 146" stroke="#a855f7" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.35" />
-
-      {/* Corpo */}
-      <ellipse cx="100" cy="150" rx="63" ry="55" fill="url(#pbodyg)" />
-      <ellipse cx="76" cy="128" rx="22" ry="30" fill="rgba(255,255,255,0.07)" />
-      <ellipse cx="100" cy="152" rx="38" ry="34" fill="rgba(196,181,253,0.09)" />
-
-      {/* Cabeça */}
-      <circle cx="100" cy="73" r="52" fill="url(#pheadg)" />
-      <ellipse cx="76" cy="52" rx="16" ry="22" fill="rgba(255,255,255,0.07)" />
-
-      {/* Bico superior */}
-      <path d="M97 87 Q128 80 132 97 Q128 107 97 102 Z" fill="#f59e0b" />
-      <path d="M99 88 Q122 83 124 95" stroke="#fde68a" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.7" />
-      {/* Bico inferior */}
-      <path d="M97 102 Q124 107 126 115 Q116 121 97 112 Z" fill="#d97706" />
-
-      {/* Olho esquerdo (principal) */}
-      <circle cx="74" cy="65" r="20" fill="white" />
-      <circle cx="76" cy="67" r="13" fill="#0d0d0d" />
-      <circle cx="82" cy="61" r="5" fill="white" />
-      <circle cx="73" cy="73" r="2" fill="white" opacity="0.4" />
-      <circle cx="74" cy="65" r="20" fill="none" stroke="rgba(196,181,253,0.2)" strokeWidth="2" />
-
-      {/* Olho direito */}
-      <circle cx="118" cy="65" r="14" fill="white" />
-      <circle cx="119" cy="67" r="9.5" fill="#0d0d0d" />
-      <circle cx="124" cy="62" r="3.5" fill="white" />
-      <circle cx="118" cy="65" r="14" fill="none" stroke="rgba(196,181,253,0.15)" strokeWidth="1.5" />
-
-      {/* Crista — 4 penas coloridas */}
-      <path d="M72 24 Q60 -6 65 -22" stroke="#0d9488" strokeWidth="9" strokeLinecap="round" fill="none" />
-      <path d="M87 16 Q80 -16 84 -30" stroke="#fbbf24" strokeWidth="9" strokeLinecap="round" fill="none" />
-      <path d="M102 12 Q100 -18 105 -32" stroke="#a855f7" strokeWidth="9" strokeLinecap="round" fill="none" />
-      <path d="M117 16 Q124 -10 122 -24" stroke="#f472b6" strokeWidth="9" strokeLinecap="round" fill="none" />
-      <circle cx="65" cy="-22" r="6.5" fill="#0d9488" />
-      <circle cx="84" cy="-30" r="6.5" fill="#fbbf24" />
-      <circle cx="105" cy="-32" r="6.5" fill="#a855f7" />
-      <circle cx="122" cy="-24" r="6.5" fill="#f472b6" />
-
-      {/* X no peito — marca da brand */}
-      <g filter="url(#pxglow)">
-        <line x1="78" y1="122" x2="122" y2="172" stroke="#7c3aed" strokeWidth="12" strokeLinecap="round" />
-        <line x1="122" y1="122" x2="78" y2="172" stroke="#7c3aed" strokeWidth="12" strokeLinecap="round" />
-      </g>
-      <line x1="80" y1="124" x2="120" y2="170" stroke="#c084fc" strokeWidth="5.5" strokeLinecap="round" opacity="0.9" />
-      <line x1="120" y1="124" x2="80" y2="170" stroke="#c084fc" strokeWidth="5.5" strokeLinecap="round" opacity="0.9" />
-
-      {/* Patas */}
-      <g stroke="#f59e0b" strokeWidth="4.5" strokeLinecap="round" fill="none">
-        <path d="M80 198 Q70 207 65 215 M80 198 Q77 208 74 216 M80 198 Q86 208 90 215" />
-        <path d="M120 198 Q130 207 135 215 M120 198 Q123 208 126 216 M120 198 Q114 208 110 215" />
-      </g>
-    </svg>
-  );
-}
-
 // ── Logo header ───────────────────────────────────────────────
 function Logo({ className = "" }: { className?: string }) {
   return (
@@ -193,13 +99,67 @@ function Logo({ className = "" }: { className?: string }) {
 }
 
 // ── Dados ──────────────────────────────────────────────────────
+const TESTIMONIALS = [
+  {
+    name: "Mariana Costa",
+    handle: "@maricosta.nutri",
+    avatar: "MC",
+    color: "#ec4899",
+    niche: "Nutrição",
+    text: "Passei 2 anos tentando criar conteúdo consistente e nunca conseguia manter. Com o XPost faço um carrossel por dia em menos de 5 minutos. Meu engajamento triplicou em 2 meses.",
+    stars: 5,
+    result: "+3.200 seguidores em 60 dias",
+  },
+  {
+    name: "Rafael Torres",
+    handle: "@rafaterapia",
+    avatar: "RT",
+    color: "#7c3aed",
+    niche: "Psicologia",
+    text: "Era difícil transformar conhecimento técnico em conteúdo acessível. A IA faz isso pra mim agora. Hoje tenho 3 clientes novos por mês vindos direto do Instagram.",
+    stars: 5,
+    result: "3 clientes novos/mês pelo Instagram",
+  },
+  {
+    name: "Juliana Santos",
+    handle: "@ju.negociosdigitais",
+    avatar: "JS",
+    color: "#f97316",
+    niche: "Marketing Digital",
+    text: "Achei que era mais uma ferramenta de IA genérica. Mas o resultado é absurdo — os carrosséis ficam tão bons que meu cliente perguntou se tinha contratado agência.",
+    stars: 5,
+    result: "Taxa de salvamento 4x maior",
+  },
+];
+
+const HOW_IT_WORKS = [
+  {
+    step: "01",
+    icon: <PenLine size={22} />,
+    title: "Digite o tema",
+    desc: "Escreva qualquer assunto — sua especialidade, uma tendência do nicho, um produto. A IA entende qualquer área.",
+  },
+  {
+    step: "02",
+    icon: <Cpu size={22} />,
+    title: "A IA cria tudo",
+    desc: "Em 30 segundos a IA pesquisa na web, escreve o texto de cada slide e gera imagens únicas. Carrossel completo.",
+  },
+  {
+    step: "03",
+    icon: <Send size={22} />,
+    title: "Revise e publique",
+    desc: "Edite o que quiser no editor visual. Satisfeito? Publique direto no Instagram com 1 clique.",
+  },
+];
+
 const FEATURES = [
-  { icon: <Globe size={22} />,        title: "Pesquisa real na web",        desc: "A IA busca dados atuais sobre qualquer tema para embasar seu conteúdo com informações reais." },
-  { icon: <Brain size={22} />,        title: "Texto escrito por IA",        desc: "Claude AI escreve títulos impactantes, corpo e CTA adaptados ao seu nicho e estilo." },
-  { icon: <ImageIcon size={22} />,    title: "Imagens cinematográficas",    desc: "Gera imagens únicas com Gemini AI para cada slide — dark, dramáticas e profissionais." },
-  { icon: <Instagram size={22} />,    title: "Publica direto no Instagram", desc: "Conecte sua conta Business e publique carrosséis com um único clique, sem sair da plataforma." },
-  { icon: <MousePointer size={22} />, title: "Editor visual completo",      desc: "Edite textos, imagens, cores e layout de cada slide com total liberdade, sem precisar de Canva." },
-  { icon: <TrendingUp size={22} />,   title: "Crescimento consistente",     desc: "Conteúdo diário profissional que gera engajamento real e atrai seguidores qualificados." },
+  { icon: <Globe size={22} />,        title: "Pesquisa real na web",        desc: "A IA busca dados atuais sobre qualquer tema para embasar seu conteúdo com informações reais — não inventa nada." },
+  { icon: <Brain size={22} />,        title: "Texto escrito por IA",        desc: "Títulos impactantes, corpo e CTA adaptados ao seu nicho e estilo. Você revisa, ajusta o que quiser." },
+  { icon: <ImageIcon size={22} />,    title: "Imagens geradas por IA",      desc: "Cada slide recebe uma imagem única criada pelo Gemini AI — sem banco de imagem, sem foto genérica." },
+  { icon: <Instagram size={22} />,    title: "Publica direto no Instagram", desc: "Conecte sua conta Business e publique com 1 clique, sem baixar nada, sem copiar pro celular." },
+  { icon: <MousePointer size={22} />, title: "Editor visual completo",      desc: "Edite fonte, cor, layout e imagem de cada slide com total liberdade — sem precisar abrir o Canva." },
+  { icon: <TrendingUp size={22} />,   title: "Funciona pra qualquer nicho", desc: "Nutrição, direito, psicologia, marketing, finanças, moda... A IA adapta a linguagem automaticamente." },
 ];
 
 const PLANS = [
@@ -208,7 +168,6 @@ const PLANS = [
     label: "Básico",
     price: "29,90",
     period: "/ mês",
-    equiv: null as string | null,
     highlight: false,
     badge: null as string | null,
     cta: "Começar agora",
@@ -220,7 +179,6 @@ const PLANS = [
     label: "Pro",
     price: "61,90",
     period: "/ mês",
-    equiv: null as string | null,
     highlight: true,
     badge: "Mais popular" as string | null,
     cta: "Assinar agora",
@@ -232,7 +190,6 @@ const PLANS = [
     label: "Business",
     price: "99,90",
     period: "/ mês",
-    equiv: null as string | null,
     highlight: false,
     badge: "Mais completo" as string | null,
     cta: "Quero o melhor",
@@ -242,15 +199,33 @@ const PLANS = [
 ];
 
 const FAQS = [
-  { q: "Preciso instalar alguma coisa?",            a: "Não. XPost é 100% online, funciona direto no browser, em qualquer dispositivo." },
-  { q: "Funciona para qualquer nicho?",             a: "Sim. A IA pesquisa na web e adapta o conteúdo ao seu nicho automaticamente — de finanças a gastronomia." },
-  { q: "As imagens são realmente geradas por IA?",  a: "Sim. Usamos Gemini AI para criar imagens cinematográficas únicas para cada slide." },
-  { q: "Consigo publicar direto no Instagram?",     a: "Sim. Conecte sua conta Instagram Business e publique com um clique, sem sair da plataforma." },
-  { q: "Posso cancelar quando quiser?",             a: "Sim. Sem fidelidade, sem multa. Cancele quando quiser pelo portal do cliente Stripe." },
-  { q: "Meu carrossel vai parecer amador?",         a: "Não. O editor permite customizar tudo — fontes, cores, layout, imagens. O resultado é profissional." },
+  {
+    q: "Preciso instalar alguma coisa?",
+    a: "Não. Funciona 100% no browser — Chrome, Safari, qualquer um. Sem app, sem download. Abre o link e já começa. Tem 4 créditos grátis pra testar sem nem precisar colocar cartão.",
+  },
+  {
+    q: "Funciona para qualquer nicho?",
+    a: "Sim. Nutrição, psicologia, direito, marketing, finanças, gastronomia, moda... A IA pesquisa o que está em alta no seu nicho e adapta a linguagem automaticamente. Se você entende do assunto, a IA cria o conteúdo.",
+  },
+  {
+    q: "As imagens são realmente geradas por IA?",
+    a: "Sim. Usamos Gemini AI (do Google) para criar imagens únicas pra cada slide — não são fotos de banco de imagem. Cada carrossel sai com um visual exclusivo feito especificamente pro seu tema.",
+  },
+  {
+    q: "Consigo publicar direto no Instagram?",
+    a: "Sim. Conecte sua conta Instagram Business nas configurações e publique direto do editor com 1 clique. Não precisa baixar a imagem, não precisa copiar pro celular. É literalmente 1 clique.",
+  },
+  {
+    q: "Posso cancelar quando quiser?",
+    a: "Sim, e é simples. É só cancelar pelo portal do cliente — menos de 1 minuto. Sem multa, sem fidelidade, sem precisar falar com atendente pra cancelar. Cancela na hora.",
+  },
+  {
+    q: "Tem alguma garantia?",
+    a: "Sim. Se em 7 dias você não estiver satisfeito com o resultado, devolvemos 100% do valor. Sem perguntas, sem burocracia. É o suficiente pra você testar de verdade e ver se funciona pra você.",
+  },
 ];
 
-// ── Componente ─────────────────────────────────────────────────
+// ── Componente principal ───────────────────────────────────────
 export default function LandingPage() {
   const pricingRef = useRef<HTMLDivElement>(null);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -267,8 +242,7 @@ export default function LandingPage() {
   };
 
   const goToCheckout = (plan: string) => {
-    const url = KIRVANO_URLS[plan] ?? KIRVANO_URLS.pro;
-    window.open(url, "_blank");
+    window.open(KIRVANO_URLS[plan] ?? KIRVANO_URLS.pro, "_blank");
   };
 
   return (
@@ -304,14 +278,10 @@ export default function LandingPage() {
             backgroundImage: "linear-gradient(rgba(124,58,237,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,0.07) 1px,transparent 1px)",
             backgroundSize: "64px 64px",
           }} />
-        {/* Fade do grid nas bordas */}
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%,transparent 40%,#060606 75%)" }} />
-
-        {/* Glow principal */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] pointer-events-none"
           style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.22) 0%,transparent 60%)", filter: "blur(70px)" }} />
-        {/* Glow rosa canto direito */}
         <div className="absolute top-10 right-[-100px] w-[500px] h-[500px] pointer-events-none"
           style={{ background: "radial-gradient(ellipse,rgba(236,72,153,0.1) 0%,transparent 65%)", filter: "blur(80px)" }} />
 
@@ -327,15 +297,15 @@ export default function LandingPage() {
             </div>
 
             <h1 className="text-[40px] md:text-[64px] lg:text-[72px] font-black leading-[1.0] tracking-tighter max-w-2xl">
-              Carrosséis{" "}
+              Carrosséis que{" "}
               <span style={{ background: "linear-gradient(135deg,#c084fc 0%,#ec4899 55%,#f97316 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
-                virais
+                param o scroll
               </span>
               <br />
-              no Instagram em{" "}
+              prontos em{" "}
               <span className="relative inline-block">
                 <span style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
-                  segundos
+                  30 segundos
                 </span>
                 <span className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full"
                   style={{ background: "linear-gradient(90deg,#818cf8,#a855f7)", opacity: 0.5 }} />
@@ -343,17 +313,23 @@ export default function LandingPage() {
             </h1>
 
             <p className="mt-5 text-gray-400 text-lg max-w-md leading-relaxed">
-              IA que pesquisa na web, escreve o copy e gera as imagens.
-              Do zero ao carrossel publicado — sem Canva, sem ChatGPT.
+              Você dá o tema. A IA pesquisa na web, escreve cada slide e cria as imagens.
+              Você revisa e publica — enquanto ainda tá tomando o café.
             </p>
 
             {/* Social proof */}
             <div className="flex items-center gap-3 mt-6">
               <div className="flex -space-x-2">
-                {["#7c3aed","#ec4899","#f97316","#10b981","#3b82f6"].map((c, i) => (
-                  <div key={i} className="w-7 h-7 rounded-full border-2 border-[#060606] flex items-center justify-center text-[10px] font-bold text-white"
-                    style={{ background: c }}>
-                    {["L","M","R","A","K"][i]}
+                {[
+                  { bg: "#7c3aed", initials: "MC" },
+                  { bg: "#ec4899", initials: "RT" },
+                  { bg: "#f97316", initials: "JS" },
+                  { bg: "#10b981", initials: "AL" },
+                  { bg: "#3b82f6", initials: "PF" },
+                ].map((u, i) => (
+                  <div key={i} className="w-7 h-7 rounded-full border-2 border-[#060606] flex items-center justify-center text-[8px] font-black text-white"
+                    style={{ background: u.bg }}>
+                    {u.initials}
                   </div>
                 ))}
               </div>
@@ -361,7 +337,7 @@ export default function LandingPage() {
                 <div className="flex items-center gap-0.5">
                   {[1,2,3,4,5].map(i => <Star key={i} size={11} className="text-yellow-400 fill-yellow-400" />)}
                 </div>
-                <p className="text-[11px] text-gray-500">+2.000 criadores já usam</p>
+                <p className="text-[11px] text-gray-500">842 criadores ativos agora</p>
               </div>
             </div>
 
@@ -393,18 +369,15 @@ export default function LandingPage() {
 
           {/* Coluna visual — mockup do editor */}
           <div className="flex-shrink-0 flex flex-col items-center justify-center relative lg:w-[480px]">
-            {/* Glow externo */}
             <div className="absolute -inset-16 pointer-events-none"
               style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.18) 0%,transparent 65%)", filter: "blur(50px)" }} />
 
-            {/* Card mockup editor */}
             <div className="relative w-full rounded-[28px] overflow-hidden"
               style={{
                 background: "linear-gradient(160deg,rgba(22,12,48,0.97),rgba(8,4,20,0.99))",
                 border: "1px solid rgba(168,85,247,0.35)",
                 boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 32px 80px rgba(0,0,0,0.7), 0 0 100px rgba(124,58,237,0.18)",
               }}>
-
               {/* Browser chrome */}
               <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.06]"
                 style={{ background: "rgba(255,255,255,0.025)" }}>
@@ -421,7 +394,6 @@ export default function LandingPage() {
 
               {/* Editor layout simulado */}
               <div className="flex" style={{ height: 290 }}>
-                {/* Painel slides */}
                 <div className="w-[96px] border-r border-white/[0.05] p-2.5 flex flex-col gap-2"
                   style={{ background: "rgba(255,255,255,0.018)" }}>
                   {[
@@ -450,7 +422,6 @@ export default function LandingPage() {
                   ))}
                 </div>
 
-                {/* Canvas central */}
                 <div className="flex-1 flex items-center justify-center p-4"
                   style={{ background: "rgba(0,0,0,0.35)" }}>
                   <div className="rounded-2xl overflow-hidden relative"
@@ -473,7 +444,6 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* Painel propriedades */}
                 <div className="w-[100px] border-l border-white/[0.05] p-3 flex flex-col gap-2.5"
                   style={{ background: "rgba(255,255,255,0.018)" }}>
                   <p className="text-[7px] font-bold uppercase tracking-wider text-gray-600">Texto</p>
@@ -499,7 +469,6 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Status bar */}
               <div className="px-5 py-3 flex items-center justify-between border-t border-white/[0.05]"
                 style={{ background: "rgba(255,255,255,0.018)" }}>
                 <div className="flex items-center gap-2">
@@ -516,7 +485,6 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Badges flutuantes */}
             <div className="absolute -top-4 -right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold"
               style={{ background: "rgba(124,58,237,0.25)", border: "1px solid rgba(168,85,247,0.55)", color: "#c084fc", backdropFilter: "blur(10px)" }}>
               <Sparkles size={9} /> IA gerada
@@ -534,7 +502,7 @@ export default function LandingPage() {
         <div className="text-center mb-8">
           <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-2">Criado com XPost</p>
           <h2 className="text-xl md:text-2xl font-bold text-white">
-            Veja exemplos reais de carrosséis gerados por IA
+            Exemplos reais de carrosséis gerados por IA
           </h2>
         </div>
         <div className="absolute inset-y-0 left-0 w-24 z-10 pointer-events-none"
@@ -551,24 +519,91 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── STATS ──────────────────────────────────────────── */}
-      <section className="px-5 py-12 max-w-4xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { num: "30s",      label: "para gerar um carrossel" },
-            { num: "100%",     label: "online, zero instalação" },
-            { num: "IA",       label: "pesquisa + texto + imagem" },
-            { num: "1 clique", label: "para publicar no Instagram" },
-          ].map((s) => (
-            <div key={s.label} className="flex flex-col items-center justify-center text-center p-5 rounded-2xl"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <p className="text-2xl md:text-3xl font-black"
-                style={{ background: "linear-gradient(135deg,#c084fc,#818cf8)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
-                {s.num}
+      {/* ── DEPOIMENTOS ────────────────────────────────────── */}
+      <section className="px-5 py-16 max-w-5xl mx-auto">
+        <div className="text-center mb-10">
+          <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Quem já usa</p>
+          <h2 className="text-2xl md:text-3xl font-black">O que dizem os criadores</h2>
+          <p className="text-sm text-gray-500 mt-2">Resultados reais de pessoas reais — não atores contratados.</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-5">
+          {TESTIMONIALS.map((t) => (
+            <div key={t.handle} className="flex flex-col rounded-3xl p-6"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              {/* Cabeçalho */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-11 h-11 rounded-full flex items-center justify-center font-black text-sm text-white flex-shrink-0"
+                  style={{ background: `linear-gradient(135deg,${t.color}cc,${t.color}66)`, border: `1.5px solid ${t.color}55` }}>
+                  {t.avatar}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white leading-tight">{t.name}</p>
+                  <p className="text-[11px] text-gray-500">{t.handle}</p>
+                </div>
+                <span className="ml-auto px-2 py-0.5 rounded-full text-[9px] font-bold flex-shrink-0"
+                  style={{ background: `${t.color}18`, border: `1px solid ${t.color}30`, color: t.color }}>
+                  {t.niche}
+                </span>
+              </div>
+
+              {/* Estrelas */}
+              <div className="flex gap-0.5 mb-3">
+                {[1,2,3,4,5].map(i => <Star key={i} size={11} className="text-yellow-400 fill-yellow-400" />)}
+              </div>
+
+              {/* Texto */}
+              <p className="text-sm text-gray-400 leading-relaxed flex-1 mb-4">
+                &ldquo;{t.text}&rdquo;
               </p>
-              <p className="text-[11px] text-gray-500 mt-1 leading-tight">{s.label}</p>
+
+              {/* Resultado */}
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(168,85,247,0.2)" }}>
+                <TrendingUp size={13} className="text-purple-400 flex-shrink-0" />
+                <span className="text-[11px] font-bold text-purple-300">{t.result}</span>
+              </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── COMO FUNCIONA ──────────────────────────────────── */}
+      <section className="px-5 py-16 max-w-4xl mx-auto">
+        <div className="text-center mb-12">
+          <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Simples assim</p>
+          <h2 className="text-3xl md:text-4xl font-black">Do zero ao carrossel publicado</h2>
+          <p className="text-gray-500 text-sm mt-2">Sem curva de aprendizado. Sem tutorial de 30 minutos.</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6 relative">
+          {/* Linha conectando os passos (desktop) */}
+          <div className="hidden md:block absolute top-8 left-[calc(16.66%+1rem)] right-[calc(16.66%+1rem)] h-px"
+            style={{ background: "linear-gradient(90deg,transparent,rgba(168,85,247,0.4),transparent)" }} />
+
+          {HOW_IT_WORKS.map((step, i) => (
+            <div key={step.step} className="flex flex-col items-center text-center">
+              {/* Número + ícone */}
+              <div className="relative mb-5">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-purple-400 relative z-10"
+                  style={{ background: "rgba(124,58,237,0.12)", border: "1.5px solid rgba(168,85,247,0.3)" }}>
+                  {step.icon}
+                </div>
+                <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black text-white"
+                  style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+                  {i + 1}
+                </div>
+              </div>
+              <h3 className="font-bold text-white text-[15px] mb-2">{step.title}</h3>
+              <p className="text-xs text-gray-500 leading-relaxed max-w-[220px]">{step.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-center mt-10">
+          <Link href="/editor"
+            className="flex items-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-[15px] transition-all hover:scale-105"
+            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 8px 32px rgba(124,58,237,0.35)" }}>
+            <Sparkles size={16} /> Testar grátis agora <ArrowRight size={16} />
+          </Link>
         </div>
       </section>
 
@@ -579,7 +614,6 @@ export default function LandingPage() {
           <div className="absolute inset-0 pointer-events-none"
             style={{ background: "radial-gradient(ellipse 60% 80% at 80% 50%,rgba(124,58,237,0.10) 0%,transparent 70%)" }} />
 
-          {/* Avatar Zora */}
           <div className="flex-shrink-0 relative flex flex-col items-center gap-3">
             <div className="relative">
               <div className="absolute inset-0 rounded-full pointer-events-none"
@@ -631,24 +665,30 @@ export default function LandingPage() {
       <section className="px-5 py-16 max-w-5xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-[44px] font-black leading-tight max-w-2xl mx-auto">
-            Daqui a 6 meses, seu Instagram vai estar{" "}
+            Daqui a 3 meses, seu Instagram vai estar{" "}
             <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
-              vendendo todos os dias
+              crescendo todo dia
             </span>{" "}
-            — ou continuar como está?
+            — ou continuar igual?
           </h2>
           <p className="mt-4 text-gray-500 text-sm max-w-md mx-auto">
-            A diferença entre esses dois caminhos começa com uma decisão simples.
+            A diferença entre esses dois caminhos começa com uma decisão hoje.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
           <div className="rounded-3xl p-7" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)" }}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-500/60 mb-4">Sem XPost</p>
-            <ul className="space-y-3">
-              {["Horas no Canva sem resultado nenhum", "Posts inconsistentes que ninguém vê", "Sem estratégia de crescimento", "Vendo concorrentes crescerem enquanto você trava", "Sem previsibilidade de clientes ou vendas"].map((i) => (
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-500/60 mb-5">Sem XPost</p>
+            <ul className="space-y-4">
+              {[
+                "3h no Canva pra fazer um post que nem chega a 200 views",
+                "Acordar sem ideia do que postar — e não postar nada",
+                "Visual caseiro que faz o seguidor scrollar sem parar",
+                "Meses sem crescimento sem entender o que tá errando",
+                "Concorrentes crescendo enquanto seu perfil fica parado",
+              ].map((i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-gray-400">
-                  <X size={15} className="text-red-500 flex-shrink-0 mt-0.5" /> {i}
+                  <X size={15} className="text-red-500/80 flex-shrink-0 mt-0.5" /> {i}
                 </li>
               ))}
             </ul>
@@ -660,9 +700,15 @@ export default function LandingPage() {
               style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white" }}>
               ✦ Sua melhor escolha
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-purple-400/70 mb-4">Com XPost</p>
-            <ul className="space-y-3">
-              {["Carrossel pronto em 30 segundos com IA", "Conteúdo profissional todos os dias", "Mais alcance, engajamento e seguidores", "Crescimento constante e previsível", "Mais vendas no automático"].map((i) => (
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-purple-400/70 mb-5">Com XPost</p>
+            <ul className="space-y-4">
+              {[
+                "Carrossel profissional pronto antes do café esfriar",
+                "Nunca mais sem pauta — a IA pesquisa o que tá em alta no seu nicho",
+                "Visual que para o scroll e faz o seguidor salvar e compartilhar",
+                "Crescimento real: mais alcance, mais seguidores, mais clientes",
+                "Posta todo dia sem estresse — e ainda sobra tempo pra viver",
+              ].map((i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-gray-200">
                   <Check size={15} className="text-purple-400 flex-shrink-0 mt-0.5" /> {i}
                 </li>
@@ -675,7 +721,7 @@ export default function LandingPage() {
           <button onClick={scrollToPricing}
             className="flex items-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-[15px] transition-all hover:scale-105"
             style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 32px rgba(124,58,237,0.3)" }}>
-            Quero ativar minha máquina de conteúdo <ArrowRight size={17} />
+            Quero começar a crescer <ArrowRight size={17} />
           </button>
         </div>
       </section>
@@ -688,7 +734,7 @@ export default function LandingPage() {
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {FEATURES.map((f) => (
-            <div key={f.title} className="rounded-2xl p-5 flex gap-4 items-start group hover:border-purple-500/30 transition-colors"
+            <div key={f.title} className="rounded-2xl p-5 flex gap-4 items-start hover:border-purple-500/30 transition-colors"
               style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
               <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-purple-400"
                 style={{ background: "rgba(168,85,247,0.12)" }}>
@@ -705,7 +751,7 @@ export default function LandingPage() {
 
       {/* ── PRICING ────────────────────────────────────────── */}
       <section ref={pricingRef} id="pricing" className="px-5 py-20 max-w-5xl mx-auto scroll-mt-16">
-        <div className="text-center mb-14 relative">
+        <div className="text-center mb-14">
           <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Planos e preços</p>
           <h2 className="text-3xl md:text-5xl font-black">
             Escolha e{" "}
@@ -714,6 +760,13 @@ export default function LandingPage() {
             </span>
           </h2>
           <p className="mt-3 text-gray-500 text-sm">Sem fidelidade. Cancele quando quiser.</p>
+
+          {/* Garantia */}
+          <div className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 rounded-full"
+            style={{ background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.2)" }}>
+            <Shield size={14} className="text-green-400" />
+            <span className="text-sm text-green-300 font-semibold">Garantia de 7 dias — se não gostar, devolvemos 100% do valor</span>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-5 items-stretch">
@@ -814,7 +867,8 @@ export default function LandingPage() {
 
       {/* ── FAQ ────────────────────────────────────────────── */}
       <section className="px-5 py-16 max-w-2xl mx-auto">
-        <h2 className="text-2xl md:text-3xl font-black text-center mb-8">Dúvidas frequentes</h2>
+        <h2 className="text-2xl md:text-3xl font-black text-center mb-2">Dúvidas frequentes</h2>
+        <p className="text-center text-gray-500 text-sm mb-8">Se tiver outra dúvida, chama no WhatsApp — respondemos na hora.</p>
         <div className="space-y-2">
           {FAQS.map((faq, i) => (
             <div key={i} className="rounded-2xl overflow-hidden"
@@ -842,20 +896,33 @@ export default function LandingPage() {
           style={{ background: "radial-gradient(ellipse 70% 60% at 50% 100%,rgba(124,58,237,0.12) 0%,transparent 70%)" }} />
         <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-4">Comece hoje</p>
         <h2 className="text-3xl md:text-5xl font-black leading-tight max-w-xl mx-auto mb-5">
-          Pare de perder tempo.{" "}
+          Seu concorrente vai postar{" "}
           <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
-            Comece a crescer.
+            amanhã de manhã.
           </span>
         </h2>
-        <p className="text-gray-500 text-sm mb-10 max-w-sm mx-auto">
-          Cada dia sem conteúdo é um dia que seu concorrente está na frente.
+        <p className="text-gray-400 text-base mb-3 max-w-md mx-auto">
+          Você também pode — e em 30 segundos, com um carrossel que realmente para o scroll.
         </p>
-        <button onClick={scrollToPricing}
-          className="inline-flex items-center gap-2.5 px-10 py-4 rounded-2xl font-bold text-lg transition-all hover:scale-105"
-          style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 40px rgba(124,58,237,0.4)" }}>
-          <Sparkles size={20} /> Começar agora <ArrowRight size={20} />
-        </button>
-        <p className="text-xs text-gray-600 mt-4">A partir de R$29,90/mês · Cancele quando quiser</p>
+        <p className="text-gray-600 text-sm mb-10">
+          Começa grátis. 4 créditos sem cartão. Sem risco.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link href="/editor"
+            className="inline-flex items-center gap-2.5 px-10 py-4 rounded-2xl font-bold text-lg transition-all hover:scale-105"
+            style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 40px rgba(124,58,237,0.4)" }}>
+            <Sparkles size={20} /> Começar grátis agora
+          </Link>
+          <button onClick={scrollToPricing}
+            className="inline-flex items-center gap-2 px-7 py-4 rounded-2xl font-semibold text-sm text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all"
+            style={{ background: "rgba(255,255,255,0.04)" }}>
+            Ver planos e preços →
+          </button>
+        </div>
+        <p className="text-xs text-gray-600 mt-5 flex items-center justify-center gap-1.5">
+          <Shield size={11} className="text-green-400" />
+          Garantia de 7 dias · A partir de R$29,90/mês · Cancele quando quiser
+        </p>
       </section>
 
       {/* ── FOOTER ─────────────────────────────────────────── */}
