@@ -383,16 +383,22 @@ async function saveToGallery(imageUrl: string, email: string | null | undefined,
     let finalUrl = imageUrl;
 
     if (imageUrl.startsWith("data:")) {
-      const [header, b64] = imageUrl.split(",");
-      const mimeType = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
-      const ext = mimeType.split("/")[1]?.split("+")[0] ?? "jpg";
-      const buffer = Buffer.from(b64, "base64");
-      const blob = await put(
-        `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`,
-        buffer,
-        { access: "public", contentType: mimeType }
-      );
-      finalUrl = blob.url;
+      try {
+        const [header, b64] = imageUrl.split(",");
+        const mimeType = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
+        const ext = mimeType.split("/")[1]?.split("+")[0] ?? "jpg";
+        const buffer = Buffer.from(b64, "base64");
+        const blob = await put(
+          `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`,
+          buffer,
+          { access: "public" as any, contentType: mimeType }
+        );
+        finalUrl = blob.url;
+      } catch {
+        // Blob store privado ou indisponível — não salva na galeria
+        console.warn("[image] blob upload falhou, galeria não salva");
+        return;
+      }
     }
 
     const globalEntry = JSON.stringify({ url: finalUrl, email: email ?? "anon", prompt, source, createdAt: new Date().toISOString() });
