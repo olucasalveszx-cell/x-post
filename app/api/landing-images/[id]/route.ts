@@ -68,6 +68,7 @@ async function generateWithGemini(prompt: string): Promise<string | null> {
   const fullPrompt = `${prompt}. Cinematic ultra-high-quality Instagram editorial image, dramatic lighting, rich saturated colors, professional photography style, portrait 4:5 aspect ratio, no text overlay, no watermarks, no logos.`;
 
   const MODELS = [
+    "gemini-3-pro-image-preview",
     "gemini-2.0-flash-preview-image-generation",
     "gemini-2.0-flash-exp-image-generation",
   ];
