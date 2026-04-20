@@ -260,32 +260,6 @@ async function fromOpenRouter(prompt: string, style: ImageStyle) {
   throw new Error("OpenRouter: falha inesperada");
 }
 
-// ── Serper — Google Images (fallback secundário) ──────────────
-async function fromSerper(prompt: string) {
-  const key = process.env.SERPER_API_KEY;
-  if (!key) throw new Error("SERPER_API_KEY não configurada");
-
-  const query = prompt.replace(/<[^>]+>/g, "").replace(/[^\w\sÀ-ÿ]/g, "").trim()
-    .split(/\s+/).slice(0, 6).join(" ") || "photography";
-
-  const res = await fetch("https://google.serper.dev/images", {
-    method: "POST",
-    headers: { "X-API-KEY": key, "Content-Type": "application/json" },
-    body: JSON.stringify({ q: query, gl: "br", hl: "pt", num: 10 }),
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!res.ok) throw new Error(`Serper HTTP ${res.status}`);
-
-  const data = await res.json();
-  const images: any[] = (data.images ?? [])
-    .filter((img: any) => img.imageUrl && img.imageWidth >= 400 && img.imageHeight >= 400);
-  if (!images.length) throw new Error("Serper: sem resultados");
-
-  const pick = images[Math.floor(Math.random() * Math.min(images.length, 5))];
-  console.log("[image] Serper fallback OK");
-  return { imageUrl: pick.imageUrl, source: "serper" };
-}
-
 // ── Unsplash (fallback) ───────────────────────────────────────
 async function fromUnsplash(prompt: string) {
   const key = process.env.UNSPLASH_ACCESS_KEY;
@@ -427,7 +401,6 @@ export async function POST(req: NextRequest) {
     const tries: Array<() => Promise<ImageResult>> = [
       () => fromGemini(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
       () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
-      () => fromSerper(enhancedPrompt).then(r => { plan = "free_fallback"; return r; }),
       () => fromUnsplash(enhancedPrompt).then(r => { plan = "free_fallback"; return r; }),
       () => fromPixabay(enhancedPrompt).then(r => { plan = "free_fallback"; return r; }),
       () => fromPexels(enhancedPrompt).then(r => { plan = "free_fallback"; return r; }),
@@ -443,7 +416,6 @@ export async function POST(req: NextRequest) {
       () => fromImagen4(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromImagen3(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      () => fromSerper(enhancedPrompt).then(r => { plan = "fallback"; return r; }),
       () => fromUnsplash(enhancedPrompt).then(r => { plan = "fallback"; return r; }),
       () => fromPixabay(enhancedPrompt).then(r => { plan = "fallback"; return r; }),
       () => fromPexels(enhancedPrompt).then(r => { plan = "fallback"; return r; }),
