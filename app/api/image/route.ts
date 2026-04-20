@@ -280,6 +280,31 @@ async function fromOpenRouter(prompt: string, style: ImageStyle) {
   throw new Error("OpenRouter: falha inesperada");
 }
 
+// ── Google Custom Search — imagens relevantes ────────────────
+async function fromGoogleImages(prompt: string) {
+  const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
+  const cseId  = process.env.GOOGLE_CSE_ID;
+  if (!apiKey || !cseId) throw new Error("GOOGLE_SEARCH_API_KEY/GOOGLE_CSE_ID não configurados");
+
+  const query = prompt.replace(/<[^>]+>/g, "").replace(/[^\w\sÀ-ÿ]/g, " ").trim()
+    .split(/\s+/).slice(0, 8).join(" ") || "photography";
+
+  const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(query)}&searchType=image&imgSize=LARGE&imgType=photo&num=10&safe=active`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Google Images HTTP ${res.status}: ${err.error?.message ?? ""}`);
+  }
+
+  const data = await res.json();
+  const items: any[] = data.items ?? [];
+  if (!items.length) throw new Error("Google Images: sem resultados");
+
+  const pick = items[Math.floor(Math.random() * Math.min(items.length, 5))];
+  console.log("[image] Google Images OK");
+  return { imageUrl: pick.link, source: "google" };
+}
+
 // ── Unsplash (fallback) ───────────────────────────────────────
 async function fromUnsplash(prompt: string) {
   const key = process.env.UNSPLASH_ACCESS_KEY;
@@ -421,9 +446,10 @@ export async function POST(req: NextRequest) {
     const tries: Array<() => Promise<ImageResult>> = [
       () => fromGemini(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
       () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
-      () => fromUnsplash(enhancedPrompt).then(r => { plan = "free_fallback"; return r; }),
-      () => fromPixabay(enhancedPrompt).then(r => { plan = "free_fallback"; return r; }),
-      () => fromPexels(enhancedPrompt).then(r => { plan = "free_fallback"; return r; }),
+      () => fromGoogleImages(prompt).then(r => { plan = "free_fallback"; return r; }),
+      () => fromUnsplash(prompt).then(r => { plan = "free_fallback"; return r; }),
+      () => fromPixabay(prompt).then(r => { plan = "free_fallback"; return r; }),
+      () => fromPexels(prompt).then(r => { plan = "free_fallback"; return r; }),
     ];
     for (const fn of tries) {
       if (result) break;
@@ -436,9 +462,10 @@ export async function POST(req: NextRequest) {
       () => fromImagen4(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromImagen3(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      () => fromUnsplash(enhancedPrompt).then(r => { plan = "fallback"; return r; }),
-      () => fromPixabay(enhancedPrompt).then(r => { plan = "fallback"; return r; }),
-      () => fromPexels(enhancedPrompt).then(r => { plan = "fallback"; return r; }),
+      () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
+      () => fromUnsplash(prompt).then(r => { plan = "fallback"; return r; }),
+      () => fromPixabay(prompt).then(r => { plan = "fallback"; return r; }),
+      () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
     ];
     for (const fn of tries) {
       if (result) break;
