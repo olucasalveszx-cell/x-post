@@ -44,13 +44,21 @@ function buildPrompt(subject: string, style: ImageStyle): string {
   return `${subject}. ${stylePrompt}. Portrait orientation 4:5 aspect ratio.`;
 }
 
-// ── Gemini Flash Image Generation (tenta múltiplos modelos) ──
+// ── Rotação de chaves Gemini ──────────────────────────────────
+function getGeminiKeys(): string[] {
+  return [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+  ].filter(Boolean) as string[];
+}
+
+// ── Gemini Flash Image Generation (tenta múltiplos modelos e chaves) ──
 async function fromGemini(prompt: string, style: ImageStyle) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY não configurada");
+  const keys = getGeminiKeys();
+  if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
 
   const fullPrompt = buildPrompt(prompt, style);
-
   const MODELS = [
     "gemini-2.5-flash-image",
     "gemini-3.1-flash-image-preview",
@@ -58,95 +66,107 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   ];
 
   let lastError = "";
-  for (const model of MODELS) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+  for (const key of keys) {
+    for (const model of MODELS) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: fullPrompt }] }],
+            generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+          }),
+          signal: AbortSignal.timeout(22000),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          lastError = data.error?.message ?? `Gemini HTTP ${res.status}`;
+          console.error(`[image] ${model} (key${keys.indexOf(key)+1}) falhou:`, lastError);
+          // Se for quota, tenta próxima chave imediatamente
+          if (res.status === 429) break;
+          continue;
+        }
+
+        const parts = data.candidates?.[0]?.content?.parts ?? [];
+        const imagePart = parts.find((p: any) => p.inlineData);
+        if (!imagePart?.inlineData) { lastError = `${model}: sem imagem`; continue; }
+
+        const { data: b64, mimeType } = imagePart.inlineData;
+        console.log(`[image] Gemini OK (${model}, key${keys.indexOf(key)+1})`);
+        return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini" };
+      } catch (e: any) {
+        lastError = e.message;
+      }
+    }
+  }
+  throw new Error(lastError || "Gemini: falha em todos os modelos/chaves");
+}
+
+// ── Imagen 4 ──────────────────────────────────────────────────
+async function fromImagen4(prompt: string, style: ImageStyle) {
+  const keys = getGeminiKeys();
+  if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
+
+  let lastError = "";
+  for (const key of keys) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${key}`;
     try {
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: fullPrompt }] }],
-          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+          instances: [{ prompt: buildPrompt(prompt, style) }],
+          parameters: { sampleCount: 1, aspectRatio: "3:4", safetyFilterLevel: "block_few", personGeneration: "allow_adult" },
         }),
-        signal: AbortSignal.timeout(22000),
+        signal: AbortSignal.timeout(50000),
       });
-
       const data = await res.json();
-      if (!res.ok) {
-        lastError = data.error?.message ?? `Gemini HTTP ${res.status}`;
-        console.error(`[image] ${model} falhou:`, lastError);
-        continue;
-      }
-
-      const parts = data.candidates?.[0]?.content?.parts ?? [];
-      const imagePart = parts.find((p: any) => p.inlineData);
-      if (!imagePart?.inlineData) {
-        lastError = `${model}: sem imagem na resposta`;
-        continue;
-      }
-
-      const { data: b64, mimeType } = imagePart.inlineData;
-      console.log(`[image] Gemini OK (${model})`);
-      return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini" };
-    } catch (e: any) {
-      lastError = e.message;
-    }
+      if (!res.ok) { lastError = data.error?.message ?? `Imagen4 HTTP ${res.status}`; continue; }
+      const pred = data.predictions?.[0];
+      if (!pred?.bytesBase64Encoded) { lastError = "Imagen4: sem imagem"; continue; }
+      console.log(`[image] Imagen 4 OK (key${keys.indexOf(key)+1})`);
+      return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen4" };
+    } catch (e: any) { lastError = e.message; }
   }
-  throw new Error(lastError || "Gemini: falha em todos os modelos");
-}
-
-// ── Imagen 4 ──────────────────────────────────────────────────
-async function fromImagen4(prompt: string, style: ImageStyle) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY não configurada");
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${key}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      instances: [{ prompt: buildPrompt(prompt, style) }],
-      parameters: { sampleCount: 1, aspectRatio: "3:4", safetyFilterLevel: "block_few", personGeneration: "allow_adult" },
-    }),
-    signal: AbortSignal.timeout(50000),
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `Imagen4 HTTP ${res.status}`);
-  const pred = data.predictions?.[0];
-  if (!pred?.bytesBase64Encoded) throw new Error("Imagen4: sem imagem");
-  console.log("[image] Imagen 4 OK");
-  return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen4" };
+  throw new Error(lastError || "Imagen4: falha em todas as chaves");
 }
 
 // ── Imagen 4 Fast ─────────────────────────────────────────────
 async function fromImagen3(prompt: string, style: ImageStyle) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY não configurada");
+  const keys = getGeminiKeys();
+  if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict?key=${key}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      instances: [{ prompt: buildPrompt(prompt, style) }],
-      parameters: { sampleCount: 1, aspectRatio: "3:4", safetyFilterLevel: "block_few", personGeneration: "allow_adult" },
-    }),
-    signal: AbortSignal.timeout(40000),
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `Imagen3 HTTP ${res.status}`);
-  const pred = data.predictions?.[0];
-  if (!pred?.bytesBase64Encoded) throw new Error("Imagen3: sem imagem");
-  console.log("[image] Imagen 4 Fast OK");
-  return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen3" };
+  let lastError = "";
+  for (const key of keys) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict?key=${key}`;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instances: [{ prompt: buildPrompt(prompt, style) }],
+          parameters: { sampleCount: 1, aspectRatio: "3:4", safetyFilterLevel: "block_few", personGeneration: "allow_adult" },
+        }),
+        signal: AbortSignal.timeout(40000),
+      });
+      const data = await res.json();
+      if (!res.ok) { lastError = data.error?.message ?? `Imagen3 HTTP ${res.status}`; continue; }
+      const pred = data.predictions?.[0];
+      if (!pred?.bytesBase64Encoded) { lastError = "Imagen3: sem imagem"; continue; }
+      console.log(`[image] Imagen 4 Fast OK (key${keys.indexOf(key)+1})`);
+      return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen3" };
+    } catch (e: any) { lastError = e.message; }
+  }
+  throw new Error(lastError || "Imagen3: falha em todas as chaves");
 }
 
 // ── Gemini com imagem de referência ──────────────────────────
 async function fromGeminiWithReference(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY não configurada");
+  const keys = getGeminiKeys();
+  if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
+  const key = keys[0];
 
   const styleGuide = PROMPTS[style] ?? PROMPTS.gemini;
   const textInstruction = `Use this image as visual reference. Transform it into a stylized Instagram carousel slide background: "${prompt}". Style: ${styleGuide}. Portrait 4:5. No text, no watermarks.`;

@@ -53,9 +53,17 @@ const UNSPLASH_QUERY: Record<string, string> = {
 
 const CACHE_PREFIX = "landing:img:v5:";
 
+function getGeminiKeys(): string[] {
+  return [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+  ].filter(Boolean) as string[];
+}
+
 async function generateWithGemini(prompt: string): Promise<string | null> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return null;
+  const keys = getGeminiKeys();
+  if (!keys.length) return null;
 
   const fullPrompt = `${prompt}. Cinematic ultra-high-quality Instagram editorial image, dramatic lighting, rich saturated colors, professional photography style, portrait 4:5 aspect ratio, no text overlay, no watermarks, no logos.`;
 
@@ -65,6 +73,7 @@ async function generateWithGemini(prompt: string): Promise<string | null> {
     "gemini-3-pro-image-preview",
   ];
 
+  for (const key of keys) {
   for (const model of MODELS) {
     try {
       const res = await fetch(
@@ -82,7 +91,7 @@ async function generateWithGemini(prompt: string): Promise<string | null> {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        console.error(`[landing-img] ${model} falhou:`, err.error?.message);
+        console.error(`[landing-img] ${model} (key${keys.indexOf(key)+1}) falhou:`, err.error?.message);
         continue;
       }
 
@@ -92,12 +101,13 @@ async function generateWithGemini(prompt: string): Promise<string | null> {
       if (!imgPart?.inlineData) continue;
 
       const { data: b64, mimeType } = imgPart.inlineData;
-      console.log(`[landing-img] Gemini OK (${model})`);
+      console.log(`[landing-img] Gemini OK (${model}, key${keys.indexOf(key)+1})`);
       return `data:${mimeType};base64,${b64}`;
     } catch (e: any) {
       console.error(`[landing-img] ${model} erro:`, e.message);
     }
   }
+  } // end keys loop
   return null;
 }
 
