@@ -308,9 +308,11 @@ export default function EditorPage() {
       if (saved) profileData = JSON.parse(saved);
     } catch {}
 
-    const PAD = Math.round(W * 0.055);         // margem lateral ~5.5%
-    const PROFILE_H = Math.round(H * 0.075);   // altura do bloco de perfil
-    const PROFILE_Y = Math.round(H * 0.03);    // topo
+    const PAD  = Math.round(W * 0.055);
+    const HPAD = Math.round(W * 0.04);   // padding interno do card
+
+    const PROFILE_H = Math.round(H * 0.075);
+    const PROFILE_Y = Math.round(H * 0.03);
 
     const makeProfile = (): import("@/types").SlideElement => ({
       id: uuidv4(),
@@ -326,18 +328,23 @@ export default function EditorPage() {
       zIndex: 10,
     });
 
-    // ── Slide 1 (capa): foto retangular contida + perfil no topo ──
+    // ── Slide 1 (capa) ──────────────────────────────────────────────
     const [coverSlide, ...rest] = slides;
-    const coverImgUrl = coverSlide.backgroundImageUrl;
-    const IMG_TOP    = PROFILE_Y + PROFILE_H + Math.round(H * 0.025);
-    const IMG_H      = Math.round(H * 0.36);
-    const TEXT_TOP   = IMG_TOP + IMG_H + Math.round(H * 0.025);
-    const TEXT_H     = Math.round(H * 0.18);
-    const BODY_TOP   = TEXT_TOP + TEXT_H + Math.round(H * 0.015);
-    const BODY_H     = Math.round(H * 0.10);
+
+    // Imagem pode estar em backgroundImageUrl OU em elemento com src
+    const coverImgUrl =
+      coverSlide.backgroundImageUrl ??
+      (coverSlide.elements.find((el) => el.type === "image" && (el as any).src) as any)?.src ?? null;
+
+    const IMG_TOP  = PROFILE_Y + PROFILE_H + Math.round(H * 0.025);
+    const IMG_H    = Math.round(H * 0.38);
+    const TEXT_TOP = IMG_TOP + IMG_H + Math.round(H * 0.022);
+    const TEXT_H   = Math.round(H * 0.17);
+    const BODY_TOP = TEXT_TOP + TEXT_H + Math.round(H * 0.012);
+    const BODY_H   = Math.round(H * 0.10);
 
     const coverTexts = coverSlide.elements
-      .filter(el => el.type === "text")
+      .filter((el) => el.type === "text")
       .map((el, i) => ({
         ...el,
         x: PAD,
@@ -348,68 +355,88 @@ export default function EditorPage() {
           ...(el.style as any),
           color: "#111111",
           fontFamily: "'Inter', sans-serif",
-          fontSize: i === 0 ? Math.round(H * 0.038) : Math.round(H * 0.020),
+          fontSize: i === 0 ? Math.round(H * 0.036) : Math.round(H * 0.019),
           fontWeight: i === 0 ? "bold" : "normal",
         },
       }));
 
-    const coverImgEl: import("@/types").SlideElement | null = coverImgUrl ? {
-      id: uuidv4(),
-      type: "image" as const,
-      x: PAD,
-      y: IMG_TOP,
-      width: W - PAD * 2,
-      height: IMG_H,
-      src: coverImgUrl,
-      zIndex: 2,
-      imageObjectPositionY: 30,
-    } : null;
+    const coverImgEl: import("@/types").SlideElement | null = coverImgUrl
+      ? {
+          id: uuidv4(),
+          type: "image" as const,
+          x: PAD,
+          y: IMG_TOP,
+          width: W - PAD * 2,
+          height: IMG_H,
+          src: coverImgUrl,
+          zIndex: 2,
+          imageObjectPositionY: 30,
+        }
+      : null;
 
     const coverSlideOut: Slide = {
       ...coverSlide,
-      backgroundColor: "#ffffff",
+      backgroundColor: "#f5f7fa",
+      backgroundGradient: "linear-gradient(160deg,#ffffff 0%,#edf1f8 100%)",
       backgroundImageUrl: undefined,
-      backgroundGradient: undefined,
       backgroundCrop: undefined,
-      elements: [
-        makeProfile(),
-        ...(coverImgEl ? [coverImgEl] : []),
-        ...coverTexts,
-      ],
+      elements: [makeProfile(), ...(coverImgEl ? [coverImgEl] : []), ...coverTexts],
     };
 
-    // ── Slides 2+ (conteúdo): fundo branco, perfil no topo, texto no meio ──
-    const CTOP_TITLE = PROFILE_Y + PROFILE_H + Math.round(H * 0.06);
-    const CTOP_BODY  = CTOP_TITLE + Math.round(H * 0.22) + Math.round(H * 0.02);
+    // ── Slides 2+ (conteúdo): gradiente azul-cinza claro + card branco atrás do texto ──
+    const CARD_TOP    = PROFILE_Y + PROFILE_H + Math.round(H * 0.045);
+    const CARD_BOTTOM = H - Math.round(H * 0.06);
+    const CARD_H      = CARD_BOTTOM - CARD_TOP;
+
+    const CTOP_TITLE  = CARD_TOP + Math.round(H * 0.05);
+    const CTOP_BODY   = CTOP_TITLE + Math.round(H * 0.22) + Math.round(H * 0.02);
+
+    const makeCard = (): import("@/types").SlideElement => ({
+      id: uuidv4(),
+      type: "shape" as const,
+      x: PAD,
+      y: CARD_TOP,
+      width: W - PAD * 2,
+      height: CARD_H,
+      content: "",
+      style: {
+        fill: "#ffffff",
+        stroke: "rgba(0,0,0,0.07)",
+        strokeWidth: 1,
+        borderRadius: Math.round(W * 0.04),
+      } as any,
+      zIndex: 1,
+    });
 
     const contentSlides = rest.map((slide) => {
       const texts = slide.elements
-        .filter(el => el.type === "text")
+        .filter((el) => el.type === "text")
         .map((el, i) => ({
           ...el,
-          x: PAD,
+          x: PAD + HPAD,
           y: i === 0 ? CTOP_TITLE : CTOP_BODY,
-          width: W - PAD * 2,
+          width: W - PAD * 2 - HPAD * 2,
           height: i === 0 ? Math.round(H * 0.22) : Math.round(H * 0.30),
           style: {
             ...(el.style as any),
             color: "#111111",
             fontFamily: "'Inter', sans-serif",
-            fontSize: i === 0 ? Math.round(H * 0.046) : Math.round(H * 0.022),
+            fontSize: i === 0 ? Math.round(H * 0.044) : Math.round(H * 0.021),
             fontWeight: i === 0 ? "bold" : "normal",
             lineHeight: i === 0 ? 1.15 : 1.5,
           },
+          zIndex: 5,
         }));
 
       return {
         ...slide,
-        backgroundColor: "#f7f7f7",
+        backgroundColor: "#e8edf5",
+        backgroundGradient: "linear-gradient(160deg,#eef2f9 0%,#dce4f0 100%)",
         backgroundImageUrl: undefined,
-        backgroundGradient: undefined,
         backgroundCrop: undefined,
         backgroundPosition: undefined,
         backgroundZoom: 100,
-        elements: [makeProfile(), ...texts],
+        elements: [makeProfile(), makeCard(), ...texts],
       };
     });
 
