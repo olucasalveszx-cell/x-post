@@ -7,17 +7,17 @@ const APP_URL = process.env.NEXTAUTH_URL ?? "https://xpost.app";
 export const metadata: Metadata = {
   title: "XPost — Criador de Carrosséis para Instagram com IA",
   description:
-    "Crie carrosséis incríveis para Instagram e posts para Twitter/X com Inteligência Artificial em segundos.",
+    "Chega de perder horas criando conteúdo. O XPost gera carrosséis completos com IA — do texto às imagens — em menos de 3 minutos.",
   metadataBase: new URL(APP_URL),
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
   },
   openGraph: {
     title: "XPost — Criador de Carrosséis para Instagram com IA",
     description:
-      "Crie carrosséis incríveis para Instagram e posts para Twitter/X com Inteligência Artificial em segundos.",
+      "Chega de perder horas criando conteúdo. O XPost gera carrosséis completos com IA — do texto às imagens — em menos de 3 minutos.",
     url: APP_URL,
     siteName: "XPost",
     type: "website",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "XPost — Criador de Carrosséis para Instagram com IA",
     description:
-      "Crie carrosséis incríveis para Instagram e posts para Twitter/X com Inteligência Artificial em segundos.",
+      "Chega de perder horas criando conteúdo. O XPost gera carrosséis completos com IA — do texto às imagens — em menos de 3 minutos.",
   },
 };
 

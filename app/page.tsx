@@ -11,7 +11,6 @@ import {
 import MarqueeImages from "@/components/MarqueeImages";
 import LoginModal from "@/components/LoginModal";
 import AppLogo from "@/components/AppLogo";
-import ThemeToggle from "@/components/ThemeToggle";
 
 // ── Botão flutuante WhatsApp ───────────────────────────────────
 const WA_NUMBER = "5581973014080";
@@ -257,7 +256,6 @@ export default function LandingPage() {
           <button onClick={() => setLoginOpen(true)} className="hover:text-white transition-colors">Entrar</button>
         </nav>
         <div className="flex items-center gap-2">
-          <ThemeToggle />
           <button onClick={() => setLoginOpen(true)}
             className="hidden sm:block px-4 py-2 rounded-full text-sm font-medium text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all">
             Entrar
@@ -272,18 +270,6 @@ export default function LandingPage() {
 
       {/* ── HERO ───────────────────────────────────────────── */}
       <section className="relative min-h-[92vh] px-5 md:px-10 pt-20 pb-16 overflow-hidden flex items-center">
-        {/* Grid de fundo */}
-        <div className="absolute inset-0 pointer-events-none opacity-40"
-          style={{
-            backgroundImage: "linear-gradient(rgba(59,91,219,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(59,91,219,0.07) 1px,transparent 1px)",
-            backgroundSize: "64px 64px",
-          }} />
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%,transparent 40%,#060606 75%)" }} />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] pointer-events-none"
-          style={{ background: "radial-gradient(ellipse,rgba(59,91,219,0.22) 0%,transparent 60%)", filter: "blur(70px)" }} />
-        <div className="absolute top-10 right-[-100px] w-[500px] h-[500px] pointer-events-none"
-          style={{ background: "radial-gradient(ellipse,rgba(236,72,153,0.1) 0%,transparent 65%)", filter: "blur(80px)" }} />
 
         <div className="relative z-10 max-w-6xl mx-auto w-full flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
 
@@ -296,25 +282,15 @@ export default function LandingPage() {
               4 créditos grátis · Sem cartão de crédito
             </div>
 
-            <h1 className="text-[40px] md:text-[64px] lg:text-[72px] font-black leading-[1.0] tracking-tighter max-w-2xl">
-              Carrosséis que{" "}
-              <span style={{ background: "linear-gradient(135deg,##818cf8 0%,#ec4899 55%,#f97316 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
-                param o scroll
-              </span>
-              <br />
-              prontos em{" "}
-              <span className="relative inline-block">
-                <span style={{ background: "linear-gradient(135deg,#818cf8,#4c6ef5)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
-                  30 segundos
-                </span>
-                <span className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full"
-                  style={{ background: "linear-gradient(90deg,#818cf8,#4c6ef5)", opacity: 0.5 }} />
+            <h1 className="text-[40px] md:text-[62px] lg:text-[68px] font-black leading-[1.05] tracking-tighter max-w-2xl">
+              Chega de perder horas{" "}
+              <span style={{ background: "linear-gradient(135deg,#4c6ef5,#3b5bdb)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
+                criando conteúdo
               </span>
             </h1>
 
             <p className="mt-5 text-gray-400 text-lg max-w-md leading-relaxed">
-              Você dá o tema. A IA pesquisa na web, escreve cada slide e cria as imagens.
-              Você revisa e publica — enquanto ainda tá tomando o café.
+              O XPost gera carrosséis completos com IA — do texto às imagens — em menos de 3 minutos.
             </p>
 
             {/* Social proof */}

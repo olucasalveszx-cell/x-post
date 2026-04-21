@@ -22,7 +22,6 @@ import { autosaveWrite, autosaveRead, autosaveClear } from "@/lib/autosave-db";
 import ProfileModal from "@/components/ProfileModal";
 import StyleSelectorModal from "@/components/Editor/StyleSelectorModal";
 import AppLogo from "@/components/AppLogo";
-import ThemeToggle from "@/components/ThemeToggle";
 
 interface IGAccount { token: string; accountId: string; username: string; }
 
@@ -606,7 +605,6 @@ export default function EditorPage() {
         </div>
 
         <div className="flex items-center gap-1.5">
-          <ThemeToggle />
           {credits && (
             <Link href="/credits"
               className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-semibold transition-opacity hover:opacity-80"

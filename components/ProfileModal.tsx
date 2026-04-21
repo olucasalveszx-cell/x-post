@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard, Zap, Crown, ArrowRight, Instagram, Trash2 } from "lucide-react";
+import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard, Zap, Crown, ArrowRight, Instagram, Trash2, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import Link from "next/link";
 
 interface HistoryEntry {
@@ -46,6 +47,7 @@ function fmt(iso: string) {
 
 export default function ProfileModal({ open, onClose }: Props) {
   const { data: session } = useSession();
+  const { theme, setTheme } = useTheme();
   const [tab, setTab]         = useState<"history" | "images" | "instagram">("history");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [images,  setImages]  = useState<ImageEntry[]>([]);
@@ -339,6 +341,28 @@ export default function ProfileModal({ open, onClose }: Props) {
               )}
             </>
           )}
+        </div>
+
+        {/* Aparência */}
+        <div className="mx-4 mb-2 rounded-xl border border-[#1e1e1e] px-4 py-3 shrink-0 flex items-center justify-between" style={{ background: "#0a0a0a" }}>
+          <div className="flex items-center gap-2">
+            {theme === "dark" ? <Moon size={13} className="text-brand-500" /> : <Sun size={13} className="text-yellow-400" />}
+            <span className="text-xs font-semibold text-gray-300">Aparência</span>
+          </div>
+          <div className="flex items-center gap-1 bg-[#1a1a1a] rounded-lg p-0.5 border border-[#2a2a2a]">
+            <button
+              onClick={() => setTheme("light")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${theme === "light" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-300"}`}
+            >
+              <Sun size={11} /> Claro
+            </button>
+            <button
+              onClick={() => setTheme("dark")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${theme === "dark" ? "bg-[#333] text-white shadow-sm" : "text-gray-500 hover:text-gray-300"}`}
+            >
+              <Moon size={11} /> Escuro
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
