@@ -3,11 +3,12 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Sparkles, LogOut, Users, Loader2, RefreshCw,
+  LogOut, Users, Loader2, RefreshCw,
   Activity, TrendingUp, Image, Layers, DollarSign, Crown, ArrowLeft,
   LayoutGrid, ImageOff, Download, ExternalLink, Eye, X, ChevronLeft, ChevronRight,
   Trash2, Plus, RotateCcw, Zap,
 } from "lucide-react";
+import AppLogo from "@/components/AppLogo";
 import Link from "next/link";
 import type { AdminDraftMeta } from "@/app/api/admin/carousels/route";
 import type { AdminImageEntry } from "@/app/api/admin/images/route";
@@ -82,7 +83,7 @@ function WeekChart({ data }: { data: Stats["weekData"] }) {
                   style={{
                     height: `${Math.max(pct, d.count > 0 ? 4 : 0)}%`,
                     background: isToday
-                      ? "linear-gradient(to top, #a855f7, #ec4899)"
+                      ? "linear-gradient(to top, #4c6ef5, #ec4899)"
                       : "#1e1e1e",
                     border: isToday ? "none" : "1px solid #2a2a2a",
                   }}
@@ -90,7 +91,7 @@ function WeekChart({ data }: { data: Stats["weekData"] }) {
               </div>
               <span
                 className="text-[9px] font-medium"
-                style={{ color: isToday ? "#a855f7" : "#4b5563" }}
+                style={{ color: isToday ? "#4c6ef5" : "#4b5563" }}
               >
                 {dayLabel}
               </span>
@@ -303,7 +304,7 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e]">
             <div>
               <p className="font-bold text-sm text-white">{previewDraft.name || "Sem nome"}</p>
-              <p className="text-[11px] text-purple-400 mt-0.5">{previewDraft.email}</p>
+              <p className="text-[11px] text-brand-500 mt-0.5">{previewDraft.email}</p>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-xs text-gray-500">{previewIdx + 1} / {previewDraft.slideCount}</span>
@@ -315,7 +316,7 @@ export default function AdminDashboard() {
           <div className="p-5">
             {previewLoading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 size={28} className="animate-spin text-purple-400" />
+                <Loader2 size={28} className="animate-spin text-brand-500" />
               </div>
             ) : slide ? (
               <div className="relative rounded-xl overflow-hidden mx-auto" style={{ maxWidth: 360, aspectRatio: "4/5", background: slide.backgroundColor ?? "#111" }}>
@@ -359,7 +360,7 @@ export default function AdminDashboard() {
                 {previewSlides.map((s, i) => (
                   <button key={i} onClick={() => setPreviewIdx(i)}
                     className="shrink-0 rounded-lg overflow-hidden transition-all"
-                    style={{ width: 36, height: 46, border: i === previewIdx ? "2px solid #a855f7" : "2px solid transparent", background: s.backgroundColor ?? "#111" }}>
+                    style={{ width: 36, height: 46, border: i === previewIdx ? "2px solid #4c6ef5" : "2px solid transparent", background: s.backgroundColor ?? "#111" }}>
                     {s.backgroundImageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={s.backgroundImageUrl} alt="" className="w-full h-full object-cover" />
@@ -388,16 +389,8 @@ export default function AdminDashboard() {
         style={{ background: "#0d0d0d" }}
       >
         <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)" }}
-          >
-            <Sparkles size={15} color="white" />
-          </div>
-          <div>
-            <p className="font-black text-sm tracking-tight">XPost Zone</p>
-            <p className="text-[10px] text-purple-400">Admin Dashboard</p>
-          </div>
+          <AppLogo variant="dark" size={32} textClassName="font-black text-sm tracking-tight text-white" />
+          <p className="text-[10px] text-brand-500">Admin Dashboard</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -413,7 +406,7 @@ export default function AdminDashboard() {
           </button>
           <Link
             href="/editor"
-            className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors border border-purple-500/30 hover:border-purple-500/60 px-2.5 py-1.5 rounded-lg"
+            className="flex items-center gap-1.5 text-xs text-brand-500 hover:text-brand-400 transition-colors border border-brand-500/30 hover:border-brand-500/60 px-2.5 py-1.5 rounded-lg"
           >
             <ArrowLeft size={13} /> Editor
           </Link>
@@ -435,14 +428,14 @@ export default function AdminDashboard() {
               onClick={() => setTab(t)}
               className={`flex items-center gap-1.5 px-4 py-3 text-xs font-medium border-b-2 transition-colors ${
                 tab === t
-                  ? "border-purple-500 text-white"
+                  ? "border-brand-500 text-white"
                   : "border-transparent text-gray-500 hover:text-gray-300"
               }`}
             >
               {t === "overview" ? <Activity size={12} /> : t === "users" ? <Users size={12} /> : t === "carousels" ? <LayoutGrid size={12} /> : <Image size={12} />}
               {t === "overview" ? "Visão geral" : t === "users" ? "Usuários" : t === "carousels" ? "Carrosséis" : "Imagens"}
               {t === "carousels" && draftsTotal > 0 && (
-                <span className="ml-1 bg-purple-500/20 text-purple-300 text-[10px] px-1.5 py-0.5 rounded-full">
+                <span className="ml-1 bg-brand-500/15 text-brand-400 text-[10px] px-1.5 py-0.5 rounded-full">
                   {draftsTotal}
                 </span>
               )}
@@ -464,7 +457,7 @@ export default function AdminDashboard() {
           <>
             {loading && !stats && (
               <div className="flex justify-center py-20">
-                <Loader2 size={28} className="text-purple-400 animate-spin" />
+                <Loader2 size={28} className="text-brand-500 animate-spin" />
               </div>
             )}
             {error && <p className="text-center text-sm text-red-400 py-10">{error}</p>}
@@ -472,7 +465,7 @@ export default function AdminDashboard() {
             {stats && (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                  <KpiCard label="Usuários" value={stats.totalUsers} icon={Users} accent="#a855f7" sub="total cadastrados" />
+                  <KpiCard label="Usuários" value={stats.totalUsers} icon={Users} accent="#4c6ef5" sub="total cadastrados" />
                   <KpiCard label="Online agora" value={stats.onlineNow} icon={Activity} accent="#22c55e" sub="últimos 2 min" />
                   <KpiCard label="Ativos hoje" value={stats.activeToday} icon={TrendingUp} accent="#3b82f6" sub="usuários únicos" />
                   <KpiCard label="Básico" value={stats.basicCount} icon={Crown} accent="#60a5fa" sub="plano básico" />
@@ -513,7 +506,7 @@ export default function AdminDashboard() {
                       {stats.recentUsers.map((u, i) => (
                         <div key={i} className="grid grid-cols-12 px-5 py-3.5 items-center hover:bg-white/[0.02] transition-colors">
                           <div className="col-span-4 flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)" }}>
                               {u.name?.charAt(0)?.toUpperCase() || "?"}
                             </div>
                             <span className="text-sm text-gray-200 truncate">{u.name || "—"}</span>
@@ -546,7 +539,7 @@ export default function AdminDashboard() {
 
             {usersLoading && adminUsers.length === 0 && (
               <div className="flex justify-center py-20">
-                <Loader2 size={28} className="text-purple-400 animate-spin" />
+                <Loader2 size={28} className="text-brand-500 animate-spin" />
               </div>
             )}
 
@@ -554,7 +547,7 @@ export default function AdminDashboard() {
               <div className="rounded-2xl overflow-hidden" style={{ background: "#0d0d0d", border: "1px solid #1e1e1e" }}>
                 {(() => {
                   const PLAN_COLOR: Record<string, string> = {
-                    god: "#a855f7", business: "#f59e0b", pro: "#ec4899", basic: "#60a5fa", free: "#6b7280",
+                    god: "#4c6ef5", business: "#f59e0b", pro: "#ec4899", basic: "#60a5fa", free: "#6b7280",
                   };
                   const PLAN_LABEL: Record<string, string> = {
                     god: "God", business: "Business", pro: "Pro", basic: "Básico", free: "Grátis",
@@ -586,7 +579,7 @@ export default function AdminDashboard() {
                               {PLAN_LABEL[u.plan] ?? u.plan}
                             </span>
                             <div className="flex items-center gap-1 text-[10px] text-gray-400">
-                              <Zap size={10} className="text-purple-400" />
+                              <Zap size={10} className="text-brand-500" />
                               <span className="font-bold text-white">{u.total}</span>
                               <span className="text-gray-600">restantes</span>
                               <span className="text-gray-700 mx-0.5">·</span>
@@ -666,7 +659,7 @@ export default function AdminDashboard() {
 
             {imagesLoading && images.length === 0 && (
               <div className="flex justify-center py-20">
-                <Loader2 size={28} className="text-purple-400 animate-spin" />
+                <Loader2 size={28} className="text-brand-500 animate-spin" />
               </div>
             )}
 
@@ -723,7 +716,7 @@ export default function AdminDashboard() {
 
             {draftsLoading && drafts.length === 0 && (
               <div className="flex justify-center py-20">
-                <Loader2 size={28} className="text-purple-400 animate-spin" />
+                <Loader2 size={28} className="text-brand-500 animate-spin" />
               </div>
             )}
 
@@ -737,7 +730,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {drafts.map((d) => (
                   <div key={`${d.email}-${d.id}`}
-                    className="rounded-xl overflow-hidden border border-[#1e1e1e] hover:border-purple-500/40 transition-colors group cursor-pointer"
+                    className="rounded-xl overflow-hidden border border-[#1e1e1e] hover:border-brand-500/40 transition-colors group cursor-pointer"
                     style={{ background: "#0d0d0d" }}
                     onClick={() => openPreview(d)}
                   >
@@ -761,7 +754,7 @@ export default function AdminDashboard() {
                     {/* Info */}
                     <div className="p-3">
                       <p className="text-xs font-semibold text-gray-200 truncate">{d.name || "Sem nome"}</p>
-                      <p className="text-[10px] text-purple-400 truncate mt-0.5">{d.email}</p>
+                      <p className="text-[10px] text-brand-500 truncate mt-0.5">{d.email}</p>
                       <p className="text-[10px] text-gray-600 mt-1">{fmt(d.updatedAt)}</p>
                     </div>
                   </div>

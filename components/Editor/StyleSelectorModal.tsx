@@ -38,11 +38,11 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
           {/* ── Gerar Layouts ── */}
           <button
             onClick={() => onSelect("layouts")}
-            className="flex flex-col gap-3 p-4 rounded-xl border border-[#2a2a2a] hover:border-purple-500/50 hover:bg-purple-500/5 transition-all text-left group"
+            className="flex flex-col gap-3 p-4 rounded-xl border border-[#2a2a2a] hover:border-brand-500/50 hover:bg-brand-500/5 transition-all text-left group"
           >
             <div className="relative w-full rounded-lg overflow-hidden" style={{ aspectRatio: "4/5" }}>
               {/* Slide stack */}
-              <div className="absolute inset-0" style={{ background: "linear-gradient(145deg,#1a0533,#2d0a5c,#4a1090)" }} />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(145deg,#0f172a,#1e2fa0,#3b5bdb)" }} />
               {/* Gradiente overlay */}
               <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.9) 0%,rgba(0,0,0,0.3) 60%,transparent 100%)" }} />
               {/* Sparkles decorativos */}
@@ -55,19 +55,19 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
                 <div className="h-[7%] rounded-md bg-white/60" style={{ height: 6, width: "75%" }} />
               </div>
               <div className="absolute bottom-[10%] left-[8%] right-[8%] h-[12%] rounded-lg border border-purple-400/30 bg-purple-500/20 flex items-center gap-1.5 px-2">
-                <Sparkles size={10} className="text-purple-300 shrink-0" />
+                <Sparkles size={10} className="text-brand-400 shrink-0" />
                 <div className="flex flex-col gap-0.5">
                   <div className="h-1.5 w-12 bg-purple-300/70 rounded" />
                   <div className="h-1 w-8 bg-purple-400/40 rounded" />
                 </div>
               </div>
               {/* Badge IA */}
-              <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold text-purple-200 bg-purple-500/30 border border-purple-400/20">
+              <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold text-blue-200 bg-brand-500/25 border border-brand-400/20">
                 <Sparkles size={7} /> IA
               </div>
             </div>
             <div>
-              <p className="font-bold text-white text-sm group-hover:text-purple-300 transition-colors">Gerar Layouts</p>
+              <p className="font-bold text-white text-sm group-hover:text-brand-400 transition-colors">Gerar Layouts</p>
               <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
                 Imagens por IA em cada slide com gradientes
               </p>

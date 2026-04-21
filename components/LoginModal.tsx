@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { signIn } from "next-auth/react";
-import { X, Mail, Lock, User, Eye, EyeOff, Loader2, Sparkles } from "lucide-react";
+import { X, Mail, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
+import AppLogo from "@/components/AppLogo";
 
 interface Props {
   open: boolean;
@@ -116,17 +117,9 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
         {/* Header */}
         <div
           className="flex items-center justify-between px-6 py-5"
-          style={{ background: "linear-gradient(135deg,#1a0533 0%,#0d0d1f 100%)", borderBottom: "1px solid #1e1e1e" }}
+          style={{ background: "linear-gradient(135deg,#080e40 0%,#0d0d1f 100%)", borderBottom: "1px solid #1e1e1e" }}
         >
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)" }}
-            >
-              <Sparkles size={15} color="white" />
-            </div>
-            <span className="font-black text-white tracking-tight">XPost Zone</span>
-          </div>
+          <AppLogo variant="dark" size={32} textClassName="font-black text-white tracking-tight" />
           <button onClick={onClose} className="p-1.5 rounded-lg text-gray-500 hover:text-white transition-colors">
             <X size={16} />
           </button>
@@ -140,8 +133,8 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
               onClick={() => switchTab(t)}
               className="flex-1 py-3.5 text-sm font-medium transition-colors"
               style={{
-                color: tab === t ? "#a855f7" : "#4b5563",
-                borderBottom: tab === t ? "2px solid #a855f7" : "2px solid transparent",
+                color: tab === t ? "#4c6ef5" : "#4b5563",
+                borderBottom: tab === t ? "2px solid #4c6ef5" : "2px solid transparent",
               }}
             >
               {t === "google" ? "Entrar com Google" : "E-mail e senha"}
@@ -167,7 +160,7 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
               </button>
               <p className="text-center text-xs text-gray-600 pt-1">
                 Prefere usar e-mail?{" "}
-                <button onClick={() => switchTab("email")} className="text-purple-400 hover:text-purple-300 underline transition-colors">
+                <button onClick={() => switchTab("email")} className="text-brand-500 hover:text-brand-400 underline transition-colors">
                   Clique aqui
                 </button>
               </p>
@@ -185,7 +178,7 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
                     onClick={() => switchMode(m)}
                     className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all"
                     style={{
-                      background: mode === m ? "linear-gradient(135deg,#7c3aed,#a855f7)" : "transparent",
+                      background: mode === m ? "linear-gradient(135deg,#3b5bdb,#4c6ef5)" : "transparent",
                       color: mode === m ? "white" : "#6b7280",
                     }}
                   >
@@ -269,7 +262,7 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
                 onClick={mode === "login" ? handleLogin : handleRegister}
                 disabled={loading}
                 className="w-full py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
-                style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white" }}
+                style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", color: "white" }}
               >
                 {loading
                   ? <Loader2 size={16} className="animate-spin" />

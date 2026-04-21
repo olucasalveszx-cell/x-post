@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import MarqueeImages from "@/components/MarqueeImages";
 import LoginModal from "@/components/LoginModal";
+import AppLogo from "@/components/AppLogo";
+import ThemeToggle from "@/components/ThemeToggle";
 
 // ── Botão flutuante WhatsApp ───────────────────────────────────
 const WA_NUMBER = "5581973014080";
@@ -66,7 +68,7 @@ function ZoraAvatar({ size = 48 }: { size?: number }) {
       <defs>
         <radialGradient id="zoraBg" cx="35%" cy="30%" r="70%">
           <stop offset="0%" stopColor="#a78bfa" />
-          <stop offset="100%" stopColor="#4c1d95" />
+          <stop offset="100%" stopColor="#1e3a8a" />
         </radialGradient>
         <filter id="zoraGlow" x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="2" result="blur" />
@@ -74,7 +76,7 @@ function ZoraAvatar({ size = 48 }: { size?: number }) {
         </filter>
       </defs>
       <circle cx="24" cy="24" r="24" fill="url(#zoraBg)" />
-      <g filter="url(#zoraGlow)" stroke="#c084fc" strokeWidth="2.5" strokeLinecap="round" fill="none">
+      <g filter="url(#zoraGlow)" stroke="##818cf8" strokeWidth="2.5" strokeLinecap="round" fill="none">
         <path d="M14 18 L34 18 L24 32 Z" />
         <path d="M18 26 L30 26" opacity="0.5" />
       </g>
@@ -86,15 +88,12 @@ function ZoraAvatar({ size = 48 }: { size?: number }) {
 // ── Logo header ───────────────────────────────────────────────
 function Logo({ className = "" }: { className?: string }) {
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <div className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-[17px] text-white select-none"
-        style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 0 12px rgba(124,58,237,0.4)" }}>
-        X
-      </div>
-      <span className="text-[22px] font-black tracking-tight text-white leading-none">
-        xpost
-      </span>
-    </div>
+    <AppLogo
+      variant="dark"
+      size={36}
+      textClassName="text-[22px] font-black tracking-tight text-white leading-none"
+      className={className}
+    />
   );
 }
 
@@ -114,7 +113,7 @@ const TESTIMONIALS = [
     name: "Rafael Torres",
     handle: "@rafaterapia",
     avatar: "RT",
-    color: "#7c3aed",
+    color: "#3b5bdb",
     niche: "Psicologia",
     text: "Era difícil transformar conhecimento técnico em conteúdo acessível. A IA faz isso pra mim agora. Hoje tenho 3 clientes novos por mês vindos direto do Instagram.",
     stars: 5,
@@ -258,13 +257,14 @@ export default function LandingPage() {
           <button onClick={() => setLoginOpen(true)} className="hover:text-white transition-colors">Entrar</button>
         </nav>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <button onClick={() => setLoginOpen(true)}
             className="hidden sm:block px-4 py-2 rounded-full text-sm font-medium text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all">
             Entrar
           </button>
           <button onClick={scrollToPricing}
             className="px-4 py-2 rounded-full text-sm font-bold text-white transition-all hover:opacity-90 hover:scale-105"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+            style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)" }}>
             Ver planos
           </button>
         </div>
@@ -275,13 +275,13 @@ export default function LandingPage() {
         {/* Grid de fundo */}
         <div className="absolute inset-0 pointer-events-none opacity-40"
           style={{
-            backgroundImage: "linear-gradient(rgba(124,58,237,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,0.07) 1px,transparent 1px)",
+            backgroundImage: "linear-gradient(rgba(59,91,219,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(59,91,219,0.07) 1px,transparent 1px)",
             backgroundSize: "64px 64px",
           }} />
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%,transparent 40%,#060606 75%)" }} />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] pointer-events-none"
-          style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.22) 0%,transparent 60%)", filter: "blur(70px)" }} />
+          style={{ background: "radial-gradient(ellipse,rgba(59,91,219,0.22) 0%,transparent 60%)", filter: "blur(70px)" }} />
         <div className="absolute top-10 right-[-100px] w-[500px] h-[500px] pointer-events-none"
           style={{ background: "radial-gradient(ellipse,rgba(236,72,153,0.1) 0%,transparent 65%)", filter: "blur(80px)" }} />
 
@@ -298,17 +298,17 @@ export default function LandingPage() {
 
             <h1 className="text-[40px] md:text-[64px] lg:text-[72px] font-black leading-[1.0] tracking-tighter max-w-2xl">
               Carrosséis que{" "}
-              <span style={{ background: "linear-gradient(135deg,#c084fc 0%,#ec4899 55%,#f97316 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
+              <span style={{ background: "linear-gradient(135deg,##818cf8 0%,#ec4899 55%,#f97316 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
                 param o scroll
               </span>
               <br />
               prontos em{" "}
               <span className="relative inline-block">
-                <span style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
+                <span style={{ background: "linear-gradient(135deg,#818cf8,#4c6ef5)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
                   30 segundos
                 </span>
                 <span className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full"
-                  style={{ background: "linear-gradient(90deg,#818cf8,#a855f7)", opacity: 0.5 }} />
+                  style={{ background: "linear-gradient(90deg,#818cf8,#4c6ef5)", opacity: 0.5 }} />
               </span>
             </h1>
 
@@ -321,7 +321,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-3 mt-6">
               <div className="flex -space-x-2">
                 {[
-                  { bg: "#7c3aed", initials: "MC" },
+                  { bg: "#3b5bdb", initials: "MC" },
                   { bg: "#ec4899", initials: "RT" },
                   { bg: "#f97316", initials: "JS" },
                   { bg: "#10b981", initials: "AL" },
@@ -344,7 +344,7 @@ export default function LandingPage() {
             <div className="flex flex-col sm:flex-row items-center gap-3 mt-8">
               <Link href="/editor"
                 className="flex items-center gap-2.5 px-9 py-4 rounded-2xl font-bold text-[16px] transition-all hover:scale-105 hover:brightness-110"
-                style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 40px rgba(124,58,237,0.5)" }}>
+                style={{ background: "linear-gradient(135deg,#3b5bdb,#ec4899)", boxShadow: "0 8px 40px rgba(59,91,219,0.5)" }}>
                 <Sparkles size={18} />
                 Começar grátis agora
                 <ArrowRight size={18} />
@@ -360,7 +360,7 @@ export default function LandingPage() {
               {[
                 { icon: <Shield size={12} className="text-green-400" />,  text: "Sem cartão de crédito" },
                 { icon: <Zap size={12} className="text-yellow-400" />,    text: "4 créditos grátis" },
-                { icon: <Check size={12} className="text-purple-400" />,  text: "Cancele quando quiser" },
+                { icon: <Check size={12} className="text-brand-500" />,  text: "Cancele quando quiser" },
               ].map((b) => (
                 <span key={b.text} className="flex items-center gap-1.5">{b.icon}{b.text}</span>
               ))}
@@ -370,13 +370,13 @@ export default function LandingPage() {
           {/* Coluna visual — mockup do editor */}
           <div className="flex-shrink-0 flex flex-col items-center justify-center relative lg:w-[480px]">
             <div className="absolute -inset-16 pointer-events-none"
-              style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.18) 0%,transparent 65%)", filter: "blur(50px)" }} />
+              style={{ background: "radial-gradient(ellipse,rgba(59,91,219,0.18) 0%,transparent 65%)", filter: "blur(50px)" }} />
 
             <div className="relative w-full rounded-[28px] overflow-hidden"
               style={{
                 background: "linear-gradient(160deg,rgba(22,12,48,0.97),rgba(8,4,20,0.99))",
-                border: "1px solid rgba(168,85,247,0.35)",
-                boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 32px 80px rgba(0,0,0,0.7), 0 0 100px rgba(124,58,237,0.18)",
+                border: "1px solid rgba(76,110,245,0.35)",
+                boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 32px 80px rgba(0,0,0,0.7), 0 0 100px rgba(59,91,219,0.18)",
               }}>
               {/* Browser chrome */}
               <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.06]"
@@ -397,9 +397,9 @@ export default function LandingPage() {
                 <div className="w-[96px] border-r border-white/[0.05] p-2.5 flex flex-col gap-2"
                   style={{ background: "rgba(255,255,255,0.018)" }}>
                   {[
-                    { grad: "linear-gradient(135deg,#4c1d95,#7c3aed)", active: true },
+                    { grad: "linear-gradient(135deg,#1e3a8a,#3b5bdb)", active: true },
                     { grad: "linear-gradient(135deg,#0f172a,#1e3a5f)", active: false },
-                    { grad: "linear-gradient(135deg,#1a0533,#6d28d9)", active: false },
+                    { grad: "linear-gradient(135deg,#080e40,#2d3fe0)", active: false },
                     { grad: "linear-gradient(135deg,#0c1a0f,#166534)", active: false },
                     { grad: "linear-gradient(135deg,#2d1a00,#92400e)", active: false },
                   ].map((s, i) => (
@@ -407,8 +407,8 @@ export default function LandingPage() {
                       style={{
                         height: 52,
                         background: s.grad,
-                        border: s.active ? "1.5px solid rgba(168,85,247,0.7)" : "1px solid rgba(255,255,255,0.06)",
-                        boxShadow: s.active ? "0 0 12px rgba(124,58,237,0.35)" : "none",
+                        border: s.active ? "1.5px solid rgba(76,110,245,0.7)" : "1px solid rgba(255,255,255,0.06)",
+                        boxShadow: s.active ? "0 0 12px rgba(59,91,219,0.35)" : "none",
                       }}>
                       <div className="absolute bottom-0 left-0 right-0 p-1.5">
                         <div className="h-[5px] rounded-sm mb-1" style={{ width: "75%", background: "rgba(255,255,255,0.5)" }} />
@@ -416,7 +416,7 @@ export default function LandingPage() {
                       </div>
                       {s.active && (
                         <div className="absolute top-1 right-1 px-1 py-0.5 rounded text-[5px] font-bold"
-                          style={{ background: "rgba(168,85,247,0.8)", color: "white" }}>IA</div>
+                          style={{ background: "rgba(76,110,245,0.8)", color: "white" }}>IA</div>
                       )}
                     </div>
                   ))}
@@ -425,19 +425,19 @@ export default function LandingPage() {
                 <div className="flex-1 flex items-center justify-center p-4"
                   style={{ background: "rgba(0,0,0,0.35)" }}>
                   <div className="rounded-2xl overflow-hidden relative"
-                    style={{ width: 150, height: 200, background: "linear-gradient(150deg,#1a0533 0%,#3b0764 60%,#4c1d95 100%)" }}>
+                    style={{ width: 150, height: 200, background: "linear-gradient(150deg,#080e40 0%,#0f1a6e 60%,#1e3a8a 100%)" }}>
                     <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.85) 0%,transparent 55%)" }} />
                     <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[7px] font-black"
-                      style={{ background: "rgba(168,85,247,0.75)", color: "white" }}>IA</div>
+                      style={{ background: "rgba(76,110,245,0.75)", color: "white" }}>IA</div>
                     <div className="absolute top-4 left-0 right-0 flex justify-center">
                       <div className="w-12 h-12 rounded-full opacity-20"
-                        style={{ background: "radial-gradient(circle,#a855f7,transparent)" }} />
+                        style={{ background: "radial-gradient(circle,#4c6ef5,transparent)" }} />
                     </div>
                     <div className="absolute bottom-0 left-0 right-0 p-3">
                       <div className="font-black text-white leading-tight mb-1.5" style={{ fontSize: 10 }}>
                         5 Segredos do<br />Instagram em 2025
                       </div>
-                      <div className="text-purple-300 leading-tight" style={{ fontSize: 7.5 }}>
+                      <div className="text-brand-400 leading-tight" style={{ fontSize: 7.5 }}>
                         Descubra o que os top<br />criadores estão fazendo
                       </div>
                     </div>
@@ -448,18 +448,18 @@ export default function LandingPage() {
                   style={{ background: "rgba(255,255,255,0.018)" }}>
                   <p className="text-[7px] font-bold uppercase tracking-wider text-gray-600">Texto</p>
                   <div className="space-y-1.5">
-                    <div className="h-[5px] rounded-sm w-full" style={{ background: "rgba(168,85,247,0.4)" }} />
+                    <div className="h-[5px] rounded-sm w-full" style={{ background: "rgba(76,110,245,0.4)" }} />
                     <div className="h-[4px] rounded-sm w-4/5 bg-white/10" />
                     <div className="h-[4px] rounded-sm w-3/5 bg-white/10" />
                   </div>
                   <p className="text-[7px] font-bold uppercase tracking-wider text-gray-600 mt-1">Cor</p>
                   <div className="flex gap-1">
-                    {["#7c3aed","#ec4899","#f97316","#0d9488"].map((c) => (
+                    {["#3b5bdb","#ec4899","#f97316","#0d9488"].map((c) => (
                       <div key={c} className="w-4 h-4 rounded-full" style={{ background: c }} />
                     ))}
                   </div>
-                  <div className="mt-2 h-7 rounded-lg flex items-center justify-center gap-1 text-[7px] font-bold text-purple-300"
-                    style={{ background: "rgba(124,58,237,0.2)", border: "1px solid rgba(168,85,247,0.25)" }}>
+                  <div className="mt-2 h-7 rounded-lg flex items-center justify-center gap-1 text-[7px] font-bold text-brand-400"
+                    style={{ background: "rgba(59,91,219,0.2)", border: "1px solid rgba(76,110,245,0.25)" }}>
                     <Sparkles size={7} /> Zora IA
                   </div>
                   <div className="h-7 rounded-lg flex items-center justify-center gap-1 text-[7px] font-bold"
@@ -473,20 +473,20 @@ export default function LandingPage() {
                 style={{ background: "rgba(255,255,255,0.018)" }}>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+                    style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)" }}>
                     <Sparkles size={8} className="text-white" />
                   </div>
                   <span className="text-[10px] text-gray-500">Gerando imagens com IA...</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
                   <span className="text-[9px] text-gray-600">5 / 5 slides</span>
                 </div>
               </div>
             </div>
 
             <div className="absolute -top-4 -right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold"
-              style={{ background: "rgba(124,58,237,0.25)", border: "1px solid rgba(168,85,247,0.55)", color: "#c084fc", backdropFilter: "blur(10px)" }}>
+              style={{ background: "rgba(59,91,219,0.25)", border: "1px solid rgba(76,110,245,0.55)", color: "##818cf8", backdropFilter: "blur(10px)" }}>
               <Sparkles size={9} /> IA gerada
             </div>
             <div className="absolute -bottom-4 -left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold"
@@ -512,8 +512,8 @@ export default function LandingPage() {
         <MarqueeImages />
         <div className="flex justify-center mt-8">
           <button onClick={scrollToPricing}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold border border-purple-500/25 text-purple-300 hover:bg-purple-500/8 transition-colors"
-            style={{ background: "rgba(124,58,237,0.06)" }}>
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold border border-brand-500/25 text-brand-400 hover:bg-brand-600/8 transition-colors"
+            style={{ background: "rgba(59,91,219,0.06)" }}>
             Quero criar assim também <ArrowRight size={13} />
           </button>
         </div>
@@ -558,9 +558,9 @@ export default function LandingPage() {
 
               {/* Resultado */}
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(168,85,247,0.2)" }}>
-                <TrendingUp size={13} className="text-purple-400 flex-shrink-0" />
-                <span className="text-[11px] font-bold text-purple-300">{t.result}</span>
+                style={{ background: "rgba(59,91,219,0.1)", border: "1px solid rgba(76,110,245,0.2)" }}>
+                <TrendingUp size={13} className="text-brand-500 flex-shrink-0" />
+                <span className="text-[11px] font-bold text-brand-400">{t.result}</span>
               </div>
             </div>
           ))}
@@ -577,18 +577,18 @@ export default function LandingPage() {
         <div className="grid md:grid-cols-3 gap-6 relative">
           {/* Linha conectando os passos (desktop) */}
           <div className="hidden md:block absolute top-8 left-[calc(16.66%+1rem)] right-[calc(16.66%+1rem)] h-px"
-            style={{ background: "linear-gradient(90deg,transparent,rgba(168,85,247,0.4),transparent)" }} />
+            style={{ background: "linear-gradient(90deg,transparent,rgba(76,110,245,0.4),transparent)" }} />
 
           {HOW_IT_WORKS.map((step, i) => (
             <div key={step.step} className="flex flex-col items-center text-center">
               {/* Número + ícone */}
               <div className="relative mb-5">
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-purple-400 relative z-10"
-                  style={{ background: "rgba(124,58,237,0.12)", border: "1.5px solid rgba(168,85,247,0.3)" }}>
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-brand-500 relative z-10"
+                  style={{ background: "rgba(59,91,219,0.12)", border: "1.5px solid rgba(76,110,245,0.3)" }}>
                   {step.icon}
                 </div>
                 <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black text-white"
-                  style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+                  style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)" }}>
                   {i + 1}
                 </div>
               </div>
@@ -601,7 +601,7 @@ export default function LandingPage() {
         <div className="flex justify-center mt-10">
           <Link href="/editor"
             className="flex items-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-[15px] transition-all hover:scale-105"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 8px 32px rgba(124,58,237,0.35)" }}>
+            style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", boxShadow: "0 8px 32px rgba(59,91,219,0.35)" }}>
             <Sparkles size={16} /> Testar grátis agora <ArrowRight size={16} />
           </Link>
         </div>
@@ -610,34 +610,34 @@ export default function LandingPage() {
       {/* ── ZORA — ASSISTENTE IA ────────────────────────────── */}
       <section className="px-5 py-10 max-w-4xl mx-auto">
         <div className="relative rounded-3xl overflow-hidden flex flex-col md:flex-row items-center gap-8 p-8 md:p-10"
-          style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.14),rgba(236,72,153,0.06))", border: "1.5px solid rgba(168,85,247,0.25)" }}>
+          style={{ background: "linear-gradient(135deg,rgba(59,91,219,0.14),rgba(236,72,153,0.06))", border: "1.5px solid rgba(76,110,245,0.25)" }}>
           <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "radial-gradient(ellipse 60% 80% at 80% 50%,rgba(124,58,237,0.10) 0%,transparent 70%)" }} />
+            style={{ background: "radial-gradient(ellipse 60% 80% at 80% 50%,rgba(59,91,219,0.10) 0%,transparent 70%)" }} />
 
           <div className="flex-shrink-0 relative flex flex-col items-center gap-3">
             <div className="relative">
               <div className="absolute inset-0 rounded-full pointer-events-none"
-                style={{ background: "radial-gradient(ellipse,rgba(124,58,237,0.4) 0%,transparent 70%)", filter: "blur(18px)", transform: "scale(1.4)" }} />
+                style={{ background: "radial-gradient(ellipse,rgba(59,91,219,0.4) 0%,transparent 70%)", filter: "blur(18px)", transform: "scale(1.4)" }} />
               <div className="relative w-28 h-28 rounded-full flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg,#4c1d95,#7c3aed)", border: "2px solid rgba(168,85,247,0.5)", boxShadow: "0 0 32px rgba(124,58,237,0.4)" }}>
+                style={{ background: "linear-gradient(135deg,#1e3a8a,#3b5bdb)", border: "2px solid rgba(76,110,245,0.5)", boxShadow: "0 0 32px rgba(59,91,219,0.4)" }}>
                 <ZoraAvatar size={64} />
               </div>
               <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", border: "2px solid #060606" }}>
+                style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", border: "2px solid #060606" }}>
                 <Sparkles size={12} className="text-white" />
               </div>
             </div>
             <div className="px-3 py-1 rounded-full text-[11px] font-bold"
-              style={{ background: "rgba(168,85,247,0.15)", border: "1px solid rgba(168,85,247,0.3)", color: "#c084fc" }}>
+              style={{ background: "rgba(76,110,245,0.15)", border: "1px solid rgba(76,110,245,0.3)", color: "##818cf8" }}>
               Planos Pro & Business
             </div>
           </div>
 
           <div className="relative text-center md:text-left">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-purple-400/70 mb-2">Sua assistente de IA</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-500/70 mb-2">Sua assistente de IA</p>
             <h3 className="text-2xl md:text-3xl font-black mb-3">
               Conheça a{" "}
-              <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
+              <span style={{ background: "linear-gradient(135deg,#4c6ef5,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
                 Zora
               </span>
             </h3>
@@ -647,14 +647,14 @@ export default function LandingPage() {
             <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-5">
               {["Sugestão de pautas", "Refinar textos", "Estratégia de nicho", "Responde dúvidas", "Sempre disponível"].map((tag) => (
                 <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium"
-                  style={{ background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.2)", color: "#d8b4fe" }}>
+                  style={{ background: "rgba(76,110,245,0.1)", border: "1px solid rgba(76,110,245,0.2)", color: "#d8b4fe" }}>
                   {tag}
                 </span>
               ))}
             </div>
             <button onClick={scrollToPricing}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all hover:scale-105"
-              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}>
+              style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", boxShadow: "0 4px 20px rgba(59,91,219,0.35)" }}>
               <Sparkles size={14} /> Acessar a Zora
             </button>
           </div>
@@ -666,7 +666,7 @@ export default function LandingPage() {
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-[44px] font-black leading-tight max-w-2xl mx-auto">
             Daqui a 3 meses, seu Instagram vai estar{" "}
-            <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
+            <span style={{ background: "linear-gradient(135deg,#4c6ef5,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
               crescendo todo dia
             </span>{" "}
             — ou continuar igual?
@@ -695,12 +695,12 @@ export default function LandingPage() {
           </div>
 
           <div className="rounded-3xl p-7 relative overflow-hidden"
-            style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.12),rgba(236,72,153,0.06))", border: "1.5px solid rgba(168,85,247,0.35)" }}>
+            style={{ background: "linear-gradient(135deg,rgba(59,91,219,0.12),rgba(236,72,153,0.06))", border: "1.5px solid rgba(76,110,245,0.35)" }}>
             <div className="absolute -top-3 right-5 px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide"
-              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white" }}>
+              style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", color: "white" }}>
               ✦ Sua melhor escolha
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-purple-400/70 mb-5">Com XPost</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-500/70 mb-5">Com XPost</p>
             <ul className="space-y-4">
               {[
                 "Carrossel profissional pronto antes do café esfriar",
@@ -710,7 +710,7 @@ export default function LandingPage() {
                 "Posta todo dia sem estresse — e ainda sobra tempo pra viver",
               ].map((i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-gray-200">
-                  <Check size={15} className="text-purple-400 flex-shrink-0 mt-0.5" /> {i}
+                  <Check size={15} className="text-brand-500 flex-shrink-0 mt-0.5" /> {i}
                 </li>
               ))}
             </ul>
@@ -720,7 +720,7 @@ export default function LandingPage() {
         <div className="flex justify-center mt-10">
           <button onClick={scrollToPricing}
             className="flex items-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-[15px] transition-all hover:scale-105"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 32px rgba(124,58,237,0.3)" }}>
+            style={{ background: "linear-gradient(135deg,#3b5bdb,#ec4899)", boxShadow: "0 8px 32px rgba(59,91,219,0.3)" }}>
             Quero começar a crescer <ArrowRight size={17} />
           </button>
         </div>
@@ -734,10 +734,10 @@ export default function LandingPage() {
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {FEATURES.map((f) => (
-            <div key={f.title} className="rounded-2xl p-5 flex gap-4 items-start hover:border-purple-500/30 transition-colors"
+            <div key={f.title} className="rounded-2xl p-5 flex gap-4 items-start hover:border-brand-500/30 transition-colors"
               style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-purple-400"
-                style={{ background: "rgba(168,85,247,0.12)" }}>
+              <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-brand-500"
+                style={{ background: "rgba(76,110,245,0.12)" }}>
                 {f.icon}
               </div>
               <div>
@@ -755,7 +755,7 @@ export default function LandingPage() {
           <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Planos e preços</p>
           <h2 className="text-3xl md:text-5xl font-black">
             Escolha e{" "}
-            <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
+            <span style={{ background: "linear-gradient(135deg,#4c6ef5,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
               comece hoje
             </span>
           </h2>
@@ -773,21 +773,21 @@ export default function LandingPage() {
           {PLANS.map((plan) => (
             <div key={plan.key} className="relative flex flex-col rounded-3xl p-7 transition-transform hover:-translate-y-1"
               style={{
-                background: plan.highlight ? "linear-gradient(160deg,rgba(124,58,237,0.22),rgba(168,85,247,0.1))" : "rgba(255,255,255,0.03)",
-                border: plan.highlight ? "2px solid rgba(168,85,247,0.6)" : "1px solid rgba(255,255,255,0.08)",
-                boxShadow: plan.highlight ? "0 0 40px rgba(124,58,237,0.15)" : "none",
+                background: plan.highlight ? "linear-gradient(160deg,rgba(59,91,219,0.22),rgba(76,110,245,0.1))" : "rgba(255,255,255,0.03)",
+                border: plan.highlight ? "2px solid rgba(76,110,245,0.6)" : "1px solid rgba(255,255,255,0.08)",
+                boxShadow: plan.highlight ? "0 0 40px rgba(59,91,219,0.15)" : "none",
               }}>
               {plan.badge && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-wide whitespace-nowrap"
-                  style={{ background: plan.highlight ? "linear-gradient(135deg,#7c3aed,#a855f7)" : "rgba(255,255,255,0.1)", color: "white" }}>
+                  style={{ background: plan.highlight ? "linear-gradient(135deg,#3b5bdb,#4c6ef5)" : "rgba(255,255,255,0.1)", color: "white" }}>
                   {plan.badge}
                 </div>
               )}
               <div className="flex items-center gap-2 mb-5">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-                  style={{ background: plan.highlight ? "rgba(168,85,247,0.3)" : "rgba(255,255,255,0.07)" }}>
-                  {plan.key === "basic"    && <Zap    size={14} className="text-purple-300" />}
-                  {plan.key === "pro"      && <Star   size={14} className="text-purple-300" />}
+                  style={{ background: plan.highlight ? "rgba(76,110,245,0.3)" : "rgba(255,255,255,0.07)" }}>
+                  {plan.key === "basic"    && <Zap    size={14} className="text-brand-400" />}
+                  {plan.key === "pro"      && <Star   size={14} className="text-brand-400" />}
                   {plan.key === "business" && <Crown  size={14} className="text-yellow-400" />}
                 </div>
                 <span className="text-sm font-bold uppercase tracking-widest text-gray-300">{plan.label}</span>
@@ -804,7 +804,7 @@ export default function LandingPage() {
                 disabled={loadingPlan !== null}
                 className="w-full py-3.5 rounded-xl font-bold text-sm mb-6 flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-40"
                 style={plan.highlight
-                  ? { background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white", boxShadow: "0 4px 20px rgba(124,58,237,0.4)" }
+                  ? { background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", color: "white", boxShadow: "0 4px 20px rgba(59,91,219,0.4)" }
                   : { background: "rgba(255,255,255,0.07)", color: "white", border: "1px solid rgba(255,255,255,0.1)" }}>
                 {loadingPlan === plan.key ? <><Loader2 size={14} className="animate-spin" /> Aguarde...</> : plan.cta}
               </button>
@@ -812,7 +812,7 @@ export default function LandingPage() {
               <ul className="space-y-2.5 flex-1">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2.5 text-[13px] text-gray-300">
-                    <Check size={14} className="text-purple-400 flex-shrink-0" /> {f}
+                    <Check size={14} className="text-brand-500 flex-shrink-0" /> {f}
                   </li>
                 ))}
                 {plan.missing.map((f) => (
@@ -831,7 +831,7 @@ export default function LandingPage() {
             style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="px-5 py-3.5 text-gray-500">Recurso</div>
             {PLANS.map((p) => (
-              <div key={p.key} className={`px-3 py-3.5 text-center ${p.highlight ? "text-purple-400" : "text-gray-500"}`}>{p.label}</div>
+              <div key={p.key} className={`px-3 py-3.5 text-center ${p.highlight ? "text-brand-500" : "text-gray-500"}`}>{p.label}</div>
             ))}
           </div>
           {["Carrosséis ilimitados", "Pesquisa na web", "Editor visual", "Publicação Instagram", "Flyer promocional IA", "Assistente IA (Zora)", "Suporte prioritário"].map((row, ri) => (
@@ -839,13 +839,13 @@ export default function LandingPage() {
               style={{ borderBottom: ri < 6 ? "1px solid rgba(255,255,255,0.05)" : "none", background: ri % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)" }}>
               <div className="px-5 py-3 text-gray-400">{row}</div>
               <div className="px-3 py-3 flex justify-center">
-                {ri <= 3 ? <Check size={16} className="text-purple-400" /> : <X size={14} className="text-gray-700" />}
+                {ri <= 3 ? <Check size={16} className="text-brand-500" /> : <X size={14} className="text-gray-700" />}
               </div>
               <div className="px-3 py-3 flex justify-center">
-                {ri <= 5 ? <Check size={16} className="text-purple-400" /> : <X size={14} className="text-gray-700" />}
+                {ri <= 5 ? <Check size={16} className="text-brand-500" /> : <X size={14} className="text-gray-700" />}
               </div>
               <div className="px-3 py-3 flex justify-center">
-                <Check size={16} className="text-purple-400" />
+                <Check size={16} className="text-brand-500" />
               </div>
             </div>
           ))}
@@ -858,7 +858,7 @@ export default function LandingPage() {
           </p>
           <p className="text-xs text-gray-600">
             Já tem conta?{" "}
-            <button onClick={() => setLoginOpen(true)} className="text-purple-400 hover:text-purple-300 underline transition-colors">
+            <button onClick={() => setLoginOpen(true)} className="text-brand-500 hover:text-brand-400 underline transition-colors">
               Fazer login
             </button>
           </p>
@@ -872,7 +872,7 @@ export default function LandingPage() {
         <div className="space-y-2">
           {FAQS.map((faq, i) => (
             <div key={i} className="rounded-2xl overflow-hidden"
-              style={{ border: "1px solid rgba(255,255,255,0.07)", background: openFaq === i ? "rgba(124,58,237,0.06)" : "rgba(255,255,255,0.02)" }}>
+              style={{ border: "1px solid rgba(255,255,255,0.07)", background: openFaq === i ? "rgba(59,91,219,0.06)" : "rgba(255,255,255,0.02)" }}>
               <button
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}
                 className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-semibold text-white">
@@ -893,11 +893,11 @@ export default function LandingPage() {
       {/* ── CTA FINAL ──────────────────────────────────────── */}
       <section className="px-5 py-24 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 70% 60% at 50% 100%,rgba(124,58,237,0.12) 0%,transparent 70%)" }} />
+          style={{ background: "radial-gradient(ellipse 70% 60% at 50% 100%,rgba(59,91,219,0.12) 0%,transparent 70%)" }} />
         <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-4">Comece hoje</p>
         <h2 className="text-3xl md:text-5xl font-black leading-tight max-w-xl mx-auto mb-5">
           Seu concorrente vai postar{" "}
-          <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
+          <span style={{ background: "linear-gradient(135deg,#4c6ef5,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
             amanhã de manhã.
           </span>
         </h2>
@@ -910,7 +910,7 @@ export default function LandingPage() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link href="/editor"
             className="inline-flex items-center gap-2.5 px-10 py-4 rounded-2xl font-bold text-lg transition-all hover:scale-105"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", boxShadow: "0 8px 40px rgba(124,58,237,0.4)" }}>
+            style={{ background: "linear-gradient(135deg,#3b5bdb,#ec4899)", boxShadow: "0 8px 40px rgba(59,91,219,0.4)" }}>
             <Sparkles size={20} /> Começar grátis agora
           </Link>
           <button onClick={scrollToPricing}
@@ -928,10 +928,8 @@ export default function LandingPage() {
       {/* ── FOOTER ─────────────────────────────────────────── */}
       <footer className="px-5 py-10 text-center text-xs text-gray-600"
         style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <div className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-[12px] text-white"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>X</div>
-          <span className="font-black text-gray-400 text-sm">xpost</span>
+        <div className="flex items-center justify-center mb-3">
+          <AppLogo variant="dark" size={24} textClassName="font-black text-gray-400 text-sm" />
         </div>
         <p>© 2025 XPost · Todos os direitos reservados</p>
         <div className="flex justify-center gap-5 mt-3">

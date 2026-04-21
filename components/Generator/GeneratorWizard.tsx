@@ -155,7 +155,7 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
               className="h-1.5 rounded-full transition-all duration-300"
               style={{
                 width: i === step ? 28 : 10,
-                background: i <= step ? "#a855f7" : "rgba(255,255,255,0.1)",
+                background: i <= step ? "var(--accent)" : "rgba(255,255,255,0.1)",
               }}
             />
           ))}
@@ -419,11 +419,11 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                     >
                       {/* Mini preview */}
                       <div className="w-8 h-10 rounded-md overflow-hidden bg-[#111] border border-[#2a2a2a] relative flex flex-col">
-                        {lyt.preview === "full"   && <div className="absolute inset-0 bg-purple-500/30 rounded-md" />}
-                        {lyt.preview === "mixed"  && (<><div className="absolute inset-0 bg-purple-500/20 rounded-md" /><div className="absolute bottom-0 inset-x-0 h-1/3 bg-[#111]" /></>)}
-                        {lyt.preview === "square" && (<><div className="absolute inset-x-1 top-1 bottom-3 bg-purple-500/30 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-2 bg-[#111]" /></>)}
-                        {lyt.preview === "top"    && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-purple-500/30" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#111]" /></>)}
-                        {lyt.preview === "base"   && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[#111]" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-purple-500/30" /></>)}
+                        {lyt.preview === "full"   && <div className="absolute inset-0 bg-brand-500/25 rounded-md" />}
+                        {lyt.preview === "mixed"  && (<><div className="absolute inset-0 bg-brand-500/15 rounded-md" /><div className="absolute bottom-0 inset-x-0 h-1/3 bg-[#111]" /></>)}
+                        {lyt.preview === "square" && (<><div className="absolute inset-x-1 top-1 bottom-3 bg-brand-500/25 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-2 bg-[#111]" /></>)}
+                        {lyt.preview === "top"    && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-brand-500/25" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#111]" /></>)}
+                        {lyt.preview === "base"   && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[#111]" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-brand-500/25" /></>)}
                       </div>
                       <span className={`text-[9px] font-medium leading-tight text-center ${imageLayout === lyt.value ? "text-white" : "text-gray-500"}`}>
                         {lyt.label}

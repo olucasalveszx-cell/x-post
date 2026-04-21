@@ -423,7 +423,7 @@ export default function AIAssistant({ open, onClose }: Props) {
     // Feedback visual — fecha o chat brevemente
     const toast = document.createElement("div");
     toast.textContent = "✓ Prompt enviado para o Gerador!";
-    toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#7c3aed;color:white;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999999;pointer-events:none;";
+    toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#3b5bdb;color:white;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999999;pointer-events:none;";
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2500);
   };
@@ -437,7 +437,7 @@ export default function AIAssistant({ open, onClose }: Props) {
 
   if (!mounted || !open) return null;
 
-  const waveColor = listening ? "#f87171" : "#a855f7";
+  const waveColor = listening ? "#f87171" : "#4c6ef5";
   const isActive  = listening || speaking;
 
   /* ════════════════════════════════════════
@@ -477,8 +477,8 @@ export default function AIAssistant({ open, onClose }: Props) {
             background: listening
               ? "radial-gradient(ellipse at center, rgba(239,68,68,0.15) 0%, transparent 70%)"
               : speaking
-              ? "radial-gradient(ellipse at center, rgba(168,85,247,0.18) 0%, transparent 70%)"
-              : "radial-gradient(ellipse at center, rgba(124,58,237,0.08) 0%, transparent 70%)",
+              ? "radial-gradient(ellipse at center, rgba(76,110,245,0.18) 0%, transparent 70%)"
+              : "radial-gradient(ellipse at center, rgba(59,91,219,0.08) 0%, transparent 70%)",
             transition: "background 0.6s ease",
             animation: isActive ? "bgPulse 2s ease-in-out infinite" : "none",
           }}
@@ -496,7 +496,7 @@ export default function AIAssistant({ open, onClose }: Props) {
           <div className="flex items-center gap-2">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)" }}
+              style={{ background: "linear-gradient(135deg,#4c6ef5,#ec4899)" }}
             >
               <Sparkles size={14} color="white" />
             </div>
@@ -517,11 +517,11 @@ export default function AIAssistant({ open, onClose }: Props) {
             <>
               <div
                 className="absolute w-44 h-44 rounded-full animate-ping"
-                style={{ background: listening ? "rgba(239,68,68,0.06)" : "rgba(168,85,247,0.06)" }}
+                style={{ background: listening ? "rgba(239,68,68,0.06)" : "rgba(76,110,245,0.06)" }}
               />
               <div
                 className="absolute w-36 h-36 rounded-full animate-pulse"
-                style={{ background: listening ? "rgba(239,68,68,0.1)" : "rgba(168,85,247,0.12)" }}
+                style={{ background: listening ? "rgba(239,68,68,0.1)" : "rgba(76,110,245,0.12)" }}
               />
             </>
           )}
@@ -553,12 +553,12 @@ export default function AIAssistant({ open, onClose }: Props) {
           <div
             className="relative w-24 h-24 rounded-full flex items-center justify-center shadow-2xl"
             style={{
-              background: "linear-gradient(135deg,#a855f7,#ec4899)",
+              background: "linear-gradient(135deg,#4c6ef5,#ec4899)",
               boxShadow: listening
                 ? "0 0 60px rgba(239,68,68,0.55), 0 0 120px rgba(239,68,68,0.2)"
                 : speaking
-                ? "0 0 60px rgba(168,85,247,0.65), 0 0 120px rgba(168,85,247,0.25)"
-                : "0 0 40px rgba(168,85,247,0.25)",
+                ? "0 0 60px rgba(76,110,245,0.65), 0 0 120px rgba(76,110,245,0.25)"
+                : "0 0 40px rgba(76,110,245,0.25)",
               transition: "box-shadow 0.5s ease",
             }}
           >
@@ -575,7 +575,7 @@ export default function AIAssistant({ open, onClose }: Props) {
         <p
           className="text-sm font-medium mb-1 transition-colors z-10"
           style={{
-            color: listening ? "#f87171" : speaking ? "#d8b4fe" : loading ? "#a855f7" : "#6b7280",
+            color: listening ? "#f87171" : speaking ? "#d8b4fe" : loading ? "#4c6ef5" : "#6b7280",
           }}
         >
           {listening ? "Ouvindo..." : micStarting ? "Iniciando microfone..." : speaking ? "Falando..." : loading ? "Pensando..." : "Toque para falar"}
@@ -613,11 +613,11 @@ export default function AIAssistant({ open, onClose }: Props) {
             background: listening
               ? "linear-gradient(135deg,#dc2626,#ef4444)"
               : micStarting
-              ? "linear-gradient(135deg,#4c1d95,#6d28d9)"
-              : "linear-gradient(135deg,#7c3aed,#a855f7)",
+              ? "linear-gradient(135deg,#1e3a8a,#2d3fe0)"
+              : "linear-gradient(135deg,#3b5bdb,#4c6ef5)",
             boxShadow: listening
               ? "0 0 32px rgba(239,68,68,0.55)"
-              : "0 0 32px rgba(168,85,247,0.45)",
+              : "0 0 32px rgba(76,110,245,0.45)",
             transition: "background 0.3s ease, box-shadow 0.3s ease",
           }}
         >
@@ -634,10 +634,10 @@ export default function AIAssistant({ open, onClose }: Props) {
             onClick={() => setAutoListen(v => !v)}
             className="flex items-center gap-1.5 text-[12px] px-4 py-2 rounded-full font-semibold transition-all"
             style={{
-              background: autoListen ? "rgba(168,85,247,0.25)" : "rgba(255,255,255,0.06)",
-              border: `1.5px solid ${autoListen ? "#a855f7" : "#2a2a2a"}`,
+              background: autoListen ? "rgba(76,110,245,0.25)" : "rgba(255,255,255,0.06)",
+              border: `1.5px solid ${autoListen ? "#4c6ef5" : "#2a2a2a"}`,
               color: autoListen ? "#d8b4fe" : "#6b7280",
-              boxShadow: autoListen ? "0 0 16px rgba(168,85,247,0.3)" : "none",
+              boxShadow: autoListen ? "0 0 16px rgba(76,110,245,0.3)" : "none",
             }}
           >
             <span className={`w-2 h-2 rounded-full ${autoListen ? "bg-purple-400 animate-pulse" : "bg-gray-600"}`} />
@@ -673,24 +673,24 @@ export default function AIAssistant({ open, onClose }: Props) {
         {/* Header */}
         <div
           className="flex items-center justify-between px-5 py-4 flex-shrink-0"
-          style={{ background: "linear-gradient(135deg,#1a0533 0%,#0d0d1f 100%)", borderBottom: "1px solid #1e1e1e" }}
+          style={{ background: "linear-gradient(135deg,#080e40 0%,#0d0d1f 100%)", borderBottom: "1px solid #1e1e1e" }}
         >
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)" }}
+              style={{ background: "linear-gradient(135deg,#4c6ef5,#ec4899)" }}
             >
               <Sparkles size={17} color="white" />
             </div>
             <div>
               <p className="font-semibold text-white">Zora IA</p>
-              <p className="text-xs text-purple-400">Especialista em carrosséis</p>
+              <p className="text-xs text-brand-500">Especialista em carrosséis</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setVoiceMode(true)}
-              className="p-2 rounded-lg text-gray-400 hover:text-purple-400 transition-colors"
+              className="p-2 rounded-lg text-gray-400 hover:text-brand-500 transition-colors"
               title="Modo de voz"
             >
               <Mic size={17} />
@@ -724,7 +724,7 @@ export default function AIAssistant({ open, onClose }: Props) {
               <div
                 className="text-sm leading-relaxed max-w-[85%] px-3.5 py-2.5 rounded-2xl"
                 style={{
-                  background: m.role === "user" ? "linear-gradient(135deg,#7c3aed,#a855f7)" : "#1c1c1c",
+                  background: m.role === "user" ? "linear-gradient(135deg,#3b5bdb,#4c6ef5)" : "#1c1c1c",
                   color: "#e5e7eb",
                   borderBottomRightRadius: m.role === "user" ? 4 : undefined,
                   borderBottomLeftRadius: m.role === "assistant" ? 4 : undefined,
@@ -736,7 +736,7 @@ export default function AIAssistant({ open, onClose }: Props) {
                 <button
                   onClick={() => sendPromptToGenerator(detectedPrompt)}
                   className="mt-1.5 flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full font-semibold transition-all"
-                  style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white", boxShadow: "0 0 12px rgba(168,85,247,0.4)" }}
+                  style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", color: "white", boxShadow: "0 0 12px rgba(76,110,245,0.4)" }}
                 >
                   <Wand2 size={11} /> Usar no Gerador
                 </button>
@@ -748,7 +748,7 @@ export default function AIAssistant({ open, onClose }: Props) {
           {loading && (
             <div className="flex justify-start">
               <div className="px-3.5 py-2.5 rounded-2xl rounded-bl-[4px] bg-[#1c1c1c] flex items-center gap-2">
-                <Loader2 size={14} className="text-purple-400 animate-spin" />
+                <Loader2 size={14} className="text-brand-500 animate-spin" />
                 <span className="text-xs text-gray-500">Zora está pensando...</span>
               </div>
             </div>
@@ -760,7 +760,7 @@ export default function AIAssistant({ open, onClose }: Props) {
                 <button
                   key={s}
                   onClick={() => sendMessage(s)}
-                  className="text-xs px-3 py-1.5 rounded-full border border-[#2a2a2a] text-gray-400 hover:border-purple-500 hover:text-purple-300 transition-colors"
+                  className="text-xs px-3 py-1.5 rounded-full border border-[#2a2a2a] text-gray-400 hover:border-brand-500 hover:text-brand-400 transition-colors"
                 >
                   {s}
                 </button>
@@ -814,7 +814,7 @@ export default function AIAssistant({ open, onClose }: Props) {
               onClick={() => sendMessage(input)}
               disabled={!input.trim() || loading}
               className="w-7 h-7 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all flex-shrink-0"
-              style={{ background: input.trim() && !loading ? "linear-gradient(135deg,#7c3aed,#a855f7)" : "#2a2a2a" }}
+              style={{ background: input.trim() && !loading ? "linear-gradient(135deg,#3b5bdb,#4c6ef5)" : "#2a2a2a" }}
             >
               <Send size={13} color="white" />
             </button>
@@ -828,9 +828,9 @@ export default function AIAssistant({ open, onClose }: Props) {
               style={{
                 background: listening
                   ? "linear-gradient(135deg,#dc2626,#ef4444)"
-                  : "linear-gradient(135deg,#7c3aed,#a855f7)",
+                  : "linear-gradient(135deg,#3b5bdb,#4c6ef5)",
                 color: "white",
-                boxShadow: listening ? "0 0 20px rgba(239,68,68,0.4)" : "0 0 20px rgba(168,85,247,0.3)",
+                boxShadow: listening ? "0 0 20px rgba(239,68,68,0.4)" : "0 0 20px rgba(76,110,245,0.3)",
               }}
             >
               {micStarting ? (
@@ -848,8 +848,8 @@ export default function AIAssistant({ open, onClose }: Props) {
               title={autoListen ? "Desativar conversa automática" : "Ativar conversa automática (Zora ouve de volta após responder)"}
               className="px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
               style={{
-                background: autoListen ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.05)",
-                border: `1.5px solid ${autoListen ? "#a855f7" : "#2a2a2a"}`,
+                background: autoListen ? "rgba(76,110,245,0.2)" : "rgba(255,255,255,0.05)",
+                border: `1.5px solid ${autoListen ? "#4c6ef5" : "#2a2a2a"}`,
                 color: autoListen ? "#d8b4fe" : "#6b7280",
               }}
             >

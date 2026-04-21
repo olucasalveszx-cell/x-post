@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 const ROW1 = [
   { topicId: "nutricao",      title: "Plano alimentar para emagrecer",          body: "sem passar fome",                    tag: "NUTRIÇÃO",       accent: "#10b981" },
   { topicId: "fitness",       title: "Treino completo sem academia",             body: "só com o peso do corpo",            tag: "FITNESS",        accent: "#f97316" },
-  { topicId: "tecnologia",    title: "IA vai substituir sua profissão?",         body: "a verdade que poucos falam",        tag: "TECNOLOGIA",     accent: "#a855f7" },
+  { topicId: "tecnologia",    title: "IA vai substituir sua profissão?",         body: "a verdade que poucos falam",        tag: "TECNOLOGIA",     accent: "#4c6ef5" },
   { topicId: "produtividade", title: "5 hábitos de quem acorda às 5h",          body: "e transforma a vida",               tag: "PRODUTIVIDADE",  accent: "#3b82f6" },
   { topicId: "viagem",        title: "Os destinos mais baratos do Brasil",       body: "para viajar esse ano",              tag: "VIAGEM",         accent: "#06b6d4" },
   { topicId: "psicologia",    title: "Por que você procrastina tanto?",          body: "a ciência por trás do hábito",      tag: "PSICOLOGIA",     accent: "#ec4899" },
@@ -24,7 +24,7 @@ const ROW2 = [
   { topicId: "politica",         title: "Eleições 2025: o que está em jogo",     body: "análise sem filtro",                tag: "POLÍTICA",         accent: "#ef4444" },
   { topicId: "fofoca",           title: "Polêmica dos famosos que chocou",       body: "veja o que aconteceu",              tag: "FOFOCA",           accent: "#f97316" },
   { topicId: "cripto",           title: "Bitcoin vai a $200k em 2025?",          body: "análise completa do mercado",       tag: "CRIPTO",           accent: "#f59e0b" },
-  { topicId: "advocacia",        title: "Seus direitos que poucos conhecem",     body: "saiba o que a lei garante",         tag: "ADVOCACIA",        accent: "#a855f7" },
+  { topicId: "advocacia",        title: "Seus direitos que poucos conhecem",     body: "saiba o que a lei garante",         tag: "ADVOCACIA",        accent: "#4c6ef5" },
   { topicId: "gastronomia",      title: "Receita que virou febre nas redes",     body: "fácil, rápido e delicioso",         tag: "GASTRONOMIA",      accent: "#14b8a6" },
   { topicId: "educacao",         title: "Como estudar e reter tudo",             body: "método comprovado pela ciência",    tag: "EDUCAÇÃO",         accent: "#3b82f6" },
 ];

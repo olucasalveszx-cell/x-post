@@ -37,7 +37,7 @@ const GRADIENTS = [
   { label: "Escuro baixo",  value: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, transparent 60%)" },
   { label: "Escuro cima",   value: "linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, transparent 60%)" },
   { label: "Escuro total",  value: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.85) 100%)" },
-  { label: "Roxo",          value: "linear-gradient(135deg, rgba(124,58,237,0.8) 0%, transparent 70%)" },
+  { label: "Roxo",          value: "linear-gradient(135deg, rgba(59,91,219,0.8) 0%, transparent 70%)" },
   { label: "Rosa",          value: "linear-gradient(135deg, rgba(236,72,153,0.8) 0%, transparent 70%)" },
   { label: "Sem degradê",   value: "" },
 ];
@@ -98,7 +98,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       titleY = Math.round(H * 0.28); titleH = 300; tAlign = "left";
       bodyY = Math.min(titleY + 310, H - 210);
       elements.push({ id: uuid(), type: "shape" as const, x: 60, y: titleY - 28, width: 56, height: 6, content: "",
-        style: { fill: "#a855f7", stroke: "transparent", strokeWidth: 0, borderRadius: 3 } });
+        style: { fill: "#4c6ef5", stroke: "transparent", strokeWidth: 0, borderRadius: 3 } });
     } else if (variant === 2) {
       elImgId = uuid();
       titleY = 110; tAlign = "left"; titleH = 230; bodyY = 360; bodyH = 130; bAlign = "left";
@@ -806,7 +806,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               style={{
                 left: el.x, top: el.y, width: el.width, height: el.height,
                 opacity: el.opacity ?? 1, zIndex: el.zIndex ?? 20, touchAction: "none",
-                ...(isSelected ? { outline: `${oW}px solid #a855f7`, outlineOffset: `${Math.round(2 * S)}px` } : {}),
+                ...(isSelected ? { outline: `${oW}px solid #4c6ef5`, outlineOffset: `${Math.round(2 * S)}px` } : {}),
               }}
               onMouseDown={(e) => {
                 if (isPanning && el.frameImageUrl) {
@@ -848,8 +848,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             >
               <div style={innerStyle}>
                 {isLoading ? (
-                  <div style={{ width: "100%", height: "100%", background: "rgba(168,85,247,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ width: Math.round(el.width * 0.18), height: Math.round(el.width * 0.18), border: `${Math.round(el.width * 0.025)}px solid #a855f7`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                  <div style={{ width: "100%", height: "100%", background: "rgba(76,110,245,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: Math.round(el.width * 0.18), height: Math.round(el.width * 0.18), border: `${Math.round(el.width * 0.025)}px solid #4c6ef5`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                   </div>
                 ) : el.frameImageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -868,7 +868,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                   />
                 ) : (
                   <div
-                    style={{ width: "100%", height: "100%", background: "rgba(255,255,255,0.06)", border: `${Math.round(2 * S)}px dashed rgba(168,85,247,0.5)`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: Math.round(el.height * 0.05), color: "rgba(168,85,247,0.7)", cursor: "pointer", boxSizing: "border-box" }}
+                    style={{ width: "100%", height: "100%", background: "rgba(255,255,255,0.06)", border: `${Math.round(2 * S)}px dashed rgba(76,110,245,0.5)`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: Math.round(el.height * 0.05), color: "rgba(76,110,245,0.7)", cursor: "pointer", boxSizing: "border-box" }}
                     onClick={(e) => { e.stopPropagation(); if (isSelected) { setFramePendingId(el.id); frameFileInputRef.current?.click(); } else { setSelectedId(el.id); onSelectElement?.(el); } }}
                   >
                     <ImageIcon style={{ width: Math.round(el.width * 0.22), height: Math.round(el.width * 0.22) }} />
@@ -882,7 +882,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                 <div style={{ position: "absolute", top: -Math.round(36 * S), left: 0, display: "flex", gap: Math.round(4 * S), zIndex: 15 }}
                   onClick={(e) => e.stopPropagation()}>
                   <button
-                    style={{ background: "#a855f7", border: "none", borderRadius: Math.round(8 * S), padding: `${Math.round(4 * S)}px ${Math.round(10 * S)}px`, color: "#fff", fontSize: Math.round(11 * S), fontFamily: "sans-serif", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+                    style={{ background: "#4c6ef5", border: "none", borderRadius: Math.round(8 * S), padding: `${Math.round(4 * S)}px ${Math.round(10 * S)}px`, color: "#fff", fontSize: Math.round(11 * S), fontFamily: "sans-serif", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); setFramePanId(el.id); }}
                   >
@@ -900,14 +900,14 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                 >
                   {/* Linha topo: label + concluir */}
                   <div style={{ display: "flex", alignItems: "center", gap: Math.round(4 * S) }}>
-                    <div style={{ background: "rgba(0,0,0,0.8)", borderRadius: Math.round(8 * S), padding: `${Math.round(3 * S)}px ${Math.round(8 * S)}px`, color: "#a855f7", fontSize: Math.round(10 * S), fontFamily: "sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
+                    <div style={{ background: "rgba(0,0,0,0.8)", borderRadius: Math.round(8 * S), padding: `${Math.round(3 * S)}px ${Math.round(8 * S)}px`, color: "#4c6ef5", fontSize: Math.round(10 * S), fontFamily: "sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
                       ↕↔ Arraste · Zoom:
                     </div>
                     {/* Slider de zoom */}
                     <input
                       type="range" min={100} max={400} step={5}
                       value={imgZoom}
-                      style={{ flex: 1, accentColor: "#a855f7", cursor: "pointer", height: Math.round(4 * S) }}
+                      style={{ flex: 1, accentColor: "#4c6ef5", cursor: "pointer", height: Math.round(4 * S) }}
                       onMouseDown={(e) => e.stopPropagation()}
                       onChange={(e) => updateElement(el.id, { frameImageZoom: Number(e.target.value) })}
                     />
@@ -934,7 +934,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
               {isSelected && !isLoading && !isPanning && (
                 <div
-                  style={{ position: "absolute", width: rS, height: rS, background: "#a855f7", border: `${Math.max(1, Math.round(2 * S))}px solid white`, borderRadius: "50%", cursor: "se-resize", bottom: -Math.round(rS / 2), right: -Math.round(rS / 2), zIndex: 10, touchAction: "none" }}
+                  style={{ position: "absolute", width: rS, height: rS, background: "#4c6ef5", border: `${Math.max(1, Math.round(2 * S))}px solid white`, borderRadius: "50%", cursor: "se-resize", bottom: -Math.round(rS / 2), right: -Math.round(rS / 2), zIndex: 10, touchAction: "none" }}
                   onMouseDown={(e) => { e.stopPropagation(); handleResizeDown(e, el); }}
                   onTouchStart={(e) => { e.stopPropagation(); handleResizeTouchStart(e, el); }}
                 />
@@ -950,7 +950,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             style={{
               left: el.x, top: el.y, width: el.width, height: el.height,
               opacity: el.opacity ?? 1, zIndex: el.zIndex, touchAction: "none",
-              ...(isSelected ? { outline: `${oW}px solid #a855f7`, outlineOffset: `${Math.round(2 * S)}px` } : {}),
+              ...(isSelected ? { outline: `${oW}px solid #4c6ef5`, outlineOffset: `${Math.round(2 * S)}px` } : {}),
             }}
             onMouseDown={(e) => handleMouseDown(e, el)}
             onClick={(e) => e.stopPropagation()}
@@ -1013,7 +1013,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
             {/* Forma */}
             {el.type === "shape" && (
-              <div className="w-full h-full" style={{ backgroundColor: (el.style as any)?.fill ?? "#a855f7", borderRadius: (el.style as any)?.borderRadius ?? 0, border: `${(el.style as any)?.strokeWidth ?? 0}px solid ${(el.style as any)?.stroke ?? "transparent"}` }} />
+              <div className="w-full h-full" style={{ backgroundColor: (el.style as any)?.fill ?? "#4c6ef5", borderRadius: (el.style as any)?.borderRadius ?? 0, border: `${(el.style as any)?.strokeWidth ?? 0}px solid ${(el.style as any)?.stroke ?? "transparent"}` }} />
             )}
 
             {/* Perfil */}
@@ -1051,13 +1051,13 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               <>
                 {el.type === "text" && (
                   <div style={{ position: "absolute", bottom: -Math.round(rS / 2) - Math.round(20 * S), right: 0, display: "flex", alignItems: "center", gap: Math.round(4 * S), zIndex: 11, pointerEvents: "none" }}>
-                    <span style={{ fontSize: Math.round(11 * S), color: "rgba(168,85,247,0.9)", background: "rgba(0,0,0,0.6)", borderRadius: Math.round(4 * S), padding: `${Math.round(2 * S)}px ${Math.round(6 * S)}px`, whiteSpace: "nowrap", fontFamily: "sans-serif" }}>
+                    <span style={{ fontSize: Math.round(11 * S), color: "rgba(76,110,245,0.9)", background: "rgba(0,0,0,0.6)", borderRadius: Math.round(4 * S), padding: `${Math.round(2 * S)}px ${Math.round(6 * S)}px`, whiteSpace: "nowrap", fontFamily: "sans-serif" }}>
                       ↕↔ tamanho
                     </span>
                   </div>
                 )}
                 <div
-                  style={{ position: "absolute", width: rS, height: rS, background: el.type === "text" ? "#7c3aed" : "#a855f7", border: `${Math.max(1, Math.round(2 * S))}px solid white`, borderRadius: "50%", cursor: "se-resize", bottom: -Math.round(rS / 2), right: -Math.round(rS / 2), zIndex: 10, touchAction: "none", boxShadow: el.type === "text" ? `0 0 ${Math.round(8 * S)}px rgba(124,58,237,0.8)` : "none", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ position: "absolute", width: rS, height: rS, background: el.type === "text" ? "#3b5bdb" : "#4c6ef5", border: `${Math.max(1, Math.round(2 * S))}px solid white`, borderRadius: "50%", cursor: "se-resize", bottom: -Math.round(rS / 2), right: -Math.round(rS / 2), zIndex: 10, touchAction: "none", boxShadow: el.type === "text" ? `0 0 ${Math.round(8 * S)}px rgba(59,91,219,0.8)` : "none", display: "flex", alignItems: "center", justifyContent: "center" }}
                   onMouseDown={(e) => { e.stopPropagation(); handleResizeDown(e, el); }}
                   onTouchStart={(e) => { e.stopPropagation(); handleResizeTouchStart(e, el); }}
                 >
@@ -1332,7 +1332,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
           {/* Modificar Layout */}
           <button onClick={() => { setShowLayoutPicker(true); closeBgCtx(); }}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-purple-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-500 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
             <LayoutTemplate size={15} /> Modificar layout
           </button>
 
@@ -1348,7 +1348,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         <div className="absolute inset-0 flex flex-col items-center justify-end pointer-events-none" style={{ zIndex: 10, paddingBottom: slide.height * 0.06 }}>
           <button
             className="pointer-events-auto flex items-center gap-2 px-5 py-3 rounded-2xl text-white font-semibold transition-all active:scale-95"
-            style={{ fontSize: slide.width * 0.022, background: "rgba(168,85,247,0.18)", border: "1.5px solid rgba(168,85,247,0.45)", backdropFilter: "blur(8px)", boxShadow: "0 0 24px rgba(168,85,247,0.25)" }}
+            style={{ fontSize: slide.width * 0.022, background: "rgba(76,110,245,0.18)", border: "1.5px solid rgba(76,110,245,0.45)", backdropFilter: "blur(8px)", boxShadow: "0 0 24px rgba(76,110,245,0.25)" }}
             onClick={(e) => { e.stopPropagation(); generateBg(); }}
           >
             <Wand2 style={{ width: slide.width * 0.025, height: slide.width * 0.025 }} />
@@ -1409,7 +1409,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-2">
-            <LayoutTemplate size={18} className="text-purple-400" />
+            <LayoutTemplate size={18} className="text-brand-500" />
             <span className="text-base font-bold text-white">Escolher layout</span>
             <button onClick={() => setShowLayoutPicker(false)} className="ml-auto text-gray-500 hover:text-white transition-colors"><X size={16} /></button>
           </div>
@@ -1427,16 +1427,16 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               <button
                 key={v}
                 onClick={() => applyLayout(v)}
-                className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[#222] bg-[#0a0a0a] hover:border-purple-500/50 hover:bg-purple-500/5 transition-all group"
+                className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[#222] bg-[#0a0a0a] hover:border-brand-500/50 hover:bg-brand-600/5 transition-all group"
               >
                 {/* Mini visual preview */}
                 <div className="w-12 h-16 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] relative overflow-hidden">
-                  {v === 0 && (<><div className="absolute inset-0 bg-purple-500/20" /><div className="absolute bottom-0 inset-x-0 h-2/5 bg-black/60" /><div className="absolute bottom-2 inset-x-1.5 h-2 bg-white/40 rounded-sm" /><div className="absolute bottom-5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /></>)}
-                  {v === 1 && (<><div className="absolute inset-0 bg-purple-500/20" /><div className="absolute top-0 inset-x-0 h-2/5 bg-black/50" /><div className="absolute top-3 left-1.5 w-1 h-3 bg-purple-400/60 rounded-sm" /><div className="absolute top-3 left-3.5 right-1.5 h-2 bg-white/40 rounded-sm" /></>)}
-                  {v === 2 && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[#222]" /><div className="absolute top-2 inset-x-1.5 h-2 bg-white/40 rounded-sm" /><div className="absolute top-5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-purple-500/25 rounded-b-lg" /></>)}
-                  {v === 3 && (<><div className="absolute top-0 inset-x-0 h-1/3 bg-[#222]" /><div className="absolute top-2 inset-x-1.5 h-2.5 bg-white/40 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-2/3 bg-purple-500/25 rounded-b-lg" /></>)}
-                  {v === 4 && (<><div className="absolute top-0 inset-x-0 h-1/5 bg-[#222]" /><div className="absolute top-5 inset-x-2 bottom-5 bg-purple-500/30 rounded-md" /><div className="absolute bottom-1.5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /></>)}
-                  {v === 5 && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-purple-500/30" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#222]" /><div className="absolute bottom-4 inset-x-1.5 h-2 bg-white/40 rounded-sm" /><div className="absolute bottom-1.5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /></>)}
+                  {v === 0 && (<><div className="absolute inset-0 bg-brand-500/15" /><div className="absolute bottom-0 inset-x-0 h-2/5 bg-black/60" /><div className="absolute bottom-2 inset-x-1.5 h-2 bg-white/40 rounded-sm" /><div className="absolute bottom-5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /></>)}
+                  {v === 1 && (<><div className="absolute inset-0 bg-brand-500/15" /><div className="absolute top-0 inset-x-0 h-2/5 bg-black/50" /><div className="absolute top-3 left-1.5 w-1 h-3 bg-purple-400/60 rounded-sm" /><div className="absolute top-3 left-3.5 right-1.5 h-2 bg-white/40 rounded-sm" /></>)}
+                  {v === 2 && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[#222]" /><div className="absolute top-2 inset-x-1.5 h-2 bg-white/40 rounded-sm" /><div className="absolute top-5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-brand-600/25 rounded-b-lg" /></>)}
+                  {v === 3 && (<><div className="absolute top-0 inset-x-0 h-1/3 bg-[#222]" /><div className="absolute top-2 inset-x-1.5 h-2.5 bg-white/40 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-2/3 bg-brand-600/25 rounded-b-lg" /></>)}
+                  {v === 4 && (<><div className="absolute top-0 inset-x-0 h-1/5 bg-[#222]" /><div className="absolute top-5 inset-x-2 bottom-5 bg-brand-500/25 rounded-md" /><div className="absolute bottom-1.5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /></>)}
+                  {v === 5 && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-brand-500/25" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#222]" /><div className="absolute bottom-4 inset-x-1.5 h-2 bg-white/40 rounded-sm" /><div className="absolute bottom-1.5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /></>)}
                 </div>
                 <div className="text-center">
                   <p className="text-xs font-semibold text-gray-200 group-hover:text-white transition-colors">{label}</p>

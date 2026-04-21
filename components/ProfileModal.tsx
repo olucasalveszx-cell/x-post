@@ -32,7 +32,7 @@ const PLAN_LABEL: Record<string, string> = {
   free: "Free", basic: "Basic", pro: "Pro", business: "Business",
 };
 const PLAN_COLOR: Record<string, string> = {
-  free: "#9ca3af", basic: "#60a5fa", pro: "#a855f7", business: "#f59e0b",
+  free: "#9ca3af", basic: "#60a5fa", pro: "#4c6ef5", business: "#f59e0b",
 };
 
 interface Props {
@@ -134,8 +134,8 @@ export default function ProfileModal({ open, onClose }: Props) {
               {/* Total badge */}
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
                 style={{
-                  background: credits.total > 5 ? "rgba(168,85,247,0.12)" : credits.total > 0 ? "rgba(251,191,36,0.12)" : "rgba(239,68,68,0.12)",
-                  color: credits.total > 5 ? "#c084fc" : credits.total > 0 ? "#fbbf24" : "#f87171",
+                  background: credits.total > 5 ? "rgba(76,110,245,0.12)" : credits.total > 0 ? "rgba(251,191,36,0.12)" : "rgba(239,68,68,0.12)",
+                  color: credits.total > 5 ? "##818cf8" : credits.total > 0 ? "#fbbf24" : "#f87171",
                 }}>
                 <Zap size={11} />
                 <span className="text-xs font-black">{credits.total}</span>
@@ -149,7 +149,7 @@ export default function ProfileModal({ open, onClose }: Props) {
                 <div className="h-full rounded-full transition-all"
                   style={{
                     width: `${Math.min(100, (credits.used / credits.limit) * 100)}%`,
-                    background: credits.used / credits.limit > 0.85 ? "#ef4444" : credits.used / credits.limit > 0.6 ? "#f59e0b" : "#a855f7",
+                    background: credits.used / credits.limit > 0.85 ? "#ef4444" : credits.used / credits.limit > 0.6 ? "#f59e0b" : "#4c6ef5",
                   }} />
               </div>
             </div>
@@ -163,7 +163,7 @@ export default function ProfileModal({ open, onClose }: Props) {
               </p>
               <div className="flex items-center gap-2">
                 <Link href="/credits" onClick={onClose}
-                  className="text-[11px] font-semibold text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-0.5">
+                  className="text-[11px] font-semibold text-brand-500 hover:text-brand-400 transition-colors flex items-center gap-0.5">
                   Comprar mais <ArrowRight size={10} />
                 </Link>
                 <span className="text-gray-700">·</span>
@@ -183,7 +183,7 @@ export default function ProfileModal({ open, onClose }: Props) {
               key={t}
               onClick={() => setTab(t)}
               className={`flex-1 py-3 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
-                tab === t ? "text-white border-b-2 border-purple-500" : "text-gray-500 hover:text-gray-300"
+                tab === t ? "text-white border-b-2 border-brand-500" : "text-gray-500 hover:text-gray-300"
               }`}
             >
               {t === "history" ? <><Layers size={13} /> Histórico</> : t === "images" ? <><ImageIcon size={13} /> Biblioteca</> : <><Instagram size={13} /> Instagram</>}
@@ -195,7 +195,7 @@ export default function ProfileModal({ open, onClose }: Props) {
         <div className="flex-1 overflow-y-auto p-4">
           {loading && (
             <div className="flex justify-center py-12">
-              <Loader2 size={22} className="text-purple-400 animate-spin" />
+              <Loader2 size={22} className="text-brand-500 animate-spin" />
             </div>
           )}
 
@@ -236,7 +236,7 @@ export default function ProfileModal({ open, onClose }: Props) {
                           download
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-1 flex items-center justify-center gap-1 py-1 rounded-lg text-[10px] font-medium text-purple-400 border border-purple-500/30 hover:bg-purple-500/10 transition-colors"
+                          className="mt-1 flex items-center justify-center gap-1 py-1 rounded-lg text-[10px] font-medium text-brand-500 border border-brand-500/30 hover:bg-brand-500/8 transition-colors"
                         >
                           <Download size={11} /> Baixar capa
                         </a>
@@ -353,7 +353,7 @@ export default function ProfileModal({ open, onClose }: Props) {
             <Link
               href="/admin"
               onClick={onClose}
-              className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 font-semibold transition-colors border border-purple-500/30 hover:border-purple-500/60 px-2.5 py-1.5 rounded-lg"
+              className="flex items-center gap-1.5 text-xs text-brand-500 hover:text-brand-400 font-semibold transition-colors border border-brand-500/30 hover:border-brand-500/60 px-2.5 py-1.5 rounded-lg"
             >
               <LayoutDashboard size={13} /> Dashboard
             </Link>

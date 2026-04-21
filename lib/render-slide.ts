@@ -155,7 +155,7 @@ export async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
       } catch {}
     } else if (el.type === "shape") {
       const s = el.style as any;
-      ctx.fillStyle = s?.fill ?? "#a855f7";
+      ctx.fillStyle = s?.fill ?? "#4c6ef5";
       ctx.fillRect(el.x, el.y, el.width, el.height);
     } else if (el.type === "profile") {
       const avatarD = el.height * 0.72;

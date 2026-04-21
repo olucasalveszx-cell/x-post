@@ -460,8 +460,8 @@ export default function GeneratorPanel({ onGenerate }: Props) {
                   <div
                     className="w-2 h-2 rounded-full transition-all duration-300"
                     style={{
-                      background: status === s ? "#a855f7" : ["searching", "generating", "images"].indexOf(status) > i ? "#6b21a8" : "#1f1f1f",
-                      boxShadow: status === s ? "0 0 8px #a855f7" : "none",
+                      background: status === s ? "#4c6ef5" : ["searching", "generating", "images"].indexOf(status) > i ? "#6b21a8" : "#1f1f1f",
+                      boxShadow: status === s ? "0 0 8px #4c6ef5" : "none",
                     }}
                   />
                   {i < 2 && <div className="w-6 h-px bg-[#222]" />}
@@ -488,7 +488,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
           </button>
         ) : (() => {
           const PLAN_STYLE: Record<string, { label: string; color: string; bg: string; border: string }> = {
-            god:      { label: "God",      color: "#a855f7", bg: "rgba(168,85,247,0.10)",  border: "rgba(168,85,247,0.25)" },
+            god:      { label: "God",      color: "#4c6ef5", bg: "rgba(76,110,245,0.10)",  border: "rgba(76,110,245,0.25)" },
             business: { label: "Business", color: "#f59e0b", bg: "rgba(245,158,11,0.10)",  border: "rgba(245,158,11,0.25)" },
             pro:      { label: "Pro",      color: "#ec4899", bg: "rgba(236,72,153,0.10)",  border: "rgba(236,72,153,0.25)" },
             basic:    { label: "Básico",   color: "#60a5fa", bg: "rgba(96,165,250,0.10)",  border: "rgba(96,165,250,0.25)" },
@@ -591,11 +591,11 @@ export default function GeneratorPanel({ onGenerate }: Props) {
                             }`}
                           >
                             <div className="w-6 h-8 rounded-sm overflow-hidden bg-[#111] border border-[#2a2a2a] relative">
-                              {lyt.value === "full"   && <div className="absolute inset-0 bg-purple-500/30" />}
-                              {lyt.value === "mixed"  && (<><div className="absolute inset-0 bg-purple-500/20" /><div className="absolute bottom-0 inset-x-0 h-1/3 bg-[#111]" /></>)}
-                              {lyt.value === "square" && (<><div className="absolute inset-x-0.5 top-0.5 bottom-2 bg-purple-500/30 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-1.5 bg-[#111]" /></>)}
-                              {lyt.value === "top"    && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-purple-500/30" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#111]" /></>)}
-                              {lyt.value === "base"   && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[#111]" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-purple-500/30" /></>)}
+                              {lyt.value === "full"   && <div className="absolute inset-0 bg-brand-500/25" />}
+                              {lyt.value === "mixed"  && (<><div className="absolute inset-0 bg-brand-500/15" /><div className="absolute bottom-0 inset-x-0 h-1/3 bg-[#111]" /></>)}
+                              {lyt.value === "square" && (<><div className="absolute inset-x-0.5 top-0.5 bottom-2 bg-brand-500/25 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-1.5 bg-[#111]" /></>)}
+                              {lyt.value === "top"    && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-brand-500/25" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#111]" /></>)}
+                              {lyt.value === "base"   && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[#111]" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-brand-500/25" /></>)}
                             </div>
                             <span className={`text-[8px] font-medium ${active ? "text-white" : "text-gray-500"}`}>{lyt.label}</span>
                           </button>
@@ -618,12 +618,12 @@ export default function GeneratorPanel({ onGenerate }: Props) {
               <div
                 className="flex items-center justify-between px-3 py-2 rounded-lg text-xs"
                 style={{
-                  background: credits.remaining > 5 ? "rgba(168,85,247,0.07)" : credits.remaining > 0 ? "rgba(251,191,36,0.07)" : "rgba(239,68,68,0.07)",
-                  border: `1px solid ${credits.remaining > 5 ? "rgba(168,85,247,0.2)" : credits.remaining > 0 ? "rgba(251,191,36,0.2)" : "rgba(239,68,68,0.2)"}`,
+                  background: credits.remaining > 5 ? "rgba(76,110,245,0.07)" : credits.remaining > 0 ? "rgba(251,191,36,0.07)" : "rgba(239,68,68,0.07)",
+                  border: `1px solid ${credits.remaining > 5 ? "rgba(76,110,245,0.2)" : credits.remaining > 0 ? "rgba(251,191,36,0.2)" : "rgba(239,68,68,0.2)"}`,
                 }}
               >
                 <span
-                  style={{ color: credits.remaining > 5 ? "#c084fc" : credits.remaining > 0 ? "#fbbf24" : "#f87171" }}
+                  style={{ color: credits.remaining > 5 ? "##818cf8" : credits.remaining > 0 ? "#fbbf24" : "#f87171" }}
                   className="flex items-center gap-1"
                 >
                   <Zap size={11} />

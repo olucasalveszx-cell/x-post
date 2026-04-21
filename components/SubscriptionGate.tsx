@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Loader2, Lock, ArrowRight, Check } from "lucide-react";
+import { Loader2, Lock, ArrowRight, Check, Sparkles } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
+import AppLogo from "@/components/AppLogo";
 
 const PLANS = [
   { key: "basic",    label: "Básico",   price: "29,90", period: "mês" },
@@ -67,7 +68,7 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
     return (
       <div className="min-h-screen bg-[#060606] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 size={28} className="text-purple-400 animate-spin" />
+          <Loader2 size={28} className="text-brand-500 animate-spin" />
           <p className="text-sm text-gray-500">Verificando acesso...</p>
         </div>
       </div>
@@ -85,9 +86,9 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
         <button onClick={() => router.push("/")} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm">
           ← Voltar
         </button>
-        <span className="font-black text-sm tracking-tight">XPost Zone</span>
+        <AppLogo variant="dark" size={28} textClassName="font-black text-sm tracking-tight text-white" />
         {!session?.user ? (
-          <button onClick={() => setLoginOpen(true)} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+          <button onClick={() => setLoginOpen(true)} className="text-xs text-brand-500 hover:text-brand-400 transition-colors">
             Já tenho conta
           </button>
         ) : (
@@ -99,19 +100,19 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-16">
         {/* Ícone */}
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
-          style={{ background: "linear-gradient(135deg, rgba(124,58,237,0.3), rgba(168,85,247,0.2))", border: "1px solid rgba(168,85,247,0.3)" }}>
-          <Lock size={28} className="text-purple-400" />
+          style={{ background: "linear-gradient(135deg, rgba(59,91,219,0.3), rgba(76,110,245,0.2))", border: "1px solid rgba(76,110,245,0.3)" }}>
+          <Lock size={28} className="text-brand-500" />
         </div>
 
         <h1 className="text-3xl md:text-4xl font-black text-center mb-3">
           Seus créditos acabaram<br />
-          <span style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          <span style={{ background: "linear-gradient(135deg,#4c6ef5,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             assine para continuar
           </span>
         </h1>
         <p className="text-gray-500 text-center mb-12 max-w-md">
           Você usou todos os seus créditos gratuitos. Assine um plano ou{" "}
-          <a href="/credits" className="text-purple-400 hover:text-purple-300 underline">compre mais créditos</a>{" "}
+          <a href="/credits" className="text-brand-500 hover:text-brand-400 underline">compre mais créditos</a>{" "}
           para continuar criando.
         </p>
 
@@ -120,12 +121,12 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
           {PLANS.map((plan) => (
             <div
               key={plan.key}
-              className={`rounded-2xl p-5 flex flex-col gap-4 relative ${plan.popular ? "border-2 border-purple-500" : "border border-white/10"}`}
-              style={plan.popular ? { background: "linear-gradient(135deg,rgba(124,58,237,0.15),rgba(168,85,247,0.08))" } : { background: "rgba(255,255,255,0.03)" }}
+              className={`rounded-2xl p-5 flex flex-col gap-4 relative ${plan.popular ? "border-2 border-brand-500" : "border border-white/10"}`}
+              style={plan.popular ? { background: "linear-gradient(135deg,rgba(59,91,219,0.15),rgba(76,110,245,0.08))" } : { background: "rgba(255,255,255,0.03)" }}
             >
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold"
-                  style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white" }}>
+                  style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", color: "white" }}>
                   Mais popular
                 </div>
               )}
@@ -135,7 +136,7 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
                 </div>
               )}
 
-              <p className="text-xs font-bold uppercase tracking-widest text-purple-400">{plan.label}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-brand-500">{plan.label}</p>
 
               <div>
                 <p className="text-3xl font-black">R${plan.price}</p>
@@ -147,7 +148,7 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
                 disabled={loadingPlan !== null}
                 className="w-full py-3 rounded-xl font-bold text-sm transition-all hover:scale-105 disabled:opacity-40 flex items-center justify-center gap-1.5"
                 style={plan.popular
-                  ? { background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white" }
+                  ? { background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", color: "white" }
                   : { background: "rgba(255,255,255,0.07)", color: "white" }}
               >
                 {loadingPlan === plan.key ? (
@@ -163,7 +164,7 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
         <div className="flex flex-wrap justify-center gap-4 mt-8 text-sm text-gray-600">
           {["Cancele quando quiser", "Sem fidelidade", "Suporte dedicado"].map((f) => (
             <span key={f} className="flex items-center gap-1.5">
-              <Check size={12} className="text-purple-500" /> {f}
+              <Check size={12} className="text-brand-600" /> {f}
             </span>
           ))}
         </div>
@@ -171,7 +172,7 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
         {!session?.user && (
           <p className="mt-6 text-xs text-gray-600">
             Já assinou?{" "}
-            <button onClick={() => setLoginOpen(true)} className="text-purple-400 hover:text-purple-300 underline transition-colors">
+            <button onClick={() => setLoginOpen(true)} className="text-brand-500 hover:text-brand-400 underline transition-colors">
               Entrar
             </button>
           </p>

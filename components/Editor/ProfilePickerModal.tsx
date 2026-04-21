@@ -67,7 +67,7 @@ export default function ProfilePickerModal({ open, onClose }: Props) {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}>
       <div className="relative w-full max-w-lg rounded-3xl overflow-hidden"
-        style={{ background: "#0d0d0d", border: "1px solid rgba(168,85,247,0.25)", boxShadow: "0 32px 80px rgba(0,0,0,0.7), 0 0 80px rgba(124,58,237,0.15)" }}>
+        style={{ background: "#0d0d0d", border: "1px solid rgba(76,110,245,0.25)", boxShadow: "0 32px 80px rgba(0,0,0,0.7), 0 0 80px rgba(59,91,219,0.15)" }}>
 
         {/* Header */}
         <div className="px-7 pt-7 pb-5">
@@ -89,13 +89,13 @@ export default function ProfilePickerModal({ open, onClose }: Props) {
                 onClick={() => setSelected(p.key)}
                 className="flex flex-col items-center gap-1.5 px-2 py-3 rounded-2xl text-center transition-all hover:scale-[1.03]"
                 style={{
-                  background: active ? "rgba(124,58,237,0.2)" : "rgba(255,255,255,0.04)",
-                  border: active ? "1.5px solid rgba(168,85,247,0.7)" : "1px solid rgba(255,255,255,0.07)",
-                  boxShadow: active ? "0 0 16px rgba(124,58,237,0.25)" : "none",
+                  background: active ? "rgba(59,91,219,0.2)" : "rgba(255,255,255,0.04)",
+                  border: active ? "1.5px solid rgba(76,110,245,0.7)" : "1px solid rgba(255,255,255,0.07)",
+                  boxShadow: active ? "0 0 16px rgba(59,91,219,0.25)" : "none",
                 }}>
                 <span style={{ fontSize: 24 }}>{p.emoji}</span>
                 <span className="text-[11px] font-semibold leading-tight"
-                  style={{ color: active ? "#c084fc" : "#9ca3af" }}>
+                  style={{ color: active ? "##818cf8" : "#9ca3af" }}>
                   {p.label}
                 </span>
               </button>
@@ -125,7 +125,7 @@ export default function ProfilePickerModal({ open, onClose }: Props) {
             onClick={handleConfirm}
             disabled={!canConfirm}
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:scale-105 disabled:opacity-30 disabled:cursor-not-allowed"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: canConfirm ? "0 4px 20px rgba(124,58,237,0.4)" : "none" }}>
+            style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", boxShadow: canConfirm ? "0 4px 20px rgba(59,91,219,0.4)" : "none" }}>
             Confirmar <ChevronRight size={15} />
           </button>
         </div>

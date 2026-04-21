@@ -21,6 +21,8 @@ import ProfilePickerModal, { UserProfile, getStoredProfile, saveProfile, PROFILE
 import { autosaveWrite, autosaveRead, autosaveClear } from "@/lib/autosave-db";
 import ProfileModal from "@/components/ProfileModal";
 import StyleSelectorModal from "@/components/Editor/StyleSelectorModal";
+import AppLogo from "@/components/AppLogo";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface IGAccount { token: string; accountId: string; username: string; }
 
@@ -45,7 +47,7 @@ export default function EditorPage() {
     return {
       projects: [{
         id: pid, name: "Projeto 1",
-        slides: [{ id: uuid(), backgroundColor: "#1a0533", elements: [], width: 1080, height: 1350 }],
+        slides: [{ id: uuid(), backgroundColor: "#080e40", elements: [], width: 1080, height: 1350 }],
       }] as Project[],
       activeProjectId: pid,
     };
@@ -276,7 +278,7 @@ export default function EditorPage() {
 
   const addSlide = useCallback(() => {
     const pid = activeProjectIdRef.current;
-    const newSlide: Slide = { id: uuid(), backgroundColor: "#1a0533", elements: [], width: SLIDE_W, height: SLIDE_H };
+    const newSlide: Slide = { id: uuid(), backgroundColor: "#080e40", elements: [], width: SLIDE_W, height: SLIDE_H };
     setProjects((prev) => {
       const next = prev.map((p) => p.id !== pid ? p : { ...p, slides: [...p.slides, newSlide] });
       const newLen = next.find((p) => p.id === pid)?.slides.length ?? 1;
@@ -461,6 +463,26 @@ export default function EditorPage() {
     }
   }, [setProjects, pushHistory, applyTwitterStyle]);
 
+  const applyThemeToAll = useCallback((bg: string, textColor: string) => {
+    const pid = activeProjectIdRef.current;
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== pid) return p;
+      const newSlides = p.slides.map((s) => ({
+        ...s,
+        backgroundColor: bg,
+        backgroundImageUrl: undefined,
+        backgroundGradient: undefined,
+        elements: s.elements.map((el) =>
+          el.type === "text"
+            ? { ...el, style: { ...(el.style as any), color: textColor } }
+            : el
+        ),
+      }));
+      pushHistory(newSlides);
+      return { ...p, slides: newSlides };
+    }));
+  }, [setProjects, pushHistory]);
+
   const handleFormatChange = (f: Format) => {
     setFormat(f);
     setProjects((prev) => prev.map((p) => ({
@@ -580,23 +602,18 @@ export default function EditorPage() {
           <Link href="/" className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-colors">
             <ArrowLeft size={18} />
           </Link>
-          <div className="flex items-center gap-1.5 select-none">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-[15px] text-white"
-              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 0 10px rgba(124,58,237,0.4)" }}>
-              X
-            </div>
-            <span className="hidden sm:block text-[18px] font-black tracking-tight text-white leading-none">xpost</span>
-          </div>
+          <AppLogo variant="dark" size={28} textClassName="hidden sm:block text-[18px] font-black tracking-tight text-white leading-none" />
         </div>
 
         <div className="flex items-center gap-1.5">
+          <ThemeToggle />
           {credits && (
             <Link href="/credits"
               className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-semibold transition-opacity hover:opacity-80"
               style={{
-                background: (credits as any).total > 10 ? "rgba(168,85,247,0.1)" : (credits as any).total > 0 ? "rgba(251,191,36,0.1)" : "rgba(239,68,68,0.1)",
-                borderColor: (credits as any).total > 10 ? "rgba(168,85,247,0.3)" : (credits as any).total > 0 ? "rgba(251,191,36,0.3)" : "rgba(239,68,68,0.3)",
-                color: (credits as any).total > 10 ? "#c084fc" : (credits as any).total > 0 ? "#fbbf24" : "#f87171",
+                background: (credits as any).total > 10 ? "rgba(76,110,245,0.1)" : (credits as any).total > 0 ? "rgba(251,191,36,0.1)" : "rgba(239,68,68,0.1)",
+                borderColor: (credits as any).total > 10 ? "rgba(76,110,245,0.3)" : (credits as any).total > 0 ? "rgba(251,191,36,0.3)" : "rgba(239,68,68,0.3)",
+                color: (credits as any).total > 10 ? "##818cf8" : (credits as any).total > 0 ? "#fbbf24" : "#f87171",
               }}>
               <Zap size={11} />
               {`${(credits as any).total ?? credits.remaining}/${credits.limit}`}
@@ -608,7 +625,7 @@ export default function EditorPage() {
               onClick={() => setShowProfilePicker(true)}
               title="Alterar perfil"
               className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all hover:brightness-110"
-              style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(168,85,247,0.3)", color: "#c084fc" }}>
+              style={{ background: "rgba(59,91,219,0.15)", border: "1px solid rgba(76,110,245,0.3)", color: "##818cf8" }}>
               <span style={{ fontSize: 13 }}>
                 {["advocacia","nutricao","odonto","saude","noticias","marketing","fitness","educacao","beleza","gastronomia"].includes(userProfile.key)
                   ? ["⚖️","🥗","🦷","🏥","📰","📈","💪","📚","💄","🍽️"][["advocacia","nutricao","odonto","saude","noticias","marketing","fitness","educacao","beleza","gastronomia"].indexOf(userProfile.key)]
@@ -619,7 +636,7 @@ export default function EditorPage() {
           )}
           <AuthButton />
           <button onClick={() => setShowAI(true)}
-            className="flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-purple-700 bg-purple-900/30 hover:bg-purple-800/40 text-purple-300 transition-colors">
+            className="flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-purple-700 bg-purple-900/30 hover:bg-purple-800/40 text-brand-400 transition-colors">
             <MessageCircle size={15} />
             <span className="hidden md:inline">Zora IA</span>
           </button>
@@ -715,6 +732,7 @@ export default function EditorPage() {
                 const f = FORMATS.find((f) => f.label === label);
                 if (f) handleFormatChange(f);
               }}
+              onApplyThemeToAll={applyThemeToAll}
             />
           )}
 
@@ -809,7 +827,7 @@ export default function EditorPage() {
           ].map((tab) => (
             <button key={tab.id} onClick={tab.action}
               className="flex flex-col items-center justify-center gap-1 py-3.5 transition-colors"
-              style={{ color: tab.active ? "#a855f7" : "#6b7280", background: tab.active ? "rgba(168,85,247,0.08)" : "transparent", fontSize: 11, touchAction: "manipulation" }}>
+              style={{ color: tab.active ? "#4c6ef5" : "#6b7280", background: tab.active ? "rgba(76,110,245,0.08)" : "transparent", fontSize: 11, touchAction: "manipulation" }}>
               {tab.icon}
               <span>{tab.label}</span>
             </button>

@@ -27,7 +27,7 @@ function buildAISlide(
   w: number,
   h: number,
 ): Slide {
-  const accent = data.accentColor ?? "#a855f7";
+  const accent = data.accentColor ?? "#4c6ef5";
   const gradient = "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.97) 28%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.1) 72%, rgba(0,0,0,0) 100%)";
   const titleY = h - 510;
   const bodyY  = h - 192;
@@ -105,7 +105,7 @@ export default function HorizontalSlidePanel({
     const newProject: Project = {
       id: uuid(),
       name: `Projeto ${projects.length + 1}`,
-      slides: [{ id: uuid(), backgroundColor: "#1a0533", elements: [], width: slideWidth, height: slideHeight }],
+      slides: [{ id: uuid(), backgroundColor: "#080e40", elements: [], width: slideWidth, height: slideHeight }],
     };
     onProjectsChange([...projects, newProject]);
     onSelectSlide(newProject.id, 0);
@@ -132,7 +132,7 @@ export default function HorizontalSlidePanel({
   const addBlankSlide = (projectId: string) => {
     const project = projects.find((p) => p.id === projectId);
     if (!project) return;
-    const newSlide: Slide = { id: uuid(), backgroundColor: "#1a0533", elements: [], width: slideWidth, height: slideHeight };
+    const newSlide: Slide = { id: uuid(), backgroundColor: "#080e40", elements: [], width: slideWidth, height: slideHeight };
     const newSlides = [...project.slides, newSlide];
     onProjectsChange(projects.map((p) => p.id === projectId ? { ...p, slides: newSlides } : p));
     onSelectSlide(projectId, newSlides.length - 1);
@@ -239,7 +239,7 @@ export default function HorizontalSlidePanel({
                     <button
                       onClick={() => startRename(project)}
                       className="flex items-center gap-1.5 text-xs font-semibold hover:text-white transition-colors group"
-                      style={{ color: isActive ? "#c084fc" : "#6b7280" }}
+                      style={{ color: isActive ? "##818cf8" : "#6b7280" }}
                     >
                       {project.name}
                       <Edit2 size={9} className="opacity-0 group-hover:opacity-40 transition-opacity" />
@@ -267,9 +267,9 @@ export default function HorizontalSlidePanel({
                       className="relative shrink-0 rounded-lg overflow-hidden transition-all group"
                       style={{
                         width: THUMB_W, height: THUMB_H,
-                        backgroundColor: slide.backgroundColor ?? "#1a0533",
-                        border: isActiveSlide ? "2px solid #a855f7" : "2px solid transparent",
-                        outline: isActiveSlide ? "1px solid rgba(168,85,247,0.3)" : "none",
+                        backgroundColor: slide.backgroundColor ?? "#080e40",
+                        border: isActiveSlide ? "2px solid #4c6ef5" : "2px solid transparent",
+                        outline: isActiveSlide ? "1px solid rgba(76,110,245,0.3)" : "none",
                         outlineOffset: 1,
                       }}
                     >
@@ -356,7 +356,7 @@ export default function HorizontalSlidePanel({
         {/* AI generation */}
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-1.5">
-            <Sparkles size={12} className="text-purple-400" />
+            <Sparkles size={12} className="text-brand-500" />
             <p className="text-xs font-semibold text-white">Gerar com IA</p>
           </div>
 
@@ -367,14 +367,14 @@ export default function HorizontalSlidePanel({
             placeholder="Tema ou ideia para o slide..."
             rows={2}
             autoFocus
-            className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-xl px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500 resize-none"
+            className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-xl px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-500 resize-none"
           />
 
           {/* Include image toggle */}
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <div
               onClick={() => setAiImage((v) => !v)}
-              className={`w-8 h-4 rounded-full transition-colors relative ${aiImage ? "bg-purple-600" : "bg-[#2a2a2a]"}`}
+              className={`w-8 h-4 rounded-full transition-colors relative ${aiImage ? "bg-brand-700" : "bg-[#2a2a2a]"}`}
             >
               <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${aiImage ? "translate-x-4" : "translate-x-0.5"}`} />
             </div>
@@ -391,7 +391,7 @@ export default function HorizontalSlidePanel({
             onClick={() => generateAISlide(aiTarget)}
             disabled={aiGenerating || !aiTopic.trim()}
             className="w-full py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-40"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white" }}
+            style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", color: "white" }}
           >
             {aiGenerating
               ? <><Loader2 size={13} className="animate-spin" /> {aiImage ? "Gerando texto e imagem..." : "Gerando..."}</>

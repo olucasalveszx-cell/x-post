@@ -2,38 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Tema claro (padrão) ──────────────────────────────────────── */
 :root {
-  --background: #050505;
-  --foreground: #e8e8e8;
+  --bg:          #f4f4f5;
+  --bg-2:        #ffffff;
+  --bg-3:        #e8e8eb;
+  --bg-4:        #dddde2;
+  --text:        #111111;
+  --text-2:      #555555;
+  --text-3:      #888888;
+  --border:      rgba(0,0,0,0.09);
+  --border-2:    rgba(0,0,0,0.16);
+  --accent:      #3b5bdb;
+  --accent-2:    #4c6ef5;
+  --accent-glow: rgba(59,91,219,0.25);
+  --scrollbar:   #c0c0c8;
 }
 
-* {
-  box-sizing: border-box;
+/* ── Tema escuro ──────────────────────────────────────────────── */
+.dark {
+  --bg:          #0a0a0a;
+  --bg-2:        #111111;
+  --bg-3:        #1a1a1a;
+  --bg-4:        #232323;
+  --text:        #f0f0f0;
+  --text-2:      #999999;
+  --text-3:      #555555;
+  --border:      rgba(255,255,255,0.07);
+  --border-2:    rgba(255,255,255,0.13);
+  --accent:      #4c6ef5;
+  --accent-2:    #3b5bdb;
+  --accent-glow: rgba(76,110,245,0.30);
+  --scrollbar:   #333333;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg);
+  color: var(--text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-/* Scrollbar customizado */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0a0a0a;
-}
-::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #666;
-}
+/* ── Classes utilitárias de tema ─────────────────────────────── */
+.bg-app    { background: var(--bg); }
+.bg-panel  { background: var(--bg-2); }
+.bg-card   { background: var(--bg-3); }
+.bg-raised { background: var(--bg-4); }
 
-/* Slide canvas */
+.text-primary   { color: var(--text); }
+.text-secondary { color: var(--text-2); }
+.text-tertiary  { color: var(--text-3); }
+
+.border-theme  { border-color: var(--border); }
+.border-theme2 { border-color: var(--border-2); }
+
+.accent-bg   { background: var(--accent); }
+.accent-text { color: var(--accent); }
+
+/* ── Scrollbar ───────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+/* ── Slide canvas ────────────────────────────────────────────── */
 .slide-canvas {
   position: relative;
   overflow: hidden;
@@ -41,49 +74,30 @@ body {
   user-select: none;
 }
 
-.slide-element {
-  position: absolute;
-  cursor: move;
-}
-
-.slide-element.selected {
-  outline: 2px solid #a855f7;
-  outline-offset: 2px;
-}
+.slide-element { position: absolute; cursor: move; }
+.slide-element.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .resize-handle {
   position: absolute;
-  width: 8px;
-  height: 8px;
-  background: #a855f7;
+  width: 8px; height: 8px;
+  background: var(--accent);
   border: 1px solid white;
   border-radius: 50%;
   cursor: se-resize;
-  bottom: -4px;
-  right: -4px;
+  bottom: -4px; right: -4px;
   z-index: 10;
 }
 
-/* Esconder scrollbar em toolbars */
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+/* ── Scrollbar oculta em toolbars ────────────────────────────── */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Resize handle maior no mobile */
+/* ── Resize handle maior no mobile ──────────────────────────── */
 @media (max-width: 768px) {
-  .resize-handle {
-    width: 16px;
-    height: 16px;
-    bottom: -8px;
-    right: -8px;
-  }
+  .resize-handle { width: 16px; height: 16px; bottom: -8px; right: -8px; }
 }
 
-/* Marquee infinito */
+/* ── Marquee ─────────────────────────────────────────────────── */
 @keyframes scroll-left {
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
@@ -94,18 +108,11 @@ body {
 }
 
 .marquee-left {
-  display: flex;
-  gap: 12px;
-  width: max-content;
+  display: flex; gap: 12px; width: max-content;
   animation: scroll-left linear infinite;
 }
 .marquee-right {
-  display: flex;
-  gap: 12px;
-  width: max-content;
+  display: flex; gap: 12px; width: max-content;
   animation: scroll-right linear infinite;
 }
-.marquee-left:hover,
-.marquee-right:hover {
-  animation-play-state: paused;
-}
+.marquee-left:hover, .marquee-right:hover { animation-play-state: paused; }

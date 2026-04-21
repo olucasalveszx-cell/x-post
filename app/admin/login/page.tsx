@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, Mail, Eye, EyeOff, Sparkles } from "lucide-react";
+import { Loader2, Lock, Mail, Eye, EyeOff } from "lucide-react";
+import AppLogo from "@/components/AppLogo";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -43,18 +44,10 @@ export default function AdminLoginPage() {
         {/* Header */}
         <div
           className="flex flex-col items-center gap-3 px-6 py-8"
-          style={{ background: "linear-gradient(135deg,#1a0533 0%,#0d0d1f 100%)", borderBottom: "1px solid #1e1e1e" }}
+          style={{ background: "linear-gradient(135deg,#080e40 0%,#0d0d1f 100%)", borderBottom: "1px solid #1e1e1e" }}
         >
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg,#a855f7,#ec4899)" }}
-          >
-            <Sparkles size={22} color="white" />
-          </div>
-          <div className="text-center">
-            <p className="font-black text-white text-lg tracking-tight">XPost Zone</p>
-            <p className="text-xs text-purple-400 mt-0.5">Painel Administrativo</p>
-          </div>
+          <AppLogo variant="dark" size={48} textClassName="font-black text-white text-lg tracking-tight" />
+          <p className="text-xs text-brand-500">Painel Administrativo</p>
         </div>
 
         {/* Form */}
@@ -100,7 +93,7 @@ export default function AdminLoginPage() {
             type="submit"
             disabled={loading}
             className="w-full py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white" }}
+            style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", color: "white" }}
           >
             {loading ? <Loader2 size={16} className="animate-spin" /> : "Entrar"}
           </button>

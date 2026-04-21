@@ -328,7 +328,7 @@ export default function TranslatePanel({ onGenerate }: Props) {
         <div className="grid grid-cols-2 gap-1.5">
           {([
             { value: "gemini",  label: "Gemini",   sub: "IA Google · padrão",  color: "text-blue-400" },
-            { value: "imagen3", label: "Imagen 3", sub: "IA Google · premium", color: "text-purple-400" },
+            { value: "imagen3", label: "Imagen 3", sub: "IA Google · premium", color: "text-brand-500" },
           ] as const).map((opt) => (
             <button
               key={opt.value}

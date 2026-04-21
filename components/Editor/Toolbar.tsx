@@ -1,6 +1,6 @@
 "use client";
 
-import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon } from "lucide-react";
+import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon, Palette } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import { useRef, useState, useEffect } from "react";
@@ -22,6 +22,37 @@ const FONTS = [
 const FORMATS = ["1:1", "4:5", "9:16", "16:9"] as const;
 type FormatLabel = typeof FORMATS[number];
 
+const SLIDE_THEMES = [
+  {
+    id: "dark",
+    label: "Preto",
+    bg: "#0a0a0a",
+    textColor: "#ffffff",
+    preview: { bg: "#0a0a0a", line: "#ffffff" },
+  },
+  {
+    id: "light",
+    label: "Branco",
+    bg: "#ffffff",
+    textColor: "#111111",
+    preview: { bg: "#ffffff", line: "#111111" },
+  },
+  {
+    id: "navy",
+    label: "Azul",
+    bg: "#0f172a",
+    textColor: "#e2e8f0",
+    preview: { bg: "#0f172a", line: "#818cf8" },
+  },
+  {
+    id: "cream",
+    label: "Creme",
+    bg: "#faf7f2",
+    textColor: "#1c1917",
+    preview: { bg: "#faf7f2", line: "#78716c" },
+  },
+] as const;
+
 interface Props {
   slide: Slide;
   onUpdate: (slide: Slide) => void;
@@ -38,13 +69,14 @@ interface Props {
   canRedo?: boolean;
   format?: FormatLabel;
   onFormatChange?: (f: FormatLabel) => void;
+  onApplyThemeToAll?: (bg: string, textColor: string) => void;
 }
 
 export default function Toolbar({
   slide, onUpdate, onAddSlide, onDeleteSlide,
   slideIndex, totalSlides, onPrev, onNext,
   selectedElement, onUndo, onRedo, canUndo, canRedo,
-  format = "4:5", onFormatChange,
+  format = "4:5", onFormatChange, onApplyThemeToAll,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -55,17 +87,20 @@ export default function Toolbar({
   const [editError, setEditError] = useState("");
   const [showLayouts, setShowLayouts] = useState(false);
   const [showMolds, setShowMolds] = useState(false);
+  const [showTheme, setShowTheme] = useState(false);
+
+  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); };
 
   const MOLD_SHAPES = [
-    { id: "circle",   label: "Círculo",      path: <circle cx="24" cy="24" r="22" /> },
-    { id: "rounded",  label: "Arredond.",     path: <rect x="4" y="4" width="40" height="40" rx="10" ry="10" /> },
-    { id: "rect",     label: "Retângulo",     path: <rect x="4" y="8" width="40" height="32" /> },
-    { id: "squircle", label: "Suave",         path: <rect x="4" y="4" width="40" height="40" rx="18" ry="18" /> },
-    { id: "arch",     label: "Arco",          path: <path d="M4 48 Q4 4 24 4 Q44 4 44 48 Z" /> },
-    { id: "diamond",  label: "Losango",       path: <polygon points="24,2 46,24 24,46 2,24" /> },
-    { id: "hexagon",  label: "Hexágono",      path: <polygon points="24,2 44,13 44,35 24,46 4,35 4,13" /> },
-    { id: "triangle", label: "Triângulo",     path: <polygon points="24,2 46,46 2,46" /> },
-    { id: "star",     label: "Estrela",       path: <polygon points="24,2 29,18 46,18 33,28 38,44 24,34 10,44 15,28 2,18 19,18" /> },
+    { id: "circle",   label: "Círculo",  path: <circle cx="24" cy="24" r="22" /> },
+    { id: "rounded",  label: "Arredon.", path: <rect x="4" y="4" width="40" height="40" rx="10" ry="10" /> },
+    { id: "rect",     label: "Retang.",  path: <rect x="4" y="8" width="40" height="32" /> },
+    { id: "squircle", label: "Suave",    path: <rect x="4" y="4" width="40" height="40" rx="18" ry="18" /> },
+    { id: "arch",     label: "Arco",     path: <path d="M4 48 Q4 4 24 4 Q44 4 44 48 Z" /> },
+    { id: "diamond",  label: "Losango",  path: <polygon points="24,2 46,24 24,46 2,24" /> },
+    { id: "hexagon",  label: "Hexágono", path: <polygon points="24,2 44,13 44,35 24,46 4,35 4,13" /> },
+    { id: "triangle", label: "Triâng.",  path: <polygon points="24,2 46,46 2,46" /> },
+    { id: "star",     label: "Estrela",  path: <polygon points="24,2 29,18 46,18 33,28 38,44 24,34 10,44 15,28 2,18 19,18" /> },
   ] as const;
 
   const addFrame = (shape: string) => {
@@ -98,7 +133,7 @@ export default function Toolbar({
       gradient: "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.88) 40%, rgba(0,0,0,0.30) 68%, rgba(0,0,0,0.04) 100%)",
       bgPosition: { x: 50, y: 38 }, bgZoom: 112,
       textBlocks: [{ top: "57%", left: "5%", w: "90%", h: "24%", bold: true }, { top: "84%", left: "5%", w: "62%", h: "7%" }],
-      photoCover: "linear-gradient(160deg, #4f46e5 0%, #7c3aed 45%, #db2777 100%)",
+      photoCover: "linear-gradient(160deg, #1e3a8a 0%, #3b5bdb 45%, #2563eb 100%)",
     },
     {
       id: "capa", label: "Capa", desc: "Foto no topo, base sólida escura",
@@ -143,7 +178,6 @@ export default function Toolbar({
     const layout = LAYOUTS.find(l => l.id === layoutId);
     if (!layout) return;
 
-    // Ignora header (y < 12%) e footer (y > 82%)
     const contentEls = slide.elements.filter(e =>
       e.type === "text" && e.y >= H * 0.12 && e.y <= H * 0.82
     );
@@ -151,9 +185,6 @@ export default function Toolbar({
 
     let newElements = [...slide.elements];
 
-    // ty/th = posição Y e altura do título; by/bh = posição Y e altura do corpo
-    // fs = fontSize do título; bfs = fontSize do corpo; ba = alinhamento
-    // Valores calibrados para corresponder ao preview visual de cada template
     const positions: Record<string, { ty: number; th: number; by: number; bh: number; fs: number; bfs: number; ba: "left" | "center" }> = {
       impacto:   { ty: Math.round(H*0.57), th: Math.round(H*0.24), by: Math.round(H*0.84), bh: Math.round(H*0.07), fs: Math.round(H*0.046), bfs: Math.round(H*0.020), ba: "left" },
       capa:      { ty: Math.round(H*0.66), th: Math.round(H*0.20), by: Math.round(H*0.89), bh: Math.round(H*0.05), fs: Math.round(H*0.042), bfs: Math.round(H*0.018), ba: "left" },
@@ -298,7 +329,6 @@ export default function Toolbar({
     setEditLoading(true);
     setEditError("");
     try {
-      // Converte URL em base64 (pode já ser data URL ou URL externa)
       let imageBase64 = "";
       let imageMime = "image/jpeg";
 
@@ -345,104 +375,141 @@ export default function Toolbar({
     document.head.appendChild(link);
   };
 
+  const panelBase = "absolute top-full left-0 z-50 mt-1 ml-2 bg-[var(--bg-2)] border border-[var(--border-2)] rounded-xl shadow-2xl p-4";
+  const btnBase  = "flex items-center gap-1.5 px-3 py-1.5 rounded bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)] hover:text-[var(--text)] text-sm shrink-0 transition-colors";
+  const divider  = "w-px h-6 bg-[var(--border-2)]";
+
   return (
-    <div className="flex flex-col bg-[#080808] border-b border-[#161616] relative">
+    <div className="flex flex-col bg-[var(--bg-2)] border-b border-[var(--border)] relative">
       {/* Linha principal */}
       <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto whitespace-nowrap scrollbar-none">
+
         {/* Navegação */}
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={onPrev} disabled={slideIndex === 0} className="p-1.5 rounded hover:bg-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed"><ChevronLeft size={16} /></button>
-          <span className="text-sm text-gray-400 w-16 text-center">{slideIndex + 1} / {totalSlides}</span>
-          <button onClick={onNext} disabled={slideIndex === totalSlides - 1} className="p-1.5 rounded hover:bg-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed"><ChevronRight size={16} /></button>
+          <button onClick={onPrev} disabled={slideIndex === 0} className={`p-1.5 rounded hover:bg-[var(--bg-3)] disabled:opacity-30 disabled:cursor-not-allowed text-[var(--text-2)]`}><ChevronLeft size={16} /></button>
+          <span className="text-sm text-[var(--text-2)] w-16 text-center">{slideIndex + 1} / {totalSlides}</span>
+          <button onClick={onNext} disabled={slideIndex === totalSlides - 1} className={`p-1.5 rounded hover:bg-[var(--bg-3)] disabled:opacity-30 disabled:cursor-not-allowed text-[var(--text-2)]`}><ChevronRight size={16} /></button>
         </div>
 
-        <div className="w-px h-6 bg-[#2a2a2a]" />
+        <div className={divider} />
 
-        <button onClick={onUndo} disabled={!canUndo} title="Desfazer (Ctrl+Z)" className="p-1.5 rounded hover:bg-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 hover:text-white"><Undo2 size={16} /></button>
-        <button onClick={onRedo} disabled={!canRedo} title="Refazer (Ctrl+Y)" className="p-1.5 rounded hover:bg-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 hover:text-white"><Redo2 size={16} /></button>
+        <button onClick={onUndo} disabled={!canUndo} title="Desfazer (Ctrl+Z)" className={`p-1.5 rounded hover:bg-[var(--bg-3)] disabled:opacity-30 disabled:cursor-not-allowed text-[var(--text-2)] hover:text-[var(--text)]`}><Undo2 size={16} /></button>
+        <button onClick={onRedo} disabled={!canRedo} title="Refazer (Ctrl+Y)" className={`p-1.5 rounded hover:bg-[var(--bg-3)] disabled:opacity-30 disabled:cursor-not-allowed text-[var(--text-2)] hover:text-[var(--text)]`}><Redo2 size={16} /></button>
 
-        <div className="w-px h-6 bg-[#2a2a2a]" />
+        <div className={divider} />
 
-        <button onClick={addText} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#2a2a2a] hover:bg-[#333] text-sm shrink-0"><Type size={14} /> Texto</button>
-
-        <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#2a2a2a] hover:bg-[#333] text-sm shrink-0"><ImageIcon size={14} /> Imagem</button>
+        <button onClick={addText} className={btnBase}><Type size={14} /> Texto</button>
+        <button onClick={() => fileInputRef.current?.click()} className={btnBase}><ImageIcon size={14} /> Imagem</button>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
 
         {/* Perfil */}
-        <button onClick={() => setShowProfile((v) => !v)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showProfile ? "bg-brand-600 text-white" : "bg-[#2a2a2a] hover:bg-[#333] text-gray-300"}`}>
+        <button onClick={() => { closeAll(); setShowProfile((v) => !v); }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showProfile ? "bg-brand-600 text-white" : btnBase}`}>
           <UserCircle size={14} /> Perfil
         </button>
 
         {/* Layout */}
-        <button onClick={() => { setShowLayouts(v => !v); setShowProfile(false); setShowEditAI(false); setShowMolds(false); }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showLayouts ? "bg-brand-600 text-white" : "bg-[#2a2a2a] hover:bg-[#333] text-gray-300"}`}>
+        <button onClick={() => { closeAll(); setShowLayouts(v => !v); }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showLayouts ? "bg-brand-600 text-white" : btnBase}`}>
           <LayoutTemplate size={14} /> Layout
         </button>
 
         {/* Molduras */}
-        <button onClick={() => { setShowMolds(v => !v); setShowLayouts(false); setShowProfile(false); setShowEditAI(false); }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showMolds ? "bg-violet-600 text-white" : "bg-[#2a2a2a] hover:bg-[#333] text-gray-300"}`}>
+        <button onClick={() => { closeAll(); setShowMolds(v => !v); }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showMolds ? "bg-brand-600 text-white" : btnBase}`}>
           <FrameIcon size={14} /> Molduras
+        </button>
+
+        {/* Tema dos slides */}
+        <button onClick={() => { closeAll(); setShowTheme(v => !v); }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showTheme ? "bg-brand-600 text-white" : btnBase}`}>
+          <Palette size={14} /> Tema
         </button>
 
         {/* Gerar fundo IA */}
         <button onClick={generateBackground} disabled={generating}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-brand-600/20 hover:bg-brand-600/40 border border-brand-600/30 text-brand-400 text-sm shrink-0 disabled:opacity-40 transition-colors">
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-brand-600/15 hover:bg-brand-600/30 border border-brand-600/25 text-brand-500 text-sm shrink-0 disabled:opacity-40 transition-colors">
           <Wand2 size={14} className={generating ? "animate-spin" : ""} />
           {generating ? "Gerando..." : "Fundo IA"}
         </button>
 
-        {/* Editar imagem com IA (só aparece quando há imagem de fundo) */}
+        {/* Editar imagem com IA */}
         {slide.backgroundImageUrl && (
           <button
-            onClick={() => { setShowEditAI((v) => !v); setEditError(""); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm shrink-0 transition-colors ${showEditAI ? "bg-pink-600/30 border-pink-500/50 text-pink-300" : "bg-pink-600/10 hover:bg-pink-600/20 border-pink-600/30 text-pink-400"}`}>
+            onClick={() => { closeAll(); setShowEditAI((v) => !v); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm shrink-0 transition-colors ${showEditAI ? "bg-pink-600/30 border-pink-500/50 text-pink-300" : "bg-pink-600/10 hover:bg-pink-600/20 border-pink-600/25 text-pink-400"}`}>
             <Sparkles size={14} />
             Editar com IA
           </button>
         )}
 
-        <div className="w-px h-6 bg-[#2a2a2a]" />
+        <div className={divider} />
 
         {/* Formato */}
-        <div className="flex items-center gap-1 bg-[#111] border border-[#222] rounded-lg p-0.5 shrink-0">
+        <div className="flex items-center gap-1 bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg p-0.5 shrink-0">
           {FORMATS.map((f) => (
             <button key={f} onClick={() => onFormatChange?.(f)}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${format === f ? "bg-brand-600 text-white" : "text-gray-500 hover:text-gray-300"}`}>{f}</button>
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${format === f ? "bg-brand-600 text-white" : "text-[var(--text-2)] hover:text-[var(--text)]"}`}>{f}</button>
           ))}
         </div>
 
-        <div className="w-px h-6 bg-[#2a2a2a]" />
+        <div className={divider} />
 
-        <label className="flex items-center gap-1.5 text-sm text-gray-400 cursor-pointer shrink-0">
+        <label className="flex items-center gap-1.5 text-sm text-[var(--text-2)] cursor-pointer shrink-0">
           Fundo:
           <input type="color" value={slide.backgroundColor} onChange={(e) => onUpdate({ ...slide, backgroundColor: e.target.value })} className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent" />
         </label>
 
         <div className="flex gap-2 shrink-0 ml-3">
-          <button onClick={onAddSlide} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-brand-600 hover:bg-brand-700 text-sm font-medium shrink-0"><Plus size={14} /> Slide</button>
-          <button onClick={onDeleteSlide} disabled={totalSlides <= 1} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-900/40 hover:bg-red-900/60 text-sm disabled:opacity-30 disabled:cursor-not-allowed shrink-0"><Trash2 size={14} /></button>
+          <button onClick={onAddSlide} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium shrink-0"><Plus size={14} /> Slide</button>
+          <button onClick={onDeleteSlide} disabled={totalSlides <= 1} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-900/40 hover:bg-red-900/60 text-red-300 text-sm disabled:opacity-30 disabled:cursor-not-allowed shrink-0"><Trash2 size={14} /></button>
         </div>
       </div>
 
-      {/* Painel de perfil */}
-      {showProfile && (
-        <div className="absolute top-full left-0 z-50 mt-1 ml-2 bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl p-4 w-80">
+      {/* ── Painel de tema dos slides ── */}
+      {showTheme && (
+        <div className={`${panelBase} w-72`}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-200">Configurar perfil</span>
-            <button onClick={() => setShowProfile(false)} className="text-gray-500 hover:text-gray-300"><X size={16} /></button>
+            <span className="text-sm font-semibold text-[var(--text)] flex items-center gap-1.5">
+              <Palette size={14} className="text-brand-500" /> Tema dos Slides
+            </span>
+            <button onClick={() => setShowTheme(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
+          </div>
+          <p className="text-[11px] text-[var(--text-3)] mb-3">Aplica fundo e cor do texto em todos os slides.</p>
+          <div className="grid grid-cols-2 gap-2">
+            {SLIDE_THEMES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => { onApplyThemeToAll?.(t.bg, t.textColor); setShowTheme(false); }}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[var(--border-2)] hover:border-brand-500/60 hover:bg-brand-500/5 transition-all"
+              >
+                <div className="w-full h-10 rounded-lg border border-[var(--border-2)] relative overflow-hidden" style={{ background: t.preview.bg }}>
+                  <div className="absolute left-2 top-2 right-2 h-1.5 rounded" style={{ background: t.preview.line, opacity: 0.9 }} />
+                  <div className="absolute left-2 top-5 w-3/5 h-1 rounded" style={{ background: t.preview.line, opacity: 0.5 }} />
+                </div>
+                <span className="text-xs font-medium text-[var(--text-2)]">{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Painel de perfil ── */}
+      {showProfile && (
+        <div className={`${panelBase} w-80`}>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-[var(--text)]">Configurar perfil</span>
+            <button onClick={() => setShowProfile(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
           </div>
 
-          {/* Avatar */}
           <div className="flex items-center gap-3 mb-4">
             <button onClick={() => avatarInputRef.current?.click()} className="relative group shrink-0">
               {profileAvatarSrc ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={profileAvatarSrc} alt="" className="w-14 h-14 rounded-full object-cover border-2 border-brand-500" />
               ) : (
-                <div className="w-14 h-14 rounded-full bg-[#2a2a2a] flex items-center justify-center border-2 border-dashed border-[#444]">
-                  <UserCircle size={28} className="text-gray-500" />
+                <div className="w-14 h-14 rounded-full bg-[var(--bg-3)] flex items-center justify-center border-2 border-dashed border-[var(--border-2)]">
+                  <UserCircle size={28} className="text-[var(--text-3)]" />
                 </div>
               )}
               <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -451,54 +518,50 @@ export default function Toolbar({
             </button>
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); e.target.value = ""; }} />
             <div className="flex-1">
-              <p className="text-xs text-gray-400 mb-1">Foto de perfil</p>
-              <p className="text-[11px] text-gray-600">Clique para fazer upload</p>
+              <p className="text-xs text-[var(--text-2)] mb-1">Foto de perfil</p>
+              <p className="text-[11px] text-[var(--text-3)]">Clique para fazer upload</p>
             </div>
           </div>
 
-          {/* Nome */}
           <div className="mb-2">
-            <label className="text-xs text-gray-400 block mb-1">Nome</label>
+            <label className="text-xs text-[var(--text-2)] block mb-1">Nome</label>
             <input value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="Seu nome"
-              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500" />
+              className="w-full bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]" />
           </div>
 
-          {/* Handle */}
           <div className="mb-3">
-            <label className="text-xs text-gray-400 block mb-1">@ (sem o @)</label>
-            <div className="flex items-center bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg overflow-hidden focus-within:border-brand-500">
-              <span className="px-3 text-gray-500 text-sm select-none">@</span>
+            <label className="text-xs text-[var(--text-2)] block mb-1">@ (sem o @)</label>
+            <div className="flex items-center bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg overflow-hidden focus-within:border-brand-500">
+              <span className="px-3 text-[var(--text-3)] text-sm select-none">@</span>
               <input value={profileHandle} onChange={(e) => setProfileHandle(e.target.value.replace("@", ""))} placeholder="seuhandle"
-                className="flex-1 bg-transparent py-2 pr-3 text-sm text-white focus:outline-none" />
+                className="flex-1 bg-transparent py-2 pr-3 text-sm text-[var(--text)] focus:outline-none" />
             </div>
           </div>
 
-          {/* Verificado */}
           <label className="flex items-center gap-2 mb-4 cursor-pointer select-none">
             <div onClick={() => setProfileVerified((v) => !v)}
-              className={`w-10 h-5 rounded-full transition-colors flex items-center px-0.5 ${profileVerified ? "bg-blue-500" : "bg-[#333]"}`}>
+              className={`w-10 h-5 rounded-full transition-colors flex items-center px-0.5 ${profileVerified ? "bg-blue-500" : "bg-[var(--bg-4)]"}`}>
               <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${profileVerified ? "translate-x-5" : "translate-x-0"}`} />
             </div>
-            <span className="text-sm text-gray-300 flex items-center gap-1.5">
+            <span className="text-sm text-[var(--text-2)] flex items-center gap-1.5">
               <BadgeCheck size={14} className="text-blue-400" /> Selo verificado
             </span>
           </label>
 
-          {/* Preview */}
           {(profileName || profileHandle) && (
-            <div className="flex items-center gap-2.5 bg-[#1a1a1a] rounded-lg px-3 py-2.5 mb-3">
+            <div className="flex items-center gap-2.5 bg-[var(--bg-3)] rounded-lg px-3 py-2.5 mb-3">
               {profileAvatarSrc ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={profileAvatarSrc} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-[#333] shrink-0" />
+                <div className="w-9 h-9 rounded-full bg-[var(--bg-4)] shrink-0" />
               )}
               <div>
-                <div className="flex items-center gap-1 text-sm font-semibold text-white">
+                <div className="flex items-center gap-1 text-sm font-semibold text-[var(--text)]">
                   {profileName || "Seu nome"}
                   {profileVerified && <BadgeCheck size={13} className="text-blue-400" />}
                 </div>
-                <div className="text-xs text-gray-400">@{profileHandle || "seuhandle"}</div>
+                <div className="text-xs text-[var(--text-2)]">@{profileHandle || "seuhandle"}</div>
               </div>
             </div>
           )}
@@ -510,48 +573,38 @@ export default function Toolbar({
         </div>
       )}
 
-      {/* Painel de layouts */}
+      {/* ── Painel de layouts ── */}
       {showLayouts && (
-        <div className="absolute top-full left-0 z-50 mt-1 ml-2 bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl p-4 w-[420px]">
+        <div className={`${panelBase} w-[420px]`}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
-              <LayoutTemplate size={14} className="text-brand-400" /> Templates de Layout
+            <span className="text-sm font-semibold text-[var(--text)] flex items-center gap-1.5">
+              <LayoutTemplate size={14} className="text-brand-500" /> Templates de Layout
             </span>
-            <button onClick={() => setShowLayouts(false)} className="text-gray-500 hover:text-gray-300"><X size={16} /></button>
+            <button onClick={() => setShowLayouts(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
           </div>
-          <p className="text-[11px] text-gray-600 mb-3">Reposiciona o texto e ajusta o gradiente. O conteúdo é preservado.</p>
+          <p className="text-[11px] text-[var(--text-3)] mb-3">Reposiciona o texto e ajusta o gradiente. O conteúdo é preservado.</p>
           <div className="grid grid-cols-3 gap-2">
             {LAYOUTS.map((layout) => (
               <button
                 key={layout.id}
                 onClick={() => applyLayout(layout.id)}
-                className="flex flex-col gap-2 p-2 rounded-xl border border-[#2a2a2a] hover:border-brand-500/50 hover:bg-brand-500/5 transition-all text-left"
+                className="flex flex-col gap-2 p-2 rounded-xl border border-[var(--border-2)] hover:border-brand-500/50 hover:bg-brand-500/5 transition-all text-left"
               >
-                {/* Mini preview: foto simulada + gradiente + blocos de texto */}
                 <div className="relative w-full rounded-lg overflow-hidden" style={{ aspectRatio: "4/5" }}>
-                  {/* Foto simulada */}
                   <div className="absolute inset-0" style={{ background: layout.photoCover }} />
-                  {/* Gradiente do layout */}
                   <div className="absolute inset-0" style={{ background: layout.gradient }} />
-                  {/* Blocos de texto */}
                   {layout.textBlocks.map((block, i) => (
-                    <div
-                      key={i}
-                      className="absolute rounded-sm"
-                      style={{
-                        top: block.top, left: block.left, width: block.w, height: block.h,
-                        background: block.bold ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.50)",
-                      }}
-                    />
+                    <div key={i} className="absolute rounded-sm"
+                      style={{ top: block.top, left: block.left, width: block.w, height: block.h,
+                        background: block.bold ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.50)" }} />
                   ))}
-                  {/* Label de posição da foto */}
                   <div className="absolute bottom-1 right-1 bg-black/50 rounded px-1 py-0.5 text-[7px] text-gray-400 font-mono">
-                    {layout.bgPosition.x}% {layout.bgPosition.y}% {layout.bgZoom > 100 ? `${layout.bgZoom}%` : ""}
+                    {layout.bgPosition.x}% {layout.bgPosition.y}%
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-white">{layout.label}</p>
-                  <p className="text-[10px] text-gray-500">{layout.desc}</p>
+                  <p className="text-xs font-semibold text-[var(--text)]">{layout.label}</p>
+                  <p className="text-[10px] text-[var(--text-3)]">{layout.desc}</p>
                 </div>
               </button>
             ))}
@@ -559,50 +612,49 @@ export default function Toolbar({
         </div>
       )}
 
-      {/* Painel de Molduras */}
+      {/* ── Painel de Molduras ── */}
       {showMolds && (
-        <div className="absolute top-full left-0 z-50 mt-1 ml-2 bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl p-4 w-[360px]">
+        <div className={`${panelBase} w-[360px]`}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
-              <FrameIcon size={14} className="text-violet-400" /> Molduras
+            <span className="text-sm font-semibold text-[var(--text)] flex items-center gap-1.5">
+              <FrameIcon size={14} className="text-brand-500" /> Molduras
             </span>
-            <button onClick={() => setShowMolds(false)} className="text-gray-500 hover:text-gray-300"><X size={16} /></button>
+            <button onClick={() => setShowMolds(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
           </div>
-          <p className="text-xs text-gray-500 mb-3">Clique em uma forma para adicionar ao slide. Clique com o botão direito na moldura para adicionar foto.</p>
+          <p className="text-xs text-[var(--text-3)] mb-3">Clique em uma forma para adicionar ao slide.</p>
           <div className="grid grid-cols-3 gap-2">
             {MOLD_SHAPES.map((s) => (
               <button
                 key={s.id}
                 onClick={() => addFrame(s.id)}
-                className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] hover:border-violet-500/50 hover:bg-violet-500/10 transition-all group"
+                className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[var(--border-2)] bg-[var(--bg-3)] hover:border-brand-500/50 hover:bg-brand-500/8 transition-all group"
               >
-                <svg viewBox="0 0 48 48" width={52} height={52} fill="rgba(168,85,247,0.25)" stroke="rgba(168,85,247,0.8)" strokeWidth={2} className="group-hover:fill-violet-500/40 transition-all">
+                <svg viewBox="0 0 48 48" width={52} height={52} fill="rgba(76,110,245,0.20)" stroke="rgba(76,110,245,0.75)" strokeWidth={2} className="group-hover:fill-brand-500/35 transition-all">
                   {s.path}
                 </svg>
-                <span className="text-[11px] text-gray-400 group-hover:text-violet-300 transition-colors">{s.label}</span>
+                <span className="text-[11px] text-[var(--text-3)] group-hover:text-brand-500 transition-colors">{s.label}</span>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Painel Editar com IA */}
+      {/* ── Painel Editar com IA ── */}
       {showEditAI && slide.backgroundImageUrl && (
-        <div className="absolute top-full left-0 z-50 mt-1 ml-2 bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl p-4 w-96">
+        <div className={`${panelBase} w-96`}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
+            <span className="text-sm font-semibold text-[var(--text)] flex items-center gap-1.5">
               <Sparkles size={14} className="text-pink-400" /> Editar imagem com IA
             </span>
-            <button onClick={() => setShowEditAI(false)} className="text-gray-500 hover:text-gray-300"><X size={16} /></button>
+            <button onClick={() => setShowEditAI(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
           </div>
 
-          {/* Preview da imagem atual */}
-          <div className="rounded-lg overflow-hidden mb-3 border border-[#2a2a2a]" style={{ height: 120 }}>
+          <div className="rounded-lg overflow-hidden mb-3 border border-[var(--border-2)]" style={{ height: 120 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={slide.backgroundImageUrl} alt="Imagem atual" className="w-full h-full object-cover" />
           </div>
 
-          <p className="text-[11px] text-gray-500 mb-2">
+          <p className="text-[11px] text-[var(--text-3)] mb-2">
             Descreva o que quer alterar. O rosto e demais elementos são preservados ao máximo pelo Gemini.
           </p>
 
@@ -611,12 +663,10 @@ export default function Toolbar({
             onChange={(e) => setEditPrompt(e.target.value)}
             placeholder="ex: ele segurando a taça da copa do mundo"
             rows={3}
-            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-pink-500 resize-none placeholder:text-gray-600"
+            className="w-full bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-pink-500 resize-none placeholder:text-[var(--text-3)]"
           />
 
-          {editError && (
-            <p className="text-xs text-red-400 mt-1">{editError}</p>
-          )}
+          {editError && <p className="text-xs text-red-400 mt-1">{editError}</p>}
 
           <button
             onClick={editBackgroundWithAI}
@@ -628,76 +678,70 @@ export default function Toolbar({
         </div>
       )}
 
-      {/* Painel de imagem de fundo */}
+      {/* ── Painel de imagem de fundo ── */}
       {slide.backgroundImageUrl && !isText && (
-        <div className="flex items-center gap-4 px-4 py-2 border-t border-[#161616] overflow-x-auto whitespace-nowrap scrollbar-none">
-          <span className="text-xs text-gray-500 shrink-0">Imagem:</span>
+        <div className="flex items-center gap-4 px-4 py-2 border-t border-[var(--border)] overflow-x-auto whitespace-nowrap scrollbar-none">
+          <span className="text-xs text-[var(--text-3)] shrink-0">Imagem:</span>
 
-          <label className="flex items-center gap-2 text-xs text-gray-400 shrink-0">
+          <label className="flex items-center gap-2 text-xs text-[var(--text-2)] shrink-0">
             X
-            <input
-              type="range" min={0} max={100} step={1}
+            <input type="range" min={0} max={100} step={1}
               value={slide.backgroundPosition?.x ?? 50}
               onChange={(e) => onUpdate({ ...slide, backgroundPosition: { x: Number(e.target.value), y: slide.backgroundPosition?.y ?? 50 } })}
-              className="w-24 accent-brand-500"
-            />
-            <span className="text-gray-600 w-6">{slide.backgroundPosition?.x ?? 50}</span>
+              className="w-24 accent-brand-500" />
+            <span className="text-[var(--text-3)] w-6">{slide.backgroundPosition?.x ?? 50}</span>
           </label>
 
-          <label className="flex items-center gap-2 text-xs text-gray-400 shrink-0">
+          <label className="flex items-center gap-2 text-xs text-[var(--text-2)] shrink-0">
             Y
-            <input
-              type="range" min={0} max={100} step={1}
+            <input type="range" min={0} max={100} step={1}
               value={slide.backgroundPosition?.y ?? 50}
               onChange={(e) => onUpdate({ ...slide, backgroundPosition: { x: slide.backgroundPosition?.x ?? 50, y: Number(e.target.value) } })}
-              className="w-24 accent-brand-500"
-            />
-            <span className="text-gray-600 w-6">{slide.backgroundPosition?.y ?? 50}</span>
+              className="w-24 accent-brand-500" />
+            <span className="text-[var(--text-3)] w-6">{slide.backgroundPosition?.y ?? 50}</span>
           </label>
 
-          <label className="flex items-center gap-2 text-xs text-gray-400 shrink-0">
+          <label className="flex items-center gap-2 text-xs text-[var(--text-2)] shrink-0">
             Zoom
-            <input
-              type="range" min={100} max={200} step={5}
+            <input type="range" min={100} max={200} step={5}
               value={slide.backgroundZoom ?? 100}
               onChange={(e) => onUpdate({ ...slide, backgroundZoom: Number(e.target.value) })}
-              className="w-24 accent-brand-500"
-            />
-            <span className="text-gray-600 w-8">{slide.backgroundZoom ?? 100}%</span>
+              className="w-24 accent-brand-500" />
+            <span className="text-[var(--text-3)] w-8">{slide.backgroundZoom ?? 100}%</span>
           </label>
 
           <button
             onClick={() => onUpdate({ ...slide, backgroundPosition: { x: 50, y: 50 }, backgroundZoom: 100 })}
-            className="text-xs text-gray-600 hover:text-gray-400 shrink-0 underline"
+            className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] shrink-0 underline"
           >
             Reset
           </button>
         </div>
       )}
 
-      {/* Painel de tipografia */}
+      {/* ── Painel de tipografia ── */}
       {isText && s && (
-        <div className="flex items-center gap-3 px-4 py-2 border-t border-[#161616] overflow-x-auto whitespace-nowrap scrollbar-none">
+        <div className="flex items-center gap-3 px-4 py-2 border-t border-[var(--border)] overflow-x-auto whitespace-nowrap scrollbar-none">
           <select value={s.fontFamily ?? "sans-serif"} onChange={(e) => { loadFont(e.target.value); patchStyle({ fontFamily: e.target.value }); }}
-            className="bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-brand-500 max-w-[130px]" style={{ fontFamily: s.fontFamily }}>
+            className="bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-2 py-1 text-xs text-[var(--text)] focus:outline-none focus:border-brand-500 max-w-[130px]" style={{ fontFamily: s.fontFamily }}>
             {FONTS.map((f) => (<option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>))}
           </select>
           <div className="flex items-center gap-1">
-            <button onClick={() => patchStyle({ fontSize: Math.max(8, (s.fontSize ?? 20) - 2) })} className="w-6 h-6 flex items-center justify-center rounded bg-[#1a1a1a] hover:bg-[#2a2a2a] text-sm font-bold">−</button>
-            <input type="number" min={8} max={300} value={s.fontSize ?? 20} onChange={(e) => patchStyle({ fontSize: Number(e.target.value) })} className="w-14 bg-[#1a1a1a] border border-[#2a2a2a] rounded px-1 py-1 text-xs text-center text-white focus:outline-none focus:border-brand-500" />
-            <button onClick={() => patchStyle({ fontSize: (s.fontSize ?? 20) + 2 })} className="w-6 h-6 flex items-center justify-center rounded bg-[#1a1a1a] hover:bg-[#2a2a2a] text-sm font-bold">+</button>
+            <button onClick={() => patchStyle({ fontSize: Math.max(8, (s.fontSize ?? 20) - 2) })} className="w-6 h-6 flex items-center justify-center rounded bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text)] text-sm font-bold">−</button>
+            <input type="number" min={8} max={300} value={s.fontSize ?? 20} onChange={(e) => patchStyle({ fontSize: Number(e.target.value) })} className="w-14 bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-1 py-1 text-xs text-center text-[var(--text)] focus:outline-none focus:border-brand-500" />
+            <button onClick={() => patchStyle({ fontSize: (s.fontSize ?? 20) + 2 })} className="w-6 h-6 flex items-center justify-center rounded bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text)] text-sm font-bold">+</button>
           </div>
-          <div className="w-px h-5 bg-[#2a2a2a]" />
-          <button onClick={() => patchStyle({ fontWeight: s.fontWeight === "bold" ? "normal" : "bold" })} className={`p-1.5 rounded text-sm ${s.fontWeight === "bold" ? "bg-brand-500/20 text-brand-400" : "bg-[#1a1a1a] hover:bg-[#2a2a2a] text-gray-400"}`}><Bold size={14} /></button>
+          <div className="w-px h-5 bg-[var(--border-2)]" />
+          <button onClick={() => patchStyle({ fontWeight: s.fontWeight === "bold" ? "normal" : "bold" })} className={`p-1.5 rounded text-sm ${s.fontWeight === "bold" ? "bg-brand-500/20 text-brand-500" : "bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)]"}`}><Bold size={14} /></button>
           {(["left", "center", "right"] as const).map((align) => {
             const Icon = align === "left" ? AlignLeft : align === "center" ? AlignCenter : AlignRight;
-            return (<button key={align} onClick={() => patchStyle({ textAlign: align })} className={`p-1.5 rounded ${s.textAlign === align ? "bg-brand-500/20 text-brand-400" : "bg-[#1a1a1a] hover:bg-[#2a2a2a] text-gray-400"}`}><Icon size={14} /></button>);
+            return (<button key={align} onClick={() => patchStyle({ textAlign: align })} className={`p-1.5 rounded ${s.textAlign === align ? "bg-brand-500/20 text-brand-500" : "bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)]"}`}><Icon size={14} /></button>);
           })}
-          <div className="w-px h-5 bg-[#2a2a2a]" />
-          <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer">Cor:<input type="color" value={s.color ?? "#ffffff"} onChange={(e) => patchStyle({ color: e.target.value })} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent" /></label>
-          <label className="flex items-center gap-1.5 text-xs text-gray-400">Espaç:<input type="number" min={0.8} max={3} step={0.1} value={s.lineHeight ?? 1.4} onChange={(e) => patchStyle({ lineHeight: Number(e.target.value) })} className="w-12 bg-[#1a1a1a] border border-[#2a2a2a] rounded px-1 py-1 text-xs text-center text-white focus:outline-none focus:border-brand-500" /></label>
-          <div className="w-px h-5 bg-[#2a2a2a]" />
-          <input type="text" value={selectedElement?.content ?? ""} onChange={(e) => patchSelected({ content: e.target.value })} placeholder="Editar texto..." className="bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-brand-500 w-48" />
+          <div className="w-px h-5 bg-[var(--border-2)]" />
+          <label className="flex items-center gap-1.5 text-xs text-[var(--text-2)] cursor-pointer">Cor:<input type="color" value={s.color ?? "#ffffff"} onChange={(e) => patchStyle({ color: e.target.value })} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent" /></label>
+          <label className="flex items-center gap-1.5 text-xs text-[var(--text-2)]">Espaç:<input type="number" min={0.8} max={3} step={0.1} value={s.lineHeight ?? 1.4} onChange={(e) => patchStyle({ lineHeight: Number(e.target.value) })} className="w-12 bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-1 py-1 text-xs text-center text-[var(--text)] focus:outline-none focus:border-brand-500" /></label>
+          <div className="w-px h-5 bg-[var(--border-2)]" />
+          <input type="text" value={selectedElement?.content ?? ""} onChange={(e) => patchSelected({ content: e.target.value })} placeholder="Editar texto..." className="bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-2 py-1 text-xs text-[var(--text)] focus:outline-none focus:border-brand-500 w-48 placeholder:text-[var(--text-3)]" />
         </div>
       )}
     </div>

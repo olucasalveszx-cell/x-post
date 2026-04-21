@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Zap, ArrowLeft, Loader2, Crown, Sparkles, ExternalLink, Check } from "lucide-react";
+import { Zap, ArrowLeft, Loader2, Crown, ExternalLink, Check, Sparkles } from "lucide-react";
 import Link from "next/link";
+import AppLogo from "@/components/AppLogo";
 
 interface CreditsInfo {
   plan: string;
@@ -17,7 +18,7 @@ interface CreditsInfo {
 const PLAN_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   free:     { label: "Free",     color: "#9ca3af", bg: "rgba(156,163,175,0.1)" },
   basic:    { label: "Basic",    color: "#60a5fa", bg: "rgba(96,165,250,0.1)"  },
-  pro:      { label: "Pro",      color: "#a855f7", bg: "rgba(168,85,247,0.1)"  },
+  pro:      { label: "Pro",      color: "#4c6ef5", bg: "rgba(76,110,245,0.1)"  },
   business: { label: "Business", color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
 };
 
@@ -37,9 +38,9 @@ const KIRVANO_PLANS = [
     id: "pro",
     label: "Pro",
     credits: 45,
-    color: "#a855f7",
-    bg: "rgba(168,85,247,0.08)",
-    border: "rgba(168,85,247,0.35)",
+    color: "#4c6ef5",
+    bg: "rgba(76,110,245,0.08)",
+    border: "rgba(76,110,245,0.35)",
     url: "https://pay.kirvano.com/e5bdb60b-3d05-4338-bbb7-59e17b1b636f",
     features: ["45 créditos/mês", "Imagen 4 (Google)", "Edição com IA", "Suporte prioritário"],
     highlight: true,
@@ -70,7 +71,7 @@ export default function CreditsPage() {
 
   const planStyle = PLAN_LABELS[info?.plan ?? "free"] ?? PLAN_LABELS.free;
   const pct = info ? Math.min(100, (info.used / info.limit) * 100) : 0;
-  const barColor = pct > 85 ? "#ef4444" : pct > 60 ? "#f59e0b" : "#a855f7";
+  const barColor = pct > 85 ? "#ef4444" : pct > 60 ? "#f59e0b" : "#4c6ef5";
 
   return (
     <div className="min-h-screen text-white" style={{ background: "#060606" }}>
@@ -79,13 +80,7 @@ export default function CreditsPage() {
         <Link href="/editor" className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-colors">
           <ArrowLeft size={18} />
         </Link>
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-white"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
-            X
-          </div>
-          <span className="font-black text-sm tracking-tight">xpost</span>
-        </div>
+        <AppLogo variant="dark" size={28} textClassName="font-black text-sm tracking-tight text-white" />
         <span className="text-gray-600">·</span>
         <span className="text-sm text-gray-400 font-medium">Planos & Créditos</span>
       </header>
@@ -94,7 +89,7 @@ export default function CreditsPage() {
 
         {/* Credits overview */}
         {loading ? (
-          <div className="flex justify-center py-16"><Loader2 size={28} className="animate-spin text-purple-400" /></div>
+          <div className="flex justify-center py-16"><Loader2 size={28} className="animate-spin text-brand-500" /></div>
         ) : info && (
           <div className="rounded-2xl p-6 space-y-5" style={{ background: "#0d0d0d", border: "1px solid #1e1e1e" }}>
             <div className="flex items-center justify-between">
@@ -107,7 +102,7 @@ export default function CreditsPage() {
               </div>
               <div className="text-right">
                 <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-1">Disponível</p>
-                <p className="text-3xl font-black" style={{ color: "#a855f7" }}>{info.total}</p>
+                <p className="text-3xl font-black" style={{ color: "#4c6ef5" }}>{info.total}</p>
                 <p className="text-[11px] text-gray-600">créditos</p>
               </div>
             </div>
@@ -140,7 +135,7 @@ export default function CreditsPage() {
         <div>
           <div className="mb-6">
             <h2 className="text-lg font-bold flex items-center gap-2">
-              <Sparkles size={18} className="text-purple-400" /> Escolha seu plano
+              <Sparkles size={18} className="text-brand-500" /> Escolha seu plano
             </h2>
             <p className="text-xs text-gray-500 mt-1">Pagamento processado com segurança pelo Kirvano. Ativação automática após confirmação.</p>
           </div>
