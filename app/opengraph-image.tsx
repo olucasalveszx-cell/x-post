@@ -1,11 +1,38 @@
 import { ImageResponse } from "next/og";
+import fs from "fs";
+import path from "path";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 export const alt = "XPost — Criador de Carrosséis para Instagram com IA";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function Image() {
+  // Logo como base64
+  const logoBuffer = fs.readFileSync(path.join(process.cwd(), "public/tema_black.png"));
+  const logoSrc = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+
+  // Bebas Neue via Google Fonts
+  let bebasFont: ArrayBuffer | null = null;
+  try {
+    const cssResp = await fetch(
+      "https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap",
+      {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+      }
+    );
+    const css = await cssResp.text();
+    const fontUrl = css.match(/url\(([^)]+)\)/)?.[1];
+    if (fontUrl) {
+      bebasFont = await fetch(fontUrl).then((r) => r.arrayBuffer());
+    }
+  } catch {
+    // fallback: usa fonte padrão
+  }
+
   return new ImageResponse(
     (
       <div
@@ -47,7 +74,7 @@ export default async function Image() {
           }}
         />
 
-        {/* Slide mockups (decorative) */}
+        {/* Slide mockups (decorativo) */}
         <div
           style={{
             position: "absolute",
@@ -90,48 +117,59 @@ export default async function Image() {
           ))}
         </div>
 
-        {/* Main content */}
+        {/* Conteúdo principal */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "flex-start",
-            gap: 20,
+            gap: 24,
             paddingLeft: 100,
             paddingRight: 420,
             zIndex: 1,
           }}
         >
-          {/* Logo box */}
+          {/* Logo + nome lado a lado */}
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            {/* Logo image */}
+            <img
+              src={logoSrc}
+              width={96}
+              height={96}
+              style={{ borderRadius: 22, display: "flex" }}
+            />
+            {/* Nome XPost em Bebas Neue */}
+            <div
+              style={{
+                fontSize: 100,
+                fontWeight: 400,
+                color: "white",
+                letterSpacing: 2,
+                lineHeight: 1,
+                display: "flex",
+                fontFamily: bebasFont ? "Bebas Neue" : "sans-serif",
+              }}
+            >
+              XPost
+            </div>
+          </div>
+
+          {/* Subtítulo */}
           <div
             style={{
-              width: 88,
-              height: 88,
-              borderRadius: 22,
-              background: "linear-gradient(135deg, #3b5bdb, #4c6ef5)",
+              fontSize: 30,
+              color: "rgba(255,255,255,0.6)",
+              fontWeight: 400,
+              lineHeight: 1.4,
+              maxWidth: 520,
               display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 0 40px rgba(59,91,219,0.55)",
             }}
           >
-            <svg width="48" height="48" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M16 2 L18.2 13 L29 16 L18.2 19 L16 30 L13.8 19 L3 16 L13.8 13 Z" fill="white" />
-            </svg>
-          </div>
-
-          {/* Title */}
-          <div style={{ fontSize: 86, fontWeight: 900, color: "white", letterSpacing: -3, lineHeight: 1, display: "flex" }}>
-            XPost
-          </div>
-
-          {/* Subtitle */}
-          <div style={{ fontSize: 28, color: "rgba(255,255,255,0.6)", fontWeight: 400, lineHeight: 1.4, maxWidth: 500, display: "flex" }}>
             Chega de perder horas criando conteúdo
           </div>
 
           {/* Badges */}
-          <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+          <div style={{ display: "flex", gap: 12 }}>
             {["Instagram", "Twitter / X", "IA Generativa"].map((tag) => (
               <div
                 key={tag}
@@ -153,6 +191,11 @@ export default async function Image() {
         </div>
       </div>
     ),
-    { ...size }
+    {
+      ...size,
+      fonts: bebasFont
+        ? [{ name: "Bebas Neue", data: bebasFont, style: "normal", weight: 400 }]
+        : [],
+    }
   );
 }
