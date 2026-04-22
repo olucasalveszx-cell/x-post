@@ -385,16 +385,16 @@ export default function AdminDashboard() {
     <div className="min-h-screen text-white" style={{ background: "#060606" }}>
       {/* Topbar */}
       <header
-        className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-white/5 sticky top-0 z-10 gap-2"
+        className="sticky top-0 z-10 border-b border-white/5 overflow-x-auto scrollbar-none"
         style={{ background: "#0d0d0d" }}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <AppLogo variant="dark" size={28} textClassName="font-black text-sm tracking-tight text-white hidden xs:block" />
-          <span className="hidden sm:block text-[10px] text-brand-500 whitespace-nowrap">Admin</span>
-        </div>
+        <div className="flex items-center gap-3 px-4 py-3 min-w-max">
+          <AppLogo variant="dark" size={28} textClassName="font-black text-sm tracking-tight text-white" />
+          <span className="text-[10px] text-brand-500 whitespace-nowrap">Admin</span>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] text-gray-600 hidden md:block">
+          <div className="w-4" />
+
+          <span className="text-[10px] text-gray-600 whitespace-nowrap">
             {lastRefresh.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
           </span>
           <button
@@ -407,18 +407,15 @@ export default function AdminDashboard() {
           </button>
           <Link
             href="/editor"
-            className="flex items-center gap-1 text-xs text-brand-500 hover:text-brand-400 transition-colors border border-brand-500/30 hover:border-brand-500/60 px-2 py-1.5 rounded-lg"
+            className="flex items-center gap-1.5 text-xs text-brand-500 hover:text-brand-400 transition-colors border border-brand-500/30 hover:border-brand-500/60 px-2.5 py-1.5 rounded-lg whitespace-nowrap"
           >
-            <ArrowLeft size={13} />
-            <span className="hidden sm:inline">Editor</span>
+            <ArrowLeft size={13} /> Editor
           </Link>
           <button
             onClick={handleLogout}
-            title="Sair"
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5"
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-white/5 whitespace-nowrap"
           >
-            <LogOut size={13} />
-            <span className="hidden sm:inline">Sair</span>
+            <LogOut size={13} /> Sair
           </button>
         </div>
       </header>

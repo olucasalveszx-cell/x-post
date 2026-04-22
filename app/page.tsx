@@ -540,8 +540,10 @@ export default function LandingPage() {
           </div>
 
           {/* Coluna visual — celular holográfico */}
-          <div className="hidden lg:flex flex-shrink-0 items-center justify-center lg:w-[480px] py-8">
-            <PhoneHologram />
+          <div className="flex flex-shrink-0 items-center justify-center lg:w-[480px] py-4 lg:py-8">
+            <div className="origin-center scale-[0.65] sm:scale-[0.82] lg:scale-100 -mt-[108px] -mb-[108px] sm:-mt-[57px] sm:-mb-[57px] lg:mt-0 lg:mb-0">
+              <PhoneHologram />
+            </div>
           </div>
 
         </div>
