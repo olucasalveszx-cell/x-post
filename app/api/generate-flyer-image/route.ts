@@ -61,10 +61,19 @@ function buildPrompt(opts: {
   return lines.join(" ");
 }
 
+/* ── Rotação de chaves ── */
+function getGeminiKeys(): string[] {
+  return [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_2,
+  ].filter(Boolean) as string[];
+}
+
 /* ── Imagen 4 (1:1) ── */
 async function fromImagen3(prompt: string): Promise<string> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY não configurada");
+  const keys = getGeminiKeys();
+  if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
+  const key = keys[0];
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${key}`,
@@ -88,34 +97,45 @@ async function fromImagen3(prompt: string): Promise<string> {
 
 /* ── Gemini 2.5 Flash texto→imagem ── */
 async function fromGemini(prompt: string): Promise<string> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY não configurada");
+  const keys = getGeminiKeys();
+  if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-      }),
-      signal: AbortSignal.timeout(45000),
+  const MODELS = ["gemini-2.5-flash-image", "gemini-2.0-flash-preview-image-generation", "gemini-2.0-flash-exp-image-generation"];
+  let lastError = "";
+
+  for (const key of keys) {
+    for (const model of MODELS) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+            }),
+            signal: AbortSignal.timeout(45000),
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) { lastError = data.error?.message ?? `Gemini HTTP ${res.status}`; if (res.status === 429) break; continue; }
+        const parts = data.candidates?.[0]?.content?.parts ?? [];
+        const img = parts.find((p: any) => p.inlineData);
+        if (!img?.inlineData) { lastError = `${model}: sem imagem`; continue; }
+        console.log(`[flyer] Gemini OK (${model})`);
+        return `data:${img.inlineData.mimeType};base64,${img.inlineData.data}`;
+      } catch (e: any) { lastError = e.message; }
     }
-  );
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `Gemini HTTP ${res.status}`);
-  const parts = data.candidates?.[0]?.content?.parts ?? [];
-  const img = parts.find((p: any) => p.inlineData);
-  if (!img?.inlineData) throw new Error("Gemini: sem imagem na resposta");
-  return `data:${img.inlineData.mimeType};base64,${img.inlineData.data}`;
+  }
+  throw new Error(lastError || "Gemini: falha em todos os modelos/chaves");
 }
 
 /* ── Gemini com foto do produto ── */
 async function fromGeminiWithProduct(prompt: string, refB64: string, refMime: string): Promise<string> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY não configurada");
+  const keys = getGeminiKeys();
+  if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
+  const key = keys[0];
 
   const instruction = `You are a world-class Brazilian advertising designer specializing in high-conversion social media creatives.
 Using the product photo provided as the HERO product, create a stunning promotional Instagram flyer (square 1:1 format).
