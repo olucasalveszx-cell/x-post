@@ -12,10 +12,10 @@ export default async function Image() {
   const logoBuffer = fs.readFileSync(path.join(process.cwd(), "public/tema_black.png"));
   const logoSrc = `data:image/png;base64,${logoBuffer.toString("base64")}`;
 
-  // Bebas Neue via Google Fonts
-  const bebasFont = await fetch(
-    "https://fonts.gstatic.com/s/bebasneue/v14/JTUSjIg69CK48gW7PXooxW5rygbi49c.woff2"
-  ).then((r) => r.arrayBuffer());
+  const bebas = fs.readFileSync(
+    path.join(process.cwd(), "public/fonts/BebasNeue-Regular.ttf")
+  );
+  const bebasFont: ArrayBuffer = bebas.buffer.slice(bebas.byteOffset, bebas.byteOffset + bebas.byteLength);
 
   return new ImageResponse(
     (

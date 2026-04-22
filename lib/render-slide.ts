@@ -114,13 +114,18 @@ export async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
 
-  if (slide.backgroundPattern === "checker") {
+  if (slide.backgroundPattern === "grid-light" || slide.backgroundPattern === "grid-dark") {
+    const isDark = slide.backgroundPattern === "grid-dark";
+    ctx.fillStyle = slide.backgroundColor ?? (isDark ? "#0a0a0a" : "#ffffff");
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)";
+    ctx.lineWidth = 1;
     const tile = 32;
-    for (let row = 0; row * tile < H; row++) {
-      for (let col = 0; col * tile < W; col++) {
-        ctx.fillStyle = (row + col) % 2 === 0 ? "#d0d0d0" : "#f0f0f0";
-        ctx.fillRect(col * tile, row * tile, tile, tile);
-      }
+    for (let x = 0; x <= W; x += tile) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y <= H; y += tile) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
   } else {
     ctx.fillStyle = slide.backgroundColor ?? "#000000";

@@ -382,9 +382,9 @@ export default function EditorPage() {
 
     const coverSlideOut: Slide = {
       ...coverSlide,
-      backgroundColor: "#e4e4e4",
+      backgroundColor: "#ffffff",
       backgroundGradient: undefined,
-      backgroundPattern: "checker",
+      backgroundPattern: "grid-light",
       backgroundImageUrl: undefined,
       backgroundCrop: undefined,
       elements: [makeProfile(), ...(coverImgEl ? [coverImgEl] : []), ...coverTexts],
@@ -437,9 +437,9 @@ export default function EditorPage() {
 
       return {
         ...slide,
-        backgroundColor: "#e4e4e4",
+        backgroundColor: "#ffffff",
         backgroundGradient: undefined,
-        backgroundPattern: "checker" as const,
+        backgroundPattern: "grid-light" as const,
         backgroundImageUrl: undefined,
         backgroundCrop: undefined,
         backgroundPosition: undefined,

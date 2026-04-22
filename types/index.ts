@@ -8,7 +8,7 @@ export interface Slide {
   backgroundPosition?: { x: number; y: number };
   backgroundZoom?: number;
   backgroundOpacity?: number;
-  backgroundPattern?: "checker";
+  backgroundPattern?: "grid-light" | "grid-dark";
   elements: SlideElement[];
   width: number;
   height: number;

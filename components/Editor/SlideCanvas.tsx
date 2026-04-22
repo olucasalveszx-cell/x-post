@@ -643,10 +643,10 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         width: slide.width,
         height: slide.height,
         backgroundColor: slide.backgroundColor,
-        backgroundImage: slide.backgroundPattern === "checker"
-          ? "repeating-conic-gradient(#d0d0d0 0% 25%, #f0f0f0 0% 50%)"
+        backgroundImage: slide.backgroundPattern
+          ? "linear-gradient(rgba(128,128,128,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.2) 1px, transparent 1px)"
           : undefined,
-        backgroundSize: slide.backgroundPattern === "checker" ? "32px 32px" : undefined,
+        backgroundSize: slide.backgroundPattern ? "32px 32px" : undefined,
         transform: `scale(${scale})`,
         transformOrigin: "top left",
       }}
@@ -1339,6 +1339,25 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
               <X size={15} /> Remover fundo
             </button>
+          )}
+
+          {/* Grade claro/escuro — só quando tem backgroundPattern */}
+          {(slide.backgroundPattern === "grid-light" || slide.backgroundPattern === "grid-dark") && (
+            <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
+              <p className="text-xs text-gray-500 mb-2">Grade de fundo</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onUpdate({ ...slide, backgroundColor: "#ffffff", backgroundPattern: "grid-light" as const })}
+                  className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${slide.backgroundPattern === "grid-light" ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
+                  ☀ Branco
+                </button>
+                <button
+                  onClick={() => onUpdate({ ...slide, backgroundColor: "#0a0a0a", backgroundPattern: "grid-dark" as const })}
+                  className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${slide.backgroundPattern === "grid-dark" ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
+                  ☾ Preto
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Modificar Layout */}
