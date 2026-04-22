@@ -313,7 +313,6 @@ export default function EditorPage() {
     } catch {}
 
     const PAD  = Math.round(W * 0.055);
-    const HPAD = Math.round(W * 0.04);   // padding interno do card
 
     const PROFILE_H = Math.round(H * 0.075);
     const PROFILE_Y = Math.round(H * 0.03);
@@ -390,40 +389,19 @@ export default function EditorPage() {
       elements: [makeProfile(), ...(coverImgEl ? [coverImgEl] : []), ...coverTexts],
     };
 
-    // ── Slides 2+ (conteúdo): gradiente azul-cinza claro + card branco atrás do texto ──
-    const CARD_TOP    = PROFILE_Y + PROFILE_H + Math.round(H * 0.045);
-    const CARD_BOTTOM = H - Math.round(H * 0.06);
-    const CARD_H      = CARD_BOTTOM - CARD_TOP;
-
-    const CTOP_TITLE  = CARD_TOP + Math.round(H * 0.05);
+    // ── Slides 2+ (conteúdo) ──
+    const CTOP_TITLE  = PROFILE_Y + PROFILE_H + Math.round(H * 0.07);
     const CTOP_BODY   = CTOP_TITLE + Math.round(H * 0.22) + Math.round(H * 0.02);
-
-    const makeCard = (): import("@/types").SlideElement => ({
-      id: uuidv4(),
-      type: "shape" as const,
-      x: PAD,
-      y: CARD_TOP,
-      width: W - PAD * 2,
-      height: CARD_H,
-      content: "",
-      style: {
-        fill: "#ffffff",
-        stroke: "rgba(0,0,0,0.07)",
-        strokeWidth: 1,
-        borderRadius: Math.round(W * 0.04),
-      } as any,
-      zIndex: 1,
-    });
 
     const contentSlides = rest.map((slide) => {
       const texts = slide.elements
         .filter((el) => el.type === "text")
         .map((el, i) => ({
           ...el,
-          x: PAD + HPAD,
+          x: PAD,
           y: i === 0 ? CTOP_TITLE : CTOP_BODY,
-          width: W - PAD * 2 - HPAD * 2,
-          height: i === 0 ? Math.round(H * 0.22) : Math.round(H * 0.30),
+          width: W - PAD * 2,
+          height: i === 0 ? Math.round(H * 0.22) : Math.round(H * 0.38),
           style: {
             ...(el.style as any),
             color: "#111111",
@@ -444,7 +422,7 @@ export default function EditorPage() {
         backgroundCrop: undefined,
         backgroundPosition: undefined,
         backgroundZoom: 100,
-        elements: [makeProfile(), makeCard(), ...texts],
+        elements: [makeProfile(), ...texts],
       };
     });
 
