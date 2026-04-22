@@ -348,9 +348,16 @@ export default function EditorPage() {
     const BODY_TOP = TEXT_TOP + TEXT_H + Math.round(H * 0.012);
     const BODY_H   = Math.round(H * 0.10);
 
-    const coverTexts = coverSlide.elements
-      .filter((el) => el.type === "text")
-      .slice(0, 2)
+    const pickTitleBody = (els: import("@/types").SlideElement[]) => {
+      const texts = els.filter(e => e.type === "text");
+      const sorted = [...texts].sort((a, b) => ((b.style as any)?.fontSize ?? 0) - ((a.style as any)?.fontSize ?? 0));
+      const strip = (c: string) => c.replace(/<[^>]+>/g, "").trim();
+      const titleEl = sorted.find(e => strip(e.content ?? "").length > 3 && !/^\d{1,2}$/.test(strip(e.content ?? "")));
+      const bodyEl  = sorted.find(e => e !== titleEl && ((e.style as any)?.fontSize ?? 0) >= 20 && strip(e.content ?? "").length > 3);
+      return [titleEl, bodyEl].filter(Boolean) as import("@/types").SlideElement[];
+    };
+
+    const coverTexts = pickTitleBody(coverSlide.elements)
       .map((el, i) => ({
         ...el,
         x: PAD,
@@ -395,9 +402,7 @@ export default function EditorPage() {
     const CTOP_BODY   = CTOP_TITLE + Math.round(H * 0.22) + Math.round(H * 0.02);
 
     const contentSlides = rest.map((slide) => {
-      const texts = slide.elements
-        .filter((el) => el.type === "text")
-        .slice(0, 2)
+      const texts = pickTitleBody(slide.elements)
         .map((el, i) => ({
           ...el,
           x: PAD,
