@@ -350,6 +350,7 @@ export default function EditorPage() {
 
     const coverTexts = coverSlide.elements
       .filter((el) => el.type === "text")
+      .slice(0, 2)
       .map((el, i) => ({
         ...el,
         x: PAD,
@@ -396,6 +397,7 @@ export default function EditorPage() {
     const contentSlides = rest.map((slide) => {
       const texts = slide.elements
         .filter((el) => el.type === "text")
+        .slice(0, 2)
         .map((el, i) => ({
           ...el,
           x: PAD,
