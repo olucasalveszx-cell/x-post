@@ -329,6 +329,8 @@ export default function EditorPage() {
       profileName: profileData?.name ?? "",
       profileHandle: profileData?.handle ?? "",
       profileVerified: profileData?.verified ?? false,
+      profileNameColor: "#111111",
+      profileHandleColor: "#666666",
       zIndex: 10,
     });
 
@@ -380,8 +382,9 @@ export default function EditorPage() {
 
     const coverSlideOut: Slide = {
       ...coverSlide,
-      backgroundColor: "#f5f7fa",
-      backgroundGradient: "linear-gradient(160deg,#ffffff 0%,#edf1f8 100%)",
+      backgroundColor: "#e4e4e4",
+      backgroundGradient: undefined,
+      backgroundPattern: "checker",
       backgroundImageUrl: undefined,
       backgroundCrop: undefined,
       elements: [makeProfile(), ...(coverImgEl ? [coverImgEl] : []), ...coverTexts],
@@ -434,8 +437,9 @@ export default function EditorPage() {
 
       return {
         ...slide,
-        backgroundColor: "#e8edf5",
-        backgroundGradient: "linear-gradient(160deg,#eef2f9 0%,#dce4f0 100%)",
+        backgroundColor: "#e4e4e4",
+        backgroundGradient: undefined,
+        backgroundPattern: "checker" as const,
         backgroundImageUrl: undefined,
         backgroundCrop: undefined,
         backgroundPosition: undefined,

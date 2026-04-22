@@ -639,7 +639,17 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     <div
       ref={containerRef}
       className="slide-canvas"
-      style={{ width: slide.width, height: slide.height, backgroundColor: slide.backgroundColor, transform: `scale(${scale})`, transformOrigin: "top left" }}
+      style={{
+        width: slide.width,
+        height: slide.height,
+        backgroundColor: slide.backgroundColor,
+        backgroundImage: slide.backgroundPattern === "checker"
+          ? "repeating-conic-gradient(#d0d0d0 0% 25%, #f0f0f0 0% 50%)"
+          : undefined,
+        backgroundSize: slide.backgroundPattern === "checker" ? "32px 32px" : undefined,
+        transform: `scale(${scale})`,
+        transformOrigin: "top left",
+      }}
       onClick={handleCanvasClick}
       onContextMenu={handleBgContextMenu}
     >
@@ -1029,7 +1039,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                 {/* Textos */}
                 <div style={{ display: "flex", flexDirection: "column", gap: el.height * 0.05 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: el.height * 0.1 }}>
-                    <span style={{ fontSize: el.height * 0.28, fontWeight: 700, color: "#fff", lineHeight: 1, whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: el.height * 0.28, fontWeight: 700, color: el.profileNameColor ?? "#fff", lineHeight: 1, whiteSpace: "nowrap" }}>
                       {el.profileName || "Seu nome"}
                     </span>
                     {el.profileVerified && (
@@ -1039,7 +1049,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                       </svg>
                     )}
                   </div>
-                  <span style={{ fontSize: el.height * 0.22, color: "rgba(255,255,255,0.55)", lineHeight: 1, whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: el.height * 0.22, color: el.profileHandleColor ?? "rgba(255,255,255,0.55)", lineHeight: 1, whiteSpace: "nowrap" }}>
                     @{el.profileHandle || "seuhandle"}
                   </span>
                 </div>
@@ -1214,12 +1224,13 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       {/* Background context menu — scale invertido */}
       {bgCtxMenu && (
         <div
-          className="absolute z-[100] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1.5 min-w-[260px]"
+          className="absolute z-[100] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1 min-w-[240px] overflow-y-auto"
           style={{
-            left: Math.min(bgCtxMenu.x, slide.width - 290 / scale),
+            left: Math.min(bgCtxMenu.x, slide.width - 270 / scale),
             top: Math.min(bgCtxMenu.y, slide.height - 370 / scale),
             transform: `scale(${1 / scale})`,
             transformOrigin: "top left",
+            maxHeight: `${Math.round(slide.height * 0.82)}px`,
           }}
           onClick={(e) => e.stopPropagation()}
           onContextMenu={(e) => e.preventDefault()}

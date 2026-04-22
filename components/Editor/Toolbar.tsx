@@ -363,6 +363,7 @@ export default function Toolbar({
 
   const s = selectedElement?.type === "text" ? (selectedElement.style as any) : null;
   const isText = selectedElement?.type === "text";
+  const isProfile = selectedElement?.type === "profile";
 
   const loadFont = (fontValue: string) => {
     const name = fontValue.match(/'([^']+)'/)?.[1];
@@ -720,6 +721,27 @@ export default function Toolbar({
       )}
 
       {/* ── Painel de tipografia ── */}
+      {isProfile && (
+        <div className="flex items-center gap-3 px-4 py-2 border-t border-[var(--border)] overflow-x-auto whitespace-nowrap scrollbar-none">
+          <span className="text-xs text-[var(--text-3)] shrink-0">Perfil</span>
+          <div className="w-px h-4 bg-[var(--border-2)]" />
+          <label className="flex items-center gap-1.5 text-xs text-[var(--text-2)] cursor-pointer shrink-0">
+            Nome:
+            <input type="color"
+              value={(selectedElement as any).profileNameColor ?? "#ffffff"}
+              onChange={(e) => patchSelected({ profileNameColor: e.target.value })}
+              className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent" />
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-[var(--text-2)] cursor-pointer shrink-0">
+            @handle:
+            <input type="color"
+              value={(selectedElement as any).profileHandleColor ?? "#888888"}
+              onChange={(e) => patchSelected({ profileHandleColor: e.target.value })}
+              className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent" />
+          </label>
+        </div>
+      )}
+
       {isText && s && (
         <div className="flex items-center gap-3 px-4 py-2 border-t border-[var(--border)] overflow-x-auto whitespace-nowrap scrollbar-none">
           <select value={s.fontFamily ?? "sans-serif"} onChange={(e) => { loadFont(e.target.value); patchStyle({ fontFamily: e.target.value }); }}

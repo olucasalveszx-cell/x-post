@@ -114,8 +114,18 @@ export async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
 
-  ctx.fillStyle = slide.backgroundColor ?? "#000000";
-  ctx.fillRect(0, 0, W, H);
+  if (slide.backgroundPattern === "checker") {
+    const tile = 32;
+    for (let row = 0; row * tile < H; row++) {
+      for (let col = 0; col * tile < W; col++) {
+        ctx.fillStyle = (row + col) % 2 === 0 ? "#d0d0d0" : "#f0f0f0";
+        ctx.fillRect(col * tile, row * tile, tile, tile);
+      }
+    }
+  } else {
+    ctx.fillStyle = slide.backgroundColor ?? "#000000";
+    ctx.fillRect(0, 0, W, H);
+  }
 
   if (slide.backgroundImageUrl) {
     try {
@@ -194,7 +204,7 @@ export async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
       const handleSize = el.height * 0.22;
       ctx.save();
       ctx.font = `bold ${nameSize}px sans-serif`;
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = el.profileNameColor ?? "#ffffff";
       ctx.textBaseline = "middle";
       const nameY = ay - nameSize * 0.4;
       ctx.fillText(el.profileName ?? "", textX, nameY);
@@ -221,7 +231,7 @@ export async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
 
       // Handle
       ctx.font = `${handleSize}px sans-serif`;
-      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.fillStyle = el.profileHandleColor ?? "rgba(255,255,255,0.55)";
       ctx.fillText(`@${el.profileHandle ?? ""}`, textX, ay + nameSize * 0.55);
       ctx.restore();
     }

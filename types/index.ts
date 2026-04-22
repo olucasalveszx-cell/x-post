@@ -8,6 +8,7 @@ export interface Slide {
   backgroundPosition?: { x: number; y: number };
   backgroundZoom?: number;
   backgroundOpacity?: number;
+  backgroundPattern?: "checker";
   elements: SlideElement[];
   width: number;
   height: number;
@@ -31,6 +32,8 @@ export interface SlideElement {
   profileName?: string;
   profileHandle?: string;
   profileVerified?: boolean;
+  profileNameColor?: string;
+  profileHandleColor?: string;
   // Moldura (frame)
   frameImageUrl?: string;
   frameShape?: string;
