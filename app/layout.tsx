@@ -10,9 +10,9 @@ export const metadata: Metadata = {
     "Chega de perder horas criando conteúdo. O XPost gera carrosséis completos com IA — do texto às imagens — em menos de 3 minutos.",
   metadataBase: new URL(APP_URL),
   icons: {
-    icon: "/favicon.png",
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
+    icon: "/tema_black.png",
+    shortcut: "/tema_black.png",
+    apple: "/tema_black.png",
   },
   openGraph: {
     title: "XPost — Criador de Carrosséis para Instagram com IA",

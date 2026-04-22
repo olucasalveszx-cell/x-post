@@ -12,6 +12,11 @@ export default async function Image() {
   const logoBuffer = fs.readFileSync(path.join(process.cwd(), "public/tema_black.png"));
   const logoSrc = `data:image/png;base64,${logoBuffer.toString("base64")}`;
 
+  // Bebas Neue via Google Fonts
+  const bebasFont = await fetch(
+    "https://fonts.gstatic.com/s/bebasneue/v14/JTUSjIg69CK48gW7PXooxW5rygbi49c.woff2"
+  ).then((r) => r.arrayBuffer());
+
   return new ImageResponse(
     (
       <div
@@ -126,7 +131,7 @@ export default async function Image() {
                 letterSpacing: 2,
                 lineHeight: 1,
                 display: "flex",
-                fontFamily: "sans-serif",
+                fontFamily: "Bebas Neue",
               }}
             >
               XPost
@@ -170,6 +175,9 @@ export default async function Image() {
         </div>
       </div>
     ),
-    { ...size }
+    {
+      ...size,
+      fonts: [{ name: "Bebas Neue", data: bebasFont, style: "normal", weight: 400 }],
+    }
   );
 }
