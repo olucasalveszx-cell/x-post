@@ -85,6 +85,8 @@ export default function Toolbar({
   const [editPrompt, setEditPrompt] = useState("");
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
+  const [imgElPrompt, setImgElPrompt] = useState("");
+  const [imgElGenerating, setImgElGenerating] = useState(false);
   const [showLayouts, setShowLayouts] = useState(false);
   const [showMolds, setShowMolds] = useState(false);
   const [showTheme, setShowTheme] = useState(false);
@@ -364,6 +366,25 @@ export default function Toolbar({
   const s = selectedElement?.type === "text" ? (selectedElement.style as any) : null;
   const isText = selectedElement?.type === "text";
   const isProfile = selectedElement?.type === "profile";
+  const isImage = selectedElement?.type === "image";
+
+  const generateImageForElement = async () => {
+    if (!selectedElement || !isImage) return;
+    const prompt = imgElPrompt.trim() || slide.elements.filter(e => e.type === "text").map(e => (e.content ?? "").replace(/<[^>]+>/g, "").trim()).filter(Boolean).join(". ") || "cinematic photo";
+    setImgElGenerating(true);
+    try {
+      const customerId = localStorage.getItem("xpz_customer_id") ?? undefined;
+      const activationToken = localStorage.getItem("xpz_activation_token") ?? undefined;
+      const res = await fetch("/api/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, imageStyle: "gemini", customerId, activationToken }),
+      });
+      const data = await res.json();
+      if (data.imageUrl) patchSelected({ src: data.imageUrl });
+    } catch {}
+    finally { setImgElGenerating(false); }
+  };
 
   const loadFont = (fontValue: string) => {
     const name = fontValue.match(/'([^']+)'/)?.[1];
@@ -716,6 +737,28 @@ export default function Toolbar({
             className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] shrink-0 underline"
           >
             Reset
+          </button>
+        </div>
+      )}
+
+      {/* ── Painel de imagem IA ── */}
+      {isImage && (
+        <div className="flex items-center gap-2 px-4 py-2 border-t border-[var(--border)] overflow-x-auto whitespace-nowrap scrollbar-none">
+          <Wand2 size={14} className="text-brand-500 shrink-0" />
+          <input
+            type="text"
+            value={imgElPrompt}
+            onChange={(e) => setImgElPrompt(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && generateImageForElement()}
+            placeholder="Descreva a imagem (ou deixe vazio para usar o texto do slide)..."
+            className="bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-2 py-1 text-xs text-[var(--text)] focus:outline-none focus:border-brand-500 w-72 placeholder:text-[var(--text-3)]"
+          />
+          <button
+            onClick={generateImageForElement}
+            disabled={imgElGenerating}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white text-xs font-medium shrink-0 transition-colors"
+          >
+            {imgElGenerating ? <><Loader2 size={12} className="animate-spin" /> Gerando...</> : <><Sparkles size={12} /> Gerar imagem com IA</>}
           </button>
         </div>
       )}
