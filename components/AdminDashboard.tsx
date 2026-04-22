@@ -382,7 +382,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#060606" }}>
+    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: "#060606" }}>
       {/* Topbar */}
       <header
         className="sticky top-0 z-10 border-b border-white/5 overflow-x-auto scrollbar-none"
