@@ -19,7 +19,7 @@ type ResizeState = { elementId: string; startX: number; startY: number; origW: n
 type CropState = { elementId: string; startX: number; startY: number; handle: string; origClip: { top: number; right: number; bottom: number; left: number } } | null;
 
 type CtxMenu = { x: number; y: number; el: SlideElement } | null;
-type BgCtxMenu = { x: number; y: number } | null;
+type BgCtxMenu = { x: number; y: number; mobile?: boolean } | null;
 
 const FRAME_CLIP: Record<string, { clip?: string; radius?: string }> = {
   circle:   { radius: "50%" },
@@ -72,8 +72,9 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     const texts = slide.elements
       .filter((e) => e.type === "text")
       .sort((a, b) => ((b.style as any)?.fontSize ?? 0) - ((a.style as any)?.fontSize ?? 0));
-    const titleEl = texts[0];
-    const bodyEl  = texts[1];
+    const titleEl  = texts[0];
+    const bodyEl   = texts[1];
+    const auxTexts = texts.slice(2); // swipe indicators, footnotes, etc.
     const titleText = titleEl?.content ?? "";
     const bodyText  = bodyEl?.content  ?? "";
     const titleStyle = titleEl?.style ?? { fontSize: 80, fontWeight: "bold", fontFamily: "sans-serif", color: "#ffffff", textAlign: "center", lineHeight: 1.05 };
@@ -125,6 +126,9 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       elements.push({ id: uuid(), type: "text" as const, x: 60, y: bodyY, width: W - 120, height: bodyH,
         content: bodyText, style: { ...(bodyStyle as any), textAlign: bAlign } });
     }
+
+    // Preserva textos auxiliares (ex: "arrasta →", "salva ❤️") na posição original
+    elements.push(...auxTexts);
 
     onUpdate({
       ...slide,
@@ -386,6 +390,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     e: React.MouseEvent | React.TouchEvent,
     getPos: () => { x: number; y: number },
     setPos: (x: number, y: number) => void,
+    dragScale = scale,
   ) => {
     e.stopPropagation();
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
@@ -398,8 +403,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       const cx = "touches" in ev ? (ev as TouchEvent).touches[0].clientX : (ev as MouseEvent).clientX;
       const cy = "touches" in ev ? (ev as TouchEvent).touches[0].clientY : (ev as MouseEvent).clientY;
       setPos(
-        menuDragRef.current.origX + (cx - menuDragRef.current.startX) / scale,
-        menuDragRef.current.origY + (cy - menuDragRef.current.startY) / scale,
+        menuDragRef.current.origX + (cx - menuDragRef.current.startX) / dragScale,
+        menuDragRef.current.origY + (cy - menuDragRef.current.startY) / dragScale,
       );
     };
     const onUp = () => {
@@ -418,8 +423,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const handleBgContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const rect = containerRef.current!.getBoundingClientRect();
-    setBgCtxMenu({ x: (e.clientX - rect.left) / scale, y: (e.clientY - rect.top) / scale });
+    setBgCtxMenu({ x: e.clientX, y: e.clientY });
   };
 
   const removeBg = () => {
@@ -1221,157 +1225,6 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         </div>
       )}
 
-      {/* Background context menu — scale invertido */}
-      {bgCtxMenu && (
-        <div
-          className="absolute z-[100] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1 min-w-[240px] overflow-y-auto"
-          style={{
-            left: Math.min(bgCtxMenu.x, slide.width - 270 / scale),
-            top: Math.min(bgCtxMenu.y, slide.height - 370 / scale),
-            transform: `scale(${1 / scale})`,
-            transformOrigin: "top left",
-            maxHeight: `${Math.round(slide.height * 0.82)}px`,
-          }}
-          onClick={(e) => e.stopPropagation()}
-          onContextMenu={(e) => e.preventDefault()}
-        >
-          {/* Header — arrastar menu */}
-          <div className="px-4 py-2.5 border-b border-[#2a2a2a] flex items-center gap-2 cursor-move select-none"
-            onMouseDown={(e) => startMenuDrag(e, () => ({ x: bgCtxMenu!.x, y: bgCtxMenu!.y }), (x, y) => setBgCtxMenu(m => m ? { ...m, x, y } : null))}
-            onTouchStart={(e) => startMenuDrag(e, () => ({ x: bgCtxMenu!.x, y: bgCtxMenu!.y }), (x, y) => setBgCtxMenu(m => m ? { ...m, x, y } : null))}>
-            <ImageIcon size={15} className="text-brand-400" />
-            <span className="text-sm font-semibold text-gray-300 flex-1">Imagem de fundo</span>
-            <button onClick={(e) => { e.stopPropagation(); closeBgCtx(); }} className="ml-auto text-gray-500 hover:text-gray-200 transition-colors p-0.5"><X size={15} /></button>
-          </div>
-
-          {/* Transparência — só quando tem imagem */}
-          {slide.backgroundImageUrl && (
-            <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-sm text-gray-400 flex items-center gap-1.5"><Blend size={14} /> Transparência</span>
-                <span className="text-sm text-white font-medium">{Math.round((1 - (slide.backgroundOpacity ?? 1)) * 100)}%</span>
-              </div>
-              <input type="range" min={0} max={100} value={Math.round((1 - (slide.backgroundOpacity ?? 1)) * 100)}
-                onChange={(e) => onUpdate({ ...slide, backgroundOpacity: 1 - Number(e.target.value) / 100 })}
-                className="w-full accent-brand-500" />
-            </div>
-          )}
-
-          {/* Degradê — só quando tem imagem */}
-          {slide.backgroundImageUrl && (
-            <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
-              <p className="text-sm text-gray-400 mb-2 flex items-center gap-1.5"><Layers size={14} /> Degradê</p>
-              <div className="grid grid-cols-3 gap-1.5">
-                {GRADIENTS.map((g) => (
-                  <button key={g.label}
-                    onClick={() => setBgGradient(g.value)}
-                    className={`text-xs py-1.5 px-2 rounded border transition-colors ${
-                      (slide.backgroundGradient ?? "") === g.value
-                        ? "border-brand-500 bg-brand-500/20 text-white"
-                        : "border-[#333] text-gray-400 hover:border-[#555]"
-                    }`}>
-                    {g.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Posição e zoom — só quando tem imagem */}
-          {slide.backgroundImageUrl && (
-            <div className="px-4 py-3 border-b border-[#2a2a2a] space-y-2.5">
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Posição & Zoom</p>
-              <label className="flex items-center gap-2 text-xs text-gray-400">
-                <span className="w-3">X</span>
-                <input type="range" min={0} max={100} step={1}
-                  value={slide.backgroundPosition?.x ?? 50}
-                  onChange={(e) => onUpdate({ ...slide, backgroundPosition: { x: Number(e.target.value), y: slide.backgroundPosition?.y ?? 50 } })}
-                  className="flex-1 accent-brand-500" />
-                <span className="text-gray-600 w-6 text-right">{slide.backgroundPosition?.x ?? 50}</span>
-              </label>
-              <label className="flex items-center gap-2 text-xs text-gray-400">
-                <span className="w-3">Y</span>
-                <input type="range" min={0} max={100} step={1}
-                  value={slide.backgroundPosition?.y ?? 50}
-                  onChange={(e) => onUpdate({ ...slide, backgroundPosition: { x: slide.backgroundPosition?.x ?? 50, y: Number(e.target.value) } })}
-                  className="flex-1 accent-brand-500" />
-                <span className="text-gray-600 w-6 text-right">{slide.backgroundPosition?.y ?? 50}</span>
-              </label>
-              <label className="flex items-center gap-2 text-xs text-gray-400">
-                <span className="w-3">🔍</span>
-                <input type="range" min={80} max={250} step={5}
-                  value={slide.backgroundZoom ?? 100}
-                  onChange={(e) => onUpdate({ ...slide, backgroundZoom: Number(e.target.value) })}
-                  className="flex-1 accent-brand-500" />
-                <span className="text-gray-600 w-8 text-right">{slide.backgroundZoom ?? 100}%</span>
-              </label>
-              <button
-                onClick={() => onUpdate({ ...slide, backgroundPosition: { x: 50, y: 50 }, backgroundZoom: 100 })}
-                className="text-[11px] text-gray-600 hover:text-gray-400 underline">
-                Resetar posição
-              </button>
-            </div>
-          )}
-
-          {/* Gerar imagem IA */}
-          <button onClick={generateBg}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
-            <Wand2 size={15} /> {slide.backgroundImageUrl ? "Gerar nova imagem IA" : "Gerar imagem de fundo com IA"}
-          </button>
-
-          {/* Adicionar / Trocar imagem */}
-          <button onClick={() => bgFileInputRef.current?.click()}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
-            <RefreshCw size={15} className="text-blue-400" /> {slide.backgroundImageUrl ? "Trocar imagem" : "Adicionar imagem de fundo"}
-          </button>
-
-          {/* Cortar fundo — só quando tem imagem */}
-          {slide.backgroundImageUrl && (
-            <button onClick={enterBgCrop}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-yellow-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
-              <Scissors size={15} /> Cortar imagem de fundo
-            </button>
-          )}
-
-          {/* Remover fundo — só quando tem imagem */}
-          {slide.backgroundImageUrl && (
-            <button onClick={removeBg}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
-              <X size={15} /> Remover fundo
-            </button>
-          )}
-
-          {/* Grade claro/escuro — só quando tem backgroundPattern */}
-          {(slide.backgroundPattern === "grid-light" || slide.backgroundPattern === "grid-dark") && (
-            <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
-              <p className="text-xs text-gray-500 mb-2">Grade de fundo</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onUpdate({ ...slide, backgroundColor: "#ffffff", backgroundPattern: "grid-light" as const })}
-                  className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${slide.backgroundPattern === "grid-light" ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
-                  ☀ Branco
-                </button>
-                <button
-                  onClick={() => onUpdate({ ...slide, backgroundColor: "#0a0a0a", backgroundPattern: "grid-dark" as const })}
-                  className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${slide.backgroundPattern === "grid-dark" ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
-                  ☾ Preto
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Modificar Layout */}
-          <button onClick={() => { setShowLayoutPicker(true); closeBgCtx(); }}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-500 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
-            <LayoutTemplate size={15} /> Modificar layout
-          </button>
-
-          {/* Fechar */}
-          <button onClick={closeBgCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
-            Fechar
-          </button>
-        </div>
-      )}
 
       {/* Botão "Gerar imagem com I.A" quando não há fundo */}
       {!slide.backgroundImageUrl && !generatingBg && !selectedId && !showThemeInput && (
@@ -1396,6 +1249,154 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       )}
     </div>
 
+    {/* Background context menu — portal fixed, fora do canvas (sem clipping) */}
+    {bgCtxMenu && typeof window !== "undefined" && createPortal(
+      <>
+        <div className="fixed inset-0 z-[9990]" onClick={closeBgCtx} />
+        <div
+          className="fixed z-[9991] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1 overflow-y-auto"
+          style={bgCtxMenu.mobile
+            ? { bottom: 76, left: "50%", transform: "translateX(-50%)", maxHeight: "75vh", width: "min(300px, 92vw)" }
+            : {
+                left: Math.min(bgCtxMenu.x, window.innerWidth - 270),
+                top: Math.max(8, Math.min(bgCtxMenu.y, window.innerHeight - 60)),
+                maxHeight: "80vh",
+                minWidth: 240,
+              }
+          }
+          onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {/* Header */}
+          {!bgCtxMenu.mobile && (
+            <div className="px-4 py-2.5 border-b border-[#2a2a2a] flex items-center gap-2 cursor-move select-none"
+              onMouseDown={(e) => startMenuDrag(e, () => ({ x: bgCtxMenu!.x, y: bgCtxMenu!.y }), (x, y) => setBgCtxMenu(m => m ? { ...m, x, y } : null), 1)}
+              onTouchStart={(e) => startMenuDrag(e, () => ({ x: bgCtxMenu!.x, y: bgCtxMenu!.y }), (x, y) => setBgCtxMenu(m => m ? { ...m, x, y } : null), 1)}>
+              <ImageIcon size={15} className="text-brand-400" />
+              <span className="text-sm font-semibold text-gray-300 flex-1">Imagem de fundo</span>
+              <button onClick={(e) => { e.stopPropagation(); closeBgCtx(); }} className="ml-auto text-gray-500 hover:text-gray-200 transition-colors p-0.5"><X size={15} /></button>
+            </div>
+          )}
+          {bgCtxMenu.mobile && (
+            <div className="px-4 py-3 border-b border-[#2a2a2a] flex items-center gap-2">
+              <ImageIcon size={15} className="text-brand-400" />
+              <span className="text-sm font-semibold text-gray-300 flex-1">Opções do slide</span>
+              <button onClick={(e) => { e.stopPropagation(); closeBgCtx(); }} className="text-gray-500 hover:text-gray-200 p-0.5"><X size={15} /></button>
+            </div>
+          )}
+
+          {/* Transparência */}
+          {slide.backgroundImageUrl && (
+            <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-sm text-gray-400 flex items-center gap-1.5"><Blend size={14} /> Transparência</span>
+                <span className="text-sm text-white font-medium">{Math.round((1 - (slide.backgroundOpacity ?? 1)) * 100)}%</span>
+              </div>
+              <input type="range" min={0} max={100} value={Math.round((1 - (slide.backgroundOpacity ?? 1)) * 100)}
+                onChange={(e) => onUpdate({ ...slide, backgroundOpacity: 1 - Number(e.target.value) / 100 })}
+                className="w-full accent-brand-500" />
+            </div>
+          )}
+
+          {/* Degradê */}
+          {slide.backgroundImageUrl && (
+            <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
+              <p className="text-sm text-gray-400 mb-2 flex items-center gap-1.5"><Layers size={14} /> Degradê</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {GRADIENTS.map((g) => (
+                  <button key={g.label} onClick={() => setBgGradient(g.value)}
+                    className={`text-xs py-1.5 px-2 rounded border transition-colors ${(slide.backgroundGradient ?? "") === g.value ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Posição e zoom */}
+          {slide.backgroundImageUrl && (
+            <div className="px-4 py-3 border-b border-[#2a2a2a] space-y-2.5">
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Posição & Zoom</p>
+              <label className="flex items-center gap-2 text-xs text-gray-400"><span className="w-3">X</span>
+                <input type="range" min={0} max={100} step={1} value={slide.backgroundPosition?.x ?? 50}
+                  onChange={(e) => onUpdate({ ...slide, backgroundPosition: { x: Number(e.target.value), y: slide.backgroundPosition?.y ?? 50 } })} className="flex-1 accent-brand-500" />
+                <span className="text-gray-600 w-6 text-right">{slide.backgroundPosition?.x ?? 50}</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs text-gray-400"><span className="w-3">Y</span>
+                <input type="range" min={0} max={100} step={1} value={slide.backgroundPosition?.y ?? 50}
+                  onChange={(e) => onUpdate({ ...slide, backgroundPosition: { x: slide.backgroundPosition?.x ?? 50, y: Number(e.target.value) } })} className="flex-1 accent-brand-500" />
+                <span className="text-gray-600 w-6 text-right">{slide.backgroundPosition?.y ?? 50}</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs text-gray-400"><span className="w-3">🔍</span>
+                <input type="range" min={80} max={250} step={5} value={slide.backgroundZoom ?? 100}
+                  onChange={(e) => onUpdate({ ...slide, backgroundZoom: Number(e.target.value) })} className="flex-1 accent-brand-500" />
+                <span className="text-gray-600 w-8 text-right">{slide.backgroundZoom ?? 100}%</span>
+              </label>
+              <button onClick={() => onUpdate({ ...slide, backgroundPosition: { x: 50, y: 50 }, backgroundZoom: 100 })}
+                className="text-[11px] text-gray-600 hover:text-gray-400 underline">Resetar posição</button>
+            </div>
+          )}
+
+          {/* Gerar imagem IA */}
+          <button onClick={generateBg}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            <Wand2 size={15} /> {slide.backgroundImageUrl ? "Gerar nova imagem IA" : "Gerar imagem de fundo com IA"}
+          </button>
+
+          {/* Adicionar / Trocar imagem */}
+          <button onClick={() => bgFileInputRef.current?.click()}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            <RefreshCw size={15} className="text-blue-400" /> {slide.backgroundImageUrl ? "Trocar imagem" : "Adicionar imagem de fundo"}
+          </button>
+
+          {/* Cortar fundo */}
+          {slide.backgroundImageUrl && (
+            <button onClick={enterBgCrop}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-yellow-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+              <Scissors size={15} /> Cortar imagem de fundo
+            </button>
+          )}
+
+          {/* Remover fundo */}
+          {slide.backgroundImageUrl && (
+            <button onClick={removeBg}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+              <X size={15} /> Remover fundo
+            </button>
+          )}
+
+          {/* Grade claro/escuro */}
+          {(slide.backgroundPattern === "grid-light" || slide.backgroundPattern === "grid-dark") && (
+            <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
+              <p className="text-xs text-gray-500 mb-2">Grade de fundo</p>
+              <div className="flex gap-2">
+                <button onClick={() => onUpdate({ ...slide, backgroundColor: "#ffffff", backgroundPattern: "grid-light" as const })}
+                  className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${slide.backgroundPattern === "grid-light" ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
+                  ☀ Branco
+                </button>
+                <button onClick={() => onUpdate({ ...slide, backgroundColor: "#0a0a0a", backgroundPattern: "grid-dark" as const })}
+                  className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${slide.backgroundPattern === "grid-dark" ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
+                  ☾ Preto
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Modificar Layout */}
+          <button onClick={() => { setShowLayoutPicker(true); closeBgCtx(); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-500 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            <LayoutTemplate size={15} /> Modificar layout
+          </button>
+
+          {/* Fechar */}
+          <button onClick={closeBgCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
+            Fechar
+          </button>
+        </div>
+      </>,
+      document.body
+    )}
+
     {/* Botão 3 pontos (mobile) — fora do canvas para não atrapalhar edição */}
     {isActive && typeof window !== "undefined" && createPortal(
       <button
@@ -1419,7 +1420,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             if (el?.type === "image") { setCtxMenu({ x: 20, y: 70, el }); return; }
             if (el?.type === "frame") { setFrameCtxMenu({ x: 20, y: 70, el }); return; }
           }
-          setBgCtxMenu({ x: 20, y: 70 });
+          setBgCtxMenu({ x: 0, y: 0, mobile: true });
         }}
       >
         <MoreVertical size={18} />
