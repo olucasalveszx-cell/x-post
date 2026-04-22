@@ -1,53 +1,62 @@
 import { NextResponse } from "next/server";
 
-export const maxDuration = 30;
+export const maxDuration = 55;
+
+function getKeys() {
+  return [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+  ].filter(Boolean) as string[];
+}
+
+const MODELS = [
+  "gemini-2.5-flash-preview-05-20",
+  "gemini-2.5-flash-image",
+  "gemini-2.0-flash-preview-image-generation",
+  "gemini-2.0-flash-exp-image-generation",
+];
 
 export async function GET() {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return NextResponse.json({ error: "GEMINI_API_KEY não configurada" }, { status: 500 });
+  const keys = getKeys();
+  if (!keys.length) return NextResponse.json({ error: "Nenhuma GEMINI_API_KEY configurada" }, { status: 500 });
 
-  // Lista todos os modelos disponíveis na chave
-  const listRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models?key=${key}&pageSize=100`,
-    { signal: AbortSignal.timeout(10000) }
-  );
-  const listData = await listRes.json();
+  const results: any[] = [];
 
-  if (!listRes.ok) {
-    return NextResponse.json({ error: listData.error?.message ?? "Erro ao listar modelos", keyPrefix: key.slice(0, 8) + "..." }, { status: 500 });
+  for (let ki = 0; ki < keys.length; ki++) {
+    const key = keys[ki];
+    const keyLabel = `key${ki + 1} (${key.slice(0, 10)}...)`;
+
+    for (const model of MODELS) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: "A red apple on a white table. Simple photo." }] }],
+            generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+          }),
+          signal: AbortSignal.timeout(20000),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          results.push({ key: keyLabel, model, status: "FAIL", httpStatus: res.status, error: data.error?.message });
+          continue;
+        }
+
+        const parts = data.candidates?.[0]?.content?.parts ?? [];
+        const hasImage = parts.some((p: any) => p.inlineData);
+        results.push({ key: keyLabel, model, status: hasImage ? "OK ✅" : "no-image ⚠️", httpStatus: res.status });
+
+        if (hasImage) break; // não precisa testar mais modelos para essa chave
+
+      } catch (e: any) {
+        results.push({ key: keyLabel, model, status: "EXCEPTION", error: e.message });
+      }
+    }
   }
 
-  const models: any[] = listData.models ?? [];
-
-  // Filtra apenas os que suportam geração de imagem
-  const imageModels = models
-    .filter((m: any) =>
-      m.supportedGenerationMethods?.includes("generateContent") ||
-      m.supportedGenerationMethods?.includes("predict")
-    )
-    .filter((m: any) =>
-      m.name?.toLowerCase().includes("image") ||
-      m.name?.toLowerCase().includes("imagen") ||
-      m.displayName?.toLowerCase().includes("image") ||
-      m.outputTokenLimit === 0 // modelos de imagem geralmente não têm tokens de saída
-    )
-    .map((m: any) => ({
-      name: m.name,
-      displayName: m.displayName,
-      methods: m.supportedGenerationMethods,
-    }));
-
-  // Todos os modelos disponíveis (resumido)
-  const allModels = models.map((m: any) => ({
-    name: m.name,
-    displayName: m.displayName,
-    methods: m.supportedGenerationMethods,
-  }));
-
-  return NextResponse.json({
-    keyPrefix: key.slice(0, 8) + "...",
-    totalModels: models.length,
-    imageModels,
-    allModels,
-  });
+  return NextResponse.json({ keys: keys.length, results });
 }
