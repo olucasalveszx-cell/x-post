@@ -5,6 +5,7 @@ import { v4 as uuid } from "uuid";
 import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle, Instagram, Check } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useTheme } from "next-themes";
 
 import { Slide, Project } from "@/types";
 import { renderSlide } from "@/lib/render-slide";
@@ -36,6 +37,8 @@ type Format = typeof FORMATS[number];
 
 export default function EditorPage() {
   const { data: session } = useSession();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme !== "light";
   const [format, setFormat] = useState<Format>(FORMATS[1]);
   const SLIDE_W = format.width;
   const SLIDE_H = format.height;
@@ -593,15 +596,15 @@ export default function EditorPage() {
 
   return (
     <SubscriptionGate>
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden bg-[var(--bg)]">
 
       {/* ── Header ─────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between px-3 md:px-5 py-2 md:py-3 bg-[#070707] border-b border-[#161616] z-10 shrink-0">
+      <header className="flex items-center justify-between px-3 md:px-5 py-2 md:py-3 bg-[var(--bg-2)] border-b border-[var(--border)] z-10 shrink-0">
         <div className="flex items-center gap-2">
-          <Link href="/" className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-colors">
+          <Link href="/" className="p-1.5 rounded-lg hover:bg-[var(--bg-3)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors">
             <ArrowLeft size={18} />
           </Link>
-          <AppLogo variant="dark" size={28} textClassName="hidden sm:block text-[18px] font-black tracking-tight text-white leading-none" />
+          <AppLogo variant={isDark ? "dark" : "light"} size={28} textClassName="hidden sm:block text-[18px] font-black tracking-tight text-[var(--text)] leading-none" />
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -639,12 +642,12 @@ export default function EditorPage() {
             <span className="hidden md:inline">Zora IA</span>
           </button>
           <button onClick={handleExport} disabled={exporting}
-            className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-[#111] hover:bg-[#1a1a1a] text-sm border border-[#222] disabled:opacity-40 transition-colors">
+            className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text)] text-sm border border-[var(--border)] disabled:opacity-40 transition-colors">
             <Download size={15} />
             <span className="hidden md:inline">{exporting ? "Exportando..." : "Exportar"}</span>
           </button>
           <button onClick={() => setShowProfile(true)}
-            className="hidden md:flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-[#222] bg-[#111] hover:bg-[#1a1a1a] transition-colors text-gray-300">
+            className="hidden md:flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-[var(--border)] bg-[var(--bg-3)] hover:bg-[var(--bg-4)] transition-colors text-[var(--text-2)]">
             <UserCircle size={15} />
             <span className="hidden md:inline">Perfil</span>
           </button>
@@ -688,20 +691,20 @@ export default function EditorPage() {
 
         {/* Painel esquerdo — Gerar */}
         {isMobile ? (
-          <div className="fixed inset-y-0 left-0 z-40 flex flex-col bg-[#080808] border-r border-[#161616]"
+          <div className="fixed inset-y-0 left-0 z-40 flex flex-col bg-[var(--bg-2)] border-r border-[var(--border)]"
             style={{ width: "85vw", maxWidth: 360, transform: mobilePanel === "side" ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
-            <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#161616] shrink-0">
-              <span className="text-sm font-semibold text-gray-200 flex items-center gap-2">
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)] shrink-0">
+              <span className="text-sm font-semibold text-[var(--text)] flex items-center gap-2">
                 <Sparkles size={14} className="text-brand-400" /> Gerar Carrossel
               </span>
-              <button onClick={() => setMobilePanel(null)} className="p-1.5 rounded-lg bg-white/5 text-gray-400"><X size={16} /></button>
+              <button onClick={() => setMobilePanel(null)} className="p-1.5 rounded-lg bg-[var(--bg-3)] text-[var(--text-2)]"><X size={16} /></button>
             </div>
             <div className="flex-1 overflow-y-auto">
               <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} currentSlides={slides} />
             </div>
           </div>
         ) : (
-          <div className="flex flex-col overflow-hidden shrink-0" style={{ width: 300, background: "#080808", borderRight: "1px solid #161616" }}>
+          <div className="flex flex-col overflow-hidden shrink-0" style={{ width: 300, background: "var(--bg-2)", borderRight: "1px solid var(--border)" }}>
             <SidePanel onGenerate={handleGenerate} currentSlides={slides} />
           </div>
         )}
@@ -736,7 +739,7 @@ export default function EditorPage() {
 
 
           {/* Canvas */}
-          <div ref={canvasContainerRef} className="flex-1 overflow-auto flex items-center justify-center bg-[#0a0a0a] relative"
+          <div ref={canvasContainerRef} className="flex-1 overflow-auto flex items-center justify-center bg-[var(--bg)] relative"
             style={{ padding: isMobile ? "12px" : "16px" }}>
             {isEmpty && (
               <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
@@ -784,7 +787,7 @@ export default function EditorPage() {
 
       {/* ── Barra inferior mobile ─────────────────────────────── */}
       {isMobile && (
-        <div className="shrink-0 bg-[#080808] border-t border-[#161616]"
+        <div className="shrink-0 bg-[var(--bg-2)] border-t border-[var(--border)]"
           style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", zIndex: 20 }}>
           {[
             {
@@ -806,7 +809,7 @@ export default function EditorPage() {
               icon: (
                 <div className="relative">
                   <Instagram size={20} />
-                  <div className="absolute -bottom-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-blue-500 flex items-center justify-center border border-[#080808]">
+                  <div className="absolute -bottom-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-blue-500 flex items-center justify-center border border-[var(--bg-2)]">
                     <Check size={7} strokeWidth={3} className="text-white" />
                   </div>
                 </div>

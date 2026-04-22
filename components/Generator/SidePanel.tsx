@@ -26,17 +26,17 @@ export default function SidePanel({ onGenerate, currentSlides = [] }: Props) {
   const [tab, setTab] = useState<Tab>("generate");
 
   return (
-    <div className="w-80 bg-[#080808] border-r border-[#161616] flex flex-col overflow-hidden">
+    <div className="w-80 bg-[var(--bg-2)] border-r border-[var(--border)] flex flex-col overflow-hidden">
       {/* Abas */}
-      <div className="flex border-b border-[#161616] shrink-0 overflow-x-auto">
+      <div className="flex border-b border-[var(--border)] shrink-0 overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex-1 min-w-0 flex items-center justify-center gap-1 py-2.5 text-[10px] font-medium transition-colors whitespace-nowrap ${
               tab === t.id
-                ? "text-white border-b-2 border-brand-500"
-                : "text-gray-500 hover:text-gray-300"
+                ? "text-[var(--text)] border-b-2 border-brand-500"
+                : "text-[var(--text-3)] hover:text-[var(--text-2)]"
             }`}
           >
             {t.icon}

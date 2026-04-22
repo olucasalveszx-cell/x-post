@@ -204,14 +204,14 @@ export default function HorizontalSlidePanel({
   return (
     <>
     <div
-      className="shrink-0 bg-[#080808] border-t border-[#161616] flex flex-col overflow-hidden"
+      className="shrink-0 bg-[var(--bg-2)] border-t border-[var(--border)] flex flex-col overflow-hidden"
       style={{ maxHeight: compact ? 140 : 220 }}
     >
       <div className="flex-1 overflow-y-auto">
         {projects.map((project) => {
           const isActive = project.id === activeProjectId;
           return (
-            <div key={project.id} className="border-b border-[#111] last:border-b-0">
+            <div key={project.id} className="border-b border-[var(--border)] last:border-b-0">
               {/* Row header */}
               <div className={`flex items-center gap-2 px-3 ${compact ? "pt-1.5 pb-0.5" : "pt-2 pb-1"}`}>
                 {editingId === project.id ? (
@@ -224,12 +224,12 @@ export default function HorizontalSlidePanel({
                         if (e.key === "Escape") setEditingId(null);
                       }}
                       autoFocus
-                      className="flex-1 bg-[#1a1a1a] border border-[#333] rounded-md px-2 py-0.5 text-xs text-white focus:outline-none focus:border-brand-500"
+                      className="flex-1 bg-[var(--bg-3)] border border-[var(--border-2)] rounded-md px-2 py-0.5 text-xs text-[var(--text)] focus:outline-none focus:border-brand-500"
                     />
                     <button onClick={commitRename} className="text-green-400 hover:text-green-300 p-0.5">
                       <Check size={12} />
                     </button>
-                    <button onClick={() => setEditingId(null)} className="text-gray-500 hover:text-gray-300 p-0.5">
+                    <button onClick={() => setEditingId(null)} className="text-[var(--text-3)] hover:text-[var(--text-2)] p-0.5">
                       <X size={12} />
                     </button>
                   </div>
@@ -238,17 +238,17 @@ export default function HorizontalSlidePanel({
                     {isActive && <div className="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0" />}
                     <button
                       onClick={() => startRename(project)}
-                      className="flex items-center gap-1.5 text-xs font-semibold hover:text-white transition-colors group"
+                      className="flex items-center gap-1.5 text-xs font-semibold hover:text-[var(--text)] transition-colors group"
                       style={{ color: isActive ? "##818cf8" : "#6b7280" }}
                     >
                       {project.name}
                       <Edit2 size={9} className="opacity-0 group-hover:opacity-40 transition-opacity" />
                     </button>
                     {!compact && (
-                      <span className="text-[10px] text-[#374151] ml-1">{project.slides.length} slides</span>
+                      <span className="text-[10px] text-[var(--text-3)] ml-1">{project.slides.length} slides</span>
                     )}
                     {projects.length > 1 && (
-                      <button onClick={() => deleteProject(project.id)} className="ml-auto p-1 text-[#374151] hover:text-red-400 transition-colors">
+                      <button onClick={() => deleteProject(project.id)} className="ml-auto p-1 text-[var(--text-3)] hover:text-red-400 transition-colors">
                         <Trash2 size={11} />
                       </button>
                     )}
@@ -299,7 +299,7 @@ export default function HorizontalSlidePanel({
                 <button
                   ref={(el) => { plusBtnRefs.current[project.id] = el; }}
                   onClick={() => openAiPopup(project.id)}
-                  className="shrink-0 rounded-lg border-2 border-dashed border-[#222] hover:border-brand-500/50 hover:bg-brand-500/5 text-[#374151] hover:text-brand-400 transition-all flex items-center justify-center"
+                  className="shrink-0 rounded-lg border-2 border-dashed border-[var(--border-2)] hover:border-brand-500/50 hover:bg-brand-500/5 text-[var(--text-3)] hover:text-brand-400 transition-all flex items-center justify-center"
                   style={{ width: THUMB_W, height: THUMB_H }}
                 >
                   <Plus size={16} />
@@ -311,9 +311,9 @@ export default function HorizontalSlidePanel({
       </div>
 
       {/* Footer — add project */}
-      <div className={`shrink-0 flex items-center px-3 ${compact ? "py-1" : "py-1.5"} border-t border-[#111]`}>
+      <div className={`shrink-0 flex items-center px-3 ${compact ? "py-1" : "py-1.5"} border-t border-[var(--border)]`}>
         <button onClick={addProject}
-          className="flex items-center gap-1.5 text-[11px] text-[#4b5563] hover:text-gray-300 transition-colors px-2 py-1 rounded-lg hover:bg-white/5">
+          className="flex items-center gap-1.5 text-[11px] text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors px-2 py-1 rounded-lg hover:bg-[var(--bg-3)]">
           <Plus size={12} /> Novo Projeto
         </button>
       </div>
@@ -323,13 +323,13 @@ export default function HorizontalSlidePanel({
     {aiTarget !== null && typeof window !== "undefined" && createPortal(
       <div
         ref={popupRef}
-        className="fixed z-[9999] w-72 bg-[#111] border border-[#2a2a2a] rounded-2xl shadow-2xl p-4 flex flex-col gap-3"
+        className="fixed z-[9999] w-72 bg-[var(--bg-2)] border border-[var(--border-2)] rounded-2xl shadow-2xl p-4 flex flex-col gap-3"
         style={{ bottom: popupPos.bottom, left: Math.min(popupPos.left, window.innerWidth - 300) }}
       >
         {/* Header */}
         <div className="flex items-center justify-between">
-          <p className="text-xs font-bold text-white">Adicionar slide</p>
-          <button onClick={() => setAiTarget(null)} className="text-gray-500 hover:text-gray-300 transition-colors">
+          <p className="text-xs font-bold text-[var(--text)]">Adicionar slide</p>
+          <button onClick={() => setAiTarget(null)} className="text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
             <X size={14} />
           </button>
         </div>
@@ -337,27 +337,27 @@ export default function HorizontalSlidePanel({
         {/* Blank slide */}
         <button
           onClick={() => addBlankSlide(aiTarget)}
-          className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl border border-[#2a2a2a] hover:border-[#3a3a3a] bg-[#0d0d0d] hover:bg-[#161616] text-left transition-colors"
+          className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl border border-[var(--border)] hover:border-[var(--border-2)] bg-[var(--bg)] hover:bg-[var(--bg-2)] text-left transition-colors"
         >
-          <div className="w-7 h-8 rounded bg-[#1a1a1a] border border-[#2a2a2a] shrink-0" />
+          <div className="w-7 h-8 rounded bg-[var(--bg-3)] border border-[var(--border)] shrink-0" />
           <div>
-            <p className="text-xs font-medium text-white">Slide em branco</p>
-            <p className="text-[10px] text-gray-500">Começa do zero</p>
+            <p className="text-xs font-medium text-[var(--text)]">Slide em branco</p>
+            <p className="text-[10px] text-[var(--text-3)]">Começa do zero</p>
           </div>
         </button>
 
         {/* Divider */}
         <div className="flex items-center gap-2">
-          <div className="flex-1 h-px bg-[#222]" />
-          <span className="text-[10px] text-gray-600">ou</span>
-          <div className="flex-1 h-px bg-[#222]" />
+          <div className="flex-1 h-px bg-[var(--border-2)]" />
+          <span className="text-[10px] text-[var(--text-3)]">ou</span>
+          <div className="flex-1 h-px bg-[var(--border-2)]" />
         </div>
 
         {/* AI generation */}
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-1.5">
             <Sparkles size={12} className="text-brand-500" />
-            <p className="text-xs font-semibold text-white">Gerar com IA</p>
+            <p className="text-xs font-semibold text-[var(--text)]">Gerar com IA</p>
           </div>
 
           <textarea
@@ -367,18 +367,18 @@ export default function HorizontalSlidePanel({
             placeholder="Tema ou ideia para o slide..."
             rows={2}
             autoFocus
-            className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-xl px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-500 resize-none"
+            className="w-full bg-[var(--bg)] border border-[var(--border-2)] rounded-xl px-3 py-2 text-xs text-[var(--text)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-brand-500 resize-none"
           />
 
           {/* Include image toggle */}
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <div
               onClick={() => setAiImage((v) => !v)}
-              className={`w-8 h-4 rounded-full transition-colors relative ${aiImage ? "bg-brand-700" : "bg-[#2a2a2a]"}`}
+              className={`w-8 h-4 rounded-full transition-colors relative ${aiImage ? "bg-brand-700" : "bg-[var(--bg-4)]"}`}
             >
               <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${aiImage ? "translate-x-4" : "translate-x-0.5"}`} />
             </div>
-            <div className="flex items-center gap-1 text-[11px] text-gray-400">
+            <div className="flex items-center gap-1 text-[11px] text-[var(--text-2)]">
               <ImageIcon size={10} /> Gerar imagem de fundo
             </div>
           </label>

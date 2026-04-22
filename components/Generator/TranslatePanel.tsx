@@ -205,7 +205,7 @@ export default function TranslatePanel({ onGenerate }: Props) {
 
       {/* Modo de entrada */}
       <div>
-        <label className="text-sm text-gray-400 mb-2 block">Fonte do post</label>
+        <label className="text-sm text-[var(--text-2)] mb-2 block">Fonte do post</label>
         <div className="grid grid-cols-3 gap-1.5">
           {([
             { mode: "url",   icon: <Link size={12} />,       label: "URL" },
@@ -217,8 +217,8 @@ export default function TranslatePanel({ onGenerate }: Props) {
               onClick={() => setInputMode(opt.mode)}
               className={`flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs transition-colors ${
                 inputMode === opt.mode
-                  ? "border-brand-500 bg-brand-500/10 text-white"
-                  : "border-[#1e1e1e] bg-[#0f0f0f] text-gray-400 hover:border-[#333]"
+                  ? "border-brand-500 bg-brand-500/10 text-[var(--text)]"
+                  : "border-[var(--border)] bg-[var(--bg)] text-[var(--text-2)] hover:border-[var(--border-2)]"
               }`}
             >
               {opt.icon} {opt.label}
@@ -230,29 +230,29 @@ export default function TranslatePanel({ onGenerate }: Props) {
       {/* Input URL */}
       {inputMode === "url" && (
         <div>
-          <label className="text-sm text-gray-400 mb-1 block">URL do artigo / post</label>
+          <label className="text-sm text-[var(--text-2)] mb-1 block">URL do artigo / post</label>
           <input
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://medium.com/article..."
-            className="w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600"
+            className="w-full bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]"
             onKeyDown={(e) => e.key === "Enter" && !isLoading && handleTranslate()}
           />
-          <p className="text-[10px] text-gray-600 mt-1">Artigos, blogs, LinkedIn, Medium, etc.</p>
+          <p className="text-[10px] text-[var(--text-3)] mt-1">Artigos, blogs, LinkedIn, Medium, etc.</p>
         </div>
       )}
 
       {/* Input Texto */}
       {inputMode === "text" && (
         <div>
-          <label className="text-sm text-gray-400 mb-1 block">Cole o texto do post</label>
+          <label className="text-sm text-[var(--text-2)] mb-1 block">Cole o texto do post</label>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Cole aqui o texto em inglês ou outro idioma..."
             rows={5}
-            className="w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600 resize-none"
+            className="w-full bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)] resize-none"
           />
         </div>
       )}
@@ -260,9 +260,9 @@ export default function TranslatePanel({ onGenerate }: Props) {
       {/* Input Imagem */}
       {inputMode === "image" && (
         <div>
-          <label className="text-sm text-gray-400 mb-1 block">Screenshot do post</label>
+          <label className="text-sm text-[var(--text-2)] mb-1 block">Screenshot do post</label>
           {imagePreview ? (
-            <div className="relative rounded-lg overflow-hidden border border-[#2a2a2a]">
+            <div className="relative rounded-lg overflow-hidden border border-[var(--border-2)]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={imagePreview} alt="Preview" className="w-full max-h-48 object-cover" />
               <button
@@ -286,12 +286,12 @@ export default function TranslatePanel({ onGenerate }: Props) {
               className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
                 isDragging
                   ? "border-brand-500 bg-brand-500/10"
-                  : "border-[#2a2a2a] hover:border-[#444] bg-[#0f0f0f]"
+                  : "border-[var(--border-2)] hover:border-[var(--border-2)] bg-[var(--bg)]"
               }`}
             >
-              <Upload size={24} className="mx-auto mb-2 text-gray-500" />
-              <p className="text-sm text-gray-400">Arraste a imagem ou clique para selecionar</p>
-              <p className="text-[10px] text-gray-600 mt-1">PNG, JPG, WEBP</p>
+              <Upload size={24} className="mx-auto mb-2 text-[var(--text-3)]" />
+              <p className="text-sm text-[var(--text-2)]">Arraste a imagem ou clique para selecionar</p>
+              <p className="text-[10px] text-[var(--text-3)] mt-1">PNG, JPG, WEBP</p>
               <input
                 id="img-upload"
                 type="file"
@@ -301,7 +301,7 @@ export default function TranslatePanel({ onGenerate }: Props) {
               />
             </div>
           )}
-          <p className="text-[10px] text-gray-600 mt-1">
+          <p className="text-[10px] text-[var(--text-3)] mt-1">
             Claude lê o texto da imagem e traduz automaticamente
           </p>
         </div>
@@ -309,22 +309,22 @@ export default function TranslatePanel({ onGenerate }: Props) {
 
       {/* Slides */}
       <div>
-        <label className="text-sm text-gray-400 mb-1 block">
-          Slides: <span className="text-white font-medium">{slideCount}</span>
+        <label className="text-sm text-[var(--text-2)] mb-1 block">
+          Slides: <span className="text-[var(--text)] font-medium">{slideCount}</span>
         </label>
         <input
           type="range" min={1} max={15} value={slideCount}
           onChange={(e) => setSlideCount(Number(e.target.value))}
           className="w-full accent-brand-500"
         />
-        <div className="flex justify-between text-xs text-gray-600 mt-1">
+        <div className="flex justify-between text-xs text-[var(--text-3)] mt-1">
           <span>3</span><span>15</span>
         </div>
       </div>
 
       {/* Fonte de imagem */}
       <div>
-        <label className="text-sm text-gray-400 mb-2 block">Imagens</label>
+        <label className="text-sm text-[var(--text-2)] mb-2 block">Imagens</label>
         <div className="grid grid-cols-2 gap-1.5">
           {([
             { value: "gemini",  label: "Gemini",   sub: "IA Google · padrão",  color: "text-blue-400" },
@@ -336,10 +336,10 @@ export default function TranslatePanel({ onGenerate }: Props) {
               className={`flex flex-col items-center py-2 rounded-lg border text-center transition-colors ${
                 imageSource === opt.value
                   ? "border-brand-500 bg-brand-500/10"
-                  : "border-[#1e1e1e] bg-[#0f0f0f] hover:border-[#333]"
+                  : "border-[var(--border)] bg-[var(--bg)] hover:border-[var(--border-2)]"
               }`}
             >
-              <span className={`text-xs font-bold ${imageSource === opt.value ? "text-white" : "text-gray-300"}`}>{opt.label}</span>
+              <span className={`text-xs font-bold ${imageSource === opt.value ? "text-[var(--text)]" : "text-[var(--text-2)]"}`}>{opt.label}</span>
               <span className={`text-[10px] mt-0.5 ${opt.color}`}>{opt.sub}</span>
             </button>
           ))}
@@ -362,8 +362,8 @@ export default function TranslatePanel({ onGenerate }: Props) {
       {showConfirm && translatedData && (
         <div className="rounded-xl border border-brand-500/30 bg-brand-500/5 p-3 flex flex-col gap-2.5">
           <div>
-            <p className="text-xs text-white font-semibold">Conteúdo traduzido!</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">{translatedData.slides.length} slides prontos. Deseja gerá-los agora?</p>
+            <p className="text-xs text-[var(--text)] font-semibold">Conteúdo traduzido!</p>
+            <p className="text-[10px] text-[var(--text-2)] mt-0.5">{translatedData.slides.length} slides prontos. Deseja gerá-los agora?</p>
           </div>
           <div className="flex gap-2">
             <button onClick={confirmGenerate}
@@ -371,7 +371,7 @@ export default function TranslatePanel({ onGenerate }: Props) {
               <Sparkles size={11} /> Gerar slides
             </button>
             <button onClick={() => { setShowConfirm(false); setTranslatedData(null); }}
-              className="px-3 py-1.5 rounded-lg border border-[#2a2a2a] text-xs text-gray-400 hover:text-white transition-colors">
+              className="px-3 py-1.5 rounded-lg border border-[var(--border-2)] text-xs text-[var(--text-2)] hover:text-[var(--text)] transition-colors">
               Não
             </button>
           </div>
@@ -380,7 +380,7 @@ export default function TranslatePanel({ onGenerate }: Props) {
 
       {/* Progress bar imagens */}
       {status === "images" && (
-        <div className="w-full bg-[#1e1e1e] rounded-full h-1.5 overflow-hidden">
+        <div className="w-full bg-[var(--bg-4)] rounded-full h-1.5 overflow-hidden">
           <div
             className="bg-brand-500 h-full transition-all duration-300"
             style={{ width: `${(imageProgress / slideCount) * 100}%` }}

@@ -417,7 +417,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   const loadingPopup = isLoading && typeof window !== "undefined"
     ? createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center md:hidden" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}>
-          <div className="flex flex-col items-center gap-5 px-8 py-10 rounded-3xl bg-[#0f0f0f] border border-[#1e1e1e] shadow-2xl mx-4 w-full max-w-xs">
+          <div className="flex flex-col items-center gap-5 px-8 py-10 rounded-3xl bg-[var(--bg-2)] border border-[var(--border)] shadow-2xl mx-4 w-full max-w-xs">
             {/* Animated icon */}
             <div className="relative">
               <div className="p-5 rounded-full bg-brand-500/10 border border-brand-500/20">
@@ -433,7 +433,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
                 {status === "generating" && "Gerando com I.A..."}
                 {status === "images" && "Gerando imagens com I.A"}
               </p>
-              <p className="text-xs text-gray-500 mt-1.5">
+              <p className="text-xs text-[var(--text-3)] mt-1.5">
                 {status === "searching" && "Buscando informações atualizadas"}
                 {status === "generating" && "Criando o conteúdo dos slides"}
                 {status === "images" && totalImages > 0 ? `${imageProgress} de ${totalImages} slides` : "Aguarde um momento..."}
@@ -443,13 +443,13 @@ export default function GeneratorPanel({ onGenerate }: Props) {
             {/* Progress bar */}
             {status === "images" && totalImages > 0 && (
               <div className="w-full flex flex-col gap-1.5">
-                <div className="w-full bg-[#1a1a1a] rounded-full h-2 overflow-hidden">
+                <div className="w-full bg-[var(--bg-4)] rounded-full h-2 overflow-hidden">
                   <div
                     className="bg-brand-500 h-full transition-all duration-500 rounded-full"
                     style={{ width: `${(imageProgress / totalImages) * 100}%` }}
                   />
                 </div>
-                <p className="text-[11px] text-gray-600 text-right">{Math.round((imageProgress / totalImages) * 100)}%</p>
+                <p className="text-[11px] text-[var(--text-3)] text-right">{Math.round((imageProgress / totalImages) * 100)}%</p>
               </div>
             )}
 
@@ -478,11 +478,11 @@ export default function GeneratorPanel({ onGenerate }: Props) {
     <div className="flex flex-col h-full">
       {loadingPopup}
       {/* User badge */}
-      <div className="p-4 shrink-0 border-b border-[#161616]">
+      <div className="p-4 shrink-0 border-b border-[var(--border)]">
         {!session?.user ? (
           <button
             onClick={() => setLoginOpen(true)}
-            className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border border-[var(--border-2)] bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-sm text-[var(--text-2)] transition-colors"
           >
             <LogIn size={14} /> Entrar para gerar
           </button>
@@ -529,17 +529,17 @@ export default function GeneratorPanel({ onGenerate }: Props) {
               </div>
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-white">
+              <p className="text-sm font-medium text-[var(--text)]">
                 {status === "searching" && "Pesquisando na web..."}
                 {status === "generating" && "Gerando conteúdo com IA..."}
                 {status === "images" && "Gerando imagens..."}
               </p>
               {status === "images" && totalImages > 0 && (
-                <p className="text-xs text-gray-500 mt-1">{imageProgress}/{totalImages} slides</p>
+                <p className="text-xs text-[var(--text-3)] mt-1">{imageProgress}/{totalImages} slides</p>
               )}
             </div>
             {status === "images" && totalImages > 0 && (
-              <div className="w-full bg-[#1a1a1a] rounded-full h-1.5 overflow-hidden">
+              <div className="w-full bg-[var(--bg-4)] rounded-full h-1.5 overflow-hidden">
                 <div
                   className="bg-brand-500 h-full transition-all duration-300 rounded-full"
                   style={{ width: `${(imageProgress / totalImages) * 100}%` }}
@@ -572,7 +572,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
                 {/* Layout switcher pós-geração */}
                 {lastGenContent && (
                   <div className="flex flex-col gap-2 px-1">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Trocar layout</p>
+                    <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold">Trocar layout</p>
                     <div className="grid grid-cols-5 gap-1.5">
                       {([
                         { value: "mixed",  label: "Auto"    },
@@ -587,17 +587,17 @@ export default function GeneratorPanel({ onGenerate }: Props) {
                             key={lyt.value}
                             onClick={() => handleLayoutChange(lyt.value)}
                             className={`flex flex-col items-center gap-1 py-2 rounded-xl border transition-all ${
-                              active ? "border-brand-500 bg-brand-500/10" : "border-[#222] bg-[#0a0a0a] hover:border-brand-500/30"
+                              active ? "border-brand-500 bg-brand-500/10" : "border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/30"
                             }`}
                           >
-                            <div className="w-6 h-8 rounded-sm overflow-hidden bg-[#111] border border-[#2a2a2a] relative">
+                            <div className="w-6 h-8 rounded-sm overflow-hidden bg-[var(--bg-3)] border border-[var(--border-2)] relative">
                               {lyt.value === "full"   && <div className="absolute inset-0 bg-brand-500/25" />}
-                              {lyt.value === "mixed"  && (<><div className="absolute inset-0 bg-brand-500/15" /><div className="absolute bottom-0 inset-x-0 h-1/3 bg-[#111]" /></>)}
-                              {lyt.value === "square" && (<><div className="absolute inset-x-0.5 top-0.5 bottom-2 bg-brand-500/25 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-1.5 bg-[#111]" /></>)}
-                              {lyt.value === "top"    && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-brand-500/25" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#111]" /></>)}
-                              {lyt.value === "base"   && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[#111]" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-brand-500/25" /></>)}
+                              {lyt.value === "mixed"  && (<><div className="absolute inset-0 bg-brand-500/15" /><div className="absolute bottom-0 inset-x-0 h-1/3 bg-[var(--bg-3)]" /></>)}
+                              {lyt.value === "square" && (<><div className="absolute inset-x-0.5 top-0.5 bottom-2 bg-brand-500/25 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-1.5 bg-[var(--bg-3)]" /></>)}
+                              {lyt.value === "top"    && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-brand-500/25" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[var(--bg-3)]" /></>)}
+                              {lyt.value === "base"   && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[var(--bg-3)]" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-brand-500/25" /></>)}
                             </div>
-                            <span className={`text-[8px] font-medium ${active ? "text-white" : "text-gray-500"}`}>{lyt.label}</span>
+                            <span className={`text-[8px] font-medium ${active ? "text-[var(--text)]" : "text-[var(--text-3)]"}`}>{lyt.label}</span>
                           </button>
                         );
                       })}
@@ -640,7 +640,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
                 <span className="text-green-400 flex items-center gap-1">
                   <Zap size={11} /> {creditToast.spent} crédito{creditToast.spent > 1 ? "s" : ""} usado{creditToast.spent > 1 ? "s" : ""}
                 </span>
-                <span className="text-gray-500">{creditToast.remaining} restantes</span>
+                <span className="text-[var(--text-3)]">{creditToast.remaining} restantes</span>
               </div>
             )}
           </div>
@@ -650,7 +650,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       {/* Sources */}
       {sources.length > 0 && (
         <div className="px-4 pb-4 shrink-0">
-          <p className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1">
+          <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-2 flex items-center gap-1">
             <Search size={10} /> Fontes ({sources.length})
           </p>
           <div className="flex flex-col gap-1">
@@ -661,7 +661,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
                 target="_blank"
                 rel="noopener noreferrer"
                 title={s.title}
-                className="text-xs text-gray-500 hover:text-brand-400 bg-[#0f0f0f] rounded-lg p-2 block truncate border border-[#1a1a1a] hover:border-brand-500/30 transition-colors"
+                className="text-xs text-[var(--text-3)] hover:text-brand-400 bg-[var(--bg)] rounded-lg p-2 block truncate border border-[var(--border)] hover:border-brand-500/30 transition-colors"
               >
                 {s.title}
               </a>

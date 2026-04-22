@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
@@ -12,9 +12,9 @@ import MarqueeImages from "@/components/MarqueeImages";
 import LoginModal from "@/components/LoginModal";
 import AppLogo from "@/components/AppLogo";
 
-// â”€â”€ BotÃ£o flutuante WhatsApp â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Botão flutuante WhatsApp ───────────────────────────────────
 const WA_NUMBER = "5581973014080";
-const WA_MSG = encodeURIComponent("OlÃ¡! Vim pelo XPost e quero saber mais sobre os planos ðŸ¦œ");
+const WA_MSG = encodeURIComponent("Olá! Vim pelo XPost e quero saber mais sobre os planos 🦜");
 
 function WhatsAppButton() {
   const [open, setOpen] = useState(false);
@@ -34,7 +34,7 @@ function WhatsAppButton() {
             </div>
           </div>
           <p className="text-gray-400 text-xs leading-relaxed">
-            DÃºvidas sobre os planos ou quer ver uma demo ao vivo? Chama no WhatsApp â€” respondemos na hora! ðŸš€
+            Dúvidas sobre os planos ou quer ver uma demo ao vivo? Chama no WhatsApp — respondemos na hora! 🚀
           </p>
           <a
             href={`https://wa.me/${WA_NUMBER}?text=${WA_MSG}`}
@@ -60,7 +60,7 @@ function WhatsAppButton() {
   );
 }
 
-// â”€â”€ Ãcone Zora (avatar IA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Ícone Zora (avatar IA) ────────────────────────────────────
 function ZoraAvatar({ size = 48 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -84,7 +84,7 @@ function ZoraAvatar({ size = 48 }: { size?: number }) {
   );
 }
 
-// â”€â”€ Logo header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Logo header ───────────────────────────────────────────────
 function Logo({ className = "" }: { className?: string }) {
   return (
     <AppLogo
@@ -96,15 +96,15 @@ function Logo({ className = "" }: { className?: string }) {
   );
 }
 
-// â”€â”€ Dados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Dados ──────────────────────────────────────────────────────
 const TESTIMONIALS = [
   {
     name: "Mariana Costa",
     handle: "@maricosta.nutri",
     avatar: "MC",
     color: "#ec4899",
-    niche: "NutriÃ§Ã£o",
-    text: "Passei 2 anos tentando criar conteÃºdo consistente e nunca conseguia manter. Com o XPost faÃ§o um carrossel por dia em menos de 5 minutos. Meu engajamento triplicou em 2 meses.",
+    niche: "Nutrição",
+    text: "Passei 2 anos tentando criar conteúdo consistente e nunca conseguia manter. Com o XPost faço um carrossel por dia em menos de 5 minutos. Meu engajamento triplicou em 2 meses.",
     stars: 5,
     result: "+3.200 seguidores em 60 dias",
   },
@@ -114,9 +114,9 @@ const TESTIMONIALS = [
     avatar: "RT",
     color: "#3b5bdb",
     niche: "Psicologia",
-    text: "Era difÃ­cil transformar conhecimento tÃ©cnico em conteÃºdo acessÃ­vel. A IA faz isso pra mim agora. Hoje tenho 3 clientes novos por mÃªs vindos direto do Instagram.",
+    text: "Era difícil transformar conhecimento técnico em conteúdo acessível. A IA faz isso pra mim agora. Hoje tenho 3 clientes novos por mês vindos direto do Instagram.",
     stars: 5,
-    result: "3 clientes novos/mÃªs pelo Instagram",
+    result: "3 clientes novos/mês pelo Instagram",
   },
   {
     name: "Juliana Santos",
@@ -124,7 +124,7 @@ const TESTIMONIALS = [
     avatar: "JS",
     color: "#f97316",
     niche: "Marketing Digital",
-    text: "Achei que era mais uma ferramenta de IA genÃ©rica. Mas o resultado Ã© absurdo â€” os carrossÃ©is ficam tÃ£o bons que meu cliente perguntou se tinha contratado agÃªncia.",
+    text: "Achei que era mais uma ferramenta de IA genérica. Mas o resultado é absurdo — os carrosséis ficam tão bons que meu cliente perguntou se tinha contratado agência.",
     stars: 5,
     result: "Taxa de salvamento 4x maior",
   },
@@ -135,13 +135,13 @@ const HOW_IT_WORKS = [
     step: "01",
     icon: <PenLine size={22} />,
     title: "Digite o tema",
-    desc: "Escreva qualquer assunto â€” sua especialidade, uma tendÃªncia do nicho, um produto. A IA entende qualquer Ã¡rea.",
+    desc: "Escreva qualquer assunto — sua especialidade, uma tendência do nicho, um produto. A IA entende qualquer área.",
   },
   {
     step: "02",
     icon: <Cpu size={22} />,
     title: "A IA cria tudo",
-    desc: "Em 30 segundos a IA pesquisa na web, escreve o texto de cada slide e gera imagens Ãºnicas. Carrossel completo.",
+    desc: "Em 30 segundos a IA pesquisa na web, escreve o texto de cada slide e gera imagens únicas. Carrossel completo.",
   },
   {
     step: "03",
@@ -152,46 +152,46 @@ const HOW_IT_WORKS = [
 ];
 
 const FEATURES = [
-  { icon: <Globe size={22} />,        title: "Pesquisa real na web",        desc: "A IA busca dados atuais sobre qualquer tema para embasar seu conteÃºdo com informaÃ§Ãµes reais â€” nÃ£o inventa nada." },
-  { icon: <Brain size={22} />,        title: "Texto escrito por IA",        desc: "TÃ­tulos impactantes, corpo e CTA adaptados ao seu nicho e estilo. VocÃª revisa, ajusta o que quiser." },
-  { icon: <ImageIcon size={22} />,    title: "Imagens geradas por IA",      desc: "Cada slide recebe uma imagem Ãºnica criada pelo Gemini AI â€” sem banco de imagem, sem foto genÃ©rica." },
+  { icon: <Globe size={22} />,        title: "Pesquisa real na web",        desc: "A IA busca dados atuais sobre qualquer tema para embasar seu conteúdo com informações reais — não inventa nada." },
+  { icon: <Brain size={22} />,        title: "Texto escrito por IA",        desc: "Títulos impactantes, corpo e CTA adaptados ao seu nicho e estilo. Você revisa, ajusta o que quiser." },
+  { icon: <ImageIcon size={22} />,    title: "Imagens geradas por IA",      desc: "Cada slide recebe uma imagem única criada pelo Gemini AI — sem banco de imagem, sem foto genérica." },
   { icon: <Instagram size={22} />,    title: "Publica direto no Instagram", desc: "Conecte sua conta Business e publique com 1 clique, sem baixar nada, sem copiar pro celular." },
-  { icon: <MousePointer size={22} />, title: "Editor visual completo",      desc: "Edite fonte, cor, layout e imagem de cada slide com total liberdade â€” sem precisar abrir o Canva." },
-  { icon: <TrendingUp size={22} />,   title: "Funciona pra qualquer nicho", desc: "NutriÃ§Ã£o, direito, psicologia, marketing, finanÃ§as, moda... A IA adapta a linguagem automaticamente." },
+  { icon: <MousePointer size={22} />, title: "Editor visual completo",      desc: "Edite fonte, cor, layout e imagem de cada slide com total liberdade — sem precisar abrir o Canva." },
+  { icon: <TrendingUp size={22} />,   title: "Funciona pra qualquer nicho", desc: "Nutrição, direito, psicologia, marketing, finanças, moda... A IA adapta a linguagem automaticamente." },
 ];
 
 const PLANS = [
   {
     key: "basic",
-    label: "BÃ¡sico",
+    label: "Básico",
     price: "29,90",
-    period: "/ mÃªs",
+    period: "/ mês",
     highlight: false,
     badge: null as string | null,
-    cta: "ComeÃ§ar agora",
-    features: ["CarrossÃ©is ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "PublicaÃ§Ã£o no Instagram"],
-    missing: ["Flyer promocional com IA", "Assistente IA (Zora)", "Suporte prioritÃ¡rio"],
+    cta: "Começar agora",
+    features: ["Carrosséis ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "Publicação no Instagram"],
+    missing: ["Flyer promocional com IA", "Assistente IA (Zora)", "Suporte prioritário"],
   },
   {
     key: "pro",
     label: "Pro",
     price: "61,90",
-    period: "/ mÃªs",
+    period: "/ mês",
     highlight: true,
     badge: "Mais popular" as string | null,
     cta: "Assinar agora",
-    features: ["CarrossÃ©is ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "PublicaÃ§Ã£o no Instagram", "Flyer promocional com IA", "Assistente IA (Zora)"],
-    missing: ["Suporte prioritÃ¡rio"],
+    features: ["Carrosséis ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "Publicação no Instagram", "Flyer promocional com IA", "Assistente IA (Zora)"],
+    missing: ["Suporte prioritário"],
   },
   {
     key: "business",
     label: "Business",
     price: "99,90",
-    period: "/ mÃªs",
+    period: "/ mês",
     highlight: false,
     badge: "Mais completo" as string | null,
     cta: "Quero o melhor",
-    features: ["CarrossÃ©is ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "PublicaÃ§Ã£o no Instagram", "Flyer promocional com IA", "Assistente IA (Zora)", "Suporte prioritÃ¡rio"],
+    features: ["Carrosséis ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "Publicação no Instagram", "Flyer promocional com IA", "Assistente IA (Zora)", "Suporte prioritário"],
     missing: [],
   },
 ];
@@ -199,40 +199,40 @@ const PLANS = [
 const FAQS = [
   {
     q: "Preciso instalar alguma coisa?",
-    a: "NÃ£o. Funciona 100% no browser â€” Chrome, Safari, qualquer um. Sem app, sem download. Abre o link e jÃ¡ comeÃ§a. Tem 4 crÃ©ditos grÃ¡tis pra testar sem nem precisar colocar cartÃ£o.",
+    a: "Não. Funciona 100% no browser — Chrome, Safari, qualquer um. Sem app, sem download. Abre o link e já começa. Tem 4 créditos grátis pra testar sem nem precisar colocar cartão.",
   },
   {
     q: "Funciona para qualquer nicho?",
-    a: "Sim. NutriÃ§Ã£o, psicologia, direito, marketing, finanÃ§as, gastronomia, moda... A IA pesquisa o que estÃ¡ em alta no seu nicho e adapta a linguagem automaticamente. Se vocÃª entende do assunto, a IA cria o conteÃºdo.",
+    a: "Sim. Nutrição, psicologia, direito, marketing, finanças, gastronomia, moda... A IA pesquisa o que está em alta no seu nicho e adapta a linguagem automaticamente. Se você entende do assunto, a IA cria o conteúdo.",
   },
   {
-    q: "As imagens sÃ£o realmente geradas por IA?",
-    a: "Sim. Usamos Gemini AI (do Google) para criar imagens Ãºnicas pra cada slide â€” nÃ£o sÃ£o fotos de banco de imagem. Cada carrossel sai com um visual exclusivo feito especificamente pro seu tema.",
+    q: "As imagens são realmente geradas por IA?",
+    a: "Sim. Usamos Gemini AI (do Google) para criar imagens únicas pra cada slide — não são fotos de banco de imagem. Cada carrossel sai com um visual exclusivo feito especificamente pro seu tema.",
   },
   {
     q: "Consigo publicar direto no Instagram?",
-    a: "Sim. Conecte sua conta Instagram Business nas configuraÃ§Ãµes e publique direto do editor com 1 clique. NÃ£o precisa baixar a imagem, nÃ£o precisa copiar pro celular. Ã‰ literalmente 1 clique.",
+    a: "Sim. Conecte sua conta Instagram Business nas configurações e publique direto do editor com 1 clique. Não precisa baixar a imagem, não precisa copiar pro celular. É literalmente 1 clique.",
   },
   {
     q: "Posso cancelar quando quiser?",
-    a: "Sim, e Ã© simples. Ã‰ sÃ³ cancelar pelo portal do cliente â€” menos de 1 minuto. Sem multa, sem fidelidade, sem precisar falar com atendente pra cancelar. Cancela na hora.",
+    a: "Sim, e é simples. É só cancelar pelo portal do cliente — menos de 1 minuto. Sem multa, sem fidelidade, sem precisar falar com atendente pra cancelar. Cancela na hora.",
   },
   {
     q: "Tem alguma garantia?",
-    a: "Sim. Se em 7 dias vocÃª nÃ£o estiver satisfeito com o resultado, devolvemos 100% do valor. Sem perguntas, sem burocracia. Ã‰ o suficiente pra vocÃª testar de verdade e ver se funciona pra vocÃª.",
+    a: "Sim. Se em 7 dias você não estiver satisfeito com o resultado, devolvemos 100% do valor. Sem perguntas, sem burocracia. É o suficiente pra você testar de verdade e ver se funciona pra você.",
   },
 ];
 
-// â”€â”€ Phone Hologram â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Phone Hologram ─────────────────────────────────────────────
 const HOLO_SLIDES = [
   { bg: "linear-gradient(150deg,#0a1628,#1e3a8a)", accent: "#4c6ef5", title: "5 Segredos do Instagram", sub: "Que os top criadores usam", tag: "CRESCIMENTO" },
-  { bg: "linear-gradient(150deg,#1a0533,#3b0764)", accent: "#c084fc", title: "Como vender no Direct", sub: "3 tÃ©cnicas que convertem", tag: "VENDAS" },
-  { bg: "linear-gradient(150deg,#0a1a0a,#14532d)", accent: "#4ade80", title: "Engajamento em 30 dias", sub: "MÃ©todo comprovado", tag: "ESTRATÃ‰GIA" },
+  { bg: "linear-gradient(150deg,#1a0533,#3b0764)", accent: "#c084fc", title: "Como vender no Direct", sub: "3 técnicas que convertem", tag: "VENDAS" },
+  { bg: "linear-gradient(150deg,#0a1a0a,#14532d)", accent: "#4ade80", title: "Engajamento em 30 dias", sub: "Método comprovado", tag: "ESTRATÉGIA" },
 ];
 
 function PhoneHologram() {
   const [slideIdx, setSlideIdx] = useState(0);
-  const [phase, setPhase] = useState(0); // 0=view 1=generating 2=published
+  const [phase, setPhase] = useState(0);
   const [likes, setLikes] = useState(1247);
 
   useEffect(() => {
@@ -258,7 +258,7 @@ function PhoneHologram() {
 
   return (
     <div className="relative select-none" style={{ width: 300, height: 640 }}>
-      {/* Rings hologrÃ¡ficos */}
+      {/* Rings holográficos */}
       {[1.18, 1.44, 1.72].map((scale, i) => (
         <div key={i} style={{
           position: "absolute", inset: 0, margin: "auto",
@@ -300,7 +300,7 @@ function PhoneHologram() {
         <div style={{ height: 44, flexShrink: 0, background: "#080808", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px" }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.8)" }}>9:41</span>
           <div style={{ width: 88, height: 28, borderRadius: 14, background: "#000" }} />
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.6)" }}>â—â—â—</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.6)" }}>●●●</span>
         </div>
 
         {/* Instagram */}
@@ -314,24 +314,32 @@ function PhoneHologram() {
             </div>
           </div>
 
-          {/* Post header */}
+          {/* Post header com logo */}
           <div style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 9 }}>
-            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "linear-gradient(135deg,#3b5bdb,#6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 900, color: "white", flexShrink: 0 }}>XP</div>
+            {/* Logo flutuando como avatar */}
+            <div style={{
+              width: 34, height: 34, borderRadius: "50%", flexShrink: 0, overflow: "hidden",
+              border: "2px solid rgba(76,110,245,0.5)",
+              background: "#080808",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              animation: "float-phone 3s ease-in-out infinite",
+            }}>
+              <AppLogo variant="dark" size={26} showText={false} />
+            </div>
             <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "white" }}>xpost_ia</p>
-              <p style={{ margin: 0, fontSize: 9, color: "rgba(255,255,255,0.4)" }}>Agora mesmo Â· ðŸŒŽ</p>
+              <p style={{ margin: 0, fontSize: 9, color: "rgba(255,255,255,0.4)" }}>Agora mesmo</p>
             </div>
             <span style={{ fontSize: 12, fontWeight: 700, color: "#4c6ef5" }}>Seguindo</span>
-            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 18, lineHeight: "1" }}>Â·Â·Â·</span>
           </div>
 
           {/* Carousel slide */}
-          <div style={{ position: "relative", height: 245, flexShrink: 0, background: slide.bg, overflow: "hidden" }}>
+          <div style={{ position: "relative", height: 248, flexShrink: 0, background: slide.bg, overflow: "hidden" }}>
             <div style={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(ellipse at 75% 25%,${slide.accent}22 0%,transparent 55%)` }} />
             <div style={{ position: "absolute", top: 10, left: 10, padding: "3px 8px", borderRadius: 4, background: slide.accent + "28", border: `1px solid ${slide.accent}55`, fontSize: 7, fontWeight: 800, color: slide.accent, letterSpacing: 1 }}>{slide.tag}</div>
-            <div style={{ position: "absolute", top: 10, right: 10, padding: "2px 7px", borderRadius: 4, background: "rgba(59,91,219,0.9)", fontSize: 7, fontWeight: 800, color: "white", letterSpacing: 0.5 }}>IA</div>
+            <div style={{ position: "absolute", top: 10, right: 10, padding: "2px 7px", borderRadius: 4, background: "rgba(59,91,219,0.9)", fontSize: 7, fontWeight: 800, color: "white" }}>IA</div>
             <div style={{ position: "absolute", bottom: 22, left: 12, right: 12 }}>
-              <p style={{ margin: "0 0 5px", fontSize: 15, fontWeight: 900, color: "white", lineHeight: 1.2, textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}>{slide.title}</p>
+              <p style={{ margin: "0 0 5px", fontSize: 14, fontWeight: 900, color: "white", lineHeight: 1.2, textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}>{slide.title}</p>
               <p style={{ margin: 0, fontSize: 9, color: "rgba(255,255,255,0.6)" }}>{slide.sub}</p>
             </div>
             <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 4 }}>
@@ -361,8 +369,8 @@ function PhoneHologram() {
           </div>
 
           {/* Actions */}
-          <div style={{ padding: "9px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", gap: 15 }}>
+          <div style={{ padding: "8px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 14 }}>
               <svg width="21" height="21" viewBox="0 0 24 24" fill={phase===2 ? "#ef4444" : "none"} stroke={phase===2 ? "#ef4444" : "white"} strokeWidth="2.2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -372,9 +380,8 @@ function PhoneHologram() {
 
           <div style={{ padding: "0 14px 4px", fontSize: 10, fontWeight: 700, color: "white" }}>{likes.toLocaleString("pt-BR")} curtidas</div>
           <div style={{ padding: "0 14px 8px", fontSize: 9, color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>
-            <span style={{ fontWeight: 700, color: "white" }}>xpost_ia</span>{" "}Criado com IA em 2 min ðŸš€ #instagram #carrossel
+            <span style={{ fontWeight: 700, color: "white" }}>xpost_ia</span>{" "}Criado com IA em 2 min 🚀
           </div>
-          <div style={{ padding: "0 14px 10px", fontSize: 9, color: "rgba(255,255,255,0.3)" }}>Ver todos os comentÃ¡rios</div>
         </div>
 
         {/* Home indicator */}
@@ -383,7 +390,7 @@ function PhoneHologram() {
         </div>
       </div>
 
-      {/* Badge flutuante: publicado */}
+      {/* Badge: publicado */}
       {phase === 2 && (
         <div style={{
           position: "absolute", top: 28, right: -8,
@@ -391,28 +398,28 @@ function PhoneHologram() {
           background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.45)",
           boxShadow: "0 0 28px rgba(34,197,94,0.18)",
           display: "flex", alignItems: "center", gap: 8,
-          animation: "fade-in-up 0.4s ease", zIndex: 10,
+          animation: "fade-in-up 0.4s ease", zIndex: 10, whiteSpace: "nowrap",
         }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#4ade80", whiteSpace: "nowrap" }}>Publicado no Instagram!</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#4ade80" }}>Publicado no Instagram!</span>
         </div>
       )}
 
-      {/* Badge flutuante: curtidas */}
+      {/* Badge: curtidas */}
       <div style={{
         position: "absolute", bottom: 88, left: -12,
         padding: "7px 13px", borderRadius: 12,
         background: "rgba(10,10,16,0.92)", border: "1px solid rgba(76,110,245,0.3)",
-        display: "flex", alignItems: "center", gap: 7, zIndex: 10,
+        display: "flex", alignItems: "center", gap: 7, zIndex: 10, whiteSpace: "nowrap",
       }}>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="#ec4899" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>+{todayLikes} curtidas hoje</span>
+        <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>+{todayLikes} curtidas hoje</span>
       </div>
     </div>
   );
 }
 
-// â”€â”€ Componente principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Componente principal ───────────────────────────────────────
 export default function LandingPage() {
   const pricingRef = useRef<HTMLDivElement>(null);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -435,12 +442,12 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen bg-[#060606] text-white">
 
-      {/* â”€â”€ HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── HEADER ─────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 flex items-center justify-between px-5 md:px-10 py-3 border-b border-white/5"
         style={{ background: "rgba(6,6,6,0.92)", backdropFilter: "blur(12px)" }}>
         <Logo />
         <nav className="hidden md:flex items-center gap-6 text-sm text-gray-400">
-          <button onClick={scrollToPricing} className="hover:text-white transition-colors">PreÃ§os</button>
+          <button onClick={scrollToPricing} className="hover:text-white transition-colors">Preços</button>
           <Link href="/editor" className="hover:text-white transition-colors">Editor</Link>
           <button onClick={() => setLoginOpen(true)} className="hover:text-white transition-colors">Entrar</button>
         </nav>
@@ -457,7 +464,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* â”€â”€ HERO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── HERO ───────────────────────────────────────────── */}
       <section className="relative min-h-[92vh] px-5 md:px-10 pt-20 pb-16 overflow-hidden flex items-center">
 
         <div className="relative z-10 max-w-6xl mx-auto w-full flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
@@ -468,18 +475,18 @@ export default function LandingPage() {
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-green-500/30 text-green-300 text-xs font-bold mb-6 tracking-wide"
               style={{ background: "rgba(16,185,129,0.08)" }}>
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              4 crÃ©ditos grÃ¡tis Â· Sem cartÃ£o de crÃ©dito
+              4 créditos grátis · Sem cartão de crédito
             </div>
 
             <h1 className="text-[40px] md:text-[62px] lg:text-[68px] font-black leading-[1.05] tracking-tighter max-w-2xl">
               Chega de perder horas{" "}
               <span style={{ background: "linear-gradient(135deg,#4c6ef5,#3b5bdb)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
-                criando conteÃºdo
+                criando conteúdo
               </span>
             </h1>
 
             <p className="mt-5 text-gray-400 text-lg max-w-md leading-relaxed">
-              O XPost gera carrossÃ©is completos com IA â€” do texto Ã s imagens â€” em menos de 3 minutos.
+              O XPost gera carrosséis completos com IA — do texto às imagens — em menos de 3 minutos.
             </p>
 
             {/* Social proof */}
@@ -511,20 +518,20 @@ export default function LandingPage() {
                 className="flex items-center gap-2.5 px-9 py-4 rounded-2xl font-bold text-[16px] transition-all hover:scale-105 hover:brightness-110"
                 style={{ background: "linear-gradient(135deg,#3b5bdb,#ec4899)", boxShadow: "0 8px 40px rgba(59,91,219,0.5)" }}>
                 <Sparkles size={18} />
-                ComeÃ§ar grÃ¡tis agora
+                Começar grátis agora
                 <ArrowRight size={18} />
               </Link>
               <button onClick={scrollToPricing}
                 className="flex items-center gap-2 px-6 py-4 rounded-2xl text-sm font-semibold text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all"
                 style={{ background: "rgba(255,255,255,0.04)" }}>
-                Ver planos â†’
+                Ver planos →
               </button>
             </div>
 
             <div className="flex flex-wrap justify-center lg:justify-start gap-5 mt-6 text-xs text-gray-500">
               {[
-                { icon: <Shield size={12} className="text-green-400" />,  text: "Sem cartÃ£o de crÃ©dito" },
-                { icon: <Zap size={12} className="text-yellow-400" />,    text: "4 crÃ©ditos grÃ¡tis" },
+                { icon: <Shield size={12} className="text-green-400" />,  text: "Sem cartão de crédito" },
+                { icon: <Zap size={12} className="text-yellow-400" />,    text: "4 créditos grátis" },
                 { icon: <Check size={12} className="text-brand-500" />,  text: "Cancele quando quiser" },
               ].map((b) => (
                 <span key={b.text} className="flex items-center gap-1.5">{b.icon}{b.text}</span>
@@ -532,20 +539,20 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Coluna visual â€” celular hologrÃ¡fico */}
-          <div className="flex-shrink-0 flex items-center justify-center lg:w-[480px] py-8">
+          {/* Coluna visual — celular holográfico */}
+          <div className="hidden lg:flex flex-shrink-0 items-center justify-center lg:w-[480px] py-8">
             <PhoneHologram />
           </div>
 
         </div>
       </section>
 
-      {/* â”€â”€ MARQUEE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── MARQUEE ────────────────────────────────────────── */}
       <section className="relative w-full py-10 overflow-hidden">
         <div className="text-center mb-8">
           <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-2">Criado com XPost</p>
           <h2 className="text-xl md:text-2xl font-bold text-white">
-            Exemplos reais de carrossÃ©is gerados por IA
+            Exemplos reais de carrosséis gerados por IA
           </h2>
         </div>
         <div className="absolute inset-y-0 left-0 w-24 z-10 pointer-events-none"
@@ -557,23 +564,23 @@ export default function LandingPage() {
           <button onClick={scrollToPricing}
             className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold border border-brand-500/25 text-brand-400 hover:bg-brand-600/8 transition-colors"
             style={{ background: "rgba(59,91,219,0.06)" }}>
-            Quero criar assim tambÃ©m <ArrowRight size={13} />
+            Quero criar assim também <ArrowRight size={13} />
           </button>
         </div>
       </section>
 
-      {/* â”€â”€ DEPOIMENTOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── DEPOIMENTOS ────────────────────────────────────── */}
       <section className="px-5 py-16 max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Quem jÃ¡ usa</p>
+          <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Quem já usa</p>
           <h2 className="text-2xl md:text-3xl font-black">O que dizem os criadores</h2>
-          <p className="text-sm text-gray-500 mt-2">Resultados reais de pessoas reais â€” nÃ£o atores contratados.</p>
+          <p className="text-sm text-gray-500 mt-2">Resultados reais de pessoas reais — não atores contratados.</p>
         </div>
         <div className="grid md:grid-cols-3 gap-5">
           {TESTIMONIALS.map((t) => (
             <div key={t.handle} className="flex flex-col rounded-3xl p-6"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              {/* CabeÃ§alho */}
+              {/* Cabeçalho */}
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-11 h-11 rounded-full flex items-center justify-center font-black text-sm text-white flex-shrink-0"
                   style={{ background: `linear-gradient(135deg,${t.color}cc,${t.color}66)`, border: `1.5px solid ${t.color}55` }}>
@@ -610,7 +617,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* â”€â”€ COMO FUNCIONA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── COMO FUNCIONA ──────────────────────────────────── */}
       <section className="px-5 py-16 max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Simples assim</p>
@@ -624,7 +631,7 @@ export default function LandingPage() {
 
           {HOW_IT_WORKS.map((step, i) => (
             <div key={step.step} className="flex flex-col items-center text-center">
-              {/* NÃºmero + Ã­cone */}
+              {/* Número + ícone */}
               <div className="relative mb-5">
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-brand-500 relative z-10"
                   style={{ background: "rgba(59,91,219,0.12)", border: "1.5px solid rgba(76,110,245,0.3)" }}>
@@ -645,12 +652,12 @@ export default function LandingPage() {
           <Link href="/editor"
             className="flex items-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-[15px] transition-all hover:scale-105"
             style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", boxShadow: "0 8px 32px rgba(59,91,219,0.35)" }}>
-            <Sparkles size={16} /> Testar grÃ¡tis agora <ArrowRight size={16} />
+            <Sparkles size={16} /> Testar grátis agora <ArrowRight size={16} />
           </Link>
         </div>
       </section>
 
-      {/* â”€â”€ ZORA â€” ASSISTENTE IA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── ZORA — ASSISTENTE IA ────────────────────────────── */}
       <section className="px-5 py-10 max-w-4xl mx-auto">
         <div className="relative rounded-3xl overflow-hidden flex flex-col md:flex-row items-center gap-8 p-8 md:p-10"
           style={{ background: "linear-gradient(135deg,rgba(59,91,219,0.14),rgba(236,72,153,0.06))", border: "1.5px solid rgba(76,110,245,0.25)" }}>
@@ -679,16 +686,16 @@ export default function LandingPage() {
           <div className="relative text-center md:text-left">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-500/70 mb-2">Sua assistente de IA</p>
             <h3 className="text-2xl md:text-3xl font-black mb-3">
-              ConheÃ§a a{" "}
+              Conheça a{" "}
               <span style={{ background: "linear-gradient(135deg,#4c6ef5,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
                 Zora
               </span>
             </h3>
             <p className="text-gray-400 text-sm leading-relaxed max-w-md mb-4">
-              A Zora Ã© a assistente de IA integrada ao XPost. Ela sugere pautas, responde perguntas sobre o seu nicho, ajuda a refinar textos e orienta sua estratÃ©gia de conteÃºdo â€” disponÃ­vel direto no editor.
+              A Zora é a assistente de IA integrada ao XPost. Ela sugere pautas, responde perguntas sobre o seu nicho, ajuda a refinar textos e orienta sua estratégia de conteúdo — disponível direto no editor.
             </p>
             <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-5">
-              {["SugestÃ£o de pautas", "Refinar textos", "EstratÃ©gia de nicho", "Responde dÃºvidas", "Sempre disponÃ­vel"].map((tag) => (
+              {["Sugestão de pautas", "Refinar textos", "Estratégia de nicho", "Responde dúvidas", "Sempre disponível"].map((tag) => (
                 <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium"
                   style={{ background: "rgba(76,110,245,0.1)", border: "1px solid rgba(76,110,245,0.2)", color: "#d8b4fe" }}>
                   {tag}
@@ -704,7 +711,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* â”€â”€ CENÃRIO A vs B â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── CENÁRIO A vs B ─────────────────────────────────── */}
       <section className="px-5 py-16 max-w-5xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-[44px] font-black leading-tight max-w-2xl mx-auto">
@@ -712,10 +719,10 @@ export default function LandingPage() {
             <span style={{ background: "linear-gradient(135deg,#4c6ef5,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
               crescendo todo dia
             </span>{" "}
-            â€” ou continuar igual?
+            — ou continuar igual?
           </h2>
           <p className="mt-4 text-gray-500 text-sm max-w-md mx-auto">
-            A diferenÃ§a entre esses dois caminhos comeÃ§a com uma decisÃ£o hoje.
+            A diferença entre esses dois caminhos começa com uma decisão hoje.
           </p>
         </div>
 
@@ -725,9 +732,9 @@ export default function LandingPage() {
             <ul className="space-y-4">
               {[
                 "3h no Canva pra fazer um post que nem chega a 200 views",
-                "Acordar sem ideia do que postar â€” e nÃ£o postar nada",
+                "Acordar sem ideia do que postar — e não postar nada",
                 "Visual caseiro que faz o seguidor scrollar sem parar",
-                "Meses sem crescimento sem entender o que tÃ¡ errando",
+                "Meses sem crescimento sem entender o que tá errando",
                 "Concorrentes crescendo enquanto seu perfil fica parado",
               ].map((i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-gray-400">
@@ -741,16 +748,16 @@ export default function LandingPage() {
             style={{ background: "linear-gradient(135deg,rgba(59,91,219,0.12),rgba(236,72,153,0.06))", border: "1.5px solid rgba(76,110,245,0.35)" }}>
             <div className="absolute -top-3 right-5 px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide"
               style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", color: "white" }}>
-              âœ¦ Sua melhor escolha
+              ✦ Sua melhor escolha
             </div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-500/70 mb-5">Com XPost</p>
             <ul className="space-y-4">
               {[
-                "Carrossel profissional pronto antes do cafÃ© esfriar",
-                "Nunca mais sem pauta â€” a IA pesquisa o que tÃ¡ em alta no seu nicho",
+                "Carrossel profissional pronto antes do café esfriar",
+                "Nunca mais sem pauta — a IA pesquisa o que tá em alta no seu nicho",
                 "Visual que para o scroll e faz o seguidor salvar e compartilhar",
                 "Crescimento real: mais alcance, mais seguidores, mais clientes",
-                "Posta todo dia sem estresse â€” e ainda sobra tempo pra viver",
+                "Posta todo dia sem estresse — e ainda sobra tempo pra viver",
               ].map((i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-gray-200">
                   <Check size={15} className="text-brand-500 flex-shrink-0 mt-0.5" /> {i}
@@ -764,16 +771,16 @@ export default function LandingPage() {
           <button onClick={scrollToPricing}
             className="flex items-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-[15px] transition-all hover:scale-105"
             style={{ background: "linear-gradient(135deg,#3b5bdb,#ec4899)", boxShadow: "0 8px 32px rgba(59,91,219,0.3)" }}>
-            Quero comeÃ§ar a crescer <ArrowRight size={17} />
+            Quero começar a crescer <ArrowRight size={17} />
           </button>
         </div>
       </section>
 
-      {/* â”€â”€ FEATURES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── FEATURES ───────────────────────────────────────── */}
       <section className="px-5 py-16 max-w-5xl mx-auto">
         <div className="text-center mb-12">
           <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Tudo incluso</p>
-          <h2 className="text-3xl md:text-4xl font-black">O que vocÃª recebe</h2>
+          <h2 className="text-3xl md:text-4xl font-black">O que você recebe</h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {FEATURES.map((f) => (
@@ -792,10 +799,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* â”€â”€ PRICING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── PRICING ────────────────────────────────────────── */}
       <section ref={pricingRef} id="pricing" className="px-5 py-20 max-w-5xl mx-auto scroll-mt-16">
         <div className="text-center mb-14">
-          <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Planos e preÃ§os</p>
+          <p className="text-[11px] text-gray-600 uppercase tracking-[0.2em] font-bold mb-3">Planos e preços</p>
           <h2 className="text-3xl md:text-5xl font-black">
             Escolha e{" "}
             <span style={{ background: "linear-gradient(135deg,#4c6ef5,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
@@ -808,7 +815,7 @@ export default function LandingPage() {
           <div className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 rounded-full"
             style={{ background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.2)" }}>
             <Shield size={14} className="text-green-400" />
-            <span className="text-sm text-green-300 font-semibold">Garantia de 7 dias â€” se nÃ£o gostar, devolvemos 100% do valor</span>
+            <span className="text-sm text-green-300 font-semibold">Garantia de 7 dias — se não gostar, devolvemos 100% do valor</span>
           </div>
         </div>
 
@@ -877,7 +884,7 @@ export default function LandingPage() {
               <div key={p.key} className={`px-3 py-3.5 text-center ${p.highlight ? "text-brand-500" : "text-gray-500"}`}>{p.label}</div>
             ))}
           </div>
-          {["CarrossÃ©is ilimitados", "Pesquisa na web", "Editor visual", "PublicaÃ§Ã£o Instagram", "Flyer promocional IA", "Assistente IA (Zora)", "Suporte prioritÃ¡rio"].map((row, ri) => (
+          {["Carrosséis ilimitados", "Pesquisa na web", "Editor visual", "Publicação Instagram", "Flyer promocional IA", "Assistente IA (Zora)", "Suporte prioritário"].map((row, ri) => (
             <div key={row} className="grid grid-cols-4 text-[13px]"
               style={{ borderBottom: ri < 6 ? "1px solid rgba(255,255,255,0.05)" : "none", background: ri % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)" }}>
               <div className="px-5 py-3 text-gray-400">{row}</div>
@@ -897,10 +904,10 @@ export default function LandingPage() {
         <div className="flex flex-col items-center gap-2 mt-6">
           <p className="text-xs text-gray-600 flex items-center gap-1.5">
             <Crown size={11} className="text-yellow-500/60" />
-            Pagamento seguro via Stripe Â· CartÃ£o de crÃ©dito Â· Cancele quando quiser
+            Pagamento seguro via Stripe · Cartão de crédito · Cancele quando quiser
           </p>
           <p className="text-xs text-gray-600">
-            JÃ¡ tem conta?{" "}
+            Já tem conta?{" "}
             <button onClick={() => setLoginOpen(true)} className="text-brand-500 hover:text-brand-400 underline transition-colors">
               Fazer login
             </button>
@@ -908,10 +915,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* â”€â”€ FAQ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── FAQ ────────────────────────────────────────────── */}
       <section className="px-5 py-16 max-w-2xl mx-auto">
-        <h2 className="text-2xl md:text-3xl font-black text-center mb-2">DÃºvidas frequentes</h2>
-        <p className="text-center text-gray-500 text-sm mb-8">Se tiver outra dÃºvida, chama no WhatsApp â€” respondemos na hora.</p>
+        <h2 className="text-2xl md:text-3xl font-black text-center mb-2">Dúvidas frequentes</h2>
+        <p className="text-center text-gray-500 text-sm mb-8">Se tiver outra dúvida, chama no WhatsApp — respondemos na hora.</p>
         <div className="space-y-2">
           {FAQS.map((faq, i) => (
             <div key={i} className="rounded-2xl overflow-hidden"
@@ -933,7 +940,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* â”€â”€ CTA FINAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── CTA FINAL ──────────────────────────────────────── */}
       <section className="px-5 py-24 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse 70% 60% at 50% 100%,rgba(59,91,219,0.12) 0%,transparent 70%)" }} />
@@ -941,45 +948,45 @@ export default function LandingPage() {
         <h2 className="text-3xl md:text-5xl font-black leading-tight max-w-xl mx-auto mb-5">
           Seu concorrente vai postar{" "}
           <span style={{ background: "linear-gradient(135deg,#4c6ef5,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
-            amanhÃ£ de manhÃ£.
+            amanhã de manhã.
           </span>
         </h2>
         <p className="text-gray-400 text-base mb-3 max-w-md mx-auto">
-          VocÃª tambÃ©m pode â€” e em 30 segundos, com um carrossel que realmente para o scroll.
+          Você também pode — e em 30 segundos, com um carrossel que realmente para o scroll.
         </p>
         <p className="text-gray-600 text-sm mb-10">
-          ComeÃ§a grÃ¡tis. 4 crÃ©ditos sem cartÃ£o. Sem risco.
+          Começa grátis. 4 créditos sem cartão. Sem risco.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link href="/editor"
             className="inline-flex items-center gap-2.5 px-10 py-4 rounded-2xl font-bold text-lg transition-all hover:scale-105"
             style={{ background: "linear-gradient(135deg,#3b5bdb,#ec4899)", boxShadow: "0 8px 40px rgba(59,91,219,0.4)" }}>
-            <Sparkles size={20} /> ComeÃ§ar grÃ¡tis agora
+            <Sparkles size={20} /> Começar grátis agora
           </Link>
           <button onClick={scrollToPricing}
             className="inline-flex items-center gap-2 px-7 py-4 rounded-2xl font-semibold text-sm text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all"
             style={{ background: "rgba(255,255,255,0.04)" }}>
-            Ver planos e preÃ§os â†’
+            Ver planos e preços →
           </button>
         </div>
         <p className="text-xs text-gray-600 mt-5 flex items-center justify-center gap-1.5">
           <Shield size={11} className="text-green-400" />
-          Garantia de 7 dias Â· A partir de R$29,90/mÃªs Â· Cancele quando quiser
+          Garantia de 7 dias · A partir de R$29,90/mês · Cancele quando quiser
         </p>
       </section>
 
-      {/* â”€â”€ FOOTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── FOOTER ─────────────────────────────────────────── */}
       <footer className="px-5 py-10 text-center text-xs text-gray-600"
         style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="flex items-center justify-center mb-3">
           <AppLogo variant="dark" size={24} textClassName="font-black text-gray-400 text-sm" />
         </div>
-        <p>Â© 2025 XPost Â· Todos os direitos reservados</p>
+        <p>© 2025 XPost · Todos os direitos reservados</p>
         <div className="flex justify-center gap-5 mt-3">
           <Link href="/editor" className="hover:text-gray-400 transition-colors">Editor</Link>
-          <span className="text-gray-700">Â·</span>
-          <button onClick={scrollToPricing} className="hover:text-gray-400 transition-colors">PreÃ§os</button>
-          <span className="text-gray-700">Â·</span>
+          <span className="text-gray-700">·</span>
+          <button onClick={scrollToPricing} className="hover:text-gray-400 transition-colors">Preços</button>
+          <span className="text-gray-700">·</span>
           <a href="mailto:suporte@xpost.app" className="hover:text-gray-400 transition-colors">Suporte</a>
         </div>
       </footer>

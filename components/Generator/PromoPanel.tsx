@@ -489,12 +489,12 @@ export default function PromoPanel({ onGenerate }: Props) {
   /* ────────────────────────── Foto compartilhada ────────────────────────── */
   const photoSection = (
     <div>
-      <label className="text-sm text-gray-400 mb-2 flex items-center gap-1.5">
+      <label className="text-sm text-[var(--text-2)] mb-2 flex items-center gap-1.5">
         <Camera size={13} className="text-brand-400" /> Foto do produto
         {isPro && <span className="text-[10px] text-yellow-400 ml-1 flex items-center gap-0.5"><Crown size={10} /> IA usa como referência</span>}
       </label>
       {photoPreview ? (
-        <div className="relative rounded-xl overflow-hidden border border-[#2a2a2a] group">
+        <div className="relative rounded-xl overflow-hidden border border-[var(--border-2)] group">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={photoPreview} alt="Produto" className="w-full h-36 object-cover" />
           <button
@@ -505,11 +505,11 @@ export default function PromoPanel({ onGenerate }: Props) {
       ) : (
         <div className="grid grid-cols-2 gap-2">
           <button onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl border border-dashed border-[#2a2a2a] hover:border-brand-500/50 hover:bg-brand-500/5 text-gray-500 hover:text-gray-300 transition-all">
+            className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl border border-dashed border-[var(--border-2)] hover:border-brand-500/50 hover:bg-brand-500/5 text-[var(--text-3)] hover:text-[var(--text-2)] transition-all">
             <Upload size={16} /><span className="text-xs">Enviar foto</span>
           </button>
           <button onClick={() => cameraInputRef.current?.click()}
-            className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl border border-dashed border-[#2a2a2a] hover:border-brand-500/50 hover:bg-brand-500/5 text-gray-500 hover:text-gray-300 transition-all">
+            className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl border border-dashed border-[var(--border-2)] hover:border-brand-500/50 hover:bg-brand-500/5 text-[var(--text-3)] hover:text-[var(--text-2)] transition-all">
             <Camera size={16} /><span className="text-xs">Tirar foto</span>
           </button>
         </div>
@@ -527,7 +527,7 @@ export default function PromoPanel({ onGenerate }: Props) {
       {/* Badge Pro/Free */}
       {!session?.user ? (
         <button onClick={() => setLoginOpen(true)}
-          className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition-colors">
+          className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border border-[var(--border-2)] bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-sm text-[var(--text-2)] transition-colors">
           <LogIn size={14} /> Entrar para gerar
         </button>
       ) : isPro ? (
@@ -536,8 +536,8 @@ export default function PromoPanel({ onGenerate }: Props) {
           <span className="text-xs text-yellow-400 font-medium">Pro · {session.user.name?.split(" ")[0]}</span>
         </div>
       ) : (
-        <div className="flex items-center justify-between bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2">
-          <span className="text-xs text-gray-500">Grátis · {session.user.name?.split(" ")[0]}</span>
+        <div className="flex items-center justify-between bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2">
+          <span className="text-xs text-[var(--text-3)]">Grátis · {session.user.name?.split(" ")[0]}</span>
           <button onClick={goToCheckout} className="text-[11px] text-brand-400 hover:text-brand-300 underline">Upgrade Pro</button>
         </div>
       )}
@@ -546,15 +546,15 @@ export default function PromoPanel({ onGenerate }: Props) {
         <h2 className="text-lg font-bold mb-0.5 flex items-center gap-2">
           <ShoppingBag size={18} className="text-brand-500" /> Post Promocional
         </h2>
-        <p className="text-xs text-gray-500">Flyer ou carrossel de vendas gerado por IA.</p>
+        <p className="text-xs text-[var(--text-3)]">Flyer ou carrossel de vendas gerado por IA.</p>
       </div>
 
       {/* Toggle de modo */}
-      <div className="flex rounded-lg border border-[#1e1e1e] overflow-hidden">
+      <div className="flex rounded-lg border border-[var(--border)] overflow-hidden">
         <button
           onClick={() => setMode("flyer")}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
-            mode === "flyer" ? "bg-brand-600 text-white" : "text-gray-500 hover:text-gray-300"
+            mode === "flyer" ? "bg-brand-600 text-white" : "text-[var(--text-3)] hover:text-[var(--text-2)]"
           }`}
         >
           <LayoutTemplate size={13} /> Post Único
@@ -562,7 +562,7 @@ export default function PromoPanel({ onGenerate }: Props) {
         <button
           onClick={() => setMode("carousel")}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
-            mode === "carousel" ? "bg-brand-600 text-white" : "text-gray-500 hover:text-gray-300"
+            mode === "carousel" ? "bg-brand-600 text-white" : "text-[var(--text-3)] hover:text-[var(--text-2)]"
           }`}
         >
           <Layers size={13} /> Carrossel
@@ -574,7 +574,7 @@ export default function PromoPanel({ onGenerate }: Props) {
         <>
           {/* Paleta de cores */}
           <div>
-            <label className="text-sm text-gray-400 mb-2 block">Paleta de cores</label>
+            <label className="text-sm text-[var(--text-2)] mb-2 block">Paleta de cores</label>
             <div className="grid grid-cols-6 gap-1.5">
               {PRESETS.map((p, i) => (
                 <button
@@ -595,7 +595,7 @@ export default function PromoPanel({ onGenerate }: Props) {
 
           {/* Selos rápidos */}
           <div>
-            <label className="text-sm text-gray-400 mb-2 block flex items-center gap-1.5">
+            <label className="text-sm text-[var(--text-2)] mb-2 block flex items-center gap-1.5">
               <Zap size={13} className="text-yellow-400" /> Selos de oferta
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -606,7 +606,7 @@ export default function PromoPanel({ onGenerate }: Props) {
                   className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
                     promoTitle === b.title
                       ? "bg-brand-600 border-brand-500 text-white"
-                      : "bg-[#0f0f0f] border-[#1e1e1e] text-gray-400 hover:border-brand-500/50 hover:text-gray-200"
+                      : "bg-[var(--bg)] border-[var(--border)] text-[var(--text-2)] hover:border-brand-500/50 hover:text-[var(--text)]"
                   }`}
                 >
                   {b.label}
@@ -617,71 +617,71 @@ export default function PromoPanel({ onGenerate }: Props) {
 
           {/* Subtítulo */}
           <div>
-            <label className="text-sm text-gray-400 mb-1 block">Texto acima do título</label>
+            <label className="text-sm text-[var(--text-2)] mb-1 block">Texto acima do título</label>
             <input type="text" value={promoSubtitle} onChange={e => setPromoSubtitle(e.target.value)}
               placeholder="ex: Confira nossas ofertas de"
-              className="w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600" />
+              className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]" />
           </div>
 
           {/* Título grande */}
           <div>
-            <label className="text-sm text-gray-400 mb-1 block flex items-center gap-1.5">
+            <label className="text-sm text-[var(--text-2)] mb-1 block flex items-center gap-1.5">
               <Tag size={13} /> Título da promoção <span className="text-red-400">*</span>
             </label>
             <input type="text" value={promoTitle} onChange={e => setPromoTitle(e.target.value)}
               placeholder="ex: Volta às Aulas, Black Friday, Liquidação"
-              className="w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600" />
+              className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]" />
           </div>
 
           {/* Nome produto */}
           <div>
-            <label className="text-sm text-gray-400 mb-1 block">Nome do produto</label>
+            <label className="text-sm text-[var(--text-2)] mb-1 block">Nome do produto</label>
             <input type="text" value={productName} onChange={e => setProductName(e.target.value)}
               placeholder="ex: Tênis Running Pro"
-              className="w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600" />
+              className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]" />
           </div>
 
           {/* Preço + Parcelamento */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-sm text-gray-400 mb-1 block flex items-center gap-1">
+              <label className="text-sm text-[var(--text-2)] mb-1 block flex items-center gap-1">
                 <DollarSign size={13} /> Preço
               </label>
-              <div className="flex items-center gap-1.5 bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 focus-within:border-brand-500">
-                <span className="text-xs text-gray-500">R$</span>
+              <div className="flex items-center gap-1.5 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 focus-within:border-brand-500">
+                <span className="text-xs text-[var(--text-3)]">R$</span>
                 <input type="text" value={price} onChange={e => setPrice(e.target.value)}
                   placeholder="180,00"
-                  className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-gray-600" />
+                  className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-[var(--text-3)]" />
               </div>
             </div>
             <div>
-              <label className="text-sm text-gray-400 mb-1 block">Parcelamento</label>
+              <label className="text-sm text-[var(--text-2)] mb-1 block">Parcelamento</label>
               <input type="text" value={installments} onChange={e => setInstallments(e.target.value)}
                 placeholder="em até 3x"
-                className="w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600" />
+                className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]" />
             </div>
           </div>
 
           {/* Contato */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm text-gray-400">Contato (opcional)</label>
-            <div className="flex items-center gap-2 bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 focus-within:border-brand-500">
-              <Globe size={13} className="text-gray-500 shrink-0" />
+            <label className="text-sm text-[var(--text-2)]">Contato (opcional)</label>
+            <div className="flex items-center gap-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 focus-within:border-brand-500">
+              <Globe size={13} className="text-[var(--text-3)] shrink-0" />
               <input type="text" value={website} onChange={e => setWebsite(e.target.value)}
                 placeholder="www.seusite.com.br"
-                className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-gray-600" />
+                className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-[var(--text-3)]" />
             </div>
-            <div className="flex items-center gap-2 bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 focus-within:border-brand-500">
-              <Instagram size={13} className="text-gray-500 shrink-0" />
+            <div className="flex items-center gap-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 focus-within:border-brand-500">
+              <Instagram size={13} className="text-[var(--text-3)] shrink-0" />
               <input type="text" value={instagram} onChange={e => setInstagram(e.target.value)}
                 placeholder="seuinstagram"
-                className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-gray-600" />
+                className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-[var(--text-3)]" />
             </div>
-            <div className="flex items-center gap-2 bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 focus-within:border-brand-500">
-              <Phone size={13} className="text-gray-500 shrink-0" />
+            <div className="flex items-center gap-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 focus-within:border-brand-500">
+              <Phone size={13} className="text-[var(--text-3)] shrink-0" />
               <input type="text" value={phone} onChange={e => setPhone(e.target.value)}
                 placeholder="(11) 99999-9999"
-                className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-gray-600" />
+                className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-[var(--text-3)]" />
             </div>
           </div>
 
@@ -697,7 +697,7 @@ export default function PromoPanel({ onGenerate }: Props) {
           </button>
 
           {flyerStatus === "generating" && (
-            <p className="text-center text-[11px] text-gray-500 -mt-2">
+            <p className="text-center text-[11px] text-[var(--text-3)] -mt-2">
               Gemini / Imagen4 gerando... ~20s
             </p>
           )}
@@ -726,7 +726,7 @@ export default function PromoPanel({ onGenerate }: Props) {
           </button>
 
           {variationsStatus === "generating" && (
-            <p className="text-center text-[11px] text-gray-500 -mt-2">
+            <p className="text-center text-[11px] text-[var(--text-3)] -mt-2">
               3 paletas diferentes em paralelo... pode levar ~30s
             </p>
           )}
@@ -734,14 +734,14 @@ export default function PromoPanel({ onGenerate }: Props) {
           {/* Grid de variações */}
           {variationsStatus === "done" && flyerVariations.length > 0 && (
             <div>
-              <p className="text-xs text-gray-400 mb-2">Escolha uma versão:</p>
+              <p className="text-xs text-[var(--text-2)] mb-2">Escolha uma versão:</p>
               <div className="grid grid-cols-3 gap-2">
                 {flyerVariations.map((url, i) => (
                   <div key={i} className="flex flex-col gap-1">
                     {url ? (
                       <>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt={`Variação ${i + 1}`} className="w-full aspect-square object-cover rounded-lg border border-[#2a2a2a]" />
+                        <img src={url} alt={`Variação ${i + 1}`} className="w-full aspect-square object-cover rounded-lg border border-[var(--border-2)]" />
                         <button
                           onClick={() => selectVariation(url)}
                           className="py-1 rounded-md bg-brand-600 hover:bg-brand-700 text-[11px] font-medium text-white transition-colors"
@@ -750,8 +750,8 @@ export default function PromoPanel({ onGenerate }: Props) {
                         </button>
                       </>
                     ) : (
-                      <div className="w-full aspect-square rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center">
-                        <AlertCircle size={16} className="text-gray-600" />
+                      <div className="w-full aspect-square rounded-lg bg-[var(--bg-4)] border border-[var(--border-2)] flex items-center justify-center">
+                        <AlertCircle size={16} className="text-[var(--text-3)]" />
                       </div>
                     )}
                   </div>
@@ -759,7 +759,7 @@ export default function PromoPanel({ onGenerate }: Props) {
               </div>
               <button
                 onClick={() => { setVariationsStatus("idle"); setFlyerVariations([]); }}
-                className="mt-2 text-[11px] text-gray-600 hover:text-gray-400 underline w-full text-center"
+                className="mt-2 text-[11px] text-[var(--text-3)] hover:text-[var(--text-2)] underline w-full text-center"
               >
                 Fechar variações
               </button>
@@ -770,7 +770,7 @@ export default function PromoPanel({ onGenerate }: Props) {
           <button
             onClick={handleGenerateFlyer}
             disabled={!promoTitle.trim() && !productName.trim()}
-            className="text-[11px] text-gray-600 hover:text-gray-400 underline text-center transition-colors disabled:opacity-30"
+            className="text-[11px] text-[var(--text-3)] hover:text-[var(--text-2)] underline text-center transition-colors disabled:opacity-30"
           >
             ou montar sem IA (instantâneo)
           </button>
@@ -783,51 +783,51 @@ export default function PromoPanel({ onGenerate }: Props) {
           {photoSection}
 
           <div>
-            <label className="text-sm text-gray-400 mb-1 block flex items-center gap-1.5">
+            <label className="text-sm text-[var(--text-2)] mb-1 block flex items-center gap-1.5">
               <Tag size={13} /> Nome do produto <span className="text-red-400">*</span>
             </label>
             <input type="text" value={productName} onChange={e => setProductName(e.target.value)}
               placeholder="ex: Tênis Runner Pro, Bolo de Pote, iPhone 15..."
-              className="w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600" />
+              className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]" />
           </div>
 
           <div>
-            <label className="text-sm text-gray-400 mb-1 block flex items-center gap-1.5">
+            <label className="text-sm text-[var(--text-2)] mb-1 block flex items-center gap-1.5">
               <DollarSign size={13} /> Preço
             </label>
-            <div className="flex items-center gap-2 bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 focus-within:border-brand-500">
-              <span className="text-sm text-gray-500">R$</span>
+            <div className="flex items-center gap-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 focus-within:border-brand-500">
+              <span className="text-sm text-[var(--text-3)]">R$</span>
               <input type="text" value={price} onChange={e => setPrice(e.target.value)}
                 placeholder="49,90"
-                className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-gray-600" />
+                className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-[var(--text-3)]" />
             </div>
           </div>
 
           <div>
-            <label className="text-sm text-gray-400 mb-1 block flex items-center gap-1.5">
+            <label className="text-sm text-[var(--text-2)] mb-1 block flex items-center gap-1.5">
               <Star size={13} /> Principal diferencial
             </label>
             <input type="text" value={benefit} onChange={e => setBenefit(e.target.value)}
               placeholder="ex: 100% natural, entrega em 24h, exclusivo..."
-              className="w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600" />
+              className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]" />
           </div>
 
           <div>
-            <label className="text-sm text-gray-400 mb-1 block">Descrição extra (opcional)</label>
+            <label className="text-sm text-[var(--text-2)] mb-1 block">Descrição extra (opcional)</label>
             <textarea value={description} onChange={e => setDescription(e.target.value)}
               placeholder="Detalhes do produto, público-alvo, promoção..."
               rows={2}
-              className="w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600 resize-none" />
+              className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)] resize-none" />
           </div>
 
           <div>
-            <label className="text-sm text-gray-400 mb-1 block">
-              Slides: <span className="text-white font-medium">{slideCount}</span>
+            <label className="text-sm text-[var(--text-2)] mb-1 block">
+              Slides: <span className="text-[var(--text)] font-medium">{slideCount}</span>
             </label>
             <input type="range" min={4} max={12} value={slideCount}
               onChange={e => setSlideCount(Number(e.target.value))}
               className="w-full accent-brand-500" />
-            <div className="flex justify-between text-xs text-gray-600 mt-1"><span>4</span><span>12</span></div>
+            <div className="flex justify-between text-xs text-[var(--text-3)] mt-1"><span>4</span><span>12</span></div>
           </div>
 
           {!isPro && (
@@ -846,7 +846,7 @@ export default function PromoPanel({ onGenerate }: Props) {
           </button>
 
           {status === "images" && (
-            <div className="w-full bg-[#1e1e1e] rounded-full h-1.5 overflow-hidden">
+            <div className="w-full bg-[var(--bg-3)] rounded-full h-1.5 overflow-hidden">
               <div className="bg-brand-500 h-full transition-all duration-300"
                 style={{ width: `${(imageProgress / slideCount) * 100}%` }} />
             </div>

@@ -137,12 +137,12 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
       style={{ background: "rgba(0,0,0,0.80)", backdropFilter: "blur(6px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="relative w-full sm:max-w-md bg-[#111] sm:border border-t border-[#222] rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col" style={{ maxHeight: "95vh" }}>
+      <div className="relative w-full sm:max-w-md bg-[var(--bg-2)] sm:border border-t border-[var(--border-2)] rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col" style={{ maxHeight: "95vh" }}>
 
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors z-10"
+          className="absolute top-4 right-4 p-1.5 rounded-full bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors z-10"
         >
           <X size={16} />
         </button>
@@ -169,20 +169,20 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
             <div className="flex flex-col gap-5">
               <div className="text-center">
                 <h2 className="text-xl font-bold">{isTwitterMode ? "Post X / Twitter" : "Configurar IA"}</h2>
-                <p className="text-sm text-gray-500 mt-1">{isTwitterMode ? "Sobre o que será o post? A IA cria o conteúdo no estilo X." : "Diga sobre o que é o conteúdo e como quer o carrossel"}</p>
+                <p className="text-sm text-[var(--text-3)] mt-1">{isTwitterMode ? "Sobre o que será o post? A IA cria o conteúdo no estilo X." : "Diga sobre o que é o conteúdo e como quer o carrossel"}</p>
               </div>
 
               {/* Input mode toggle */}
-              <div className="flex rounded-xl border border-[#222] overflow-hidden">
+              <div className="flex rounded-xl border border-[var(--border-2)] overflow-hidden">
                 <button
                   onClick={() => setInputMode("topic")}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${inputMode === "topic" ? "bg-brand-600 text-white" : "bg-[#0a0a0a] text-gray-500 hover:text-gray-300"}`}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${inputMode === "topic" ? "bg-brand-600 text-white" : "bg-[var(--bg)] text-[var(--text-3)] hover:text-[var(--text-2)]"}`}
                 >
                   <Search size={12} /> Por Tópico
                 </button>
                 <button
                   onClick={() => setInputMode("prompt")}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${inputMode === "prompt" ? "bg-brand-600 text-white" : "bg-[#0a0a0a] text-gray-500 hover:text-gray-300"}`}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${inputMode === "prompt" ? "bg-brand-600 text-white" : "bg-[var(--bg)] text-[var(--text-3)] hover:text-[var(--text-2)]"}`}
                 >
                   <Terminal size={12} /> Prompt Livre
                 </button>
@@ -190,7 +190,7 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
 
               {/* Content input */}
               <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-2">
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-2">
                   Sobre o que é o conteúdo?
                 </p>
                 {inputMode === "topic" ? (
@@ -200,7 +200,7 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                     placeholder="Ex: 5 prompts ultra realistas para foto de perfil com IA..."
                     rows={4}
                     autoFocus
-                    className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600 resize-none"
+                    className="w-full bg-[var(--bg)] border border-[var(--border-2)] text-[var(--text)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)] resize-none"
                   />
                 ) : (
                   <textarea
@@ -209,7 +209,7 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                     placeholder={`Descreva cada slide:\n\nSlide 1: Título impactante\nSlide 2: Problema principal\nSlide 3: Solução...`}
                     rows={5}
                     autoFocus
-                    className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600 resize-none font-mono text-xs leading-relaxed"
+                    className="w-full bg-[var(--bg)] border border-[var(--border-2)] text-[var(--text)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)] resize-none font-mono text-xs leading-relaxed"
                   />
                 )}
               </div>
@@ -217,15 +217,15 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
               {/* Reference images — Pro only */}
               {isPro && inputMode === "topic" && (
                 <div>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1.5">
+                  <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-1 flex items-center gap-1.5">
                     Imagens de Referência
-                    <span className="text-[9px] text-gray-600">(opcional)</span>
+                    <span className="text-[9px] text-[var(--text-3)]">(opcional)</span>
                     <span className="text-[9px] text-yellow-400 flex items-center gap-0.5 ml-auto"><Crown size={9} /> Pro</span>
                   </p>
-                  <p className="text-[11px] text-gray-600 mb-2">Anexe capturas de carrosséis — a IA analisa e cria conteúdo inspirado.</p>
+                  <p className="text-[11px] text-[var(--text-3)] mb-2">Anexe capturas de carrosséis — a IA analisa e cria conteúdo inspirado.</p>
 
                   {refImagePreview ? (
-                    <div className="relative rounded-xl overflow-hidden border border-[#222]">
+                    <div className="relative rounded-xl overflow-hidden border border-[var(--border-2)]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={refImagePreview} alt="Referência" className="w-full h-28 object-cover" />
                       <button
@@ -239,13 +239,13 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={handlePasteImage}
-                        className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[#222] bg-[#0a0a0a] hover:border-brand-500/40 hover:bg-brand-500/5 text-sm text-gray-400 hover:text-gray-200 transition-all"
+                        className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/40 hover:bg-brand-500/5 text-sm text-[var(--text-2)] hover:text-[var(--text)] transition-all"
                       >
                         <Clipboard size={13} /> Colar Imagem
                       </button>
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[#222] bg-[#0a0a0a] hover:border-brand-500/40 hover:bg-brand-500/5 text-sm text-gray-400 hover:text-gray-200 transition-all"
+                        className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/40 hover:bg-brand-500/5 text-sm text-[var(--text-2)] hover:text-[var(--text)] transition-all"
                       >
                         <Upload size={13} /> Upload
                       </button>
@@ -257,41 +257,41 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
 
               {/* Branding */}
               <div className="flex flex-col gap-2">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Sua Marca <span className="normal-case text-gray-600">(opcional)</span></p>
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold">Sua Marca <span className="normal-case text-[var(--text-3)]">(opcional)</span></p>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-gray-600">@handle</label>
+                    <label className="text-[11px] text-[var(--text-3)]">@handle</label>
                     <input
                       value={handle}
                       onChange={(e) => setHandle(e.target.value.replace(/^@+/, ""))}
                       placeholder="seuperfil"
-                      className="bg-[#0a0a0a] border border-[#222] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-700 text-white"
+                      className="bg-[var(--bg)] border border-[var(--border-2)] text-[var(--text)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-gray-600">Nome da marca</label>
+                    <label className="text-[11px] text-[var(--text-3)]">Nome da marca</label>
                     <input
                       value={brandName}
                       onChange={(e) => setBrandName(e.target.value)}
                       placeholder="MyBrand"
-                      className="bg-[#0a0a0a] border border-[#222] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-700 text-white"
+                      className="bg-[var(--bg)] border border-[var(--border-2)] text-[var(--text)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]"
                     />
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] text-gray-600">Título do carrossel (aparece no topo direito)</label>
+                  <label className="text-[11px] text-[var(--text-3)]">Título do carrossel (aparece no topo direito)</label>
                   <input
                     value={carouselTitle}
                     onChange={(e) => setCarouselTitle(e.target.value)}
                     placeholder="Ex: Carrosséis com IA"
-                    className="bg-[#0a0a0a] border border-[#222] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-700 text-white"
+                    className="bg-[var(--bg)] border border-[var(--border-2)] text-[var(--text)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]"
                   />
                 </div>
               </div>
 
               {/* Slide count */}
               <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-3">Número de Slides</p>
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3">Número de Slides</p>
                 <div className="grid grid-cols-5 gap-2">
                   {SLIDE_COUNTS.map((n) => (
                     <button
@@ -299,8 +299,8 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                       onClick={() => setSlideCount(n)}
                       className={`py-2.5 rounded-xl text-sm font-medium transition-all ${
                         slideCount === n
-                          ? "bg-white text-black font-bold"
-                          : "bg-[#0a0a0a] border border-[#222] text-gray-400 hover:border-brand-500/40 hover:text-white"
+                          ? "bg-brand-600 text-white font-bold"
+                          : "bg-[var(--bg)] border border-[var(--border-2)] text-[var(--text-2)] hover:border-brand-500/40 hover:text-[var(--text)]"
                       }`}
                     >
                       {n}
@@ -312,7 +312,7 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
               {/* Tom de escrita — exibido no step 0 apenas em modo Twitter */}
               {isTwitterMode && (
                 <div>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-3">Tom da escrita</p>
+                  <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3">Tom da escrita</p>
                   <div className="flex flex-wrap gap-2">
                     {WRITING_STYLES.map((ws) => (
                       <button
@@ -320,8 +320,8 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                         onClick={() => setWritingStyle(ws.value)}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
                           writingStyle === ws.value
-                            ? "border-sky-500 bg-sky-500/10 text-white"
-                            : "border-[#222] bg-[#0a0a0a] text-gray-400 hover:border-sky-500/30 hover:text-white"
+                            ? "border-sky-500 bg-sky-500/10 text-[var(--text)]"
+                            : "border-[var(--border-2)] bg-[var(--bg)] text-[var(--text-2)] hover:border-sky-500/30 hover:text-[var(--text)]"
                         }`}
                       >
                         <span>{ws.emoji}</span> {ws.label}
@@ -338,12 +338,12 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
             <div className="flex flex-col gap-5">
               <div className="text-center">
                 <h2 className="text-xl font-bold">Estilo do Post</h2>
-                <p className="text-sm text-gray-500 mt-1">Como quer que a IA escreva e ilustre o carrossel?</p>
+                <p className="text-sm text-[var(--text-3)] mt-1">Como quer que a IA escreva e ilustre o carrossel?</p>
               </div>
 
               {/* Writing style */}
               <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-3">Tom da escrita</p>
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3">Tom da escrita</p>
                 <div className="flex flex-col gap-2">
                   {WRITING_STYLES.map((ws) => (
                     <button
@@ -352,13 +352,13 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left ${
                         writingStyle === ws.value
                           ? "border-brand-500 bg-brand-500/10"
-                          : "border-[#222] bg-[#0a0a0a] hover:border-brand-500/30 hover:bg-white/[0.02]"
+                          : "border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/30 hover:bg-[var(--bg-3)]"
                       }`}
                     >
                       <span className="text-lg">{ws.emoji}</span>
                       <div className="flex-1">
-                        <p className={`text-sm font-medium ${writingStyle === ws.value ? "text-white" : "text-gray-300"}`}>{ws.label}</p>
-                        <p className="text-[11px] text-gray-500">{ws.desc}</p>
+                        <p className={`text-sm font-medium ${writingStyle === ws.value ? "text-[var(--text)]" : "text-[var(--text-2)]"}`}>{ws.label}</p>
+                        <p className="text-[11px] text-[var(--text-3)]">{ws.desc}</p>
                       </div>
                       {writingStyle === ws.value && (
                         <div className="w-2 h-2 rounded-full bg-brand-500 shrink-0" />
@@ -370,7 +370,7 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
 
               {/* Image style */}
               <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-3">Estilo visual das imagens</p>
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3">Estilo visual das imagens</p>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { value: "foto_real" as ImageStyle, label: "Foto Real",  desc: "Ultra-realista · Gemini",  badge: "FREE", badgeColor: "text-green-400 bg-green-500/10" },
@@ -382,14 +382,14 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                       className={`relative flex flex-col items-start gap-1.5 px-4 py-4 rounded-xl border transition-all ${
                         imageStyle === is.value
                           ? "border-brand-500 bg-brand-500/10"
-                          : "border-[#222] bg-[#0a0a0a] hover:border-brand-500/30"
+                          : "border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/30"
                       }`}
                     >
                       <span className={`absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded ${is.badgeColor}`}>
                         {is.badge}
                       </span>
-                      <p className={`text-sm font-semibold ${imageStyle === is.value ? "text-white" : "text-gray-300"}`}>{is.label}</p>
-                      <p className="text-[11px] text-gray-500 leading-snug">{is.desc}</p>
+                      <p className={`text-sm font-semibold ${imageStyle === is.value ? "text-[var(--text)]" : "text-[var(--text-2)]"}`}>{is.label}</p>
+                      <p className="text-[11px] text-[var(--text-3)] leading-snug">{is.desc}</p>
                     </button>
                   ))}
                 </div>
@@ -397,7 +397,7 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
 
               {/* Image layout */}
               <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-3 flex items-center gap-1.5">
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3 flex items-center gap-1.5">
                   <LayoutTemplate size={11} /> Layout da imagem
                 </p>
                 <div className="grid grid-cols-5 gap-2">
@@ -414,18 +414,18 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                       className={`flex flex-col items-center gap-1.5 px-1 py-2 rounded-xl border transition-all ${
                         imageLayout === lyt.value
                           ? "border-brand-500 bg-brand-500/10"
-                          : "border-[#222] bg-[#0a0a0a] hover:border-brand-500/30"
+                          : "border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/30"
                       }`}
                     >
                       {/* Mini preview */}
-                      <div className="w-8 h-10 rounded-md overflow-hidden bg-[#111] border border-[#2a2a2a] relative flex flex-col">
+                      <div className="w-8 h-10 rounded-md overflow-hidden bg-[var(--bg-3)] border border-[var(--border-2)] relative flex flex-col">
                         {lyt.preview === "full"   && <div className="absolute inset-0 bg-brand-500/25 rounded-md" />}
-                        {lyt.preview === "mixed"  && (<><div className="absolute inset-0 bg-brand-500/15 rounded-md" /><div className="absolute bottom-0 inset-x-0 h-1/3 bg-[#111]" /></>)}
-                        {lyt.preview === "square" && (<><div className="absolute inset-x-1 top-1 bottom-3 bg-brand-500/25 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-2 bg-[#111]" /></>)}
-                        {lyt.preview === "top"    && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-brand-500/25" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#111]" /></>)}
-                        {lyt.preview === "base"   && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[#111]" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-brand-500/25" /></>)}
+                        {lyt.preview === "mixed"  && (<><div className="absolute inset-0 bg-brand-500/15 rounded-md" /><div className="absolute bottom-0 inset-x-0 h-1/3 bg-[var(--bg-3)]" /></>)}
+                        {lyt.preview === "square" && (<><div className="absolute inset-x-1 top-1 bottom-3 bg-brand-500/25 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-2 bg-[var(--bg-3)]" /></>)}
+                        {lyt.preview === "top"    && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-brand-500/25" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[var(--bg-3)]" /></>)}
+                        {lyt.preview === "base"   && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[var(--bg-3)]" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-brand-500/25" /></>)}
                       </div>
-                      <span className={`text-[9px] font-medium leading-tight text-center ${imageLayout === lyt.value ? "text-white" : "text-gray-500"}`}>
+                      <span className={`text-[9px] font-medium leading-tight text-center ${imageLayout === lyt.value ? "text-[var(--text)]" : "text-[var(--text-3)]"}`}>
                         {lyt.label}
                       </span>
                     </button>
@@ -437,11 +437,11 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
         </div>
 
         {/* Footer navigation */}
-        <div className="px-6 py-4 border-t border-[#1a1a1a] flex items-center gap-3 shrink-0">
+        <div className="px-6 py-4 border-t border-[var(--border)] flex items-center gap-3 shrink-0">
           {step > 0 ? (
             <button
               onClick={() => setStep((s) => s - 1)}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-[#222] text-gray-400 hover:text-white hover:border-[#333] text-sm transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-[var(--border-2)] text-[var(--text-2)] hover:text-[var(--text)] hover:border-[var(--border-2)] text-sm transition-colors"
             >
               <ChevronLeft size={14} /> Voltar
             </button>
@@ -453,7 +453,7 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
             <button
               onClick={() => setStep(1)}
               disabled={!canContinue}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#1c1c1c] border border-[#2a2a2a] hover:border-brand-500/40 text-white text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[var(--bg-3)] border border-[var(--border-2)] hover:border-brand-500/40 text-[var(--text)] text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             >
               Continuar <ChevronRight size={14} />
             </button>
