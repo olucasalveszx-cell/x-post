@@ -438,16 +438,12 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
 
         {/* Footer navigation */}
         <div className="px-6 py-4 border-t border-[var(--border)] flex items-center gap-3 shrink-0">
-          {step > 0 ? (
-            <button
-              onClick={() => setStep((s) => s - 1)}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-[var(--border-2)] text-[var(--text-2)] hover:text-[var(--text)] hover:border-[var(--border-2)] text-sm transition-colors"
-            >
-              <ChevronLeft size={14} /> Voltar
-            </button>
-          ) : (
-            <div />
-          )}
+          <button
+            onClick={step > 0 ? () => setStep((s) => s - 1) : onClose}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-[var(--border-2)] text-[var(--text-2)] hover:text-[var(--text)] text-sm transition-colors"
+          >
+            <ChevronLeft size={14} /> {step > 0 ? "Voltar" : "Cancelar"}
+          </button>
 
           {step === 0 && !isTwitterMode ? (
             <button
