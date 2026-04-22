@@ -367,9 +367,10 @@ export default function Toolbar({
   const isText = selectedElement?.type === "text";
   const isProfile = selectedElement?.type === "profile";
   const isImage = selectedElement?.type === "image";
+  const isFrame = selectedElement?.type === "frame";
 
   const generateImageForElement = async () => {
-    if (!selectedElement || !isImage) return;
+    if (!selectedElement || (!isImage && !isFrame)) return;
     const prompt = imgElPrompt.trim() || slide.elements.filter(e => e.type === "text").map(e => (e.content ?? "").replace(/<[^>]+>/g, "").trim()).filter(Boolean).join(". ") || "cinematic photo";
     setImgElGenerating(true);
     try {
@@ -381,7 +382,10 @@ export default function Toolbar({
         body: JSON.stringify({ prompt, imageStyle: "gemini", customerId, activationToken }),
       });
       const data = await res.json();
-      if (data.imageUrl) patchSelected({ src: data.imageUrl });
+      if (data.imageUrl) {
+        if (isFrame) patchSelected({ frameImageUrl: data.imageUrl });
+        else patchSelected({ src: data.imageUrl });
+      }
     } catch {}
     finally { setImgElGenerating(false); }
   };
@@ -741,8 +745,8 @@ export default function Toolbar({
         </div>
       )}
 
-      {/* ── Painel de imagem IA ── */}
-      {isImage && (
+      {/* ── Painel de imagem IA (imagem ou moldura) ── */}
+      {(isImage || isFrame) && (
         <div className="flex items-center gap-2 px-4 py-2 border-t border-[var(--border)] overflow-x-auto whitespace-nowrap scrollbar-none">
           <Wand2 size={14} className="text-brand-500 shrink-0" />
           <input
