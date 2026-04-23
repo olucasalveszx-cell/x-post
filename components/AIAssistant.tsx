@@ -191,7 +191,6 @@ export default function AIAssistant({ open, onClose }: Props) {
   const [micError, setMicError]       = useState<string | null>(null);
   const [micStarting, setMicStarting] = useState(false);
   const [isOpera, setIsOpera]         = useState(false);
-  // Frase que Nexa exibe em tela durante processamento
   const [nexaStatus, setNexaStatus]   = useState("");
 
   const bottomRef      = useRef<HTMLDivElement>(null);

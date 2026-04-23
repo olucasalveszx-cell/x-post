@@ -748,7 +748,7 @@ export default function LandingPage() {
         </nav>
         <div className="flex items-center gap-2">
           <button onClick={() => setLoginOpen(true)}
-            className="hidden sm:block px-4 py-2 rounded-full text-sm font-medium text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all">
+            className="px-4 py-2 rounded-full text-sm font-medium text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all">
             Entrar
           </button>
           <button onClick={scrollToPricing}
