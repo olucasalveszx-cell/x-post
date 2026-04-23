@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "";
-  const API_KEY  = process.env.ELEVENLABS_API_KEY ?? "";
+  const API_KEY = process.env.OPENAI_API_KEY ?? "";
+  if (!API_KEY) return NextResponse.json({ ok: false, reason: "OPENAI_API_KEY not set" });
 
-  if (!VOICE_ID || !API_KEY) {
-    return NextResponse.json({ ok: false, reason: "env vars not set", voice: !!VOICE_ID, key: !!API_KEY });
-  }
-
-  // Testa com texto mínimo
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+  const res = await fetch("https://api.openai.com/v1/audio/speech", {
     method: "POST",
-    headers: { "xi-api-key": API_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text: "ok",
-      model_id: "eleven_multilingual_v2",
-      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-    }),
+    headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "tts-1", input: "ok", voice: "nova", response_format: "mp3" }),
   });
 
   if (!res.ok) {
@@ -24,5 +15,5 @@ export async function GET() {
     return NextResponse.json({ ok: false, status: res.status, body });
   }
 
-  return NextResponse.json({ ok: true, voice_id: VOICE_ID.slice(0, 6) + "..." });
+  return NextResponse.json({ ok: true, provider: "openai", voice: "nova" });
 }

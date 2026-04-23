@@ -4,28 +4,24 @@ export async function POST(req: NextRequest) {
   const { text } = await req.json();
   if (!text?.trim()) return NextResponse.json({ error: "No text" }, { status: 400 });
 
-  const VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "";
-  const API_KEY  = process.env.ELEVENLABS_API_KEY ?? "";
+  const API_KEY = process.env.OPENAI_API_KEY ?? "";
+  if (!API_KEY) return NextResponse.json({ error: "TTS not configured" }, { status: 503 });
 
-  if (!VOICE_ID || !API_KEY) {
-    return NextResponse.json({ error: "TTS not configured" }, { status: 503 });
-  }
-
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+  const res = await fetch("https://api.openai.com/v1/audio/speech", {
     method: "POST",
-    headers: { "xi-api-key": API_KEY, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      text,
-      model_id: "eleven_multilingual_v2",
-      output_format: "mp3_44100_128",
-      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      model: "tts-1",
+      input: text,
+      voice: "nova",
+      response_format: "mp3",
     }),
   });
 
   if (!res.ok) {
     const msg = await res.text().catch(() => "");
-    console.error("[TTS] ElevenLabs erro", res.status, msg);
-    return NextResponse.json({ error: msg || "ElevenLabs error" }, { status: res.status });
+    console.error("[TTS] OpenAI erro", res.status, msg);
+    return NextResponse.json({ error: msg || "TTS error" }, { status: res.status });
   }
 
   const audio = await res.arrayBuffer();
