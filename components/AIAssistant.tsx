@@ -296,26 +296,27 @@ export default function AIAssistant({ open, onClose }: Props) {
   }, []);
 
   // ── Web Speech fallback ────────────────────────────────────────
-  const falarWebSpeech = useCallback((text: string) => {
-    if (!window.speechSynthesis) return;
+  const falarWebSpeech = useCallback((text: string, onDone?: () => void) => {
+    if (!window.speechSynthesis) { onDone?.(); return; }
     window.speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
     const voice = getBestVoice();
     if (voice) utt.voice = voice;
     utt.lang = "pt-BR"; utt.rate = 0.9; utt.pitch = 1.0; utt.volume = 1;
     utt.onstart = () => setSpeaking(true);
-    utt.onend   = () => setSpeaking(false);
-    utt.onerror = () => setSpeaking(false);
+    utt.onend   = () => { setSpeaking(false); onDone?.(); };
+    utt.onerror = () => { setSpeaking(false); onDone?.(); };
     setTimeout(() => {
       if (window.speechSynthesis.paused) window.speechSynthesis.resume();
       window.speechSynthesis.speak(utt);
     }, 80);
   }, [getBestVoice]);
 
-  // ── falarTexto — ElevenLabs com fallback Web Speech ───────────
-  const falarTexto = useCallback(async (text: string) => {
-    if (!ttsEnabled) return;
-    // Limpa markdown antes de enviar ao TTS
+  // ── falarTexto — OpenAI TTS com fallback Web Speech ───────────
+  // onDone é chamado APÓS o áudio terminar (usado para iniciar escuta depois)
+  const falarTexto = useCallback(async (text: string, onDone?: () => void) => {
+    if (!ttsEnabled) { onDone?.(); return; }
+
     const limpo = text
       .replace(/\*\*(.*?)\*\*/g, "$1")
       .replace(/\*(.*?)\*/g, "$1")
@@ -323,7 +324,7 @@ export default function AIAssistant({ open, onClose }: Props) {
       .replace(/`{1,3}[^`]*`{1,3}/g, "")
       .replace(/Slide \d+:\s*/gi, "")
       .trim();
-    if (!limpo) return;
+    if (!limpo) { onDone?.(); return; }
 
     try {
       const res = await fetch("/api/tts", {
@@ -338,25 +339,24 @@ export default function AIAssistant({ open, onClose }: Props) {
         const audio = new Audio(url);
         audioRef.current = audio;
 
-        audio.onplay  = () => { console.log("[Nexa] ElevenLabs playing"); setSpeaking(true); };
-        audio.onended = () => { setSpeaking(false); audioRef.current = null; URL.revokeObjectURL(url); };
-        audio.onerror = (e) => {
-          console.warn("[Nexa] Audio element error, fallback Web Speech", e);
-          setSpeaking(false); audioRef.current = null; URL.revokeObjectURL(url);
-          falarWebSpeech(limpo);
+        audio.onplay  = () => setSpeaking(true);
+        audio.onended = () => {
+          setSpeaking(false); audioRef.current = null;
+          URL.revokeObjectURL(url); onDone?.();
         };
-        audio.play().catch((e) => {
-          console.warn("[Nexa] play() rejected, fallback Web Speech", e);
-          URL.revokeObjectURL(url); audioRef.current = null; falarWebSpeech(limpo);
+        audio.onerror = () => {
+          setSpeaking(false); audioRef.current = null;
+          URL.revokeObjectURL(url); falarWebSpeech(limpo, onDone);
+        };
+        audio.play().catch(() => {
+          URL.revokeObjectURL(url); audioRef.current = null;
+          falarWebSpeech(limpo, onDone);
         });
       } else {
-        const err = await res.text().catch(() => "");
-        console.warn("[Nexa] /api/tts retornou", res.status, err, "→ fallback Web Speech");
-        falarWebSpeech(limpo);
+        falarWebSpeech(limpo, onDone);
       }
-    } catch (e) {
-      console.warn("[Nexa] fetch /api/tts falhou", e, "→ fallback Web Speech");
-      falarWebSpeech(limpo);
+    } catch {
+      falarWebSpeech(limpo, onDone);
     }
   }, [ttsEnabled, falarWebSpeech]);
 
@@ -385,9 +385,9 @@ export default function AIAssistant({ open, onClose }: Props) {
 
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
       setNexaStatus("");
-      void falarTexto(reply);
-
-      if (autoListenRef.current) setTimeout(() => startListenRef.current(), 1200);
+      void falarTexto(reply, () => {
+        if (autoListenRef.current) startListenRef.current();
+      });
     } catch {
       setNexaStatus("");
       setMessages(prev => [...prev, { role: "assistant", content: "Erro de conexão." }]);
