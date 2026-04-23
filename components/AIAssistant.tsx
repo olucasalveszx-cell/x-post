@@ -205,7 +205,6 @@ export default function AIAssistant({ open, onClose }: Props) {
   const audioUnlockedRef = useRef(false);
   const loadingRef     = useRef(false);
   const audioRef       = useRef<HTMLAudioElement | null>(null);
-  const audioCacheRef  = useRef<Map<string, string>>(new Map());
 
   const orbState: OrbState = listening ? "listening" : speaking ? "speaking" : loading ? "thinking" : "idle";
 
@@ -234,29 +233,6 @@ export default function AIAssistant({ open, onClose }: Props) {
   useEffect(() => { if (open && messages.length === 0) setMessages([WELCOME]); }, [open]); // eslint-disable-line
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
 
-  // Pré-carrega áudios ElevenLabs das frases de status quando o painel abre
-  const STATUS_PHRASES = ["Hmm...", "Pronto."];
-  useEffect(() => {
-    if (!open || !ttsEnabled) return;
-    STATUS_PHRASES.forEach(async (phrase) => {
-      if (audioCacheRef.current.has(phrase)) return;
-      try {
-        const res = await fetch("/api/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: phrase }),
-        });
-        if (res.ok) {
-          const blob = await res.blob();
-          audioCacheRef.current.set(phrase, URL.createObjectURL(blob));
-        }
-      } catch {}
-    });
-    return () => {
-      audioCacheRef.current.forEach(url => URL.revokeObjectURL(url));
-      audioCacheRef.current.clear();
-    };
-  }, [open, ttsEnabled]); // eslint-disable-line
 
   const cancelSpeech = useCallback(() => {
     if (audioRef.current) {
@@ -320,55 +296,58 @@ export default function AIAssistant({ open, onClose }: Props) {
     );
   }, []);
 
-  // ── falarWebSpeech — fallback para frases individuais ──────────
-  const falarWebSpeech = useCallback((frase: string, pausaMs: number, resolve: () => void) => {
-    if (!window.speechSynthesis) { resolve(); return; }
+  // ── Web Speech fallback ────────────────────────────────────────
+  const falarWebSpeech = useCallback((text: string) => {
+    if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(frase);
+    const utt = new SpeechSynthesisUtterance(text);
     const voice = getBestVoice();
     if (voice) utt.voice = voice;
     utt.lang = "pt-BR"; utt.rate = 0.9; utt.pitch = 1.0; utt.volume = 1;
     utt.onstart = () => setSpeaking(true);
-    utt.onend   = () => { setSpeaking(false); setTimeout(resolve, pausaMs); };
-    utt.onerror = () => { setSpeaking(false); resolve(); };
+    utt.onend   = () => setSpeaking(false);
+    utt.onerror = () => setSpeaking(false);
     setTimeout(() => {
       if (window.speechSynthesis.paused) window.speechSynthesis.resume();
       window.speechSynthesis.speak(utt);
     }, 80);
   }, [getBestVoice]);
 
-  // ── falarSequencial — usa cache pré-carregado, fallback Web Speech ─
-  const falarSequencial = useCallback(async (frases: string[], pausaMs = 650) => {
+  // ── falarTexto — ElevenLabs com fallback Web Speech ───────────
+  const falarTexto = useCallback(async (text: string) => {
     if (!ttsEnabled) return;
+    // Limpa markdown antes de enviar ao TTS
+    const limpo = text
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/#{1,6}\s/g, "")
+      .replace(/`{1,3}[^`]*`{1,3}/g, "")
+      .replace(/Slide \d+:\s*/gi, "")
+      .trim();
+    if (!limpo) return;
 
-    for (const frase of frases) {
-      const cachedUrl = audioCacheRef.current.get(frase);
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: limpo }),
+      });
 
-      await new Promise<void>((resolve) => {
-        if (!cachedUrl) {
-          falarWebSpeech(frase, pausaMs, resolve);
-          return;
-        }
-
-        const audio = new Audio(cachedUrl);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
         audioRef.current = audio;
 
         audio.onplay  = () => setSpeaking(true);
-        audio.onended = () => {
-          setSpeaking(false);
-          audioRef.current = null;
-          setTimeout(resolve, pausaMs);
-        };
-        audio.onerror = () => {
-          setSpeaking(false);
-          audioRef.current = null;
-          falarWebSpeech(frase, pausaMs, resolve);
-        };
-        audio.play().catch(() => {
-          audioRef.current = null;
-          falarWebSpeech(frase, pausaMs, resolve);
-        });
-      });
+        audio.onended = () => { setSpeaking(false); audioRef.current = null; URL.revokeObjectURL(url); };
+        audio.onerror = () => { setSpeaking(false); audioRef.current = null; URL.revokeObjectURL(url); falarWebSpeech(limpo); };
+        audio.play().catch(() => { URL.revokeObjectURL(url); audioRef.current = null; falarWebSpeech(limpo); });
+      } else {
+        falarWebSpeech(limpo);
+      }
+    } catch {
+      falarWebSpeech(limpo);
     }
   }, [ttsEnabled, falarWebSpeech]);
 
@@ -384,16 +363,7 @@ export default function AIAssistant({ open, onClose }: Props) {
     setLoading(true);
     loadingRef.current = true;
 
-    // Fase 1 — status visual apenas
     setNexaStatus("Processando...");
-
-    // Fase 2 — "Hmm..." se ainda processando após 1.8s
-    const hmmmTimer = setTimeout(() => {
-      if (loadingRef.current) {
-        setNexaStatus("Hmm...");
-        void falarSequencial(["Hmm..."], 0);
-      }
-    }, 1800);
 
     try {
       const res = await fetch("/api/assistant", {
@@ -403,25 +373,20 @@ export default function AIAssistant({ open, onClose }: Props) {
       });
       const data = await res.json();
       const reply = data.text || "Não consegui processar. Tenta de novo.";
-      clearTimeout(hmmmTimer);
 
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
-      setNexaStatus("Pronto.");
-
-      // Fase 3 — entrega
-      await falarSequencial(["Pronto."], 0);
       setNexaStatus("");
+      void falarTexto(reply);
 
-      if (autoListenRef.current) setTimeout(() => startListenRef.current(), 800);
+      if (autoListenRef.current) setTimeout(() => startListenRef.current(), 1200);
     } catch {
-      clearTimeout(hmmmTimer);
       setNexaStatus("");
       setMessages(prev => [...prev, { role: "assistant", content: "Erro de conexão." }]);
     } finally {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [loading, falarSequencial, unlockAudio]);
+  }, [loading, falarTexto, unlockAudio]);
 
   // ── Reconhecimento de voz ──────────────────────────────────────
   const startListening = useCallback(() => {
