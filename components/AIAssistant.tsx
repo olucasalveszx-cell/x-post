@@ -339,14 +339,24 @@ export default function AIAssistant({ open, onClose }: Props) {
         const audio = new Audio(url);
         audioRef.current = audio;
 
-        audio.onplay  = () => setSpeaking(true);
+        audio.onplay  = () => { console.log("[Nexa] ElevenLabs playing"); setSpeaking(true); };
         audio.onended = () => { setSpeaking(false); audioRef.current = null; URL.revokeObjectURL(url); };
-        audio.onerror = () => { setSpeaking(false); audioRef.current = null; URL.revokeObjectURL(url); falarWebSpeech(limpo); };
-        audio.play().catch(() => { URL.revokeObjectURL(url); audioRef.current = null; falarWebSpeech(limpo); });
+        audio.onerror = (e) => {
+          console.warn("[Nexa] Audio element error, fallback Web Speech", e);
+          setSpeaking(false); audioRef.current = null; URL.revokeObjectURL(url);
+          falarWebSpeech(limpo);
+        };
+        audio.play().catch((e) => {
+          console.warn("[Nexa] play() rejected, fallback Web Speech", e);
+          URL.revokeObjectURL(url); audioRef.current = null; falarWebSpeech(limpo);
+        });
       } else {
+        const err = await res.text().catch(() => "");
+        console.warn("[Nexa] /api/tts retornou", res.status, err, "→ fallback Web Speech");
         falarWebSpeech(limpo);
       }
-    } catch {
+    } catch (e) {
+      console.warn("[Nexa] fetch /api/tts falhou", e, "→ fallback Web Speech");
       falarWebSpeech(limpo);
     }
   }, [ttsEnabled, falarWebSpeech]);
