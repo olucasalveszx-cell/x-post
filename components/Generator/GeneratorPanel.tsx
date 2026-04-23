@@ -428,7 +428,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
 
             {/* Status text */}
             <div className="text-center">
-              <p className="text-base font-semibold text-white">
+              <p className="text-base font-semibold text-[var(--text)]">
                 {status === "searching" && "Pesquisando na web..."}
                 {status === "generating" && "Gerando com I.A..."}
                 {status === "images" && "Gerando imagens com I.A"}

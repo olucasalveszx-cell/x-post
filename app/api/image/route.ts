@@ -452,8 +452,6 @@ export async function POST(req: NextRequest) {
       () => fromGemini(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
       () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
       () => fromGoogleImages(prompt).then(r => { plan = "free_fallback"; return r; }),
-      () => fromUnsplash(prompt).then(r => { plan = "free_fallback"; return r; }),
-      () => fromPixabay(prompt).then(r => { plan = "free_fallback"; return r; }),
       () => fromPexels(prompt).then(r => { plan = "free_fallback"; return r; }),
     ];
     for (const fn of tries) {
@@ -468,8 +466,6 @@ export async function POST(req: NextRequest) {
       () => fromImagen3(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
-      () => fromUnsplash(prompt).then(r => { plan = "fallback"; return r; }),
-      () => fromPixabay(prompt).then(r => { plan = "fallback"; return r; }),
       () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
     ];
     for (const fn of tries) {

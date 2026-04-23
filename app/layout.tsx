@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "@/components/Providers";
 
-const APP_URL = process.env.NEXTAUTH_URL ?? "https://xpost.app";
+const APP_URL = process.env.NEXTAUTH_URL ?? "https://xpostzone.online";
 
 export const metadata: Metadata = {
   title: "XPost — Criador de Carrosséis para Instagram com IA",
@@ -22,12 +22,14 @@ export const metadata: Metadata = {
     siteName: "XPost",
     type: "website",
     locale: "pt_BR",
+    images: [{ url: "https://xpostzone.online/link.png", width: 1200, height: 630, alt: "XPost" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "XPost — Criador de Carrosséis para Instagram com IA",
     description:
       "Chega de perder horas criando conteúdo. O XPost gera carrosséis completos com IA — do texto às imagens — em menos de 3 minutos.",
+    images: ["https://xpostzone.online/link.png"],
   },
 };
 

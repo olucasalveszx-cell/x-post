@@ -11,6 +11,7 @@ import {
 import MarqueeImages from "@/components/MarqueeImages";
 import LoginModal from "@/components/LoginModal";
 import AppLogo from "@/components/AppLogo";
+import ZoraOrb from "@/components/ZoraOrb";
 
 // ── Botão flutuante WhatsApp ───────────────────────────────────
 const WA_NUMBER = "5581973014080";
@@ -223,20 +224,21 @@ const FAQS = [
   },
 ];
 
-// ── Phone Hologram ─────────────────────────────────────────────
+// ── Phone + Laptop Hologram ────────────────────────────────────
 const HOLO_SLIDES = [
-  { bg: "linear-gradient(150deg,#0a1628,#1e3a8a)", accent: "#4c6ef5", title: "5 Segredos do Instagram", sub: "Que os top criadores usam", tag: "CRESCIMENTO" },
-  { bg: "linear-gradient(150deg,#1a0533,#3b0764)", accent: "#c084fc", title: "Como vender no Direct", sub: "3 técnicas que convertem", tag: "VENDAS" },
-  { bg: "linear-gradient(150deg,#0a1a0a,#14532d)", accent: "#4ade80", title: "Engajamento em 30 dias", sub: "Método comprovado", tag: "ESTRATÉGIA" },
+  { bg: "linear-gradient(150deg,#0c0c2e,#1a1060,#2d1b8a)", accent: "#6366f1", title: "Como vender no Direct", sub: "3 técnicas que convertem", tag: "VENDAS", isLogo: false },
+  { bg: "linear-gradient(150deg,#0a1628,#1e3a8a,#1e40af)", accent: "#60a5fa", title: "5 Segredos do Instagram", sub: "Que os top criadores usam", tag: "CRESCIMENTO", isLogo: false },
+  { bg: "linear-gradient(150deg,#052e16,#14532d,#15803d)", accent: "#4ade80", title: "Engajamento em 30 dias", sub: "Método comprovado", tag: "ESTRATÉGIA", isLogo: false },
+  { bg: "linear-gradient(150deg,#06051a,#0e0c3a,#1a1680)", accent: "#818cf8", title: "", sub: "", tag: "XP", isLogo: true },
 ];
 
 function PhoneHologram() {
   const [slideIdx, setSlideIdx] = useState(0);
   const [phase, setPhase] = useState(0);
-  const [likes, setLikes] = useState(1247);
+  const [likes, setLikes] = useState(1295);
 
   useEffect(() => {
-    const TIMINGS = [3500, 2000, 2000];
+    const TIMINGS = [3800, 2000, 2000];
     let t: ReturnType<typeof setTimeout>;
     const advance = (cur: number) => {
       t = setTimeout(() => {
@@ -254,149 +256,203 @@ function PhoneHologram() {
   }, []);
 
   const slide = HOLO_SLIDES[slideIdx];
-  const todayLikes = 83 + (likes - 1247);
+  const todayLikes = 83 + (likes - 1295);
 
   return (
     <div className="relative select-none" style={{ width: 300, height: 640 }}>
-      {/* Rings holográficos */}
-      {[1.18, 1.44, 1.72].map((scale, i) => (
-        <div key={i} style={{
-          position: "absolute", inset: 0, margin: "auto",
-          width: Math.round(260 * scale), height: Math.round(540 * scale),
-          borderRadius: "50%",
-          border: `1px solid rgba(76,110,245,${0.2 - i * 0.06})`,
-          animation: `pulse-ring ${2.5 + i * 0.8}s ease-in-out ${i * 0.6}s infinite`,
-          pointerEvents: "none",
-        }} />
-      ))}
+      {/* Sem glow externo — só bordas nos aparelhos */}
 
-      {/* Glow */}
+      {/* Anel orbital 1 — roxo */}
       <div style={{
-        position: "absolute", inset: 0, margin: "auto", width: 320, height: 560,
-        borderRadius: "50%",
-        background: "radial-gradient(ellipse,rgba(59,91,219,0.32) 0%,transparent 70%)",
-        filter: "blur(30px)", pointerEvents: "none",
+        position: "absolute", left: -22, top: 228,
+        width: 344, height: 200, borderRadius: "50%",
+        border: "1.5px solid rgba(99,102,241,0.45)",
+        boxShadow: "0 0 18px rgba(99,102,241,0.2), inset 0 0 12px rgba(99,102,241,0.08)",
+        transform: "rotate(-22deg)", pointerEvents: "none", zIndex: 0,
+      }} />
+      {/* Anel orbital 2 — rosa */}
+      <div style={{
+        position: "absolute", left: 2, top: 264,
+        width: 296, height: 160, borderRadius: "50%",
+        border: "1px solid rgba(236,72,153,0.32)",
+        boxShadow: "0 0 14px rgba(236,72,153,0.14)",
+        transform: "rotate(14deg)", pointerEvents: "none", zIndex: 0,
+      }} />
+      {/* Ponto luminoso no anel 1 */}
+      <div style={{
+        position: "absolute", left: -18, top: 315,
+        width: 8, height: 8, borderRadius: "50%",
+        background: "#6366f1", boxShadow: "0 0 12px 4px rgba(99,102,241,0.7)",
+        pointerEvents: "none", zIndex: 1,
+        animation: "pulse-ring 2s ease-in-out infinite",
       }} />
 
       {/* Phone frame */}
       <div style={{
         position: "absolute", left: "50%", top: "50%",
         transform: "translate(-50%,-50%)",
-        width: 260, height: 540, borderRadius: 44,
-        background: "#080808",
-        border: "2px solid rgba(76,110,245,0.5)",
-        boxShadow: "0 0 0 1px rgba(255,255,255,0.05),0 0 70px rgba(59,91,219,0.4),0 40px 90px rgba(0,0,0,0.85)",
+        width: 262, height: 548, borderRadius: 46,
+        background: "#05050f",
+        border: "2px solid rgba(110,85,255,0.75)",
+        boxShadow: "0 0 0 1px rgba(150,120,255,0.15), 0 0 35px rgba(99,70,245,0.6), 0 0 90px rgba(80,40,220,0.3), inset 0 0 60px rgba(0,0,30,0.5), 0 40px 90px rgba(0,0,0,0.9)",
         overflow: "hidden", display: "flex", flexDirection: "column",
         animation: "float-phone 5s ease-in-out infinite",
       }}>
         {/* Scan line */}
         <div style={{
           position: "absolute", left: 0, right: 0, height: 2, zIndex: 30, pointerEvents: "none",
-          background: "linear-gradient(90deg,transparent,rgba(99,132,255,0.85) 50%,transparent)",
-          animation: "scan-line 5s linear infinite",
+          background: "linear-gradient(90deg,transparent,rgba(140,110,255,0.8) 50%,transparent)",
+          animation: "scan-line 6s linear infinite",
         }} />
 
         {/* Status bar */}
-        <div style={{ height: 44, flexShrink: 0, background: "#080808", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px" }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.8)" }}>9:41</span>
-          <div style={{ width: 88, height: 28, borderRadius: 14, background: "#000" }} />
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.6)" }}>●●●</span>
+        <div style={{ height: 44, flexShrink: 0, background: "#05050f", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.9)" }}>9:41</span>
+          <div style={{ width: 90, height: 26, borderRadius: 13, background: "#000" }} />
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
+              {[0,1,2,3].map(i => <rect key={i} x={i*4} y={10-i*2.5} width="3" height={i*2.5+2} rx="0.8" fill={i<3 ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.3)"} />)}
+            </svg>
+            <svg width="15" height="11" viewBox="0 0 15 11" fill="none">
+              <path d="M7.5 9 C7.5 9 7.5 9 7.5 9Z" stroke="rgba(255,255,255,0.85)" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M5 7 C5.8 6 6.6 5.5 7.5 5.5 C8.4 5.5 9.2 6 10 7" stroke="rgba(255,255,255,0.85)" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
+              <path d="M2.5 5 C4 3 5.7 2 7.5 2 C9.3 2 11 3 12.5 5" stroke="rgba(255,255,255,0.85)" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
+            </svg>
+            <svg width="22" height="11" viewBox="0 0 22 11" fill="none">
+              <rect x="0.5" y="0.5" width="18" height="10" rx="2.5" stroke="rgba(255,255,255,0.4)" strokeWidth="1"/>
+              <rect x="2" y="2" width="14" height="7" rx="1.5" fill="rgba(255,255,255,0.9)"/>
+              <path d="M19.5 3.5 L19.5 7.5" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </div>
         </div>
 
-        {/* Instagram */}
+        {/* IG content */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#000", overflow: "hidden" }}>
           {/* IG header */}
-          <div style={{ padding: "7px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #111" }}>
-            <span style={{ fontSize: 16, fontWeight: 800, color: "white", fontFamily: "Georgia,serif", letterSpacing: -0.3 }}>Instagram</span>
+          <div style={{ padding: "6px 14px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 20, fontWeight: 800, color: "white", fontFamily: "Georgia,serif", letterSpacing: -0.5 }}>Instagram</span>
             <div style={{ display: "flex", gap: 16 }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </div>
           </div>
 
-          {/* Post header com logo */}
-          <div style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 9 }}>
-            {/* Logo flutuando como avatar */}
-            <div style={{
-              width: 34, height: 34, borderRadius: "50%", flexShrink: 0, overflow: "hidden",
-              border: "2px solid rgba(76,110,245,0.5)",
-              background: "#080808",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              animation: "float-phone 3s ease-in-out infinite",
-            }}>
-              <AppLogo variant="dark" size={26} showText={false} />
+          {/* Stories row */}
+          <div style={{ display: "flex", gap: 12, padding: "0 12px 10px", overflowX: "hidden", flexShrink: 0 }}>
+            {[
+              { gradient: "linear-gradient(45deg,#6366f1,#8b5cf6,#a855f7)", label: "xpost_ia", isActive: true },
+              { gradient: "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366)", label: "user2", isActive: false },
+              { gradient: "linear-gradient(45deg,#405de6,#5851db,#833ab4)", label: "user3", isActive: false },
+              { gradient: "linear-gradient(45deg,#10b981,#059669)", label: "user4", isActive: false },
+            ].map((s, i) => (
+              <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flexShrink: 0 }}>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", padding: 2, background: s.gradient }}>
+                  <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "#000", border: "2px solid #000", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                    {i === 0 ? <AppLogo variant="dark" size={30} showText={false} /> : <div style={{ width: "100%", height: "100%", background: `linear-gradient(135deg,#1a1a2e,#0f0f23)` }} />}
+                  </div>
+                </div>
+                <span style={{ fontSize: 8.5, color: i === 0 ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.4)", maxWidth: 52, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>{s.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ height: 1, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
+
+          {/* Post header */}
+          <div style={{ padding: "8px 14px 6px", display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+            <div style={{ width: 33, height: 33, borderRadius: "50%", flexShrink: 0, overflow: "hidden", border: "2px solid rgba(99,80,255,0.6)", background: "#080808", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <AppLogo variant="dark" size={24} showText={false} />
             </div>
             <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "white" }}>xpost_ia</p>
-              <p style={{ margin: 0, fontSize: 9, color: "rgba(255,255,255,0.4)" }}>Agora mesmo</p>
+              <p style={{ margin: 0, fontSize: 11.5, fontWeight: 700, color: "white" }}>xpost_ia</p>
             </div>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#4c6ef5" }}>Seguindo</span>
+            <span style={{ fontSize: 20, color: "rgba(255,255,255,0.45)", letterSpacing: 1, lineHeight: 1 }}>···</span>
           </div>
 
           {/* Carousel slide */}
-          <div style={{ position: "relative", height: 248, flexShrink: 0, background: slide.bg, overflow: "hidden" }}>
-            <div style={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(ellipse at 75% 25%,${slide.accent}22 0%,transparent 55%)` }} />
-            <div style={{ position: "absolute", top: 10, left: 10, padding: "3px 8px", borderRadius: 4, background: slide.accent + "28", border: `1px solid ${slide.accent}55`, fontSize: 7, fontWeight: 800, color: slide.accent, letterSpacing: 1 }}>{slide.tag}</div>
-            <div style={{ position: "absolute", top: 10, right: 10, padding: "2px 7px", borderRadius: 4, background: "rgba(59,91,219,0.9)", fontSize: 7, fontWeight: 800, color: "white" }}>IA</div>
-            <div style={{ position: "absolute", bottom: 22, left: 12, right: 12 }}>
-              <p style={{ margin: "0 0 5px", fontSize: 14, fontWeight: 900, color: "white", lineHeight: 1.2, textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}>{slide.title}</p>
-              <p style={{ margin: 0, fontSize: 9, color: "rgba(255,255,255,0.6)" }}>{slide.sub}</p>
-            </div>
-            <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 4 }}>
-              {[0,1,2,3,4].map(i => <div key={i} style={{ width: i===0 ? 16 : 4, height: 4, borderRadius: 2, background: i===0 ? "white" : "rgba(255,255,255,0.25)" }} />)}
-            </div>
-
-            {phase === 1 && (
-              <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.78)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "#4c6ef5", animation: `pulse-ring 0.9s ${i*0.25}s ease-in-out infinite` }} />)}
+          <div style={{ position: "relative", height: 230, flexShrink: 0, background: slide.bg, overflow: "hidden" }}>
+            <div style={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(ellipse at 80% 20%,${slide.accent}30 0%,transparent 55%)` }} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,transparent 40%,rgba(0,0,0,0.55) 100%)" }} />
+            {slide.isLogo ? (
+              /* Slide especial — logo XP grande centralizada */
+              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                <div style={{ filter: "drop-shadow(0 0 28px rgba(99,102,241,0.9)) drop-shadow(0 0 60px rgba(99,102,241,0.5))", animation: "float-phone 4s ease-in-out infinite" }}>
+                  <AppLogo variant="dark" size={100} showText={false} />
                 </div>
-                <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>Gerando com IA...</p>
-                <div style={{ width: 130, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.1)" }}>
-                  <div style={{ height: "100%", width: "65%", borderRadius: 2, background: slide.accent }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: 3 }}>XPOST IA</span>
+              </div>
+            ) : (
+              <>
+                <div style={{ position: "absolute", top: 10, left: 10, padding: "3px 8px", borderRadius: 5, background: slide.accent + "25", border: `1px solid ${slide.accent}60`, fontSize: 10, fontWeight: 800, color: slide.accent, letterSpacing: 1 }}>{slide.tag}</div>
+                <div style={{ position: "absolute", bottom: 24, left: 14, right: 14 }}>
+                  <p style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 900, color: "white", lineHeight: 1.15, textShadow: "0 2px 14px rgba(0,0,0,0.7)" }}>{slide.title}</p>
+                  <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,0.65)" }}>{slide.sub}</p>
+                </div>
+              </>
+            )}
+            <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 4 }}>
+              {[0,1,2,3,4].map(i => <div key={i} style={{ width: i===0?18:4, height: 4, borderRadius: 2, background: i===0?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.25)" }} />)}
+            </div>
+            {phase === 1 && (
+              <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                <div style={{ display: "flex", gap: 7 }}>
+                  {[0,1,2].map(i => <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "#6366f1", animation: `pulse-ring 0.9s ${i*0.25}s ease-in-out infinite` }} />)}
+                </div>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>Gerando com IA...</p>
+                <div style={{ width: 120, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.1)" }}>
+                  <div style={{ height: "100%", width: "70%", borderRadius: 2, background: "linear-gradient(90deg,#6366f1,#a855f7)" }} />
                 </div>
               </div>
             )}
-
             {phase === 2 && (
               <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 9, animation: "fade-in-up 0.35s ease" }}>
-                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(34,197,94,0.18)", border: "2px solid #22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(34,197,94,0.2)", border: "2px solid #22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "white" }}>Publicado!</p>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "white" }}>Publicado!</p>
               </div>
             )}
           </div>
 
           {/* Actions */}
-          <div style={{ padding: "8px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", gap: 14 }}>
-              <svg width="21" height="21" viewBox="0 0 24 24" fill={phase===2 ? "#ef4444" : "none"} stroke={phase===2 ? "#ef4444" : "white"} strokeWidth="2.2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <div style={{ padding: "9px 14px 4px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+            <div style={{ display: "flex", gap: 16 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill={phase===2?"#ef4444":"none"} stroke={phase===2?"#ef4444":"white"} strokeWidth="2.2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </div>
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div style={{ padding: "0 14px 2px", fontSize: 11, fontWeight: 700, color: "white", flexShrink: 0 }}>{likes.toLocaleString("pt-BR")} curtidas</div>
+          <div style={{ padding: "0 14px 6px", fontSize: 9.5, color: "rgba(255,255,255,0.55)", lineHeight: 1.4, flexShrink: 0 }}>
+            <span style={{ fontWeight: 700, color: "white" }}>xpost_ia</span>{" "}Criado com IA em 2 min 🚀
           </div>
 
-          <div style={{ padding: "0 14px 4px", fontSize: 10, fontWeight: 700, color: "white" }}>{likes.toLocaleString("pt-BR")} curtidas</div>
-          <div style={{ padding: "0 14px 8px", fontSize: 9, color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>
-            <span style={{ fontWeight: 700, color: "white" }}>xpost_ia</span>{" "}Criado com IA em 2 min 🚀
+          {/* Bottom nav */}
+          <div style={{ background: "#05050f", borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "space-around", padding: "8px 6px 4px", flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <div style={{ width: 28, height: 28, borderRadius: 8, border: "2px solid rgba(255,255,255,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.8" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </div>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
         </div>
 
         {/* Home indicator */}
-        <div style={{ height: 28, flexShrink: 0, background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ width: 90, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.22)" }} />
+        <div style={{ height: 24, flexShrink: 0, background: "#05050f", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 88, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.25)" }} />
         </div>
       </div>
 
-      {/* Badge: publicado */}
+      {/* Badge publicado */}
       {phase === 2 && (
         <div style={{
-          position: "absolute", top: 28, right: -8,
+          position: "absolute", top: 34, right: -10,
           padding: "8px 14px", borderRadius: 14,
-          background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.45)",
-          boxShadow: "0 0 28px rgba(34,197,94,0.18)",
+          background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.5)",
+          boxShadow: "0 0 24px rgba(34,197,94,0.2)",
           display: "flex", alignItems: "center", gap: 8,
           animation: "fade-in-up 0.4s ease", zIndex: 10, whiteSpace: "nowrap",
         }}>
@@ -405,15 +461,254 @@ function PhoneHologram() {
         </div>
       )}
 
-      {/* Badge: curtidas */}
+      {/* Badge curtidas */}
       <div style={{
-        position: "absolute", bottom: 88, left: -12,
-        padding: "7px 13px", borderRadius: 12,
-        background: "rgba(10,10,16,0.92)", border: "1px solid rgba(76,110,245,0.3)",
+        position: "absolute", bottom: 100, left: -14,
+        padding: "7px 12px", borderRadius: 12,
+        background: "rgba(8,8,20,0.95)", border: "1px solid rgba(99,80,255,0.35)",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
         display: "flex", alignItems: "center", gap: 7, zIndex: 10, whiteSpace: "nowrap",
       }}>
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="#ec4899" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>+{todayLikes} curtidas hoje</span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="#ec4899"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>+{todayLikes} curtidas hoje</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Logo pulando acima da tela do celular ─────────────────────
+// Celular: left:8, bottom:0, scale(0.68), rotateZ(-4deg) do bottom-center (x=158)
+// Top do celular (after scale): y = 500 - 640*0.68 ≈ 65px
+// Tilt -4°: top-center desloca -sin(4°)×435 ≈ -30px → top-center-x ≈ 128
+// Badge ~106px wide → left = 128 - 53 = 75
+function FloatingLogo() {
+  return (
+    <div style={{
+      position: "absolute", left: 75, top: 8, zIndex: 20,
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+      pointerEvents: "none",
+    }}>
+      {/* Logo pulando com glow roxo */}
+      <div style={{
+        animation: "logo-jump 2.2s ease-in-out infinite",
+        filter: "drop-shadow(0 0 20px rgba(99,102,241,1)) drop-shadow(0 0 40px rgba(99,102,241,0.5)) drop-shadow(0 10px 24px rgba(0,0,0,0.7))",
+      }}>
+        <AppLogo variant="dark" size={60} showText={false} />
+      </div>
+
+      {/* Badge "Publicado!" */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "5px 12px", borderRadius: 20,
+        background: "rgba(4,4,14,0.96)",
+        border: "1px solid rgba(34,197,94,0.55)",
+        boxShadow: "0 0 16px rgba(34,197,94,0.25), 0 4px 14px rgba(0,0,0,0.6)",
+        whiteSpace: "nowrap",
+        animation: "float-phone 3s ease-in-out 0.5s infinite",
+      }}>
+        <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0 }} />
+        <span style={{ fontSize: 11, fontWeight: 800, color: "#4ade80", letterSpacing: 0.3 }}>Publicado!</span>
+      </div>
+
+      {/* Fio de luz até a tela */}
+      <div style={{
+        width: 1, height: 44,
+        background: "linear-gradient(to bottom, rgba(99,102,241,0.5), transparent)",
+      }} />
+    </div>
+  );
+}
+
+// ── Laptop Mockup ──────────────────────────────────────────────
+const LAPTOP_SLIDES = [
+  { bg: "linear-gradient(135deg,#0a1628,#1e3a8a,#1e40af)", accent: "#60a5fa", title: "Estratégia de Lançamento", sub: "Como dominar o feed em 7 dias", tag: "ESTRATÉGIA" },
+  { bg: "linear-gradient(135deg,#0c0c2e,#1a1060,#2d1b8a)", accent: "#818cf8", title: "Como Vender no Direct", sub: "3 técnicas que convertem", tag: "VENDAS" },
+  { bg: "linear-gradient(135deg,#052e16,#14532d,#15803d)", accent: "#4ade80", title: "Engajamento em 30 Dias", sub: "Plano prático para crescer seu perfil todos os dias.", tag: "ESTRATÉGIA" },
+];
+
+function LaptopMockup() {
+  const [slideIdx, setSlideIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setSlideIdx(i => (i + 1) % LAPTOP_SLIDES.length), 4200);
+    return () => clearInterval(t);
+  }, []);
+  const slide = LAPTOP_SLIDES[slideIdx];
+
+  return (
+    <div className="relative select-none" style={{ width: 500, height: 360 }}>
+      {/* Sem glow externo — só bordas nos aparelhos */}
+
+      {/* Screen / Lid */}
+      <div style={{
+        position: "absolute", top: 0, left: 6, right: 6,
+        height: 324, borderRadius: "16px 16px 3px 3px",
+        background: "#05050f",
+        border: "2px solid rgba(90,80,255,0.72)",
+        boxShadow: "0 0 0 1px rgba(150,130,255,0.12), 0 0 40px rgba(80,60,245,0.55), 0 0 100px rgba(60,40,220,0.25), inset 0 0 80px rgba(0,0,40,0.4), 0 28px 90px rgba(0,0,0,0.9)",
+        overflow: "hidden",
+      }}>
+        {/* Scan line */}
+        <div style={{
+          position: "absolute", left: 0, right: 0, height: 2, zIndex: 30, pointerEvents: "none",
+          background: "linear-gradient(90deg,transparent,rgba(130,110,255,0.7) 50%,transparent)",
+          animation: "scan-line 7s 2s linear infinite",
+        }} />
+        {/* Camera bar */}
+        <div style={{ height: 18, background: "#030308", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid rgba(90,80,255,0.12)" }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(90,80,255,0.45)", border: "1px solid rgba(90,80,255,0.3)" }} />
+        </div>
+
+        {/* Editor UI */}
+        <div style={{ display: "flex", height: "calc(100% - 18px)", fontFamily: "system-ui,sans-serif" }}>
+
+          {/* Sidebar */}
+          <div style={{ width: 82, background: "#04040e", borderRight: "1px solid rgba(255,255,255,0.06)", padding: "7px 5px", display: "flex", flexDirection: "column", gap: 5, overflow: "hidden" }}>
+            {/* App logo header */}
+            <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 4px 7px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ width: 20, height: 20, borderRadius: 5, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <AppLogo variant="dark" size={14} showText={false} />
+              </div>
+              <span style={{ fontSize: 8.5, fontWeight: 800, color: "rgba(255,255,255,0.75)" }}>XPost</span>
+            </div>
+            {/* Slide thumbnails */}
+            {LAPTOP_SLIDES.map((s, i) => (
+              <div key={i} style={{
+                height: 54, borderRadius: 5, background: s.bg, flexShrink: 0,
+                border: `1.5px solid ${i === slideIdx ? s.accent + "bb" : "transparent"}`,
+                boxShadow: i === slideIdx ? `0 0 12px ${s.accent}40` : "none",
+                overflow: "hidden", position: "relative", transition: "border-color 0.3s, box-shadow 0.3s",
+              }}>
+                <div style={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(ellipse at 70% 20%,${s.accent}20,transparent 60%)` }} />
+                <div style={{ position: "absolute", bottom: 5, left: 5, right: 5, fontSize: 5.5, fontWeight: 800, color: "rgba(255,255,255,0.9)", lineHeight: 1.3 }}>{s.title}</div>
+                <div style={{ position: "absolute", top: 4, left: 4, padding: "1.5px 4px", borderRadius: 2, background: s.accent + "25", fontSize: 4.5, fontWeight: 800, color: s.accent }}>{i + 1}</div>
+              </div>
+            ))}
+            {/* Empty placeholder */}
+            <div style={{ height: 54, borderRadius: 5, background: "rgba(255,255,255,0.02)", border: "1.5px dashed rgba(255,255,255,0.08)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 18, color: "rgba(255,255,255,0.12)", lineHeight: 1 }}>+</span>
+            </div>
+          </div>
+
+          {/* Main canvas area */}
+          <div style={{ flex: 1, background: "#0a0a18", display: "flex", flexDirection: "column" }}>
+            {/* Toolbar */}
+            <div style={{ height: 28, background: "#07070f", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "0 10px", gap: 5 }}>
+              {[["T","rgba(255,255,255,0.9)"],["B","#6366f1"],["I","rgba(255,255,255,0.4)"]].map(([l,c],i) => (
+                <div key={i} style={{ width: 18, height: 18, borderRadius: 3, background: i===1?"rgba(99,102,241,0.15)":"rgba(255,255,255,0.04)", border: i===1?"1px solid rgba(99,102,241,0.4)":"1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 800, color: c as string }}>{l}</div>
+              ))}
+              <div style={{ flex: 1 }} />
+              <div style={{ padding: "3px 10px", borderRadius: 4, background: "linear-gradient(135deg,#4f46e5,#6366f1)", fontSize: 7, fontWeight: 800, color: "white", boxShadow: "0 0 10px rgba(99,102,241,0.5)" }}>Publicar</div>
+            </div>
+            {/* Canvas */}
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 10, background: "repeating-conic-gradient(rgba(255,255,255,0.012) 0% 25%,transparent 0% 50%) 0 0/14px 14px" }}>
+              <div style={{ width: 210, height: 210, borderRadius: 10, background: slide.bg, position: "relative", overflow: "hidden", boxShadow: "0 0 0 1px rgba(255,255,255,0.07),0 12px 50px rgba(0,0,0,0.8)", transition: "background 0.7s ease" }}>
+                <div style={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(ellipse at 80% 20%,${slide.accent}28 0%,transparent 55%)` }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,transparent 30%,rgba(0,0,0,0.45) 100%)" }} />
+                <div style={{ position: "absolute", top: 9, left: 9, padding: "3px 7px", borderRadius: 4, background: slide.accent + "22", border: `1px solid ${slide.accent}55`, fontSize: 6, fontWeight: 800, color: slide.accent, letterSpacing: 0.8 }}>{slide.tag}</div>
+                <div style={{ position: "absolute", top: 9, right: 9, padding: "2.5px 6px", borderRadius: 4, background: "rgba(79,70,229,0.92)", fontSize: 6, fontWeight: 800, color: "white" }}>IA</div>
+                <div style={{ position: "absolute", bottom: 20, left: 11, right: 11 }}>
+                  <p style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 900, color: "white", lineHeight: 1.15, textShadow: "0 2px 14px rgba(0,0,0,0.6)" }}>{slide.title}</p>
+                  <p style={{ margin: 0, fontSize: 7.5, color: "rgba(255,255,255,0.6)", lineHeight: 1.4 }}>{slide.sub}</p>
+                </div>
+                <div style={{ position: "absolute", bottom: 7, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 3.5 }}>
+                  {[0,1,2,3,4].map(i => <div key={i} style={{ width: i===0?16:4, height: 4, borderRadius: 2, background: i===0?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.22)" }} />)}
+                </div>
+                {/* Selection handles */}
+                <div style={{ position: "absolute", inset: -1, border: "1.5px solid rgba(99,102,241,0.75)", borderRadius: 10, pointerEvents: "none" }}>
+                  {[{top:-5,left:-5},{top:-5,right:-5},{bottom:-5,left:-5},{bottom:-5,right:-5}].map((p,i) => (
+                    <div key={i} style={{ position: "absolute", width: 8, height: 8, borderRadius: 2, background: "#6366f1", border: "1.5px solid white", ...p }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Properties panel — fiel à imagem de referência */}
+          <div style={{ width: 88, background: "#04040e", borderLeft: "1px solid rgba(255,255,255,0.06)", padding: "10px 7px", display: "flex", flexDirection: "column", gap: 9 }}>
+            <div style={{ fontSize: 7, fontWeight: 700, color: "rgba(255,255,255,0.7)", marginBottom: 2 }}>Editar post</div>
+
+            {/* Cor de fundo */}
+            <div>
+              <div style={{ fontSize: 5.5, color: "rgba(255,255,255,0.38)", marginBottom: 3 }}>Cor de fundo</div>
+              <div style={{ height: 12, borderRadius: 3, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }} />
+            </div>
+
+            {/* Tamanho */}
+            <div>
+              <div style={{ fontSize: 5.5, color: "rgba(255,255,255,0.38)", marginBottom: 3 }}>Tamanho</div>
+              <div style={{ height: 14, borderRadius: 3, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 5.5, color: "rgba(255,255,255,0.55)", fontWeight: 600 }}>1080 x 1080</span>
+              </div>
+            </div>
+
+            {/* Alinhamento */}
+            <div>
+              <div style={{ fontSize: 5.5, color: "rgba(255,255,255,0.38)", marginBottom: 3 }}>Alinhamento</div>
+              <div style={{ display: "flex", gap: 2 }}>
+                {[
+                  <><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>,
+                  <><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></>,
+                  <><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>,
+                ].map((path, i) => (
+                  <div key={i} style={{ flex: 1, height: 18, borderRadius: 3, background: i===0?"rgba(99,102,241,0.2)":"rgba(255,255,255,0.03)", border: i===0?"1px solid rgba(99,102,241,0.5)":"1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={i===0?"rgba(99,102,241,0.9)":"rgba(255,255,255,0.3)"} strokeWidth="2.5" strokeLinecap="round">{path}</svg>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Opacidade */}
+            <div>
+              <div style={{ fontSize: 5.5, color: "rgba(255,255,255,0.38)", marginBottom: 3 }}>Opacidade</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.08)", position: "relative" }}>
+                  <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "100%", borderRadius: 2, background: "linear-gradient(to right,#4f46e5,#818cf8)" }} />
+                  <div style={{ position: "absolute", right: -4, top: "50%", transform: "translateY(-50%)", width: 9, height: 9, borderRadius: "50%", background: "#818cf8", border: "1.5px solid white", boxShadow: "0 0 5px rgba(129,140,248,0.7)" }} />
+                </div>
+                <span style={{ fontSize: 5, color: "rgba(255,255,255,0.5)", whiteSpace: "nowrap" }}>100%</span>
+              </div>
+            </div>
+
+            {/* Cores */}
+            <div>
+              <div style={{ fontSize: 5.5, color: "rgba(255,255,255,0.38)", marginBottom: 4 }}>Cores</div>
+              <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+                {["#6366f1","#ec4899","#10b981","#f97316","#f8fafc"].map((c,i) => (
+                  <div key={i} style={{ width: 13, height: 13, borderRadius: 3, background: c, border: i===0?"2px solid rgba(255,255,255,0.9)":"1px solid rgba(255,255,255,0.12)", boxShadow: i===0?`0 0 6px ${c}80`:undefined }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Base / keyboard */}
+      <div style={{
+        position: "absolute", bottom: 12, left: 0, right: 0,
+        height: 24, borderRadius: "3px 3px 14px 14px",
+        background: "linear-gradient(to bottom,#0a0a1a,#060610)",
+        border: "1px solid rgba(90,80,255,0.28)",
+        borderTop: "2px solid rgba(90,80,255,0.2)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <div style={{ width: 88, height: 12, borderRadius: 5, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }} />
+      </div>
+
+      {/* Reflection */}
+      <div style={{ position: "absolute", bottom: 0, left: 18, right: 18, height: 12, background: "linear-gradient(to bottom,rgba(90,80,255,0.12),transparent)", filter: "blur(4px)" }} />
+
+      {/* "Gerando" badge — animado */}
+      <div style={{
+        position: "absolute", top: 20, right: -16,
+        padding: "6px 12px", borderRadius: 11,
+        background: "rgba(6,6,18,0.95)", border: "1px solid rgba(99,102,241,0.4)",
+        display: "flex", alignItems: "center", gap: 7,
+        boxShadow: "0 4px 24px rgba(0,0,0,0.6), 0 0 16px rgba(99,102,241,0.2)",
+        whiteSpace: "nowrap", zIndex: 10,
+        animation: "float-phone 5s ease-in-out 0.5s infinite",
+      }}>
+        <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#6366f1", boxShadow: "0 0 8px #6366f1", animation: "pulse-ring 1.5s ease-in-out infinite" }} />
+        <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.82)" }}>Gerando com IA...</span>
       </div>
     </div>
   );
@@ -471,79 +766,135 @@ export default function LandingPage() {
 
           {/* Coluna texto */}
           <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-green-500/30 text-green-300 text-xs font-bold mb-6 tracking-wide"
-              style={{ background: "rgba(16,185,129,0.08)" }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              4 créditos grátis · Sem cartão de crédito
+
+            {/* Logo + brand */}
+            <div className="flex items-center gap-3 mb-8">
+              <div style={{
+                width: 52, height: 52, borderRadius: 14, flexShrink: 0,
+                background: "linear-gradient(135deg,#1e1b4b,#312e81,#4f46e5)",
+                boxShadow: "0 0 0 1px rgba(99,102,241,0.2)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                animation: "logo-pulse 3s ease-in-out infinite",
+              }}>
+                <AppLogo variant="dark" size={32} showText={false} />
+              </div>
+              <span className="text-[22px] font-extrabold tracking-tight text-white">xpost</span>
             </div>
 
-            <h1 className="text-[40px] md:text-[62px] lg:text-[68px] font-black leading-[1.05] tracking-tighter max-w-2xl">
-              Chega de perder horas{" "}
-              <span style={{ background: "linear-gradient(135deg,#4c6ef5,#3b5bdb)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
-                criando conteúdo
+            {/* Headline */}
+            <h1 className="text-[46px] md:text-[56px] lg:text-[62px] font-black leading-[1.05] tracking-tighter">
+              Crie conteúdos<br/>
+              que{" "}
+              <span style={{ background: "linear-gradient(135deg,#f472b6,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                engajam.
+              </span>
+              <br/>
+              Com{" "}
+              <span style={{ background: "linear-gradient(135deg,#60a5fa,#818cf8)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                IA.
               </span>
             </h1>
 
-            <p className="mt-5 text-gray-400 text-lg max-w-md leading-relaxed">
-              O XPost gera carrosséis completos com IA — do texto às imagens — em menos de 3 minutos.
+            {/* Subheadline */}
+            <p className="mt-5 text-[17px] text-gray-400 leading-relaxed max-w-[360px] lg:max-w-none">
+              Ideias, estratégias e conteúdos prontos para<br className="hidden lg:block"/>
+              crescer seu perfil todos os dias.
             </p>
 
-            {/* Social proof */}
-            <div className="flex items-center gap-3 mt-6">
-              <div className="flex -space-x-2">
-                {[
-                  { bg: "#3b5bdb", initials: "MC" },
-                  { bg: "#ec4899", initials: "RT" },
-                  { bg: "#f97316", initials: "JS" },
-                  { bg: "#10b981", initials: "AL" },
-                  { bg: "#3b82f6", initials: "PF" },
-                ].map((u, i) => (
-                  <div key={i} className="w-7 h-7 rounded-full border-2 border-[#060606] flex items-center justify-center text-[8px] font-black text-white"
-                    style={{ background: u.bg }}>
-                    {u.initials}
+            {/* Feature bullets */}
+            <div className="flex flex-col gap-4 mt-8 text-left w-full max-w-[360px] lg:max-w-none">
+              {[
+                { icon: <Sparkles size={15} />, title: "Ideias em segundos", desc: "Gere conteúdos criativos com IA em poucos cliques." },
+                { icon: <TrendingUp size={15} />, title: "Mais engajamento", desc: "Técnicas testadas para crescer seu perfil todos os dias." },
+                { icon: <Zap size={15} />, title: "Prático e rápido", desc: "Do planejamento à publicação, tudo em um só lugar." },
+              ].map((f, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div style={{
+                    width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                    background: "linear-gradient(135deg,rgba(79,70,229,0.22),rgba(99,102,241,0.12))",
+                    border: "1px solid rgba(99,102,241,0.22)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#818cf8",
+                  }}>
+                    {f.icon}
                   </div>
-                ))}
-              </div>
-              <div>
-                <div className="flex items-center gap-0.5">
-                  {[1,2,3,4,5].map(i => <Star key={i} size={11} className="text-yellow-400 fill-yellow-400" />)}
+                  <div>
+                    <p className="text-sm font-bold text-white leading-tight">{f.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{f.desc}</p>
+                  </div>
                 </div>
-                <p className="text-[11px] text-gray-500">842 criadores ativos agora</p>
-              </div>
+              ))}
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 mt-8">
+            {/* CTA principal */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 mt-9 w-full sm:w-auto">
               <Link href="/editor"
-                className="flex items-center gap-2.5 px-9 py-4 rounded-2xl font-bold text-[16px] transition-all hover:scale-105 hover:brightness-110"
-                style={{ background: "linear-gradient(135deg,#3b5bdb,#ec4899)", boxShadow: "0 8px 40px rgba(59,91,219,0.5)" }}>
-                <Sparkles size={18} />
-                Começar grátis agora
-                <ArrowRight size={18} />
+                className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-[15px] transition-all hover:scale-105 hover:brightness-110 active:scale-95"
+                style={{
+                  background: "linear-gradient(135deg,#3730a3,#4f46e5,#6366f1)",
+                  boxShadow: "0 8px 32px rgba(79,70,229,0.55), 0 0 0 1px rgba(99,102,241,0.15)",
+                }}>
+                <Sparkles size={17} />
+                Criar meu post grátis
+                <ArrowRight size={17} />
               </Link>
               <button onClick={scrollToPricing}
-                className="flex items-center gap-2 px-6 py-4 rounded-2xl text-sm font-semibold text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all"
-                style={{ background: "rgba(255,255,255,0.04)" }}>
+                className="text-sm font-semibold text-gray-400 hover:text-white transition-colors">
                 Ver planos →
               </button>
             </div>
 
-            <div className="flex flex-wrap justify-center lg:justify-start gap-5 mt-6 text-xs text-gray-500">
-              {[
-                { icon: <Shield size={12} className="text-green-400" />,  text: "Sem cartão de crédito" },
-                { icon: <Zap size={12} className="text-yellow-400" />,    text: "4 créditos grátis" },
-                { icon: <Check size={12} className="text-brand-500" />,  text: "Cancele quando quiser" },
-              ].map((b) => (
-                <span key={b.text} className="flex items-center gap-1.5">{b.icon}{b.text}</span>
-              ))}
+            {/* Status pill */}
+            <div className="inline-flex items-center gap-2 mt-6 px-4 py-2.5 rounded-full text-xs font-semibold"
+              style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.18)" }}>
+              <Zap size={12} className="text-indigo-400" />
+              <span className="text-indigo-300 font-bold">XP</span>
+              <span className="text-gray-600 mx-0.5">·</span>
+              <span className="text-gray-400">Publicado com IA</span>
             </div>
+
           </div>
 
-          {/* Coluna visual — celular holográfico */}
-          <div className="flex flex-shrink-0 items-center justify-center lg:w-[480px] py-4 lg:py-8">
-            <div className="origin-center scale-[0.65] sm:scale-[0.82] lg:scale-100 -mt-[108px] -mb-[108px] sm:-mt-[57px] sm:-mb-[57px] lg:mt-0 lg:mb-0">
-              <PhoneHologram />
+          {/* Coluna visual — mockup animado */}
+          <div className="flex flex-shrink-0 items-center justify-center py-4 lg:py-8 lg:w-[580px]">
+
+            {/* Composição phone+laptop — todos os breakpoints           */}
+            {/* Fórmula neg-margin: (dim × (1 - scale)) / 2               */}
+            {/* xs  scale=0.46 → ml/mr=-189  mt/mb=-135                   */}
+            {/* sm  scale=0.82 → ml/mr=-63   mt/mb=-45                    */}
+            {/* md  scale=0.62 → ml/mr=-133  mt/mb=-95                    */}
+            {/* lg  scale=0.82 → ml/mr=-63   mt/mb=-45                    */}
+            {/* xl  scale=0.95 → ml/mr=-18   mt/mb=-13                    */}
+            <div className="origin-center
+              scale-[0.46]    -mt-[135px]   -mb-[135px]   -ml-[189px]   -mr-[189px]
+              sm:scale-[0.82] sm:-mt-[45px] sm:-mb-[45px] sm:-ml-[63px] sm:-mr-[63px]
+              md:scale-[0.62] md:-mt-[95px] md:-mb-[95px] md:-ml-[133px] md:-mr-[133px]
+              lg:scale-[0.82] lg:-mt-[45px] lg:-mb-[45px] lg:-ml-[63px]  lg:-mr-[63px]
+              xl:scale-[0.95] xl:-mt-[13px] xl:-mb-[13px] xl:-ml-[18px]  xl:-mr-[18px]">
+
+              <div style={{ position: "relative", width: 700, height: 500 }}>
+
+                {/* Celular — posição da referência: quase vertical, leve inclinação */}
+                <div style={{
+                  position: "absolute", left: 8, bottom: 0, zIndex: 2,
+                  transform: "perspective(1800px) rotateY(5deg) rotateZ(-4deg) scale(0.68)",
+                  transformOrigin: "bottom center",
+                  filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.8))",
+                }}>
+                  <PhoneHologram />
+                </div>
+
+                {/* Logo pulando acima da tela */}
+                <FloatingLogo />
+
+                {/* Laptop — elemento dominante */}
+                <div style={{ position: "absolute", right: 0, bottom: 0, zIndex: 1 }}>
+                  <LaptopMockup />
+                </div>
+
+              </div>
             </div>
+
           </div>
 
         </div>
@@ -660,58 +1011,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── ZORA — ASSISTENTE IA ────────────────────────────── */}
-      <section className="px-5 py-10 max-w-4xl mx-auto">
-        <div className="relative rounded-3xl overflow-hidden flex flex-col md:flex-row items-center gap-8 p-8 md:p-10"
-          style={{ background: "linear-gradient(135deg,rgba(59,91,219,0.14),rgba(236,72,153,0.06))", border: "1.5px solid rgba(76,110,245,0.25)" }}>
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "radial-gradient(ellipse 60% 80% at 80% 50%,rgba(59,91,219,0.10) 0%,transparent 70%)" }} />
-
-          <div className="flex-shrink-0 relative flex flex-col items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full pointer-events-none"
-                style={{ background: "radial-gradient(ellipse,rgba(59,91,219,0.4) 0%,transparent 70%)", filter: "blur(18px)", transform: "scale(1.4)" }} />
-              <div className="relative w-28 h-28 rounded-full flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg,#1e3a8a,#3b5bdb)", border: "2px solid rgba(76,110,245,0.5)", boxShadow: "0 0 32px rgba(59,91,219,0.4)" }}>
-                <ZoraAvatar size={64} />
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", border: "2px solid #060606" }}>
-                <Sparkles size={12} className="text-white" />
-              </div>
-            </div>
-            <div className="px-3 py-1 rounded-full text-[11px] font-bold"
-              style={{ background: "rgba(76,110,245,0.15)", border: "1px solid rgba(76,110,245,0.3)", color: "##818cf8" }}>
-              Planos Pro & Business
-            </div>
-          </div>
-
-          <div className="relative text-center md:text-left">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-500/70 mb-2">Sua assistente de IA</p>
-            <h3 className="text-2xl md:text-3xl font-black mb-3">
-              Conheça a{" "}
-              <span style={{ background: "linear-gradient(135deg,#4c6ef5,#ec4899)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
-                Zora
-              </span>
-            </h3>
-            <p className="text-gray-400 text-sm leading-relaxed max-w-md mb-4">
-              A Zora é a assistente de IA integrada ao XPost. Ela sugere pautas, responde perguntas sobre o seu nicho, ajuda a refinar textos e orienta sua estratégia de conteúdo — disponível direto no editor.
-            </p>
-            <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-5">
-              {["Sugestão de pautas", "Refinar textos", "Estratégia de nicho", "Responde dúvidas", "Sempre disponível"].map((tag) => (
-                <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium"
-                  style={{ background: "rgba(76,110,245,0.1)", border: "1px solid rgba(76,110,245,0.2)", color: "#d8b4fe" }}>
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <button onClick={scrollToPricing}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all hover:scale-105"
-              style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)", boxShadow: "0 4px 20px rgba(59,91,219,0.35)" }}>
-              <Sparkles size={14} /> Acessar a Zora
-            </button>
-          </div>
-        </div>
-      </section>
+      <ZoraOrb />
 
       {/* ── CENÁRIO A vs B ─────────────────────────────────── */}
       <section className="px-5 py-16 max-w-5xl mx-auto">

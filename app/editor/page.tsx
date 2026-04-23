@@ -626,9 +626,14 @@ export default function EditorPage() {
           )}
           <AuthButton />
           <button onClick={() => setShowAI(true)}
-            className="flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-purple-700 bg-purple-900/30 hover:bg-purple-800/40 text-brand-400 transition-colors">
-            <MessageCircle size={15} />
-            <span className="hidden md:inline">Zora IA</span>
+            className="flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm transition-all hover:scale-105 active:scale-95"
+            style={{ background: "linear-gradient(135deg,rgba(67,56,202,0.25),rgba(109,40,217,0.2))", border: "1px solid rgba(99,102,241,0.35)", color: "#a78bfa", boxShadow: "0 0 14px rgba(99,102,241,0.15)" }}>
+            {/* Mini orb pulsante */}
+            <span className="relative flex items-center justify-center" style={{ width: 16, height: 16, flexShrink: 0 }}>
+              <span className="absolute inset-0 rounded-full animate-ping" style={{ background: "rgba(99,102,241,0.35)", animationDuration: "2s" }} />
+              <span className="relative w-3 h-3 rounded-full" style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", boxShadow: "0 0 6px rgba(99,102,241,0.7)" }} />
+            </span>
+            <span className="hidden md:inline font-semibold">Zora IA</span>
           </button>
           <button onClick={handleExport} disabled={exporting}
             className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text)] text-sm border border-[var(--border)] disabled:opacity-40 transition-colors">
@@ -737,7 +742,7 @@ export default function EditorPage() {
                     <Sparkles size={isMobile ? 28 : 36} className="text-brand-400" />
                   </div>
                   <div>
-                    <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Pronto para criar?</h2>
+                    <h2 className="text-xl md:text-2xl font-bold text-[var(--text)] mb-2">Pronto para criar?</h2>
                     <p className="text-sm text-gray-500">Gere um carrossel incrível com IA em segundos</p>
                   </div>
                   <button
