@@ -464,7 +464,7 @@ export default function AIAssistant({ open, onClose }: Props) {
   }, []);
 
   const sendPromptToGenerator = (prompt: string) => {
-    window.dispatchEvent(new CustomEvent("zora-prompt", { detail: { prompt } }));
+    window.dispatchEvent(new CustomEvent("nexa-prompt", { detail: { prompt } }));
     const toast = document.createElement("div");
     toast.textContent = "✓ Prompt enviado ao Gerador!";
     toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#4f46e5;color:white;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999999;pointer-events:none;";

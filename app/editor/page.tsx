@@ -633,7 +633,7 @@ export default function EditorPage() {
               <span className="absolute inset-0 rounded-full animate-ping" style={{ background: "rgba(99,102,241,0.35)", animationDuration: "2s" }} />
               <span className="relative w-3 h-3 rounded-full" style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", boxShadow: "0 0 6px rgba(99,102,241,0.7)" }} />
             </span>
-            <span className="hidden md:inline font-semibold">Zora IA</span>
+            <span className="hidden md:inline font-semibold">Nexa IA</span>
           </button>
           <button onClick={handleExport} disabled={exporting}
             className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text)] text-sm border border-[var(--border)] disabled:opacity-40 transition-colors">
@@ -792,9 +792,9 @@ export default function EditorPage() {
               active: mobilePanel === "side",
             },
             {
-              id: "zora",
+              id: "nexa",
               icon: <MessageCircle size={20} />,
-              label: "Zora",
+              label: "Nexa",
               action: () => setShowAI(true),
               active: false,
             },

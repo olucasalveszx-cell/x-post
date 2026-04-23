@@ -275,7 +275,7 @@ export default function GeneratorPanel({ onGenerate }: Props) {
     return () => window.removeEventListener("open-generator-wizard", handler);
   }, []);
 
-  // Zora IA prompt injection
+  // Nexa IA prompt injection
   useEffect(() => {
     const handler = (e: Event) => {
       const prompt = (e as CustomEvent).detail?.prompt;
@@ -283,8 +283,8 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       setLastSettings((prev) => ({ ...(prev ?? defaultSettings()), customPrompt: prompt, inputMode: "prompt" }));
       setShowWizard(true);
     };
-    window.addEventListener("zora-prompt", handler);
-    return () => window.removeEventListener("zora-prompt", handler);
+    window.addEventListener("nexa-prompt", handler);
+    return () => window.removeEventListener("nexa-prompt", handler);
   }, []);
 
   // Pro check via Kirvano

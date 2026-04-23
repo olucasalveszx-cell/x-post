@@ -61,22 +61,22 @@ function WhatsAppButton() {
   );
 }
 
-// ── Ícone Zora (avatar IA) ────────────────────────────────────
-function ZoraAvatar({ size = 48 }: { size?: number }) {
+// ── Ícone Nexa (avatar IA) ────────────────────────────────────
+function NexaAvatar({ size = 48 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <radialGradient id="zoraBg" cx="35%" cy="30%" r="70%">
+        <radialGradient id="nexaBg" cx="35%" cy="30%" r="70%">
           <stop offset="0%" stopColor="#a78bfa" />
           <stop offset="100%" stopColor="#1e3a8a" />
         </radialGradient>
-        <filter id="zoraGlow" x="-40%" y="-40%" width="180%" height="180%">
+        <filter id="nexaGlow" x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="2" result="blur" />
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
-      <circle cx="24" cy="24" r="24" fill="url(#zoraBg)" />
-      <g filter="url(#zoraGlow)" stroke="##818cf8" strokeWidth="2.5" strokeLinecap="round" fill="none">
+      <circle cx="24" cy="24" r="24" fill="url(#nexaBg)" />
+      <g filter="url(#nexaGlow)" stroke="##818cf8" strokeWidth="2.5" strokeLinecap="round" fill="none">
         <path d="M14 18 L34 18 L24 32 Z" />
         <path d="M18 26 L30 26" opacity="0.5" />
       </g>
@@ -171,7 +171,7 @@ const PLANS = [
     badge: null as string | null,
     cta: "Começar agora",
     features: ["Carrosséis ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "Publicação no Instagram"],
-    missing: ["Flyer promocional com IA", "Assistente IA (Zora)", "Suporte prioritário"],
+    missing: ["Flyer promocional com IA", "Assistente IA (Nexa)", "Suporte prioritário"],
   },
   {
     key: "pro",
@@ -181,7 +181,7 @@ const PLANS = [
     highlight: true,
     badge: "Mais popular" as string | null,
     cta: "Assinar agora",
-    features: ["Carrosséis ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "Publicação no Instagram", "Flyer promocional com IA", "Assistente IA (Zora)"],
+    features: ["Carrosséis ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "Publicação no Instagram", "Flyer promocional com IA", "Assistente IA (Nexa)"],
     missing: ["Suporte prioritário"],
   },
   {
@@ -192,7 +192,7 @@ const PLANS = [
     highlight: false,
     badge: "Mais completo" as string | null,
     cta: "Quero o melhor",
-    features: ["Carrosséis ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "Publicação no Instagram", "Flyer promocional com IA", "Assistente IA (Zora)", "Suporte prioritário"],
+    features: ["Carrosséis ilimitados com IA", "Pesquisa web em tempo real", "Editor visual completo", "Publicação no Instagram", "Flyer promocional com IA", "Assistente IA (Nexa)", "Suporte prioritário"],
     missing: [],
   },
 ];
@@ -1186,7 +1186,7 @@ export default function LandingPage() {
               <div key={p.key} className={`px-3 py-3.5 text-center ${p.highlight ? "text-brand-500" : "text-gray-500"}`}>{p.label}</div>
             ))}
           </div>
-          {["Carrosséis ilimitados", "Pesquisa na web", "Editor visual", "Publicação Instagram", "Flyer promocional IA", "Assistente IA (Zora)", "Suporte prioritário"].map((row, ri) => (
+          {["Carrosséis ilimitados", "Pesquisa na web", "Editor visual", "Publicação Instagram", "Flyer promocional IA", "Assistente IA (Nexa)", "Suporte prioritário"].map((row, ri) => (
             <div key={row} className="grid grid-cols-4 text-[13px]"
               style={{ borderBottom: ri < 6 ? "1px solid rgba(255,255,255,0.05)" : "none", background: ri % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)" }}>
               <div className="px-5 py-3 text-gray-400">{row}</div>

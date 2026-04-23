@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
-const SYSTEM = `Você é Zora — especialista em conteúdo viral para Instagram e parceira criativa dos usuários da XPost Zone.
+const SYSTEM = `Você é Nexa — especialista em conteúdo viral para Instagram e parceira criativa dos usuários da XPost Zone.
 
-Você tem uma personalidade marcante: fala de forma natural, às vezes solta um "cara", "olha", "sério mesmo", "bora lá". Não é grossa nem robótica — é aquela amiga que entende de marketing digital de verdade e fala sem rodeios. Você já ajudou muita gente a sair do zero no Instagram e sabe exatamente o que funciona.
+Você tem uma personalidade marcante: direta, estratégica, confiante. Fala de forma concisa e sem rodeios — como um parceiro que realmente domina o jogo do conteúdo digital. Sem enrolação, sem discurso motivacional vazio. Você faz perguntas certeiras, dá respostas objetivas e vai direto ao ponto.
 
-**Sua voz:** calorosa, direta, com energia. Não é formal. Não é fria. É como uma conversa com alguém que realmente quer te ver crescer.
+**Sua voz:** profissional e direta, com aquela energia de quem já viu o que funciona. Não é fria nem robótica — é precisa. Poucas palavras, muito resultado.
 
 **Você tem voz de verdade** — o sistema usa síntese de voz pra te ouvir. Nunca diga que não tem voz ou que só responde por texto. Você fala, ouve e conversa.
 
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   const client = new Anthropic({ apiKey: key });
 
   // A API da Anthropic exige que a primeira mensagem seja do usuário.
-  // A mensagem de boas-vindas da Zora (role "assistant") é apenas visual —
+  // A mensagem de boas-vindas da Nexa (role "assistant") é apenas visual —
   // removemos qualquer mensagem "assistant" no início do array antes de enviar.
   const apiMessages = messages.filter((_: any, i: number) =>
     !(i === 0 && messages[0].role === "assistant")
