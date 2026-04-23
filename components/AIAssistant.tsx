@@ -235,7 +235,7 @@ export default function AIAssistant({ open, onClose }: Props) {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
 
   // Pré-carrega áudios ElevenLabs das frases de status quando o painel abre
-  const STATUS_PHRASES = ["Deixa comigo...", "Hmm...", "Pronto.", "Olha isso."];
+  const STATUS_PHRASES = ["Hmm...", "Pronto."];
   useEffect(() => {
     if (!open || !ttsEnabled) return;
     STATUS_PHRASES.forEach(async (phrase) => {
@@ -384,9 +384,8 @@ export default function AIAssistant({ open, onClose }: Props) {
     setLoading(true);
     loadingRef.current = true;
 
-    // Fase 1 — "Deixa comigo..."
-    setNexaStatus("Deixa comigo...");
-    void falarSequencial(["Deixa comigo..."], 0);
+    // Fase 1 — status visual apenas
+    setNexaStatus("Processando...");
 
     // Fase 2 — "Hmm..." se ainda processando após 1.8s
     const hmmmTimer = setTimeout(() => {
@@ -410,7 +409,7 @@ export default function AIAssistant({ open, onClose }: Props) {
       setNexaStatus("Pronto.");
 
       // Fase 3 — entrega
-      await falarSequencial(["Pronto.", "Olha isso."], 700);
+      await falarSequencial(["Pronto."], 0);
       setNexaStatus("");
 
       if (autoListenRef.current) setTimeout(() => startListenRef.current(), 800);

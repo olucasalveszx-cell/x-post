@@ -16,13 +16,14 @@ export async function POST(req: NextRequest) {
     headers: { "xi-api-key": API_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({
       text,
-      model_id: "eleven_multilingual_v2",
-      voice_settings: { stability: 0.4, similarity_boost: 0.8, style: 0.2, use_speaker_boost: true },
+      model_id: "eleven_turbo_v2_5",
+      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
     }),
   });
 
   if (!res.ok) {
     const msg = await res.text().catch(() => "");
+    console.error("[TTS] ElevenLabs erro", res.status, msg);
     return NextResponse.json({ error: msg || "ElevenLabs error" }, { status: res.status });
   }
 
