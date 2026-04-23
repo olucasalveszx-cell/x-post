@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Mic, MicOff, Send, Sparkles, Volume2, VolumeX,
+  X, Mic, MicOff, Send, Volume2, VolumeX,
   Loader2, MessageSquare, PhoneOff, Trash2, Wand2,
 } from "lucide-react";
 
@@ -205,6 +205,7 @@ export default function AIAssistant({ open, onClose }: Props) {
   const audioUnlockedRef = useRef(false);
   const loadingRef     = useRef(false);
   const audioRef       = useRef<HTMLAudioElement | null>(null);
+  const audioCacheRef  = useRef<Map<string, string>>(new Map());
 
   const orbState: OrbState = listening ? "listening" : speaking ? "speaking" : loading ? "thinking" : "idle";
 
@@ -232,6 +233,30 @@ export default function AIAssistant({ open, onClose }: Props) {
   useEffect(() => { autoListenRef.current = autoListen; }, [autoListen]);
   useEffect(() => { if (open && messages.length === 0) setMessages([WELCOME]); }, [open]); // eslint-disable-line
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
+
+  // Pré-carrega áudios ElevenLabs das frases de status quando o painel abre
+  const STATUS_PHRASES = ["Deixa comigo...", "Hmm...", "Pronto.", "Olha isso."];
+  useEffect(() => {
+    if (!open || !ttsEnabled) return;
+    STATUS_PHRASES.forEach(async (phrase) => {
+      if (audioCacheRef.current.has(phrase)) return;
+      try {
+        const res = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: phrase }),
+        });
+        if (res.ok) {
+          const blob = await res.blob();
+          audioCacheRef.current.set(phrase, URL.createObjectURL(blob));
+        }
+      } catch {}
+    });
+    return () => {
+      audioCacheRef.current.forEach(url => URL.revokeObjectURL(url));
+      audioCacheRef.current.clear();
+    };
+  }, [open, ttsEnabled]); // eslint-disable-line
 
   const cancelSpeech = useCallback(() => {
     if (audioRef.current) {
@@ -312,67 +337,40 @@ export default function AIAssistant({ open, onClose }: Props) {
     }, 80);
   }, [getBestVoice]);
 
-  // ── falarElevenLabs — busca áudio e retorna blob URL ou null ───
-  const falarElevenLabs = useCallback(async (texto: string): Promise<string | null> => {
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: texto }),
-      });
-      if (!res.ok) {
-        console.warn("[Nexa TTS] API retornou", res.status);
-        return null;
-      }
-      const blob = await res.blob();
-      return URL.createObjectURL(blob);
-    } catch (e) {
-      console.warn("[Nexa TTS] Erro ao buscar áudio:", e);
-      return null;
-    }
-  }, []);
-
-  // ── falarSequencial — ElevenLabs com fallback Web Speech ───────
+  // ── falarSequencial — usa cache pré-carregado, fallback Web Speech ─
   const falarSequencial = useCallback(async (frases: string[], pausaMs = 650) => {
     if (!ttsEnabled) return;
 
     for (const frase of frases) {
-      // Pré-busca o áudio antes de criar a promise (mantém contexto de gesture)
-      const url = await falarElevenLabs(frase);
+      const cachedUrl = audioCacheRef.current.get(frase);
 
       await new Promise<void>((resolve) => {
-        if (!url) {
+        if (!cachedUrl) {
           falarWebSpeech(frase, pausaMs, resolve);
           return;
         }
 
-        const audio = new Audio(url);
-        audio.preload = "auto";
+        const audio = new Audio(cachedUrl);
         audioRef.current = audio;
 
-        audio.onplay   = () => setSpeaking(true);
-        audio.onended  = () => {
+        audio.onplay  = () => setSpeaking(true);
+        audio.onended = () => {
           setSpeaking(false);
           audioRef.current = null;
-          URL.revokeObjectURL(url);
           setTimeout(resolve, pausaMs);
         };
-        audio.onerror  = () => {
-          console.warn("[Nexa TTS] Erro ao reproduzir áudio, usando Web Speech");
+        audio.onerror = () => {
           setSpeaking(false);
           audioRef.current = null;
-          URL.revokeObjectURL(url);
           falarWebSpeech(frase, pausaMs, resolve);
         };
-        audio.play().catch((err) => {
-          console.warn("[Nexa TTS] play() bloqueado:", err);
-          URL.revokeObjectURL(url);
+        audio.play().catch(() => {
           audioRef.current = null;
           falarWebSpeech(frase, pausaMs, resolve);
         });
       });
     }
-  }, [ttsEnabled, falarWebSpeech, falarElevenLabs]);
+  }, [ttsEnabled, falarWebSpeech]);
 
   // ── Enviar mensagem ────────────────────────────────────────────
   const sendMessage = useCallback(async (content: string) => {
