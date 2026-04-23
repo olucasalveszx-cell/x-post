@@ -261,12 +261,19 @@ export default function AIAssistant({ open, onClose }: Props) {
   }, [cancelSpeech]);
 
   const unlockAudio = useCallback(() => {
-    if (audioUnlockedRef.current || !window.speechSynthesis) return;
+    if (audioUnlockedRef.current) return;
     try {
-      const silent = new SpeechSynthesisUtterance(" ");
-      silent.volume = 0; silent.rate = 10;
-      window.speechSynthesis.speak(silent);
-      setTimeout(() => window.speechSynthesis.cancel(), 50);
+      // Destravar Web Speech API
+      if (window.speechSynthesis) {
+        const silent = new SpeechSynthesisUtterance(" ");
+        silent.volume = 0; silent.rate = 10;
+        window.speechSynthesis.speak(silent);
+        setTimeout(() => window.speechSynthesis.cancel(), 50);
+      }
+      // Destravar HTML Audio API (necessário para ElevenLabs após async fetch)
+      const silentAudio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=");
+      silentAudio.volume = 0;
+      silentAudio.play().catch(() => {});
       audioUnlockedRef.current = true;
     } catch {}
   }, []);
@@ -305,51 +312,67 @@ export default function AIAssistant({ open, onClose }: Props) {
     }, 80);
   }, [getBestVoice]);
 
+  // ── falarElevenLabs — busca áudio e retorna blob URL ou null ───
+  const falarElevenLabs = useCallback(async (texto: string): Promise<string | null> => {
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: texto }),
+      });
+      if (!res.ok) {
+        console.warn("[Nexa TTS] API retornou", res.status);
+        return null;
+      }
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    } catch (e) {
+      console.warn("[Nexa TTS] Erro ao buscar áudio:", e);
+      return null;
+    }
+  }, []);
+
   // ── falarSequencial — ElevenLabs com fallback Web Speech ───────
   const falarSequencial = useCallback(async (frases: string[], pausaMs = 650) => {
     if (!ttsEnabled) return;
 
     for (const frase of frases) {
-      await new Promise<void>(async (resolve) => {
-        try {
-          const res = await fetch("/api/tts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: frase }),
-          });
+      // Pré-busca o áudio antes de criar a promise (mantém contexto de gesture)
+      const url = await falarElevenLabs(frase);
 
-          if (res.ok) {
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const audio = new Audio(url);
-            audioRef.current = audio;
-
-            audio.onplay   = () => setSpeaking(true);
-            audio.onended  = () => {
-              setSpeaking(false);
-              audioRef.current = null;
-              URL.revokeObjectURL(url);
-              setTimeout(resolve, pausaMs);
-            };
-            audio.onerror  = () => {
-              setSpeaking(false);
-              audioRef.current = null;
-              URL.revokeObjectURL(url);
-              resolve();
-            };
-            audio.play().catch(() => {
-              URL.revokeObjectURL(url);
-              falarWebSpeech(frase, pausaMs, resolve);
-            });
-          } else {
-            falarWebSpeech(frase, pausaMs, resolve);
-          }
-        } catch {
+      await new Promise<void>((resolve) => {
+        if (!url) {
           falarWebSpeech(frase, pausaMs, resolve);
+          return;
         }
+
+        const audio = new Audio(url);
+        audio.preload = "auto";
+        audioRef.current = audio;
+
+        audio.onplay   = () => setSpeaking(true);
+        audio.onended  = () => {
+          setSpeaking(false);
+          audioRef.current = null;
+          URL.revokeObjectURL(url);
+          setTimeout(resolve, pausaMs);
+        };
+        audio.onerror  = () => {
+          console.warn("[Nexa TTS] Erro ao reproduzir áudio, usando Web Speech");
+          setSpeaking(false);
+          audioRef.current = null;
+          URL.revokeObjectURL(url);
+          falarWebSpeech(frase, pausaMs, resolve);
+        };
+        audio.play().catch((err) => {
+          console.warn("[Nexa TTS] play() bloqueado:", err);
+          URL.revokeObjectURL(url);
+          audioRef.current = null;
+          falarWebSpeech(frase, pausaMs, resolve);
+        });
       });
     }
-  }, [ttsEnabled, falarWebSpeech]);
+  }, [ttsEnabled, falarWebSpeech, falarElevenLabs]);
 
   // ── Enviar mensagem ────────────────────────────────────────────
   const sendMessage = useCallback(async (content: string) => {
