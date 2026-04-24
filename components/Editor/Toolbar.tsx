@@ -58,6 +58,7 @@ interface Props {
   onUpdate: (slide: Slide) => void;
   onAddSlide: () => void;
   onDeleteSlide: () => void;
+  onDeleteElement?: () => void;
   slideIndex: number;
   totalSlides: number;
   onPrev: () => void;
@@ -73,7 +74,7 @@ interface Props {
 }
 
 export default function Toolbar({
-  slide, onUpdate, onAddSlide, onDeleteSlide,
+  slide, onUpdate, onAddSlide, onDeleteSlide, onDeleteElement,
   slideIndex, totalSlides, onPrev, onNext,
   selectedElement, onUndo, onRedo, canUndo, canRedo,
   format = "4:5", onFormatChange, onApplyThemeToAll,
@@ -489,6 +490,15 @@ export default function Toolbar({
         <div className="flex gap-2 shrink-0 ml-3">
           <button onClick={onAddSlide} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium shrink-0"><Plus size={14} /> Slide</button>
           <button onClick={onDeleteSlide} disabled={totalSlides <= 1} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-900/40 hover:bg-red-900/60 text-red-300 text-sm disabled:opacity-30 disabled:cursor-not-allowed shrink-0"><Trash2 size={14} /></button>
+          {selectedElement && onDeleteElement && (
+            <button
+              onClick={onDeleteElement}
+              title="Excluir elemento selecionado"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-600 hover:bg-red-700 text-white text-sm font-medium shrink-0 transition-colors"
+            >
+              <Trash2 size={14} /> Excluir
+            </button>
+          )}
         </div>
       </div>
 

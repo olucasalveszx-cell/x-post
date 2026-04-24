@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, ArrowRight, Check, Sparkles } from "lucide-react";
+import { Loader2, Lock, Check, Sparkles } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
 import AppLogo from "@/components/AppLogo";
+import LoginAnimation from "@/components/LoginAnimation";
 
 const PLANS = [
   { key: "basic",    label: "Básico",   price: "29,90", period: "mês" },
@@ -20,6 +21,16 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
   const [authorized, setAuthorized] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [showLoginAnim, setShowLoginAnim] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("xpost_login_anim") === "1") {
+        localStorage.removeItem("xpost_login_anim");
+        setShowLoginAnim(true);
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -62,6 +73,11 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
   const goToCheckout = (plan: string) => {
     window.open(KIRVANO_URLS[plan] ?? KIRVANO_URLS.pro, "_blank");
   };
+
+  // Animação de login — sobrepõe tudo imediatamente ao montar
+  if (showLoginAnim) {
+    return <LoginAnimation onComplete={() => setShowLoginAnim(false)} />;
+  }
 
   // Carregando verificação
   if (checking || status === "loading") {

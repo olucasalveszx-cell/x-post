@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
-import { Sparkles, Search, Loader2, AlertCircle, Crown, Zap, LogIn, CheckCircle2 } from "lucide-react";
+import { Sparkles, Search, Loader2, AlertCircle, Crown, Zap, LogIn, CheckCircle2, Clock, X } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
 import { GeneratedContent, SearchResult, Slide, WritingStyle } from "@/types";
 import { v4 as uuid } from "uuid";
@@ -11,6 +11,8 @@ import GeneratorWizard, { WizardSettings, ImageLayout } from "./GeneratorWizard"
 
 interface Props {
   onGenerate: (slides: Slide[]) => void;
+  onLayoutChange?: (slides: Slide[]) => void;
+  currentSlides?: Slide[];
 }
 
 const SLIDE_W = 1080;
@@ -262,6 +264,16 @@ export default function GeneratorPanel({ onGenerate }: Props) {
   const [creditToast, setCreditToast] = useState<{ spent: number; remaining: number } | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [wizardTwitterMode, setWizardTwitterMode] = useState(false);
+  const [recentTopics, setRecentTopics] = useState<string[]>([]);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("xpz_recent_topics");
+      if (stored) setRecentTopics(JSON.parse(stored));
+      if (localStorage.getItem("xpz_banner_dismissed")) setBannerDismissed(true);
+    } catch {}
+  }, []);
 
   // Listen for external trigger (canvas overlay button / onboarding)
   useEffect(() => {
@@ -383,6 +395,14 @@ export default function GeneratorPanel({ onGenerate }: Props) {
       setLastGenContent(genData);
       setSlideImages(extractImages(withImages));
       setStatus("done");
+
+      if (ws.topic) {
+        setRecentTopics((prev) => {
+          const updated = [ws.topic, ...prev.filter((t) => t !== ws.topic)].slice(0, 3);
+          try { localStorage.setItem("xpz_recent_topics", JSON.stringify(updated)); } catch {}
+          return updated;
+        });
+      }
 
       const prev = credits;
       fetchCredits();
@@ -605,6 +625,46 @@ export default function GeneratorPanel({ onGenerate }: Props) {
                   </div>
                 )}
               </>
+            )}
+
+            {/* Banner de novidade */}
+            {!bannerDismissed && status !== "done" && (
+              <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl border text-xs" style={{ background: "rgba(139,92,246,0.07)", borderColor: "rgba(139,92,246,0.22)" }}>
+                <Sparkles size={12} className="mt-0.5 shrink-0" style={{ color: "#a78bfa" }} />
+                <div className="flex-1">
+                  <p className="font-medium" style={{ color: "#c4b5fd" }}>Novo: imagem de referência</p>
+                  <p className="mt-0.5" style={{ color: "rgba(196,181,253,0.55)" }}>Use sua foto como base para as imagens geradas.</p>
+                </div>
+                <button
+                  onClick={() => { setBannerDismissed(true); try { localStorage.setItem("xpz_banner_dismissed", "1"); } catch {} }}
+                  className="shrink-0 transition-opacity opacity-40 hover:opacity-80"
+                  style={{ color: "#a78bfa" }}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
+
+            {/* Tópicos recentes */}
+            {recentTopics.length > 0 && status !== "done" && (
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold">Recentes</p>
+                <div className="flex flex-col gap-1.5">
+                  {recentTopics.map((topic) => (
+                    <button
+                      key={topic}
+                      onClick={() => {
+                        setLastSettings((prev) => ({ ...(prev ?? defaultSettings()), topic, inputMode: "topic" }));
+                        setShowWizard(true);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] hover:border-brand-500/30 text-left text-xs text-[var(--text-2)] transition-colors"
+                    >
+                      <Clock size={11} className="shrink-0 text-[var(--text-3)]" />
+                      <span className="truncate">{topic}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
 
             {status === "error" && (

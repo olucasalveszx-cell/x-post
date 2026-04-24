@@ -1194,7 +1194,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         <div className="absolute inset-0 flex flex-col items-center justify-end pointer-events-none" style={{ zIndex: 10, paddingBottom: slide.height * 0.06 }}>
           <button
             className="pointer-events-auto flex items-center gap-2 px-5 py-3 rounded-2xl text-white font-semibold transition-all active:scale-95"
-            style={{ fontSize: slide.width * 0.022, background: "rgba(76,110,245,0.18)", border: "1.5px solid rgba(76,110,245,0.45)", backdropFilter: "blur(8px)", boxShadow: "0 0 24px rgba(76,110,245,0.25)" }}
+            style={{ fontSize: slide.width * 0.022, background: "rgba(76,110,245,0.55)", border: "1.5px solid rgba(76,110,245,0.85)", backdropFilter: "blur(8px)", boxShadow: "0 0 32px rgba(76,110,245,0.5)" }}
             onClick={(e) => { e.stopPropagation(); generateBg(); }}
           >
             <Wand2 style={{ width: slide.width * 0.025, height: slide.width * 0.025 }} />

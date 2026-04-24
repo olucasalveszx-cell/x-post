@@ -22,8 +22,8 @@ import ProfilePickerModal, { UserProfile, getStoredProfile, saveProfile, PROFILE
 import { autosaveWrite, autosaveRead, autosaveClear } from "@/lib/autosave-db";
 import ProfileModal from "@/components/ProfileModal";
 import StyleSelectorModal from "@/components/Editor/StyleSelectorModal";
-import LoginAnimation from "@/components/LoginAnimation";
 import AppLogo from "@/components/AppLogo";
+import LoginAnimation from "@/components/LoginAnimation";
 
 interface IGAccount { token: string; accountId: string; username: string; }
 
@@ -82,7 +82,6 @@ export default function EditorPage() {
   useEffect(() => { slidesRef.current = slides; }, [slides]);
 
   // ── UI state ──────────────────────────────────────────────────
-  const [showLoginAnim, setShowLoginAnim] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -93,7 +92,9 @@ export default function EditorPage() {
   const [showRestoreBanner, setShowRestoreBanner] = useState(false);
   const [credits, setCredits] = useState<{ remaining: number; limit: number; unlimited: boolean } | null>(null);
   const [mobilePanel, setMobilePanel] = useState<"side" | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
   const [displayScale, setDisplayScale] = useState(560 / 1350);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [showProfilePicker, setShowProfilePicker] = useState(false);
@@ -162,20 +163,28 @@ export default function EditorPage() {
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo]);
 
-  // ── Animação de login ─────────────────────────────────────────
+  // ── Animação de splash (login ou abertura PWA) ────────────────
+  const [showLoginAnim, setShowLoginAnim] = useState(false);
   const [loginAnimDone, setLoginAnimDone] = useState(false);
+
   useEffect(() => {
-    try {
-      if (localStorage.getItem("xpost_login_anim") === "1") {
-        localStorage.removeItem("xpost_login_anim");
-        setShowLoginAnim(true);
-        return; // ProfilePicker aguarda o fim da animação
-      }
-    } catch {}
-    setLoginAnimDone(true); // sem animação → libera imediatamente
+    const loginFlag = localStorage.getItem("xpost_login_anim");
+    const isPWA = window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as { standalone?: boolean }).standalone === true;
+    const splashShown = sessionStorage.getItem("pwa_splash_shown");
+
+    if (loginFlag) {
+      localStorage.removeItem("xpost_login_anim");
+      setShowLoginAnim(true);
+    } else if (isPWA && !splashShown) {
+      sessionStorage.setItem("pwa_splash_shown", "1");
+      setShowLoginAnim(true);
+    } else {
+      setLoginAnimDone(true);
+    }
   }, []);
 
-  // ── Profile picker (aguarda animação de login se houver) ──────
+  // ── Profile picker (aguarda animação se houver) ───────────────
   useEffect(() => {
     if (!loginAnimDone) return;
     const stored = getStoredProfile();
@@ -288,8 +297,14 @@ export default function EditorPage() {
     const topic = pendingTopicRef.current;
     pendingTopicRef.current = null;
     const isTwitter = style === "twitter";
-    window.dispatchEvent(new CustomEvent("open-generator-wizard", { detail: { topic: topic ?? undefined, isTwitter } }));
-  }, []);
+    const dispatch = () => window.dispatchEvent(new CustomEvent("open-generator-wizard", { detail: { topic: topic ?? undefined, isTwitter } }));
+    if (isMobile) {
+      setMobilePanel("side");
+      setTimeout(dispatch, 120);
+    } else {
+      dispatch();
+    }
+  }, [isMobile]);
 
   // ── Operações de slide ────────────────────────────────────────
   const updateSlide = useCallback((updated: Slide) => {
@@ -654,7 +669,9 @@ export default function EditorPage() {
 
   return (
     <>
-    {showLoginAnim && <LoginAnimation onComplete={() => { setShowLoginAnim(false); setLoginAnimDone(true); }} />}
+    {showLoginAnim && (
+      <LoginAnimation onComplete={() => { setShowLoginAnim(false); setLoginAnimDone(true); }} />
+    )}
     <SubscriptionGate>
     <div className="flex flex-col h-screen overflow-hidden bg-[var(--bg)]">
 
@@ -788,18 +805,20 @@ export default function EditorPage() {
 
         {/* Painel esquerdo — Gerar */}
         {isMobile ? (
-          <div className="fixed inset-y-0 left-0 z-40 flex flex-col bg-[var(--bg-2)] border-r border-[var(--border)]"
-            style={{ width: "85vw", maxWidth: 360, transform: mobilePanel === "side" ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
-            <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)] shrink-0">
-              <span className="text-sm font-semibold text-[var(--text)] flex items-center gap-2">
-                <Sparkles size={14} className="text-brand-400" /> Gerar Carrossel
-              </span>
-              <button onClick={() => setMobilePanel(null)} className="p-1.5 rounded-lg bg-[var(--bg-3)] text-[var(--text-2)]"><X size={16} /></button>
+          mobilePanel === "side" && (
+            <div className="fixed inset-y-0 left-0 z-40 flex flex-col bg-[var(--bg-2)] border-r border-[var(--border)]"
+              style={{ width: "85vw", maxWidth: 360 }}>
+              <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)] shrink-0">
+                <span className="text-sm font-semibold text-[var(--text)] flex items-center gap-2">
+                  <Sparkles size={14} className="text-brand-400" /> Gerar Carrossel
+                </span>
+                <button onClick={() => setMobilePanel(null)} className="p-1.5 rounded-lg bg-[var(--bg-3)] text-[var(--text-2)]"><X size={16} /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} currentSlides={slides} />
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} currentSlides={slides} />
-            </div>
-          </div>
+          )
         ) : (
           <div className="flex overflow-hidden shrink-0" style={{ width: 300, background: "var(--bg-2)", borderRight: "1px solid var(--border)" }}>
             <SidePanel onGenerate={handleGenerate} currentSlides={slides} />
