@@ -17,9 +17,10 @@ const SUGGESTIONS = [
 
 interface Props {
   onConfirm: (topic: string) => void;
+  onDone?: () => void;
 }
 
-export default function OnboardingModal({ onConfirm }: Props) {
+export default function OnboardingModal({ onConfirm, onDone }: Props) {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const [topic, setTopic] = useState("");
@@ -45,11 +46,13 @@ export default function OnboardingModal({ onConfirm }: Props) {
     markSeen();
     setOpen(false);
     onConfirm(topic.trim());
+    onDone?.();
   };
 
   const handleSkip = () => {
     markSeen();
     setOpen(false);
+    onDone?.();
   };
 
   if (!mounted || !open) return null;

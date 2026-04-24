@@ -24,6 +24,8 @@ import ProfileModal from "@/components/ProfileModal";
 import StyleSelectorModal from "@/components/Editor/StyleSelectorModal";
 import AppLogo from "@/components/AppLogo";
 import LoginAnimation from "@/components/LoginAnimation";
+import TutorialPromptModal, { NEVER_KEY, SESSION_KEY as TUTORIAL_SESSION_KEY } from "@/components/Tutorial/TutorialPromptModal";
+import TutorialOverlay from "@/components/Tutorial/TutorialOverlay";
 
 interface IGAccount { token: string; accountId: string; username: string; }
 
@@ -102,6 +104,8 @@ export default function EditorPage() {
   const [profileInitialTab, setProfileInitialTab] = useState<"history" | "images" | "instagram" | "tutorial" | undefined>(undefined);
   const [showStyleSelector, setShowStyleSelector] = useState(false);
   const [tutorialNotif, setTutorialNotif] = useState<{ title: string } | null>(null);
+  const [showTutorialPrompt, setShowTutorialPrompt] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const twitterStyleRef = useRef(false);
   const pendingTopicRef = useRef<string | null>(null);
 
@@ -191,6 +195,29 @@ export default function EditorPage() {
     if (stored) { setUserProfile(stored); }
     else { setTimeout(() => setShowProfilePicker(true), 800); }
   }, [loginAnimDone]);
+
+  // ── Tutorial prompt (aparece após onboarding ou para usuários que já viram o onboarding) ──
+  const triggerTutorialPrompt = () => {
+    try {
+      if (localStorage.getItem(NEVER_KEY)) return;
+      if (sessionStorage.getItem(TUTORIAL_SESSION_KEY)) return;
+    } catch {}
+    setShowTutorialPrompt(true);
+  };
+
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    const userKey = `xpz_session_welcomed_${session.user.email}`;
+    try {
+      const onboardingAlreadySeen = sessionStorage.getItem(userKey);
+      if (!onboardingAlreadySeen) return; // onboarding vai aparecer e vai chamar onDone
+      if (localStorage.getItem(NEVER_KEY)) return;
+      if (sessionStorage.getItem(TUTORIAL_SESSION_KEY)) return;
+    } catch { return; }
+    const t = setTimeout(() => setShowTutorialPrompt(true), 1200);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.email]);
 
   // ── Tutorial notification ─────────────────────────────────────
   useEffect(() => {
@@ -815,7 +842,7 @@ export default function EditorPage() {
                 <button onClick={() => setMobilePanel(null)} className="p-1.5 rounded-lg bg-[var(--bg-3)] text-[var(--text-2)]"><X size={16} /></button>
               </div>
               <div className="flex-1 overflow-y-auto">
-                <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} currentSlides={slides} />
+                <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} onLayoutChange={handleGenerate} currentSlides={slides} />
               </div>
             </div>
           )
@@ -835,6 +862,10 @@ export default function EditorPage() {
               onUpdate={updateSlide}
               onAddSlide={addSlide}
               onDeleteSlide={deleteSlide}
+              onDeleteElement={selectedElement ? () => {
+                updateSlide({ ...currentSlide, elements: currentSlide.elements.filter(el => el.id !== selectedElement.id) });
+                setSelectedElementId(null);
+              } : undefined}
               slideIndex={safeIndex}
               totalSlides={slides.length}
               onPrev={() => setCurrentIndex((i) => Math.max(0, i - 1))}
@@ -965,6 +996,16 @@ export default function EditorPage() {
           pendingTopicRef.current = topic;
           setShowStyleSelector(true);
         }}
+        onDone={triggerTutorialPrompt}
+      />
+      <TutorialPromptModal
+        open={showTutorialPrompt}
+        onStart={() => { setShowTutorialPrompt(false); setShowTutorial(true); }}
+        onClose={() => setShowTutorialPrompt(false)}
+      />
+      <TutorialOverlay
+        open={showTutorial}
+        onClose={() => setShowTutorial(false)}
       />
       <ProfilePickerModal
         open={showProfilePicker}
