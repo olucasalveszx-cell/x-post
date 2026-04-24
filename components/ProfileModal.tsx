@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard, Zap, Crown, ArrowRight, Instagram, Trash2, Sun, Moon, PlayCircle } from "lucide-react";
+import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard, Zap, Crown, ArrowRight, Instagram, Trash2, Sun, Moon, PlayCircle, MessageSquare, Bell, CheckCircle2, Lightbulb, Video, Star } from "lucide-react";
+import FeedbackModal from "@/components/FeedbackModal";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 
@@ -59,10 +60,19 @@ interface MemberTopic {
   videos: MemberVideo[];
 }
 
+interface Notification {
+  id: string;
+  type: "feedback_reply" | "idea_approved" | "idea_rejected" | "member_video";
+  title: string;
+  body: string;
+  originalText?: string;
+  createdAt: string;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
-  initialTab?: "history" | "images" | "instagram" | "tutorial";
+  initialTab?: "history" | "images" | "instagram" | "tutorial" | "inbox";
   onOpenTutorial?: () => void;
 }
 
@@ -73,7 +83,7 @@ function fmt(iso: string) {
 export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial }: Props) {
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
-  const [tab, setTab]         = useState<"history" | "images" | "instagram" | "tutorial">("history");
+  const [tab, setTab]         = useState<"history" | "images" | "instagram" | "tutorial" | "inbox">("history");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [images,  setImages]  = useState<ImageEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -82,6 +92,10 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
   const [tutorial, setTutorial] = useState<TutorialData | null>(null);
   const [loadingTutorial, setLoadingTutorial] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifUnread, setNotifUnread] = useState(0);
+  const [notifLoading, setNotifLoading] = useState(false);
   const [topics, setTopics] = useState<MemberTopic[]>([]);
   const [loadingTopics, setLoadingTopics] = useState(false);
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
@@ -124,6 +138,24 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
     }
   }, []);
 
+  const loadNotifications = useCallback(async () => {
+    setNotifLoading(true);
+    try {
+      const res = await fetch("/api/notifications");
+      if (!res.ok) return;
+      const data = await res.json();
+      setNotifications(data.notifications ?? []);
+      setNotifUnread(data.unread ?? 0);
+    } finally {
+      setNotifLoading(false);
+    }
+  }, []);
+
+  const markNotifsRead = useCallback(async () => {
+    setNotifUnread(0);
+    await fetch("/api/notifications", { method: "POST" }).catch(() => {});
+  }, []);
+
   const loadTopics = useCallback(async () => {
     setLoadingTopics(true);
     try {
@@ -142,13 +174,15 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
     fetch("/api/admin/me").then(r => r.json()).then(d => setIsAdmin(!!d.isAdmin)).catch(() => {});
     fetch("/api/credits").then(r => r.ok ? r.json() : null).then(d => { if (d) setCredits(d); }).catch(() => {});
     loadInstagram();
+    loadNotifications();
     if (initialTab) setTab(initialTab);
-  }, [open, load, loadInstagram, initialTab]);
+  }, [open, load, loadInstagram, loadNotifications, initialTab]);
 
   useEffect(() => {
     if (tab === "tutorial" && !tutorial && !loadingTutorial) loadTutorial();
     if (tab === "tutorial" && topics.length === 0 && !loadingTopics) loadTopics();
-  }, [tab, tutorial, loadingTutorial, loadTutorial, topics.length, loadingTopics, loadTopics]);
+    if (tab === "inbox") markNotifsRead();
+  }, [tab, tutorial, loadingTutorial, loadTutorial, topics.length, loadingTopics, loadTopics, markNotifsRead]);
 
   if (!open) return null;
 
@@ -159,28 +193,28 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-2xl bg-[#0e0e0e] border-t sm:border border-[#222] rounded-t-3xl sm:rounded-2xl flex flex-col overflow-hidden"
+        className="w-full sm:max-w-2xl bg-[var(--bg-2)] border-t sm:border border-[var(--border-2)] rounded-t-3xl sm:rounded-2xl flex flex-col overflow-hidden"
         style={{ maxHeight: "90vh" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-[#1e1e1e] shrink-0">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--border)] shrink-0">
           {session?.user?.image && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={session.user.image} alt="" className="w-8 h-8 rounded-full border border-white/10 shrink-0" />
+            <img src={session.user.image} alt="" className="w-8 h-8 rounded-full border border-[var(--border)] shrink-0" />
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-sm text-white truncate">{session?.user?.name ?? "Meu Perfil"}</p>
-            <p className="text-[10px] text-gray-500 truncate">{session?.user?.email}</p>
+            <p className="font-bold text-sm text-[var(--text)] truncate">{session?.user?.name ?? "Meu Perfil"}</p>
+            <p className="text-[10px] text-[var(--text-3)] truncate">{session?.user?.email}</p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors shrink-0">
+          <button onClick={onClose} className="text-[var(--text-3)] hover:text-[var(--text)] transition-colors shrink-0">
             <X size={18} />
           </button>
         </div>
 
         {/* Credits card */}
         {credits && (
-          <div className="mx-4 mt-3 mb-1 rounded-xl border border-[#1e1e1e] overflow-hidden shrink-0" style={{ background: "#0a0a0a" }}>
+          <div className="mx-4 mt-3 mb-1 rounded-xl border border-[var(--border)] overflow-hidden shrink-0" style={{ background: "var(--bg)" }}>
             <div className="flex items-center justify-between px-4 py-3">
               {/* Plan + total */}
               <div className="flex items-center gap-2.5">
@@ -192,7 +226,7 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
                   <p className="text-[11px] font-bold" style={{ color: PLAN_COLOR[credits.plan] ?? "#9ca3af" }}>
                     {PLAN_LABEL[credits.plan] ?? credits.plan}
                   </p>
-                  <p className="text-[10px] text-gray-600">{credits.used}/{credits.limit} mensais usados</p>
+                  <p className="text-[10px] text-[var(--text-3)]">{credits.used}/{credits.limit} mensais usados</p>
                 </div>
               </div>
 
@@ -210,7 +244,7 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
 
             {/* Progress bar */}
             <div className="px-4 pb-1">
-              <div className="h-1 rounded-full bg-[#1a1a1a] overflow-hidden">
+              <div className="h-1 rounded-full bg-[var(--bg-4)] overflow-hidden">
                 <div className="h-full rounded-full transition-all"
                   style={{
                     width: `${Math.min(100, (credits.used / credits.limit) * 100)}%`,
@@ -220,8 +254,8 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
             </div>
 
             {/* Bonus + actions */}
-            <div className="flex items-center justify-between px-4 py-2.5 border-t border-[#111] mt-1">
-              <p className="text-[10px] text-gray-600">
+            <div className="flex items-center justify-between px-4 py-2.5 border-t border-[var(--border)] mt-1">
+              <p className="text-[10px] text-[var(--text-3)]">
                 {credits.bonus > 0
                   ? <span className="text-yellow-600">+{credits.bonus} créditos extras</span>
                   : "Sem créditos extras"}
@@ -231,7 +265,7 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
                   className="text-[11px] font-semibold text-brand-500 hover:text-brand-400 transition-colors flex items-center gap-0.5">
                   Comprar mais <ArrowRight size={10} />
                 </Link>
-                <span className="text-gray-700">·</span>
+                <span className="text-[var(--text-3)]">·</span>
                 <Link href="/#pricing" onClick={onClose}
                   className="text-[11px] font-semibold text-yellow-500 hover:text-yellow-400 transition-colors flex items-center gap-0.5">
                   Upgrade <Crown size={10} />
@@ -242,19 +276,29 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
         )}
 
         {/* Tabs */}
-        <div className="flex border-b border-[#1e1e1e] shrink-0 mt-2">
-          {(["history", "images", "instagram", "tutorial"] as const).map((t) => (
+        <div className="flex border-b border-[var(--border)] shrink-0 mt-2 overflow-x-auto scrollbar-none">
+          {(["history", "images", "instagram", "tutorial", "inbox"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 py-3 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
-                tab === t ? "text-white border-b-2 border-brand-500" : "text-gray-500 hover:text-gray-300"
+              className={`flex-1 min-w-fit py-3 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 px-2 whitespace-nowrap ${
+                tab === t ? "text-[var(--text)] border-b-2 border-brand-500" : "text-[var(--text-3)] hover:text-[var(--text)]"
               }`}
             >
               {t === "history" ? <><Layers size={13} /> Histórico</>
                 : t === "images" ? <><ImageIcon size={13} /> Biblioteca</>
                 : t === "instagram" ? <><Instagram size={13} /> Instagram</>
-                : <><PlayCircle size={13} /> Tutorial</>}
+                : t === "tutorial" ? <><PlayCircle size={13} /> Tutorial</>
+                : (
+                  <span className="relative flex items-center gap-1.5">
+                    <Bell size={13} /> Inbox
+                    {notifUnread > 0 && (
+                      <span className="absolute -top-2 -right-3 bg-purple-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                        {notifUnread > 9 ? "9+" : notifUnread}
+                      </span>
+                    )}
+                  </span>
+                )}
             </button>
           ))}
         </div>
@@ -270,7 +314,7 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
           {!loading && tab === "history" && (
             <>
               {history.length === 0 ? (
-                <div className="text-center py-16 text-gray-600 text-sm">
+                <div className="text-center py-16 text-[var(--text-3)] text-sm">
                   <Layers size={32} className="mx-auto mb-3 opacity-30" />
                   Nenhum carrossel salvo ainda.<br />
                   <span className="text-xs">Exporte um carrossel para salvar no histórico.</span>
@@ -280,25 +324,25 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
                   {history.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-xl overflow-hidden border border-[#1e1e1e] bg-[#141414] flex flex-col"
+                      className="rounded-xl overflow-hidden border border-[var(--border)] bg-[var(--bg-2)] flex flex-col"
                     >
-                      <div className="relative aspect-[4/5] bg-[#111]">
+                      <div className="relative aspect-[4/5] bg-[var(--bg-3)]">
                         {item.coverUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Layers size={24} className="text-gray-700" />
+                            <Layers size={24} className="text-[var(--text-3)]" />
                           </div>
                         )}
-                        <div className="absolute bottom-0 inset-x-0 px-2 py-1 text-[10px] text-gray-400"
+                        <div className="absolute bottom-0 inset-x-0 px-2 py-1 text-[10px] text-[var(--text-2)]"
                           style={{ background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)" }}>
                           {item.slideCount} slide{item.slideCount !== 1 ? "s" : ""}
                         </div>
                       </div>
                       <div className="px-2.5 py-2 flex flex-col gap-1">
-                        <p className="text-xs font-semibold text-white truncate">{item.title}</p>
-                        <p className="text-[10px] text-gray-600">{fmt(item.createdAt)}</p>
+                        <p className="text-xs font-semibold text-[var(--text)] truncate">{item.title}</p>
+                        <p className="text-[10px] text-[var(--text-3)]">{fmt(item.createdAt)}</p>
                         <a
                           href={item.coverUrl}
                           download
@@ -327,7 +371,7 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
                       <Instagram size={28} color="white" />
                     </div>
                     <div className="text-center">
-                      <p className="font-bold text-white text-sm">@{igAccount.username}</p>
+                      <p className="font-bold text-[var(--text)] text-sm">@{igAccount.username}</p>
                       <p className="text-[11px] text-green-400 mt-0.5 flex items-center justify-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
                         Conta conectada
@@ -349,12 +393,12 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
               ) : (
                 <>
                   {/* Desconectado */}
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center bg-[#1a1a1a] border border-[#2a2a2a]">
-                    <Instagram size={28} className="text-gray-600" />
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center bg-[var(--bg-3)] border border-[var(--border-2)]">
+                    <Instagram size={28} className="text-[var(--text-3)]" />
                   </div>
                   <div className="text-center">
-                    <p className="font-semibold text-white text-sm">Nenhuma conta conectada</p>
-                    <p className="text-[11px] text-gray-500 mt-1">Conecte seu Instagram para publicar diretamente.</p>
+                    <p className="font-semibold text-[var(--text)] text-sm">Nenhuma conta conectada</p>
+                    <p className="text-[11px] text-[var(--text-3)] mt-1">Conecte seu Instagram para publicar diretamente.</p>
                   </div>
 
                   <a
@@ -365,7 +409,7 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
                     <Instagram size={15} /> Conectar com Instagram
                   </a>
 
-                  <p className="text-[10px] text-gray-700 text-center leading-relaxed">
+                  <p className="text-[10px] text-[var(--text-3)] text-center leading-relaxed">
                     Você será redirecionado para o Facebook para autorizar o acesso.
                   </p>
                 </>
@@ -384,20 +428,20 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
                 >
                   <PlayCircle size={24} className="text-brand-400" />
                   <div>
-                    <p className="text-xs font-bold text-white">Ver tutorial</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Tour interativo de 6 passos</p>
+                    <p className="text-xs font-bold text-[var(--text)]">Ver tutorial</p>
+                    <p className="text-[10px] text-[var(--text-3)] mt-0.5">Tour interativo de 6 passos</p>
                   </div>
                 </button>
                 <button
                   onClick={() => setInboxOpen((v) => !v)}
                   className={`flex flex-col items-center gap-2.5 px-4 py-4 rounded-2xl border transition-colors text-center ${
-                    inboxOpen ? "border-purple-500/40 bg-purple-500/10" : "border-[#222] bg-[#111] hover:border-[#333]"
+                    inboxOpen ? "border-purple-500/40 bg-purple-500/10" : "border-[var(--border-2)] bg-[var(--bg-3)] hover:border-[var(--border-2)]"
                   }`}
                 >
                   <span className="text-2xl">📬</span>
                   <div>
-                    <p className="text-xs font-bold text-white">Caixa de entrada</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Vídeos de tutorial por tópico</p>
+                    <p className="text-xs font-bold text-[var(--text)]">Caixa de entrada</p>
+                    <p className="text-[10px] text-[var(--text-3)] mt-0.5">Vídeos de tutorial por tópico</p>
                   </div>
                 </button>
               </div>
@@ -407,14 +451,14 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
                 <div className="flex flex-col gap-2">
                   {/* Player ativo */}
                   {activeVideo && (
-                    <div className="rounded-xl overflow-hidden bg-black border border-[#1e1e1e] mb-1">
+                    <div className="rounded-xl overflow-hidden bg-black border border-[var(--border)] mb-1">
                       <video src={activeVideo.url} controls autoPlay className="w-full" style={{ maxHeight: 260 }} />
                       <div className="px-3 py-2.5">
-                        <p className="text-xs font-bold text-white">{activeVideo.title}</p>
+                        <p className="text-xs font-bold text-[var(--text)]">{activeVideo.title}</p>
                         {activeVideo.description && (
-                          <p className="text-[10px] text-gray-500 mt-0.5 leading-relaxed">{activeVideo.description}</p>
+                          <p className="text-[10px] text-[var(--text-3)] mt-0.5 leading-relaxed">{activeVideo.description}</p>
                         )}
-                        <button onClick={() => setActiveVideo(null)} className="text-[10px] text-gray-600 hover:text-gray-400 mt-1 transition-colors">
+                        <button onClick={() => setActiveVideo(null)} className="text-[10px] text-[var(--text-3)] hover:text-[var(--text-2)] mt-1 transition-colors">
                           Fechar player
                         </button>
                       </div>
@@ -427,23 +471,23 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
                     </div>
                   ) : (
                     topics.map((topic) => (
-                      <div key={topic.id} className="rounded-xl border border-[#1e1e1e] overflow-hidden">
+                      <div key={topic.id} className="rounded-xl border border-[var(--border)] overflow-hidden">
                         <button
                           onClick={() => setExpandedTopic(expandedTopic === topic.id ? null : topic.id)}
-                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-colors text-left"
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--bg-3)] transition-colors text-left"
                         >
                           <span className="text-lg shrink-0">{topic.emoji}</span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-white truncate">{topic.title}</p>
-                            <p className="text-[10px] text-gray-600 truncate">{topic.videos.length === 0 ? "Em breve" : `${topic.videos.length} vídeo${topic.videos.length > 1 ? "s" : ""}`}</p>
+                            <p className="text-xs font-semibold text-[var(--text)] truncate">{topic.title}</p>
+                            <p className="text-[10px] text-[var(--text-3)] truncate">{topic.videos.length === 0 ? "Em breve" : `${topic.videos.length} vídeo${topic.videos.length > 1 ? "s" : ""}`}</p>
                           </div>
-                          <span className="text-gray-600 text-xs shrink-0">{expandedTopic === topic.id ? "▲" : "▼"}</span>
+                          <span className="text-[var(--text-3)] text-xs shrink-0">{expandedTopic === topic.id ? "▲" : "▼"}</span>
                         </button>
 
                         {expandedTopic === topic.id && (
-                          <div className="border-t border-[#1a1a1a] px-4 py-3 flex flex-col gap-2 bg-[#0a0a0a]">
+                          <div className="border-t border-[var(--border)] px-4 py-3 flex flex-col gap-2 bg-[var(--bg)]">
                             {topic.videos.length === 0 ? (
-                              <p className="text-[11px] text-gray-600 text-center py-3">
+                              <p className="text-[11px] text-[var(--text-3)] text-center py-3">
                                 Nenhum vídeo publicado ainda para este tópico.
                               </p>
                             ) : (
@@ -451,13 +495,13 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
                                 <button
                                   key={video.id}
                                   onClick={() => setActiveVideo(video)}
-                                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#111] border border-[#1e1e1e] hover:border-brand-500/30 transition-colors text-left w-full"
+                                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[var(--bg-3)] border border-[var(--border)] hover:border-brand-500/30 transition-colors text-left w-full"
                                 >
                                   <PlayCircle size={18} className="text-brand-400 shrink-0" />
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium text-white truncate">{video.title}</p>
+                                    <p className="text-xs font-medium text-[var(--text)] truncate">{video.title}</p>
                                     {video.description && (
-                                      <p className="text-[10px] text-gray-600 truncate">{video.description}</p>
+                                      <p className="text-[10px] text-[var(--text-3)] truncate">{video.description}</p>
                                     )}
                                   </div>
                                 </button>
@@ -476,7 +520,7 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
           {!loading && tab === "images" && (
             <>
               {images.length === 0 ? (
-                <div className="text-center py-16 text-gray-600 text-sm">
+                <div className="text-center py-16 text-[var(--text-3)] text-sm">
                   <ImageIcon size={32} className="mx-auto mb-3 opacity-30" />
                   Nenhuma imagem salva ainda.<br />
                   <span className="text-xs">As imagens exportadas aparecem aqui.</span>
@@ -484,7 +528,7 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {images.map((img) => (
-                    <div key={img.id} className="relative group rounded-lg overflow-hidden aspect-[3/4] bg-[#111]">
+                    <div key={img.id} className="relative group rounded-lg overflow-hidden aspect-[3/4] bg-[var(--bg-3)]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={img.url} alt="" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -498,7 +542,7 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
                           <Download size={14} className="text-white" />
                         </a>
                       </div>
-                      <div className="absolute bottom-1 left-1 right-1 text-[9px] text-gray-400 truncate">
+                      <div className="absolute bottom-1 left-1 right-1 text-[9px] text-[var(--text-2)] truncate">
                         {fmt(img.savedAt)}
                       </div>
                     </div>
@@ -507,36 +551,104 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
               )}
             </>
           )}
+
+          {/* ── Inbox ── */}
+          {tab === "inbox" && (
+            <div className="flex flex-col gap-3">
+              {notifLoading && notifications.length === 0 && (
+                <div className="flex justify-center py-12">
+                  <Loader2 size={20} className="text-brand-500 animate-spin" />
+                </div>
+              )}
+
+              {!notifLoading && notifications.length === 0 && (
+                <div className="text-center py-16">
+                  <Bell size={30} className="mx-auto mb-3 text-[var(--text-3)]" />
+                  <p className="text-sm text-[var(--text-3)]">Nenhuma notificação ainda.</p>
+                  <p className="text-[11px] text-[var(--text-3)] mt-1">As respostas do admin e novos conteúdos aparecerão aqui.</p>
+                </div>
+              )}
+
+              {notifications.map((n) => {
+                const isApproved = n.type === "idea_approved";
+                const isRejected = n.type === "idea_rejected";
+                const isReply    = n.type === "feedback_reply";
+                const isVideo    = n.type === "member_video";
+
+                const iconColor = isApproved ? "#22c55e" : isRejected ? "#6b7280" : isReply ? "#4c6ef5" : "#a78bfa";
+                const bgColor   = isApproved ? "rgba(34,197,94,0.08)" : isRejected ? "rgba(107,114,128,0.08)" : isReply ? "rgba(76,110,245,0.08)" : "rgba(167,139,250,0.08)";
+                const borderColor = isApproved ? "rgba(34,197,94,0.2)" : isRejected ? "rgba(107,114,128,0.18)" : isReply ? "rgba(76,110,245,0.2)" : "rgba(167,139,250,0.2)";
+
+                const Icon = isApproved ? CheckCircle2 : isRejected ? Lightbulb : isReply ? MessageSquare : Video;
+
+                return (
+                  <div key={n.id} className="rounded-xl border p-3.5 flex gap-3" style={{ background: bgColor, borderColor }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ background: `${iconColor}18` }}>
+                      <Icon size={15} style={{ color: iconColor }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-[var(--text)] leading-snug">{n.title}</p>
+                      <p className="text-[11px] text-[var(--text-2)] mt-1 leading-relaxed">{n.body}</p>
+                      {n.originalText && (
+                        <p className="text-[10px] text-[var(--text-3)] mt-1.5 italic border-l-2 border-[var(--border-2)] pl-2 leading-relaxed">
+                          "{n.originalText}{n.originalText.length >= 120 ? "..." : ""}"
+                        </p>
+                      )}
+                      {isVideo && (
+                        <button
+                          onClick={() => { setTab("tutorial"); setInboxOpen(true); }}
+                          className="mt-2 text-[10px] font-semibold text-purple-400 hover:text-purple-300 transition-colors"
+                        >
+                          Ver na área de membros →
+                        </button>
+                      )}
+                      <p className="text-[9px] text-[var(--text-3)] mt-1.5">
+                        {new Date(n.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Aparência */}
-        <div className="mx-4 mb-2 rounded-xl border border-[#1e1e1e] px-4 py-3 shrink-0 flex items-center justify-between" style={{ background: "#0a0a0a" }}>
+        <div className="mx-4 mb-2 rounded-xl border border-[var(--border)] px-4 py-3 shrink-0 flex items-center justify-between" style={{ background: "var(--bg)" }}>
           <div className="flex items-center gap-2">
             {theme === "dark" ? <Moon size={13} className="text-brand-500" /> : <Sun size={13} className="text-yellow-400" />}
-            <span className="text-xs font-semibold text-gray-300">Aparência</span>
+            <span className="text-xs font-semibold text-[var(--text)]">Aparência</span>
           </div>
-          <div className="flex items-center gap-1 bg-[#1a1a1a] rounded-lg p-0.5 border border-[#2a2a2a]">
+          <div className="flex items-center gap-1 bg-[var(--bg-3)] rounded-lg p-0.5 border border-[var(--border-2)]">
             <button
               onClick={() => setTheme("light")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${theme === "light" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-300"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${theme === "light" ? "bg-white text-gray-900 shadow-sm" : "text-[var(--text-3)] hover:text-[var(--text)]"}`}
             >
               <Sun size={11} /> Claro
             </button>
             <button
               onClick={() => setTheme("dark")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${theme === "dark" ? "bg-[#333] text-white shadow-sm" : "text-gray-500 hover:text-gray-300"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${theme === "dark" ? "bg-[#333] text-white shadow-sm" : "text-[var(--text-3)] hover:text-[var(--text)]"}`}
             >
               <Moon size={11} /> Escuro
             </button>
           </div>
         </div>
 
+        <FeedbackModal open={showFeedback} onClose={() => setShowFeedback(false)} />
+
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#1e1e1e] shrink-0 flex items-center gap-3">
-          <p className="text-[10px] text-gray-600 flex-1">
+        <div className="px-5 py-3 border-t border-[var(--border)] shrink-0 flex items-center gap-3">
+          <p className="text-[10px] text-[var(--text-3)] flex-1">
             {tab === "history" ? `${history.length}/30 carrosséis` : tab === "images" ? `${images.length}/100 imagens` : ""}
           </p>
-          <button onClick={load} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors">
+          <button
+            onClick={() => setShowFeedback(true)}
+            className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors border border-purple-500/20 hover:border-purple-500/40 px-2.5 py-1.5 rounded-lg"
+          >
+            <MessageSquare size={13} /> Feedback
+          </button>
+          <button onClick={load} className="flex items-center gap-1 text-xs text-[var(--text-3)] hover:text-[var(--text)] transition-colors">
             <RefreshCw size={12} />
           </button>
           {isAdmin && (

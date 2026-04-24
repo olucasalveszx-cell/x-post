@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Política de Privacidade — XPost Zone",
-  description: "Saiba como coletamos, usamos e protegemos seus dados no XPost Zone.",
+  title: "Política de Privacidade — XPost",
+  description: "Saiba como coletamos, usamos e protegemos seus dados no XPost.",
 };
 
 export default function PrivacidadePage() {
@@ -22,7 +22,7 @@ export default function PrivacidadePage() {
           <section>
             <h2 className="text-white font-bold text-base mb-3">1. Quem somos</h2>
             <p>
-              O <strong className="text-white">XPost Zone</strong> é uma plataforma online para criação de carrosséis e
+              O <strong className="text-white">XPost</strong> é uma plataforma online para criação de carrosséis e
               conteúdos visuais para redes sociais, desenvolvida e operada de forma independente. Nosso site está
               disponível em <strong className="text-white">xpostzone.com.br</strong>.
             </p>
@@ -54,7 +54,7 @@ export default function PrivacidadePage() {
           <section>
             <h2 className="text-white font-bold text-base mb-3">4. Integração com o Instagram / Meta</h2>
             <p className="text-gray-400">
-              Ao conectar sua conta do Instagram, o XPost Zone solicita permissão para publicar conteúdo em seu perfil.
+              Ao conectar sua conta do Instagram, o XPost solicita permissão para publicar conteúdo em seu perfil.
               Utilizamos a API oficial da Meta (Facebook) para isso. Você pode revogar esse acesso a qualquer momento nas
               configurações do seu Instagram em{" "}
               <strong className="text-white">Configurações → Aplicativos e Sites</strong>.
@@ -122,14 +122,14 @@ export default function PrivacidadePage() {
             <h2 className="text-white font-bold text-base mb-3">10. Alterações nesta política</h2>
             <p className="text-gray-400">
               Podemos atualizar esta política periodicamente. Quando houver mudanças relevantes, notificaremos por
-              e-mail ou via aviso na plataforma. O uso contínuo do XPost Zone após as alterações implica aceitação da
+              e-mail ou via aviso na plataforma. O uso contínuo do XPost após as alterações implica aceitação da
               nova política.
             </p>
           </section>
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/5 text-center text-[11px] text-gray-700">
-          © {new Date().getFullYear()} XPost Zone · Todos os direitos reservados
+          © {new Date().getFullYear()} XPost · Todos os direitos reservados
         </div>
       </div>
     </div>

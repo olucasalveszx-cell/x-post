@@ -4,26 +4,21 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { verifyToken } from "@/lib/activation";
 import { getUserPlan } from "@/lib/credits";
-import { redisIncr, redisLPush, redisLTrim } from "@/lib/redis";
+import { redisGet, redisSet, redisIncr, redisLPush, redisLTrim } from "@/lib/redis";
 import { put } from "@vercel/blob";
-import Anthropic from "@anthropic-ai/sdk";
+import { geminiText } from "@/lib/gemini-text";
 
 export const maxDuration = 60;
 
 async function enhancePrompt(raw: string): Promise<string> {
   try {
-    const anthropic = new Anthropic();
     const timeout = new Promise<string>((_, reject) =>
       setTimeout(() => reject(new Error("timeout")), 4000)
     );
-    const call = anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 100,
-      messages: [{
-        role: "user",
-        content: `Transform this into a vivid cinematic English image prompt (max 50 words). Translate if needed. Add lighting, mood, composition details. Return ONLY the prompt.\n\nInput: "${raw}"`,
-      }],
-    }).then((msg) => ((msg.content[0] as any).text ?? "").trim() || raw);
+    const call = geminiText(
+      `Transform this into a vivid cinematic English image prompt (max 50 words). Translate if needed. Add lighting, mood, composition details. Return ONLY the prompt.\n\nInput: "${raw}"`,
+      { maxTokens: 100 }
+    ).then((t) => t.trim() || raw);
     const enhanced = await Promise.race([call, timeout]);
     console.log(`[image] prompt: "${raw}" → "${enhanced}"`);
     return enhanced;
@@ -61,7 +56,7 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   const fullPrompt = buildPrompt(prompt, style);
   const MODELS = [
     "gemini-2.5-flash-image",
-    "gemini-2.0-flash-exp",
+    "gemini-3.1-flash-image-preview",
   ];
 
   let lastError = "";
@@ -77,6 +72,7 @@ async function fromGemini(prompt: string, style: ImageStyle) {
             generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
           }),
           signal: AbortSignal.timeout(22000),
+          cache: "no-store",
         });
 
         const data = await res.json();
@@ -103,6 +99,36 @@ async function fromGemini(prompt: string, style: ImageStyle) {
   throw new Error(lastError || "Gemini: falha em todos os modelos/chaves");
 }
 
+// ── fal.ai FLUX (geração gratuita) ───────────────────────────
+async function fromFal(prompt: string, style: ImageStyle) {
+  const key = process.env.FAL_KEY;
+  if (!key) throw new Error("FAL_KEY não configurada");
+
+  const fullPrompt = buildPrompt(prompt, style);
+  const res = await fetch("https://fal.run/fal-ai/flux/schnell", {
+    method: "POST",
+    headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt: fullPrompt, image_size: { width: 1080, height: 1350 }, num_images: 1, sync_mode: true }),
+    signal: AbortSignal.timeout(30000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data.detail ?? data.error ?? `fal.ai HTTP ${res.status}`;
+    console.error("[image] fal.ai falhou:", msg, JSON.stringify(data).slice(0, 300));
+    throw new Error(msg);
+  }
+
+  const imageUrl = data.images?.[0]?.url;
+  if (!imageUrl) {
+    console.error("[image] fal.ai: sem URL na resposta:", JSON.stringify(data).slice(0, 300));
+    throw new Error("fal.ai: sem imagem na resposta");
+  }
+
+  console.log("[image] fal.ai FLUX OK");
+  return { imageUrl, source: "fal" };
+}
+
 // ── Imagen 4 ──────────────────────────────────────────────────
 async function fromImagen4(prompt: string, style: ImageStyle) {
   const keys = getGeminiKeys();
@@ -120,6 +146,7 @@ async function fromImagen4(prompt: string, style: ImageStyle) {
           parameters: { sampleCount: 1, aspectRatio: "3:4", safetyFilterLevel: "block_few", personGeneration: "allow_adult" },
         }),
         signal: AbortSignal.timeout(50000),
+        cache: "no-store",
       });
       const data = await res.json();
       if (!res.ok) { lastError = data.error?.message ?? `Imagen4 HTTP ${res.status}`; continue; }
@@ -149,6 +176,7 @@ async function fromImagen3(prompt: string, style: ImageStyle) {
           parameters: { sampleCount: 1, aspectRatio: "3:4", safetyFilterLevel: "block_few", personGeneration: "allow_adult" },
         }),
         signal: AbortSignal.timeout(40000),
+        cache: "no-store",
       });
       const data = await res.json();
       if (!res.ok) { lastError = data.error?.message ?? `Imagen3 HTTP ${res.status}`; continue; }
@@ -170,7 +198,7 @@ async function fromGeminiWithReference(prompt: string, style: ImageStyle, refBas
   const styleGuide = PROMPTS[style] ?? PROMPTS.gemini;
   const textInstruction = `Use this image as visual reference. Transform it into a stylized Instagram carousel slide background: "${prompt}". Style: ${styleGuide}. Portrait 4:5. No text, no watermarks.`;
 
-  const MODELS = ["gemini-2.5-flash-image", "gemini-2.0-flash-exp"];
+  const MODELS = ["gemini-2.5-flash-image", "gemini-3.1-flash-image-preview"];
   let lastError = "";
 
   for (const model of MODELS) {
@@ -184,6 +212,7 @@ async function fromGeminiWithReference(prompt: string, style: ImageStyle, refBas
           generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
         }),
         signal: AbortSignal.timeout(45000),
+        cache: "no-store",
       });
 
       const data = await res.json();
@@ -229,7 +258,7 @@ async function fromOpenRouter(prompt: string, style: ImageStyle) {
     "Authorization": `Bearer ${key}`,
     "Content-Type": "application/json",
     "HTTP-Referer": process.env.NEXT_PUBLIC_BASE_URL ?? "https://xpostzone.online",
-    "X-Title": "XPost Zone",
+    "X-Title": "XPost",
   };
 
   // Tenta 1 vez com timeout curto para não estourar o maxDuration
@@ -243,7 +272,6 @@ async function fromOpenRouter(prompt: string, style: ImageStyle) {
     if (!res.ok) {
       console.error(`[image] OpenRouter tentativa ${attempt} HTTP ${res.status}:`, data.error?.message);
       throw new Error(data.error?.message ?? `OpenRouter HTTP ${res.status}`);
-      continue;
     }
 
     console.log(`[image] OpenRouter tentativa ${attempt} — tipo content:`, typeof data.choices?.[0]?.message?.content);
@@ -493,8 +521,8 @@ export async function POST(req: NextRequest) {
 
   if (!isPro) {
     const tries: Array<() => Promise<ImageResult>> = [
+      () => fromFal(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
       () => fromGemini(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
-      () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
       () => fromGoogleImages(prompt).then(r => { plan = "free_fallback"; return r; }),
       () => fromPexels(prompt).then(r => { plan = "free_fallback"; return r; }),
     ];
@@ -504,6 +532,7 @@ export async function POST(req: NextRequest) {
     }
   } else {
     const tries: Array<() => Promise<ImageResult>> = [
+      () => fromFal(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromGemini(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       ...(hasReference ? [() => fromGeminiWithReference(enhancedPrompt, style, referenceImageBase64, referenceImageMime).then(r => { plan = "pro_ref"; return r; })] : []),
       () => fromImagen4(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),

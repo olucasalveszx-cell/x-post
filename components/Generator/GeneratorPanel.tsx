@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
-import { Sparkles, Search, Loader2, AlertCircle, Crown, Zap, LogIn, CheckCircle2, Clock, X } from "lucide-react";
+import { Sparkles, Search, Loader2, AlertCircle, Crown, Zap, LogIn, CheckCircle2, Clock, X, Lightbulb, TrendingUp, Dumbbell, Briefcase, Star, BookOpen } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
 import { GeneratedContent, SearchResult, Slide, WritingStyle } from "@/types";
 import { v4 as uuid } from "uuid";
@@ -244,6 +244,15 @@ async function generateImages(
   );
 }
 
+const QUICK_TOPICS: { icon: React.ReactNode; label: string; query: string }[] = [
+  { icon: <TrendingUp size={12} />, label: "Marketing Digital", query: "dicas de marketing digital para iniciantes" },
+  { icon: <Dumbbell size={12} />,   label: "Fitness e Saúde",   query: "dicas de fitness e saúde para o dia a dia" },
+  { icon: <Briefcase size={12} />,  label: "Empreendedorismo",  query: "dicas de empreendedorismo e negócios" },
+  { icon: <BookOpen size={12} />,   label: "Produtividade",     query: "como ser mais produtivo no trabalho" },
+  { icon: <Star size={12} />,       label: "Motivação",         query: "frases e dicas motivacionais" },
+  { icon: <Lightbulb size={12} />,  label: "Finanças Pessoais", query: "dicas de finanças pessoais e investimentos" },
+];
+
 export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlides = [] }: Props) {
   const [status, setStatus] = useState<"idle" | "searching" | "generating" | "images" | "done" | "error">("idle");
   const [error, setError] = useState("");
@@ -287,11 +296,19 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
     return () => window.removeEventListener("open-generator-wizard", handler);
   }, []);
 
-  // Nexa IA prompt injection
+  // Nexa IA prompt injection (evento para desktop + sessionStorage para mobile)
   useEffect(() => {
+    const pending = sessionStorage.getItem("nexa-pending-prompt");
+    if (pending) {
+      sessionStorage.removeItem("nexa-pending-prompt");
+      setLastSettings((prev) => ({ ...(prev ?? defaultSettings()), customPrompt: pending, inputMode: "prompt" }));
+      setShowWizard(true);
+    }
+
     const handler = (e: Event) => {
       const prompt = (e as CustomEvent).detail?.prompt;
       if (!prompt) return;
+      sessionStorage.removeItem("nexa-pending-prompt");
       setLastSettings((prev) => ({ ...(prev ?? defaultSettings()), customPrompt: prompt, inputMode: "prompt" }));
       setShowWizard(true);
     };
@@ -498,7 +515,7 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
                       boxShadow: status === s ? "0 0 8px #4c6ef5" : "none",
                     }}
                   />
-                  {i < 2 && <div className="w-6 h-px bg-[#222]" />}
+                  {i < 2 && <div className="w-6 h-px bg-[var(--border-2)]" />}
                 </div>
               ))}
             </div>
@@ -553,7 +570,7 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
       </div>
 
       {/* Main area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
+      <div className="flex-1 flex flex-col items-center justify-start pt-10 px-4 gap-4">
         {isLoading ? (
           /* Loading state */
           <div className="w-full flex flex-col items-center gap-5">
@@ -639,6 +656,28 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
                   </div>
                 )}
               </>
+            )}
+
+            {/* Tópicos sugeridos */}
+            {status !== "done" && (
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold">Ideias para começar</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {QUICK_TOPICS.map((t) => (
+                    <button
+                      key={t.label}
+                      onClick={() => {
+                        setLastSettings((prev) => ({ ...(prev ?? defaultSettings()), topic: t.query, inputMode: "topic" }));
+                        session?.user ? setShowWizard(true) : setLoginOpen(true);
+                      }}
+                      className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] hover:border-brand-500/30 hover:bg-[var(--bg-3)] text-left text-[11px] text-[var(--text-2)] transition-colors"
+                    >
+                      <span className="text-[var(--text-3)] shrink-0">{t.icon}</span>
+                      <span className="truncate">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Banner de novidade */}

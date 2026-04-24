@@ -101,8 +101,8 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
   };
 
   const inputClass = `
-    w-full bg-[#131313] border border-[#2a2a2a] focus:border-purple-600
-    rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600
+    w-full bg-[var(--bg-2)] border border-[var(--border-2)] focus:border-purple-600
+    rounded-xl px-4 py-3 text-sm text-[var(--text)] placeholder-[var(--text-3)]
     outline-none transition-colors
   `;
 
@@ -114,15 +114,15 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
     >
       <div
         className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
-        style={{ background: "#0d0d0d", border: "1px solid #1e1e1e" }}
+        style={{ background: "var(--bg-2)", border: "1px solid var(--border)" }}
       >
         {/* Header */}
         <div
           className="flex items-center justify-between px-6 py-5"
-          style={{ background: "linear-gradient(135deg,#080e40 0%,#0d0d1f 100%)", borderBottom: "1px solid #1e1e1e" }}
+          style={{ background: "linear-gradient(135deg,#080e40 0%,#0d0d1f 100%)", borderBottom: "1px solid var(--border)" }}
         >
           <AppLogo variant="dark" size={32} textClassName="font-black text-white tracking-tight" />
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-500 hover:text-white transition-colors">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text)] transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -149,7 +149,7 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
           {/* ─── Google ─── */}
           {tab === "google" && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-500 text-center">
+              <p className="text-sm text-[var(--text-3)] text-center">
                 Faça login com sua conta Google para continuar.
               </p>
               <button
@@ -157,10 +157,10 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
                 disabled={loading}
                 className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-[#2a2a2a] bg-white hover:bg-gray-100 text-sm font-medium text-gray-800 transition-all disabled:opacity-50"
               >
-                {loading ? <Loader2 size={17} className="animate-spin text-gray-500" /> : <GoogleIcon />}
+                {loading ? <Loader2 size={17} className="animate-spin text-[var(--text-3)]" /> : <GoogleIcon />}
                 Continuar com Google
               </button>
-              <p className="text-center text-xs text-gray-600 pt-1">
+              <p className="text-center text-xs text-[var(--text-3)] pt-1">
                 Prefere usar e-mail?{" "}
                 <button onClick={() => switchTab("email")} className="text-brand-500 hover:text-brand-400 underline transition-colors">
                   Clique aqui
@@ -173,7 +173,7 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
           {tab === "email" && (
             <div className="space-y-3">
               {/* Sub-tabs login/registro */}
-              <div className="flex bg-[#131313] rounded-xl p-1 gap-1">
+              <div className="flex bg-[var(--bg-2)] rounded-xl p-1 gap-1">
                 {(["login", "register"] as Mode[]).map(m => (
                   <button
                     key={m}
@@ -192,7 +192,7 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
               {/* Campos */}
               {mode === "register" && (
                 <div className="relative">
-                  <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
+                  <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
                   <input
                     type="text"
                     placeholder="Seu nome"
@@ -205,7 +205,7 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
               )}
 
               <div className="relative">
-                <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
+                <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
                 <input
                   type="email"
                   placeholder="seu@email.com"
@@ -218,7 +218,7 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
               </div>
 
               <div className="relative">
-                <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
+                <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
                 <input
                   type={showPw ? "text" : "password"}
                   placeholder="Senha (mín. 6 caracteres)"
@@ -231,7 +231,7 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
                 <button
                   type="button"
                   onClick={() => setShowPw(v => !v)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
                 >
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -239,7 +239,7 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
 
               {mode === "register" && (
                 <div className="relative">
-                  <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
+                  <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
                   <input
                     type={showPw ? "text" : "password"}
                     placeholder="Confirmar senha"
@@ -273,9 +273,9 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
 
               {/* Separador */}
               <div className="flex items-center gap-3 py-1">
-                <div className="flex-1 h-px bg-[#1e1e1e]" />
-                <span className="text-xs text-gray-700">ou</span>
-                <div className="flex-1 h-px bg-[#1e1e1e]" />
+                <div className="flex-1 h-px bg-[var(--border)]" />
+                <span className="text-xs text-[var(--text-3)]">ou</span>
+                <div className="flex-1 h-px bg-[var(--border)]" />
               </div>
 
               {/* Google como opção secundária */}

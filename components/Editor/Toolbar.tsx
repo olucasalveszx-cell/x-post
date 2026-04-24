@@ -1,6 +1,6 @@
 "use client";
 
-import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon, Palette } from "lucide-react";
+import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon, Palette, FlipHorizontal, FlipVertical } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import { useRef, useState, useEffect } from "react";
@@ -71,13 +71,14 @@ interface Props {
   format?: FormatLabel;
   onFormatChange?: (f: FormatLabel) => void;
   onApplyThemeToAll?: (bg: string, textColor: string) => void;
+  onApplyProfileColorToAll?: (nameColor: string, handleColor: string) => void;
 }
 
 export default function Toolbar({
   slide, onUpdate, onAddSlide, onDeleteSlide, onDeleteElement,
   slideIndex, totalSlides, onPrev, onNext,
   selectedElement, onUndo, onRedo, canUndo, canRedo,
-  format = "4:5", onFormatChange, onApplyThemeToAll,
+  format = "4:5", onFormatChange, onApplyThemeToAll, onApplyProfileColorToAll,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -91,6 +92,7 @@ export default function Toolbar({
   const [showLayouts, setShowLayouts] = useState(false);
   const [showMolds, setShowMolds] = useState(false);
   const [showTheme, setShowTheme] = useState(false);
+  const [profileColorScope, setProfileColorScope] = useState<"this" | "all">("this");
 
   const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); };
 
@@ -223,24 +225,84 @@ export default function Toolbar({
     setShowLayouts(false);
   };
 
-  // ── Perfil ────────────────────────────────────────────────
+  // ── Perfil (multi-perfil) ─────────────────────────────────
+  interface SavedProfile { id: string; name: string; handle: string; avatarSrc?: string; verified?: boolean; }
+
+  const loadProfiles = (): SavedProfile[] => {
+    try { return JSON.parse(localStorage.getItem("xpz_profiles") ?? "[]"); } catch { return []; }
+  };
+  const persistProfiles = (ps: SavedProfile[]) => {
+    localStorage.setItem("xpz_profiles", JSON.stringify(ps));
+    fetch("/api/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "profiles", entry: ps }),
+    }).catch(() => {});
+  };
+  const setActiveProfileLS = (p: SavedProfile) => {
+    localStorage.setItem("xpz_profile", JSON.stringify({ name: p.name, handle: p.handle, avatarSrc: p.avatarSrc, verified: p.verified }));
+    localStorage.setItem("xpz_active_profile_id", p.id);
+  };
+  const getActiveProfileId = (): string | null => {
+    try { return localStorage.getItem("xpz_active_profile_id"); } catch { return null; }
+  };
+
   const [showProfile, setShowProfile] = useState(false);
+  const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>([]);
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
+  const [editingProfile, setEditingProfile] = useState<SavedProfile | null>(null);
+  const [showProfileForm, setShowProfileForm] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profileHandle, setProfileHandle] = useState("");
   const [profileAvatarSrc, setProfileAvatarSrc] = useState("");
   const [profileVerified, setProfileVerified] = useState(false);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("xpz_profile");
-      if (saved) {
-        const p = JSON.parse(saved);
-        setProfileName(p.name ?? "");
-        setProfileHandle(p.handle ?? "");
-        setProfileAvatarSrc(p.avatarSrc ?? "");
-        setProfileVerified(p.verified ?? false);
-      }
-    } catch {}
+    // Carrega do localStorage imediatamente (sem flash)
+    const cached = loadProfiles();
+    const activeId = getActiveProfileId();
+    if (cached.length > 0) {
+      setSavedProfiles(cached);
+      setActiveProfileId(activeId ?? cached[0].id);
+      if (!activeId) setActiveProfileLS(cached[0]);
+    }
+
+    // Carrega da API (fonte autoritativa — sincroniza entre dispositivos)
+    fetch("/api/profile")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return;
+        const apiProfiles: SavedProfile[] = Array.isArray(data.profiles) ? data.profiles : [];
+        if (apiProfiles.length > 0) {
+          setSavedProfiles(apiProfiles);
+          localStorage.setItem("xpz_profiles", JSON.stringify(apiProfiles));
+          const curActive = getActiveProfileId();
+          if (!curActive || !apiProfiles.find((p) => p.id === curActive)) {
+            setActiveProfileId(apiProfiles[0].id);
+            setActiveProfileLS(apiProfiles[0]);
+          }
+        } else if (cached.length > 0) {
+          // API vazia mas localStorage tem dados: migrar para o servidor
+          persistProfiles(cached);
+        } else {
+          // Migrar perfil antigo de entrada única
+          try {
+            const saved = localStorage.getItem("xpz_profile");
+            if (saved) {
+              const p = JSON.parse(saved);
+              if (p.name || p.handle) {
+                const migrated: SavedProfile = { id: require("uuid").v4(), name: p.name ?? "", handle: p.handle ?? "", avatarSrc: p.avatarSrc, verified: p.verified };
+                setSavedProfiles([migrated]);
+                setActiveProfileId(migrated.id);
+                persistProfiles([migrated]);
+                setActiveProfileLS(migrated);
+              }
+            }
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAvatarUpload = (file: File) => {
@@ -249,11 +311,64 @@ export default function Toolbar({
     reader.readAsDataURL(file);
   };
 
-  const insertProfile = () => {
-    const profile = { name: profileName, handle: profileHandle, avatarSrc: profileAvatarSrc, verified: profileVerified };
-    localStorage.setItem("xpz_profile", JSON.stringify(profile));
+  const openNewProfileForm = () => {
+    setEditingProfile(null);
+    setProfileName("");
+    setProfileHandle("");
+    setProfileAvatarSrc("");
+    setProfileVerified(false);
+    setShowProfileForm(true);
+  };
 
-    const avatarSize = 130;
+  const openEditProfileForm = (p: SavedProfile) => {
+    setEditingProfile(p);
+    setProfileName(p.name);
+    setProfileHandle(p.handle);
+    setProfileAvatarSrc(p.avatarSrc ?? "");
+    setProfileVerified(p.verified ?? false);
+    setShowProfileForm(true);
+  };
+
+  const saveProfileForm = () => {
+    const profile: SavedProfile = {
+      id: editingProfile?.id ?? require("uuid").v4(),
+      name: profileName,
+      handle: profileHandle,
+      avatarSrc: profileAvatarSrc || undefined,
+      verified: profileVerified,
+    };
+    const updated = editingProfile
+      ? savedProfiles.map((p) => p.id === editingProfile.id ? profile : p)
+      : [profile, ...savedProfiles];
+    setSavedProfiles(updated);
+    persistProfiles(updated);
+    // novo perfil vira o ativo
+    if (!editingProfile) {
+      setActiveProfileId(profile.id);
+      setActiveProfileLS(profile);
+    }
+    setShowProfileForm(false);
+    setEditingProfile(null);
+  };
+
+  const deleteProfile = (id: string) => {
+    const updated = savedProfiles.filter((p) => p.id !== id);
+    setSavedProfiles(updated);
+    persistProfiles(updated);
+    if (id === activeProfileId && updated.length > 0) {
+      setActiveProfileId(updated[0].id);
+      setActiveProfileLS(updated[0]);
+    }
+  };
+
+  const setProfileAsDefault = (p: SavedProfile) => {
+    setActiveProfileId(p.id);
+    setActiveProfileLS(p);
+  };
+
+  const insertProfileToSlide = (p: SavedProfile) => {
+    setActiveProfileLS(p);
+    setActiveProfileId(p.id);
     const cardH = 160;
     const cardW = Math.min(700, slide.width - 80);
     const el: SlideElement = {
@@ -263,10 +378,10 @@ export default function Toolbar({
       y: slide.height - cardH - 60,
       width: cardW,
       height: cardH,
-      src: profileAvatarSrc || undefined,
-      profileName,
-      profileHandle,
-      profileVerified,
+      src: p.avatarSrc || undefined,
+      profileName: p.name,
+      profileHandle: p.handle,
+      profileVerified: p.verified ?? false,
       zIndex: 10,
     };
     onUpdate({ ...slide, elements: [...slide.elements, el] });
@@ -319,6 +434,29 @@ export default function Toolbar({
   const patchSelected = (patch: Partial<SlideElement>) => {
     if (!selectedElement) return;
     onUpdate({ ...slide, elements: slide.elements.map((el) => el.id === selectedElement.id ? { ...el, ...patch } : el) });
+  };
+
+  const ALIGN_TITLES: Record<string, string> = {
+    tl: "Superior esquerda", tc: "Superior centro", tr: "Superior direita",
+    ml: "Meio esquerda",     mc: "Centro",          mr: "Meio direita",
+    bl: "Inferior esquerda", bc: "Inferior centro",  br: "Inferior direita",
+  };
+  const ALIGN_ARROWS: Record<string, string> = {
+    tl: "↖", tc: "↑", tr: "↗",
+    ml: "←", mc: "·", mr: "→",
+    bl: "↙", bc: "↓", br: "↘",
+  };
+  const alignElement = (align: string) => {
+    if (!selectedElement) return;
+    const W = slide.width; const H = slide.height;
+    const ew = selectedElement.width; const eh = selectedElement.height;
+    const cx = Math.round((W - ew) / 2); const cy = Math.round((H - eh) / 2);
+    const pos: Record<string, { x: number; y: number }> = {
+      tl: { x: 0, y: 0 },      tc: { x: cx, y: 0 },      tr: { x: W - ew, y: 0 },
+      ml: { x: 0, y: cy },      mc: { x: cx, y: cy },      mr: { x: W - ew, y: cy },
+      bl: { x: 0, y: H - eh },  bc: { x: cx, y: H - eh },  br: { x: W - ew, y: H - eh },
+    };
+    if (pos[align]) patchSelected(pos[align]);
   };
 
   const patchStyle = (stylePatch: Record<string, any>) => {
@@ -482,6 +620,44 @@ export default function Toolbar({
 
         <div className={divider} />
 
+        {/* Posição + Inverter — só quando elemento selecionado */}
+        {selectedElement && (
+          <>
+            <div className="grid grid-cols-3 gap-0.5 shrink-0" title="Posição no slide">
+              {["tl","tc","tr","ml","mc","mr","bl","bc","br"].map((a) => (
+                <button
+                  key={a}
+                  title={ALIGN_TITLES[a]}
+                  onClick={() => alignElement(a)}
+                  className="w-5 h-5 rounded-sm flex items-center justify-center text-[11px] bg-[var(--bg-3)] hover:bg-brand-500/40 text-[var(--text-3)] hover:text-brand-300 transition-colors leading-none"
+                >
+                  {ALIGN_ARROWS[a]}
+                </button>
+              ))}
+            </div>
+
+            {(isImage || isFrame) && (
+              <>
+                <button
+                  onClick={() => patchSelected({ flipX: !selectedElement.flipX })}
+                  title="Inverter horizontal"
+                  className={`p-1.5 rounded transition-colors shrink-0 ${selectedElement.flipX ? "bg-brand-600 text-white" : btnBase}`}
+                >
+                  <FlipHorizontal size={14} />
+                </button>
+                <button
+                  onClick={() => patchSelected({ flipY: !selectedElement.flipY })}
+                  title="Inverter vertical"
+                  className={`p-1.5 rounded transition-colors shrink-0 ${selectedElement.flipY ? "bg-brand-600 text-white" : btnBase}`}
+                >
+                  <FlipVertical size={14} />
+                </button>
+              </>
+            )}
+            <div className={divider} />
+          </>
+        )}
+
         <label className="flex items-center gap-1.5 text-sm text-[var(--text-2)] cursor-pointer shrink-0">
           Fundo:
           <input type="color" value={slide.backgroundColor} onChange={(e) => onUpdate({ ...slide, backgroundColor: e.target.value })} className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent" />
@@ -533,79 +709,141 @@ export default function Toolbar({
       {/* ── Painel de perfil ── */}
       {showProfile && (
         <div className={`${panelBase} w-80`}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-[var(--text)]">Configurar perfil</span>
-            <button onClick={() => setShowProfile(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
-          </div>
+          {!showProfileForm ? (
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-[var(--text)]">Perfis</span>
+                <div className="flex items-center gap-2">
+                  <button onClick={openNewProfileForm} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium transition-colors">
+                    <Plus size={12} /> Novo
+                  </button>
+                  <button onClick={() => setShowProfile(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-3 mb-4">
-            <button onClick={() => avatarInputRef.current?.click()} className="relative group shrink-0">
-              {profileAvatarSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={profileAvatarSrc} alt="" className="w-14 h-14 rounded-full object-cover border-2 border-brand-500" />
+              {savedProfiles.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-6 text-center">
+                  <UserCircle size={36} className="text-[var(--text-3)]" />
+                  <p className="text-sm text-[var(--text-3)]">Nenhum perfil salvo ainda.</p>
+                  <button onClick={openNewProfileForm} className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium transition-colors">
+                    + Criar perfil
+                  </button>
+                </div>
               ) : (
-                <div className="w-14 h-14 rounded-full bg-[var(--bg-3)] flex items-center justify-center border-2 border-dashed border-[var(--border-2)]">
-                  <UserCircle size={28} className="text-[var(--text-3)]" />
+                <div className="flex flex-col gap-2">
+                  {savedProfiles.map((p) => {
+                    const isActive = p.id === activeProfileId;
+                    return (
+                    <div key={p.id} className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 border transition-colors ${isActive ? "bg-brand-500/10 border-brand-500/50" : "bg-[var(--bg-3)] border-[var(--border-2)] hover:border-brand-500/30"}`}>
+                      {p.avatarSrc ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.avatarSrc} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-[var(--bg-4)] flex items-center justify-center shrink-0">
+                          <UserCircle size={18} className="text-[var(--text-3)]" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 text-sm font-semibold text-[var(--text)] truncate">
+                          {p.name || "Sem nome"}
+                          {p.verified && <BadgeCheck size={12} className="text-blue-400 shrink-0" />}
+                          {isActive && <span className="text-[10px] font-normal text-brand-400 ml-0.5">✦ padrão</span>}
+                        </div>
+                        <div className="text-xs text-[var(--text-3)] truncate">@{p.handle || "handle"}</div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {!isActive && (
+                          <button onClick={() => setProfileAsDefault(p)} title="Definir como padrão"
+                            className="p-1.5 rounded hover:bg-[var(--bg-4)] text-[var(--text-3)] hover:text-brand-400 transition-colors" aria-label="Padrão">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          </button>
+                        )}
+                        <button onClick={() => insertProfileToSlide(p)} title="Inserir no slide"
+                          className="px-2 py-1 rounded bg-brand-600 hover:bg-brand-700 text-white text-[11px] font-medium transition-colors">
+                          Inserir
+                        </button>
+                        <button onClick={() => openEditProfileForm(p)} title="Editar"
+                          className="p-1.5 rounded hover:bg-[var(--bg-4)] text-[var(--text-3)] hover:text-[var(--text)] transition-colors">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button onClick={() => deleteProfile(p.id)} title="Remover"
+                          className="p-1.5 rounded hover:bg-red-500/10 text-[var(--text-3)] hover:text-red-400 transition-colors">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                    );
+                  })}
                 </div>
               )}
-              <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <span className="text-white text-[10px] font-medium">Trocar</span>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <button onClick={() => setShowProfileForm(false)} className="flex items-center gap-1.5 text-sm text-[var(--text-3)] hover:text-[var(--text)] transition-colors">
+                  <ChevronLeft size={16} /> {editingProfile ? "Editar perfil" : "Novo perfil"}
+                </button>
+                <button onClick={() => { setShowProfileForm(false); setShowProfile(false); }} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
               </div>
-            </button>
-            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); e.target.value = ""; }} />
-            <div className="flex-1">
-              <p className="text-xs text-[var(--text-2)] mb-1">Foto de perfil</p>
-              <p className="text-[11px] text-[var(--text-3)]">Clique para fazer upload</p>
-            </div>
-          </div>
 
-          <div className="mb-2">
-            <label className="text-xs text-[var(--text-2)] block mb-1">Nome</label>
-            <input value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="Seu nome"
-              className="w-full bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]" />
-          </div>
-
-          <div className="mb-3">
-            <label className="text-xs text-[var(--text-2)] block mb-1">@ (sem o @)</label>
-            <div className="flex items-center bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg overflow-hidden focus-within:border-brand-500">
-              <span className="px-3 text-[var(--text-3)] text-sm select-none">@</span>
-              <input value={profileHandle} onChange={(e) => setProfileHandle(e.target.value.replace("@", ""))} placeholder="seuhandle"
-                className="flex-1 bg-transparent py-2 pr-3 text-sm text-[var(--text)] focus:outline-none" />
-            </div>
-          </div>
-
-          <label className="flex items-center gap-2 mb-4 cursor-pointer select-none">
-            <div onClick={() => setProfileVerified((v) => !v)}
-              className={`w-10 h-5 rounded-full transition-colors flex items-center px-0.5 ${profileVerified ? "bg-blue-500" : "bg-[var(--bg-4)]"}`}>
-              <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${profileVerified ? "translate-x-5" : "translate-x-0"}`} />
-            </div>
-            <span className="text-sm text-[var(--text-2)] flex items-center gap-1.5">
-              <BadgeCheck size={14} className="text-blue-400" /> Selo verificado
-            </span>
-          </label>
-
-          {(profileName || profileHandle) && (
-            <div className="flex items-center gap-2.5 bg-[var(--bg-3)] rounded-lg px-3 py-2.5 mb-3">
-              {profileAvatarSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={profileAvatarSrc} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-[var(--bg-4)] shrink-0" />
-              )}
-              <div>
-                <div className="flex items-center gap-1 text-sm font-semibold text-[var(--text)]">
-                  {profileName || "Seu nome"}
-                  {profileVerified && <BadgeCheck size={13} className="text-blue-400" />}
+              <div className="flex items-center gap-3 mb-4">
+                <button onClick={() => avatarInputRef.current?.click()} className="relative group shrink-0">
+                  {profileAvatarSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profileAvatarSrc} alt="" className="w-14 h-14 rounded-full object-cover border-2 border-brand-500" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-[var(--bg-3)] flex items-center justify-center border-2 border-dashed border-[var(--border-2)]">
+                      <UserCircle size={28} className="text-[var(--text-3)]" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <span className="text-white text-[10px] font-medium">Trocar</span>
+                  </div>
+                </button>
+                <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); e.target.value = ""; }} />
+                <div className="flex-1">
+                  <p className="text-xs text-[var(--text-2)] mb-1">Foto de perfil</p>
+                  <p className="text-[11px] text-[var(--text-3)]">Clique para fazer upload</p>
                 </div>
-                <div className="text-xs text-[var(--text-2)]">@{profileHandle || "seuhandle"}</div>
               </div>
-            </div>
+
+              <div className="mb-2">
+                <label className="text-xs text-[var(--text-2)] block mb-1">Nome</label>
+                <input value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="Seu nome"
+                  className="w-full bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]" />
+              </div>
+
+              <div className="mb-3">
+                <label className="text-xs text-[var(--text-2)] block mb-1">@ (sem o @)</label>
+                <div className="flex items-center bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg overflow-hidden focus-within:border-brand-500">
+                  <span className="px-3 text-[var(--text-3)] text-sm select-none">@</span>
+                  <input value={profileHandle} onChange={(e) => setProfileHandle(e.target.value.replace("@", ""))} placeholder="seuhandle"
+                    className="flex-1 bg-transparent py-2 pr-3 text-sm text-[var(--text)] focus:outline-none" />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 mb-4 cursor-pointer select-none">
+                <div onClick={() => setProfileVerified((v) => !v)}
+                  className={`w-10 h-5 rounded-full transition-colors flex items-center px-0.5 ${profileVerified ? "bg-blue-500" : "bg-[var(--bg-4)]"}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${profileVerified ? "translate-x-5" : "translate-x-0"}`} />
+                </div>
+                <span className="text-sm text-[var(--text-2)] flex items-center gap-1.5">
+                  <BadgeCheck size={14} className="text-blue-400" /> Selo verificado
+                </span>
+              </label>
+
+              <div className="flex gap-2">
+                <button onClick={() => setShowProfileForm(false)}
+                  className="flex-1 py-2 rounded-lg border border-[var(--border-2)] text-sm text-[var(--text-2)] hover:bg-[var(--bg-3)] transition-colors">
+                  Cancelar
+                </button>
+                <button onClick={saveProfileForm} disabled={!profileName && !profileHandle}
+                  className="flex-1 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-sm font-medium text-white transition-colors">
+                  Salvar
+                </button>
+              </div>
+            </>
           )}
-
-          <button onClick={insertProfile}
-            className="w-full py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-sm font-medium text-white transition-colors">
-            Inserir no slide
-          </button>
         </div>
       )}
 
@@ -782,18 +1020,44 @@ export default function Toolbar({
         <div className="flex items-center gap-3 px-4 py-2 border-t border-[var(--border)] overflow-x-auto whitespace-nowrap scrollbar-none">
           <span className="text-xs text-[var(--text-3)] shrink-0">Perfil</span>
           <div className="w-px h-4 bg-[var(--border-2)]" />
+          <div className="flex items-center rounded overflow-hidden border border-[var(--border-2)] shrink-0">
+            <button
+              onClick={() => setProfileColorScope("this")}
+              className={`px-2 py-0.5 text-[11px] transition-colors ${profileColorScope === "this" ? "bg-brand-500 text-white" : "bg-[var(--bg-3)] text-[var(--text-3)] hover:text-[var(--text-2)]"}`}
+            >Nesse slide</button>
+            <button
+              onClick={() => setProfileColorScope("all")}
+              className={`px-2 py-0.5 text-[11px] transition-colors ${profileColorScope === "all" ? "bg-brand-500 text-white" : "bg-[var(--bg-3)] text-[var(--text-3)] hover:text-[var(--text-2)]"}`}
+            >Em todos</button>
+          </div>
           <label className="flex items-center gap-1.5 text-xs text-[var(--text-2)] cursor-pointer shrink-0">
             Nome:
             <input type="color"
               value={(selectedElement as any).profileNameColor ?? "#ffffff"}
-              onChange={(e) => patchSelected({ profileNameColor: e.target.value })}
+              onChange={(e) => {
+                const nameColor = e.target.value;
+                const handleColor = (selectedElement as any).profileHandleColor ?? "#888888";
+                if (profileColorScope === "all") {
+                  onApplyProfileColorToAll?.(nameColor, handleColor);
+                } else {
+                  patchSelected({ profileNameColor: nameColor });
+                }
+              }}
               className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent" />
           </label>
           <label className="flex items-center gap-1.5 text-xs text-[var(--text-2)] cursor-pointer shrink-0">
             @handle:
             <input type="color"
               value={(selectedElement as any).profileHandleColor ?? "#888888"}
-              onChange={(e) => patchSelected({ profileHandleColor: e.target.value })}
+              onChange={(e) => {
+                const handleColor = e.target.value;
+                const nameColor = (selectedElement as any).profileNameColor ?? "#ffffff";
+                if (profileColorScope === "all") {
+                  onApplyProfileColorToAll?.(nameColor, handleColor);
+                } else {
+                  patchSelected({ profileHandleColor: handleColor });
+                }
+              }}
               className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent" />
           </label>
         </div>

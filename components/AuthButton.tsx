@@ -35,7 +35,7 @@ export default function AuthButton({ isPro }: Props) {
     <>
       <button
         onClick={() => setLoginOpen(true)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-gray-300 transition-colors"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border-2)] bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-xs text-[var(--text-2)] transition-colors"
       >
         <LogIn size={13} />
         Entrar

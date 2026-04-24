@@ -59,6 +59,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const [framePanId, setFramePanId] = useState<string | null>(null);
   const [showLayoutPicker, setShowLayoutPicker] = useState(false);
   const dragRef = useRef<DragState>(null);
+  const vGuideRef = useRef<HTMLDivElement>(null);
+  const hGuideRef = useRef<HTMLDivElement>(null);
   const framePanRef = useRef<{ elementId: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
   const resizeRef = useRef<ResizeState>(null);
   const cropRef = useRef<CropState>(null);
@@ -152,6 +154,17 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     onSelectElement?.(null);
   }, [selectedId, slide, onUpdate, onSelectElement]);
 
+  const showGuides = (nx: number, ny: number, ew: number, eh: number) => {
+    const cx = slide.width / 2; const cy = slide.height / 2;
+    const thr = 10;
+    if (vGuideRef.current) { vGuideRef.current.style.display = "block"; vGuideRef.current.style.opacity = Math.abs(nx + ew / 2 - cx) < thr ? "1" : "0.22"; }
+    if (hGuideRef.current) { hGuideRef.current.style.display = "block"; hGuideRef.current.style.opacity = Math.abs(ny + eh / 2 - cy) < thr ? "1" : "0.22"; }
+  };
+  const hideGuides = () => {
+    if (vGuideRef.current) vGuideRef.current.style.display = "none";
+    if (hGuideRef.current) hGuideRef.current.style.display = "none";
+  };
+
   // ── Arrastar ───────────────────────────────────────────────
   const handleMouseDown = (e: React.MouseEvent, el: SlideElement) => {
     if (cropId === el.id) return;
@@ -168,20 +181,22 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     const holdTimer = setTimeout(() => {
       dragging = true;
       dragRef.current = { elementId: el.id, startX: e.clientX, startY: e.clientY, origX: el.x, origY: el.y, origW: el.width, origH: el.height };
+      showGuides(el.x, el.y, el.width, el.height);
     }, 150);
 
     const onMove = (me: MouseEvent) => {
       if (!dragging || !dragRef.current) return;
       const d = dragRef.current;
-      updateElement(d.elementId, {
-        x: Math.max(0, Math.min(slide.width  - d.origW, d.origX + (me.clientX - d.startX) / scale)),
-        y: Math.max(0, Math.min(slide.height - d.origH, d.origY + (me.clientY - d.startY) / scale)),
-      });
+      const nx = Math.max(0, Math.min(slide.width  - d.origW, d.origX + (me.clientX - d.startX) / scale));
+      const ny = Math.max(0, Math.min(slide.height - d.origH, d.origY + (me.clientY - d.startY) / scale));
+      updateElement(d.elementId, { x: nx, y: ny });
+      showGuides(nx, ny, d.origW, d.origH);
     };
     const onUp = () => {
       clearTimeout(holdTimer);
       if (!dragging && el.type === "text") setEditingId(el.id);
       dragging = false;
+      hideGuides();
       dragRef.current = null;
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
@@ -294,19 +309,21 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       if (!dragging && Math.sqrt(dx * dx + dy * dy) > 12) {
         dragging = true;
         dragRef.current = { elementId: el.id, startX, startY, origX: el.x, origY: el.y, origW: el.width, origH: el.height };
+        showGuides(el.x, el.y, el.width, el.height);
       }
       if (dragging && dragRef.current) {
         te.preventDefault();
         const d = dragRef.current;
-        updateElement(d.elementId, {
-          x: Math.max(0, Math.min(slide.width  - d.origW, d.origX + dx / scale)),
-          y: Math.max(0, Math.min(slide.height - d.origH, d.origY + dy / scale)),
-        });
+        const nx = Math.max(0, Math.min(slide.width  - d.origW, d.origX + dx / scale));
+        const ny = Math.max(0, Math.min(slide.height - d.origH, d.origY + dy / scale));
+        updateElement(d.elementId, { x: nx, y: ny });
+        showGuides(nx, ny, d.origW, d.origH);
       }
     };
     const onEnd = () => {
       if (!dragging && el.type === "text") setEditingId(el.id);
       dragging = false;
+      hideGuides();
       dragRef.current = null;
       window.removeEventListener("touchmove", onMove);
       window.removeEventListener("touchend", onEnd);
@@ -733,7 +750,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       {isCroppingBg && !bgCtxMenu && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 flex gap-2">
           <button onClick={resetBgCrop}
-            className="bg-[#222] hover:bg-[#333] text-gray-300 rounded-lg px-3 py-2 text-sm font-medium border border-[#444]">
+            className="bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)] rounded-lg px-3 py-2 text-sm font-medium border border-[var(--border-2)]">
             Resetar
           </button>
           <button onClick={applyBgCrop}
@@ -757,6 +774,10 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           </button>
         </div>
       )}
+
+      {/* Guias de centro — exibidas via DOM direto durante arraste */}
+      <div ref={vGuideRef} style={{ display: "none", position: "absolute", left: slide.width / 2 - 0.5, top: 0, width: 1, height: slide.height, background: "rgba(76,110,245,1)", pointerEvents: "none", zIndex: 9999, transition: "opacity 0.08s" }} />
+      <div ref={hGuideRef} style={{ display: "none", position: "absolute", top: slide.height / 2 - 0.5, left: 0, height: 1, width: slide.width, background: "rgba(76,110,245,1)", pointerEvents: "none", zIndex: 9999, transition: "opacity 0.08s" }} />
 
       {/* Elementos */}
       {slide.elements.map((el) => {
@@ -1011,7 +1032,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             {el.type === "image" && el.src && (
               <div className="w-full h-full relative overflow-hidden" style={{ clipPath }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={el.src} alt="" className="w-full h-full object-cover" style={{ objectPosition: `50% ${el.imageObjectPositionY ?? 50}%` }} draggable={false} />
+                <img src={el.src} alt="" className="w-full h-full object-cover" style={{ objectPosition: `50% ${el.imageObjectPositionY ?? 50}%`, transform: (el.flipX || el.flipY) ? `scaleX(${el.flipX ? -1 : 1}) scaleY(${el.flipY ? -1 : 1})` : undefined }} draggable={false} />
                 {/* Degradê sobre a imagem */}
                 {el.gradient && <div className="absolute inset-0 pointer-events-none" style={{ background: el.gradient }} />}
 
@@ -1111,7 +1132,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       {/* Context menu — scale invertido para aparecer no tamanho real na tela */}
       {ctxMenu && (
         <div
-          className="absolute z-[100] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1.5 min-w-[260px]"
+          className="absolute z-[100] bg-[var(--bg-2)] border border-[var(--border-2)] rounded-xl shadow-2xl py-1.5 min-w-[260px]"
           style={{
             left: Math.min(ctxMenu.x, slide.width - 290 / scale),
             top: Math.min(ctxMenu.y, slide.height - 430 / scale),
@@ -1122,18 +1143,18 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           onContextMenu={(e) => e.preventDefault()}
         >
           {/* Header — arrastar menu */}
-          <div className="px-4 py-2.5 border-b border-[#2a2a2a] flex items-center gap-2 cursor-move select-none"
+          <div className="px-4 py-2.5 border-b border-[var(--border)] flex items-center gap-2 cursor-move select-none"
             onMouseDown={(e) => startMenuDrag(e, () => ({ x: ctxMenu!.x, y: ctxMenu!.y }), (x, y) => setCtxMenu(m => m ? { ...m, x, y } : null))}
             onTouchStart={(e) => startMenuDrag(e, () => ({ x: ctxMenu!.x, y: ctxMenu!.y }), (x, y) => setCtxMenu(m => m ? { ...m, x, y } : null))}>
             <ImageIcon size={15} className="text-brand-400" />
-            <span className="text-sm font-semibold text-gray-300 flex-1">Editar imagem</span>
-            <button onClick={(e) => { e.stopPropagation(); closeCtx(); }} className="ml-auto text-gray-500 hover:text-gray-200 transition-colors p-0.5"><X size={15} /></button>
+            <span className="text-sm font-semibold text-[var(--text)] flex-1">Editar imagem</span>
+            <button onClick={(e) => { e.stopPropagation(); closeCtx(); }} className="ml-auto text-[var(--text-3)] hover:text-[var(--text)] transition-colors p-0.5"><X size={15} /></button>
           </div>
 
           {/* Transparência */}
-          <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
+          <div className="px-4 py-2.5 border-b border-[var(--border)]">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-sm text-gray-400 flex items-center gap-1.5"><Blend size={14} /> Transparência</span>
+              <span className="text-sm text-[var(--text-2)] flex items-center gap-1.5"><Blend size={14} /> Transparência</span>
               <span className="text-sm text-white font-medium">{Math.round((1 - (ctxMenu.el.opacity ?? 1)) * 100)}%</span>
             </div>
             <input type="range" min={0} max={100} value={Math.round((1 - (ctxMenu.el.opacity ?? 1)) * 100)}
@@ -1142,13 +1163,13 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           </div>
 
           {/* Degradê */}
-          <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
-            <p className="text-sm text-gray-400 mb-2 flex items-center gap-1.5"><Layers size={14} /> Degradê</p>
+          <div className="px-4 py-2.5 border-b border-[var(--border)]">
+            <p className="text-sm text-[var(--text-2)] mb-2 flex items-center gap-1.5"><Layers size={14} /> Degradê</p>
             <div className="grid grid-cols-3 gap-1.5">
               {GRADIENTS.map((g) => (
                 <button key={g.label}
                   onClick={() => { updateElement(ctxMenu.el.id, { gradient: g.value || null }); setCtxMenu({ ...ctxMenu, el: { ...ctxMenu.el, gradient: g.value || null } }); }}
-                  className={`text-xs py-1.5 px-2 rounded border transition-colors ${ctxMenu.el.gradient === (g.value || null) ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
+                  className={`text-xs py-1.5 px-2 rounded border transition-colors ${ctxMenu.el.gradient === (g.value || null) ? "border-brand-500 bg-brand-500/20 text-white" : "border-[var(--border-2)] text-[var(--text-2)] hover:border-[var(--text-3)]"}`}>
                   {g.label}
                 </button>
               ))}
@@ -1157,30 +1178,30 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
           {/* Cortar */}
           <button onClick={() => enterCrop(ctxMenu.el)}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
             <Scissors size={15} className="text-yellow-400" /> Cortar imagem
           </button>
 
           {/* Camadas */}
-          <div className="border-b border-[#2a2a2a]">
+          <div className="border-b border-[var(--border)]">
             <button onClick={() => bringForward(ctxMenu.el)}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors">
               <ArrowUp size={15} className="text-blue-400" /> Trazer à frente
             </button>
             <button onClick={() => sendBackward(ctxMenu.el)}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors">
               <ArrowDown size={15} className="text-blue-400" /> Enviar para trás
             </button>
           </div>
 
           {/* Definir como fundo */}
           <button onClick={() => setAsBackground(ctxMenu.el)}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
             <Maximize2 size={15} className="text-green-400" /> Definir como fundo do slide
           </button>
 
           {/* Fechar */}
-          <button onClick={closeCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
+          <button onClick={closeCtx} className="w-full px-4 py-2 text-sm text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
             Fechar
           </button>
         </div>
@@ -1217,7 +1238,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       <>
         <div className="fixed inset-0 z-[9990]" onClick={closeBgCtx} />
         <div
-          className="fixed z-[9991] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1 overflow-y-auto"
+          className="fixed z-[9991] bg-[var(--bg-2)] border border-[var(--border-2)] rounded-xl shadow-2xl py-1 overflow-y-auto"
           style={bgCtxMenu.mobile
             ? { bottom: 76, left: "50%", transform: "translateX(-50%)", maxHeight: "75vh", width: "min(300px, 92vw)" }
             : {
@@ -1232,27 +1253,27 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         >
           {/* Header */}
           {!bgCtxMenu.mobile && (
-            <div className="px-4 py-2.5 border-b border-[#2a2a2a] flex items-center gap-2 cursor-move select-none"
+            <div className="px-4 py-2.5 border-b border-[var(--border)] flex items-center gap-2 cursor-move select-none"
               onMouseDown={(e) => startMenuDrag(e, () => ({ x: bgCtxMenu!.x, y: bgCtxMenu!.y }), (x, y) => setBgCtxMenu(m => m ? { ...m, x, y } : null), 1)}
               onTouchStart={(e) => startMenuDrag(e, () => ({ x: bgCtxMenu!.x, y: bgCtxMenu!.y }), (x, y) => setBgCtxMenu(m => m ? { ...m, x, y } : null), 1)}>
               <ImageIcon size={15} className="text-brand-400" />
-              <span className="text-sm font-semibold text-gray-300 flex-1">Imagem de fundo</span>
-              <button onClick={(e) => { e.stopPropagation(); closeBgCtx(); }} className="ml-auto text-gray-500 hover:text-gray-200 transition-colors p-0.5"><X size={15} /></button>
+              <span className="text-sm font-semibold text-[var(--text)] flex-1">Imagem de fundo</span>
+              <button onClick={(e) => { e.stopPropagation(); closeBgCtx(); }} className="ml-auto text-[var(--text-3)] hover:text-[var(--text)] transition-colors p-0.5"><X size={15} /></button>
             </div>
           )}
           {bgCtxMenu.mobile && (
-            <div className="px-4 py-3 border-b border-[#2a2a2a] flex items-center gap-2">
+            <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2">
               <ImageIcon size={15} className="text-brand-400" />
-              <span className="text-sm font-semibold text-gray-300 flex-1">Opções do slide</span>
-              <button onClick={(e) => { e.stopPropagation(); closeBgCtx(); }} className="text-gray-500 hover:text-gray-200 p-0.5"><X size={15} /></button>
+              <span className="text-sm font-semibold text-[var(--text)] flex-1">Opções do slide</span>
+              <button onClick={(e) => { e.stopPropagation(); closeBgCtx(); }} className="text-[var(--text-3)] hover:text-[var(--text)] p-0.5"><X size={15} /></button>
             </div>
           )}
 
           {/* Transparência */}
           {slide.backgroundImageUrl && (
-            <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
+            <div className="px-4 py-2.5 border-b border-[var(--border)]">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-sm text-gray-400 flex items-center gap-1.5"><Blend size={14} /> Transparência</span>
+                <span className="text-sm text-[var(--text-2)] flex items-center gap-1.5"><Blend size={14} /> Transparência</span>
                 <span className="text-sm text-white font-medium">{Math.round((1 - (slide.backgroundOpacity ?? 1)) * 100)}%</span>
               </div>
               <input type="range" min={0} max={100} value={Math.round((1 - (slide.backgroundOpacity ?? 1)) * 100)}
@@ -1263,12 +1284,12 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
           {/* Degradê */}
           {slide.backgroundImageUrl && (
-            <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
-              <p className="text-sm text-gray-400 mb-2 flex items-center gap-1.5"><Layers size={14} /> Degradê</p>
+            <div className="px-4 py-2.5 border-b border-[var(--border)]">
+              <p className="text-sm text-[var(--text-2)] mb-2 flex items-center gap-1.5"><Layers size={14} /> Degradê</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {GRADIENTS.map((g) => (
                   <button key={g.label} onClick={() => setBgGradient(g.value)}
-                    className={`text-xs py-1.5 px-2 rounded border transition-colors ${(slide.backgroundGradient ?? "") === g.value ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
+                    className={`text-xs py-1.5 px-2 rounded border transition-colors ${(slide.backgroundGradient ?? "") === g.value ? "border-brand-500 bg-brand-500/20 text-white" : "border-[var(--border-2)] text-[var(--text-2)] hover:border-[var(--text-3)]"}`}>
                     {g.label}
                   </button>
                 ))}
@@ -1278,44 +1299,44 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
           {/* Posição e zoom */}
           {slide.backgroundImageUrl && (
-            <div className="px-4 py-3 border-b border-[#2a2a2a] space-y-2.5">
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Posição & Zoom</p>
-              <label className="flex items-center gap-2 text-xs text-gray-400"><span className="w-3">X</span>
+            <div className="px-4 py-3 border-b border-[var(--border)] space-y-2.5">
+              <p className="text-xs text-[var(--text-3)] uppercase tracking-widest mb-1">Posição & Zoom</p>
+              <label className="flex items-center gap-2 text-xs text-[var(--text-2)]"><span className="w-3">X</span>
                 <input type="range" min={0} max={100} step={1} value={slide.backgroundPosition?.x ?? 50}
                   onChange={(e) => onUpdate({ ...slide, backgroundPosition: { x: Number(e.target.value), y: slide.backgroundPosition?.y ?? 50 } })} className="flex-1 accent-brand-500" />
-                <span className="text-gray-600 w-6 text-right">{slide.backgroundPosition?.x ?? 50}</span>
+                <span className="text-[var(--text-3)] w-6 text-right">{slide.backgroundPosition?.x ?? 50}</span>
               </label>
-              <label className="flex items-center gap-2 text-xs text-gray-400"><span className="w-3">Y</span>
+              <label className="flex items-center gap-2 text-xs text-[var(--text-2)]"><span className="w-3">Y</span>
                 <input type="range" min={0} max={100} step={1} value={slide.backgroundPosition?.y ?? 50}
                   onChange={(e) => onUpdate({ ...slide, backgroundPosition: { x: slide.backgroundPosition?.x ?? 50, y: Number(e.target.value) } })} className="flex-1 accent-brand-500" />
-                <span className="text-gray-600 w-6 text-right">{slide.backgroundPosition?.y ?? 50}</span>
+                <span className="text-[var(--text-3)] w-6 text-right">{slide.backgroundPosition?.y ?? 50}</span>
               </label>
-              <label className="flex items-center gap-2 text-xs text-gray-400"><span className="w-3">🔍</span>
+              <label className="flex items-center gap-2 text-xs text-[var(--text-2)]"><span className="w-3">🔍</span>
                 <input type="range" min={80} max={250} step={5} value={slide.backgroundZoom ?? 100}
                   onChange={(e) => onUpdate({ ...slide, backgroundZoom: Number(e.target.value) })} className="flex-1 accent-brand-500" />
-                <span className="text-gray-600 w-8 text-right">{slide.backgroundZoom ?? 100}%</span>
+                <span className="text-[var(--text-3)] w-8 text-right">{slide.backgroundZoom ?? 100}%</span>
               </label>
               <button onClick={() => onUpdate({ ...slide, backgroundPosition: { x: 50, y: 50 }, backgroundZoom: 100 })}
-                className="text-[11px] text-gray-600 hover:text-gray-400 underline">Resetar posição</button>
+                className="text-[11px] text-[var(--text-3)] hover:text-[var(--text-2)] underline">Resetar posição</button>
             </div>
           )}
 
           {/* Gerar imagem IA */}
           <button onClick={generateBg}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-400 hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
             <Wand2 size={15} /> {slide.backgroundImageUrl ? "Gerar nova imagem IA" : "Gerar imagem de fundo com IA"}
           </button>
 
           {/* Adicionar / Trocar imagem */}
           <button onClick={() => bgFileInputRef.current?.click()}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
             <RefreshCw size={15} className="text-blue-400" /> {slide.backgroundImageUrl ? "Trocar imagem" : "Adicionar imagem de fundo"}
           </button>
 
           {/* Cortar fundo */}
           {slide.backgroundImageUrl && (
             <button onClick={enterBgCrop}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-yellow-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-yellow-400 hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
               <Scissors size={15} /> Cortar imagem de fundo
             </button>
           )}
@@ -1323,22 +1344,40 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           {/* Remover fundo */}
           {slide.backgroundImageUrl && (
             <button onClick={removeBg}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
               <X size={15} /> Remover fundo
             </button>
           )}
 
           {/* Grade claro/escuro */}
           {(slide.backgroundPattern === "grid-light" || slide.backgroundPattern === "grid-dark") && (
-            <div className="px-4 py-2.5 border-b border-[#2a2a2a]">
-              <p className="text-xs text-gray-500 mb-2">Grade de fundo</p>
+            <div className="px-4 py-2.5 border-b border-[var(--border)]">
+              <p className="text-xs text-[var(--text-3)] mb-2">Grade de fundo</p>
               <div className="flex gap-2">
-                <button onClick={() => onUpdate({ ...slide, backgroundColor: "#ffffff", backgroundPattern: "grid-light" as const })}
-                  className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${slide.backgroundPattern === "grid-light" ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
+                <button onClick={() => onUpdate({
+                  ...slide,
+                  backgroundColor: "#ffffff",
+                  backgroundPattern: "grid-light" as const,
+                  elements: slide.elements.map((el) => {
+                    if (el.type === "text") return { ...el, style: { ...(el.style as any), color: "#111111" } };
+                    if (el.type === "profile") return { ...el, profileNameColor: "#111111", profileHandleColor: "rgba(0,0,0,0.45)" };
+                    return el;
+                  }),
+                })}
+                  className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${slide.backgroundPattern === "grid-light" ? "border-brand-500 bg-brand-500/20 text-white" : "border-[var(--border-2)] text-[var(--text-2)] hover:border-[var(--text-3)]"}`}>
                   ☀ Branco
                 </button>
-                <button onClick={() => onUpdate({ ...slide, backgroundColor: "#0a0a0a", backgroundPattern: "grid-dark" as const })}
-                  className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${slide.backgroundPattern === "grid-dark" ? "border-brand-500 bg-brand-500/20 text-white" : "border-[#333] text-gray-400 hover:border-[#555]"}`}>
+                <button onClick={() => onUpdate({
+                  ...slide,
+                  backgroundColor: "#0a0a0a",
+                  backgroundPattern: "grid-dark" as const,
+                  elements: slide.elements.map((el) => {
+                    if (el.type === "text") return { ...el, style: { ...(el.style as any), color: "#ffffff" } };
+                    if (el.type === "profile") return { ...el, profileNameColor: "#ffffff", profileHandleColor: "rgba(255,255,255,0.50)" };
+                    return el;
+                  }),
+                })}
+                  className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${slide.backgroundPattern === "grid-dark" ? "border-brand-500 bg-brand-500/20 text-white" : "border-[var(--border-2)] text-[var(--text-2)] hover:border-[var(--text-3)]"}`}>
                   ☾ Preto
                 </button>
               </div>
@@ -1347,12 +1386,12 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
           {/* Modificar Layout */}
           <button onClick={() => { setShowLayoutPicker(true); closeBgCtx(); }}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-500 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]">
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-500 hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
             <LayoutTemplate size={15} /> Modificar layout
           </button>
 
           {/* Fechar */}
-          <button onClick={closeBgCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
+          <button onClick={closeBgCtx} className="w-full px-4 py-2 text-sm text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
             Fechar
           </button>
         </div>
@@ -1396,7 +1435,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       <>
         <div className="fixed inset-0 z-[9990]" onClick={closeFrameCtx} />
         <div
-          className="fixed z-[9991] bg-[#1a1a1a] border border-[#2a2a2a] shadow-2xl overflow-y-auto"
+          className="fixed z-[9991] bg-[var(--bg-2)] border border-[var(--border-2)] shadow-2xl overflow-y-auto"
           style={frameCtxMenu.mobile
             ? { bottom: 0, left: 0, right: 0, maxHeight: "72vh", borderRadius: "18px 18px 0 0", paddingBottom: "env(safe-area-inset-bottom, 8px)" }
             : { left: Math.min(frameCtxMenu.x, window.innerWidth - 260), top: Math.max(8, Math.min(frameCtxMenu.y, window.innerHeight - 380)), maxHeight: "80vh", minWidth: 240, borderRadius: 12 }
@@ -1410,46 +1449,46 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               <div className="w-9 h-1 rounded-full bg-white/20" />
             </div>
           )}
-          <div className="px-4 py-3 border-b border-[#2a2a2a] flex items-center gap-2">
+          <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2">
             <Square size={14} className="text-indigo-400" />
             <span className="text-sm font-semibold text-white flex-1">Moldura</span>
-            <button onClick={(e) => { e.stopPropagation(); closeFrameCtx(); }} className="text-gray-500 hover:text-gray-200 transition-colors p-1"><X size={14} /></button>
+            <button onClick={(e) => { e.stopPropagation(); closeFrameCtx(); }} className="text-[var(--text-3)] hover:text-[var(--text)] transition-colors p-1"><X size={14} /></button>
           </div>
 
           <button onClick={() => generateFrameImage(frameCtxMenu.el)}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-indigo-400 hover:bg-white/5 transition-colors border-b border-[#2a2a2a]">
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-indigo-400 hover:bg-white/5 transition-colors border-b border-[var(--border)]">
             <Wand2 size={15} /> Gerar foto com I.A
           </button>
 
           <button onClick={() => { setFramePendingId(frameCtxMenu.el.id); frameFileInputRef.current?.click(); closeFrameCtx(); }}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors border-b border-[#2a2a2a]">
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors border-b border-[var(--border)]">
             <Upload size={15} className="text-blue-400" /> Fazer upload foto/vídeo
           </button>
 
           {slide.backgroundImageUrl && (
             <button onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: slide.backgroundImageUrl, frameImageOffset: { x: 50, y: 50 }, frameImageZoom: 100 }); closeFrameCtx(); }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-green-400 hover:bg-white/5 transition-colors border-b border-[#2a2a2a]">
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-green-400 hover:bg-white/5 transition-colors border-b border-[var(--border)]">
               <ImageIcon size={15} /> Usar imagem de fundo
             </button>
           )}
 
           {frameCtxMenu.el.frameImageUrl && (
             <button onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: undefined, frameMediaType: undefined }); closeFrameCtx(); }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-white/5 transition-colors border-b border-[#2a2a2a]">
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-white/5 transition-colors border-b border-[var(--border)]">
               <X size={15} /> {frameCtxMenu.el.frameMediaType === "video" ? "Remover vídeo" : "Remover foto"}
             </button>
           )}
 
           <button onClick={() => { bringForward(frameCtxMenu.el); closeFrameCtx(); }}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 transition-colors border-b border-[#2a2a2a]">
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
             <ArrowUp size={15} className="text-blue-400" /> Trazer à frente
           </button>
           <button onClick={() => { sendBackward(frameCtxMenu.el); closeFrameCtx(); }}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 transition-colors border-b border-[#2a2a2a]">
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
             <ArrowDown size={15} className="text-blue-400" /> Enviar para trás
           </button>
 
-          <button onClick={closeFrameCtx} className="w-full px-4 py-3 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+          <button onClick={closeFrameCtx} className="w-full px-4 py-3 text-sm text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
             Fechar
           </button>
         </div>
@@ -1465,15 +1504,15 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         onClick={() => setShowLayoutPicker(false)}
       >
         <div
-          className="w-full sm:max-w-sm bg-[#111] border-t sm:border border-[#222] rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-4"
+          className="w-full sm:max-w-sm bg-[var(--bg-2)] border-t sm:border border-[var(--border-2)] rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-4"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-2">
             <LayoutTemplate size={18} className="text-brand-500" />
             <span className="text-base font-bold text-white">Escolher layout</span>
-            <button onClick={() => setShowLayoutPicker(false)} className="ml-auto text-gray-500 hover:text-white transition-colors"><X size={16} /></button>
+            <button onClick={() => setShowLayoutPicker(false)} className="ml-auto text-[var(--text-3)] hover:text-[var(--text)] transition-colors"><X size={16} /></button>
           </div>
-          <p className="text-xs text-gray-500 -mt-2">O texto e imagem existentes serão redistribuídos no novo layout.</p>
+          <p className="text-xs text-[var(--text-3)] -mt-2">O texto e imagem existentes serão redistribuídos no novo layout.</p>
 
           <div className="grid grid-cols-3 gap-3">
             {([
@@ -1487,10 +1526,10 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               <button
                 key={v}
                 onClick={() => applyLayout(v)}
-                className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[#222] bg-[#0a0a0a] hover:border-brand-500/50 hover:bg-brand-600/5 transition-all group"
+                className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/50 hover:bg-brand-600/5 transition-all group"
               >
                 {/* Mini visual preview */}
-                <div className="w-12 h-16 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] relative overflow-hidden">
+                <div className="w-12 h-16 rounded-lg bg-[var(--bg-2)] border border-[var(--border-2)] relative overflow-hidden">
                   {v === 0 && (<><div className="absolute inset-0 bg-brand-500/15" /><div className="absolute bottom-0 inset-x-0 h-2/5 bg-black/60" /><div className="absolute bottom-2 inset-x-1.5 h-2 bg-white/40 rounded-sm" /><div className="absolute bottom-5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /></>)}
                   {v === 1 && (<><div className="absolute inset-0 bg-brand-500/15" /><div className="absolute top-0 inset-x-0 h-2/5 bg-black/50" /><div className="absolute top-3 left-1.5 w-1 h-3 bg-purple-400/60 rounded-sm" /><div className="absolute top-3 left-3.5 right-1.5 h-2 bg-white/40 rounded-sm" /></>)}
                   {v === 2 && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[#222]" /><div className="absolute top-2 inset-x-1.5 h-2 bg-white/40 rounded-sm" /><div className="absolute top-5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-brand-600/25 rounded-b-lg" /></>)}
@@ -1499,14 +1538,14 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                   {v === 5 && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-brand-500/25" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#222]" /><div className="absolute bottom-4 inset-x-1.5 h-2 bg-white/40 rounded-sm" /><div className="absolute bottom-1.5 inset-x-1.5 h-1 bg-white/20 rounded-sm" /></>)}
                 </div>
                 <div className="text-center">
-                  <p className="text-xs font-semibold text-gray-200 group-hover:text-white transition-colors">{label}</p>
-                  <p className="text-[9px] text-gray-600 leading-tight mt-0.5">{desc}</p>
+                  <p className="text-xs font-semibold text-[var(--text-2)] group-hover:text-[var(--text)] transition-colors">{label}</p>
+                  <p className="text-[9px] text-[var(--text-3)] leading-tight mt-0.5">{desc}</p>
                 </div>
               </button>
             ))}
           </div>
 
-          <button onClick={() => setShowLayoutPicker(false)} className="w-full py-2.5 rounded-xl border border-[#222] text-sm text-gray-500 hover:text-gray-300 transition-colors">
+          <button onClick={() => setShowLayoutPicker(false)} className="w-full py-2.5 rounded-xl border border-[var(--border-2)] text-sm text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
             Cancelar
           </button>
         </div>
@@ -1522,7 +1561,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         onClick={() => setShowThemeInput(false)}
       >
         <div
-          className="w-full sm:max-w-sm bg-[#111] border-t sm:border border-[#222] rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-4"
+          className="w-full sm:max-w-sm bg-[var(--bg-2)] border-t sm:border border-[var(--border-2)] rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-4"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-2">
@@ -1538,12 +1577,12 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               if (e.key === "Escape") setShowThemeInput(false);
             }}
             placeholder="Ex: tecnologia, saúde, negócios..."
-            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600"
+            className="w-full bg-[var(--bg-3)] border border-[var(--border-2)] rounded-xl px-4 py-3 text-[var(--text)] text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]"
           />
           <div className="flex gap-2">
             <button
               onClick={() => setShowThemeInput(false)}
-              className="flex-1 py-2.5 rounded-xl bg-[#222] border border-[#333] text-gray-500 text-sm"
+              className="flex-1 py-2.5 rounded-xl bg-[var(--bg-3)] border border-[var(--border-2)] text-[var(--text-2)] text-sm"
             >
               Cancelar
             </button>

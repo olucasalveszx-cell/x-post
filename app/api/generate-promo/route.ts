@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GeneratedContent } from "@/types";
+import { geminiText } from "@/lib/gemini-text";
 
 export const maxDuration = 60;
 
@@ -9,11 +10,6 @@ export async function POST(req: NextRequest) {
 
     if (!productName?.trim()) {
       return NextResponse.json({ error: "Nome do produto obrigatório" }, { status: 400 });
-    }
-
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "ANTHROPIC_API_KEY não configurada" }, { status: 500 });
     }
 
     const priceText = price ? `R$ ${price}` : "preço a definir";
@@ -87,27 +83,7 @@ Responda APENAS com JSON válido (sem markdown):
   ]
 }`;
 
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 2048,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-
-    const anthropicData = await anthropicRes.json();
-    if (!anthropicRes.ok) {
-      const errMsg = anthropicData?.error?.message ?? anthropicRes.statusText;
-      return NextResponse.json({ error: `API Anthropic: ${errMsg}` }, { status: 500 });
-    }
-
-    const rawText: string = anthropicData.content?.[0]?.text ?? "";
+    const rawText = await geminiText(prompt, { maxTokens: 2048 });
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return NextResponse.json({ error: "Resposta inválida da IA" }, { status: 500 });

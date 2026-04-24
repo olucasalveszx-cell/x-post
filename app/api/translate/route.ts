@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { geminiText, geminiVision } from "@/lib/gemini-text";
 
 async function fetchPageText(url: string): Promise<string> {
   const res = await fetch(url, {
@@ -47,7 +47,6 @@ Responda APENAS com JSON válido (sem markdown):
 Crie exatamente ${slideCount} slides.`;
 
 export async function POST(req: NextRequest) {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   try {
     const { url, text, imageBase64, imageMimeType, slideCount = 7 } = await req.json();
 
@@ -55,26 +54,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Informe URL, texto ou imagem" }, { status: 400 });
     }
 
-    let message: Anthropic.Message;
+    let rawText: string;
 
-    // --- Modo imagem: Claude lê o screenshot com visão ---
+    // --- Modo imagem: Gemini lê o screenshot com visão ---
     if (imageBase64) {
-      const mime = (imageMimeType ?? "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-
-      message = await client.messages.create({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 4096,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "image",
-                source: { type: "base64", media_type: mime, data: imageBase64 },
-              },
-              {
-                type: "text",
-                text: `Você é um especialista em marketing digital para Instagram no Brasil.
+      const mime = imageMimeType ?? "image/jpeg";
+      const prompt = `Você é um especialista em marketing digital para Instagram no Brasil.
 
 Esta é uma imagem de um post ou artigo estrangeiro. Sua tarefa é:
 1. Ler e extrair todo o texto visível na imagem
@@ -82,12 +67,8 @@ Esta é uma imagem de um post ou artigo estrangeiro. Sua tarefa é:
 3. Traduzir e ADAPTAR o conteúdo para o público brasileiro (linguagem natural BR, não tradução literal)
 4. Criar um carrossel de ${slideCount} slides impactantes para Instagram
 
-${slidesPrompt(slideCount)}`,
-              },
-            ],
-          },
-        ],
-      });
+${slidesPrompt(slideCount)}`;
+      rawText = await geminiVision(prompt, imageBase64, mime, { maxTokens: 4096 });
     } else {
       // --- Modo texto / URL ---
       let sourceContent = text ?? "";
@@ -107,13 +88,7 @@ ${slidesPrompt(slideCount)}`,
         return NextResponse.json({ error: "Nenhum conteúdo encontrado" }, { status: 400 });
       }
 
-      message = await client.messages.create({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 4096,
-        messages: [
-          {
-            role: "user",
-            content: `Você é um especialista em marketing digital para Instagram no Brasil.
+      const prompt = `Você é um especialista em marketing digital para Instagram no Brasil.
 
 Abaixo está o conteúdo original de um post estrangeiro.
 Sua tarefa é:
@@ -124,13 +99,10 @@ Sua tarefa é:
 CONTEÚDO ORIGINAL:
 ${sourceContent}
 
-${slidesPrompt(slideCount)}`,
-          },
-        ],
-      });
+${slidesPrompt(slideCount)}`;
+      rawText = await geminiText(prompt, { maxTokens: 4096 });
     }
 
-    const rawText = message.content[0].type === "text" ? message.content[0].text : "";
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return NextResponse.json({ error: "Resposta inválida da IA" }, { status: 500 });

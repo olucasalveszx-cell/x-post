@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GeneratedContent } from "@/types";
 import { redisIncr } from "@/lib/redis";
+import { geminiText } from "@/lib/gemini-text";
 
 export const maxDuration = 60;
 
@@ -12,12 +13,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Prompt obrigatório" }, { status: 400 });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "ANTHROPIC_API_KEY não configurada" }, { status: 500 });
-    }
-
-    const systemInstructions = `Você é um gerador de carrosséis para Instagram. O usuário vai descrever exatamente como quer os slides — siga as instruções dele fielmente.
+    const system = `Você é um gerador de carrosséis para Instagram. O usuário vai descrever exatamente como quer os slides — siga as instruções dele fielmente.
 
 REGRAS OBRIGATÓRIAS (independente do prompt do usuário):
 1. Responda APENAS com JSON válido, sem markdown, sem comentários
@@ -47,34 +43,9 @@ FORMATO DE RESPOSTA:
   ]
 }`;
 
-    const userMessage = `Crie um carrossel com ${slideCount} slides seguindo estas instruções:
+    const userMessage = `Crie um carrossel com ${slideCount} slides seguindo estas instruções:\n\n${customPrompt}`;
 
-${customPrompt}`;
-
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 3000,
-        system: systemInstructions,
-        messages: [{ role: "user", content: userMessage }],
-      }),
-    });
-
-    const anthropicData = await anthropicRes.json();
-    if (!anthropicRes.ok) {
-      return NextResponse.json(
-        { error: anthropicData?.error?.message ?? anthropicRes.statusText },
-        { status: 500 }
-      );
-    }
-
-    const rawText: string = anthropicData.content?.[0]?.text ?? "";
+    const rawText = await geminiText(userMessage, { system, maxTokens: 3000 });
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return NextResponse.json({ error: "Resposta inválida da IA" }, { status: 500 });

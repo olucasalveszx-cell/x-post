@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { consumeCredits } from "@/lib/credits";
 import { redisIncr } from "@/lib/redis";
+import { geminiText } from "@/lib/gemini-text";
 
 export const maxDuration = 60;
 
@@ -66,13 +67,6 @@ export async function POST(req: NextRequest) {
           { status: 402 }
         );
       }
-    }
-
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    console.log("[generate] key presente:", !!apiKey, "prefix:", apiKey?.slice(0, 14));
-
-    if (!apiKey) {
-      return NextResponse.json({ error: "ANTHROPIC_API_KEY não configurada no Vercel" }, { status: 500 });
     }
 
     const sourcesText = searchResults
@@ -146,30 +140,7 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
   ]
 }`;
 
-    // Fetch direto — sem SDK
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 2048,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-
-    const anthropicData = await anthropicRes.json();
-    console.log("[generate] anthropic status:", anthropicRes.status, "error:", anthropicData.error);
-
-    if (!anthropicRes.ok) {
-      const errMsg = anthropicData?.error?.message ?? anthropicRes.statusText;
-      return NextResponse.json({ error: `API Anthropic: ${errMsg}` }, { status: 500 });
-    }
-
-    const rawText: string = anthropicData.content?.[0]?.text ?? "";
+    const rawText = await geminiText(prompt, { maxTokens: 1500 });
 
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {

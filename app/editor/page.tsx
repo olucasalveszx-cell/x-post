@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuid } from "uuid";
-import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle, Instagram, Check } from "lucide-react";
+import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle, Instagram, Check, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
@@ -188,6 +188,22 @@ export default function EditorPage() {
     }
   }, []);
 
+  // ── Carregar slides gerados pelo admin (XPost generator) ─────
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("xpost-admin-slides");
+      if (raw) {
+        sessionStorage.removeItem("xpost-admin-slides");
+        const adminSlides = JSON.parse(raw);
+        if (Array.isArray(adminSlides) && adminSlides.length > 0) {
+          setProjects((prev) => prev.map((p, i) => i === 0 ? { ...p, slides: adminSlides } : p));
+          setCurrentIndex(0);
+        }
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Profile picker (aguarda animação se houver) ───────────────
   useEffect(() => {
     if (!loginAnimDone) return;
@@ -341,14 +357,12 @@ export default function EditorPage() {
       const updatedProfile = updated.elements.find((el) => el.type === "profile");
       const oldProfile = project?.slides.find((s) => s.id === updated.id)?.elements.find((el) => el.type === "profile");
 
-      // Verifica se algum campo visual do perfil mudou
+      // Verifica se campos de identidade do perfil mudaram (propaga para todos os slides)
       const profileChanged = updatedProfile && (
-        updatedProfile.profileName       !== oldProfile?.profileName ||
-        updatedProfile.profileHandle     !== oldProfile?.profileHandle ||
-        updatedProfile.profileVerified   !== oldProfile?.profileVerified ||
-        updatedProfile.profileNameColor  !== oldProfile?.profileNameColor ||
-        updatedProfile.profileHandleColor !== oldProfile?.profileHandleColor ||
-        updatedProfile.src               !== oldProfile?.src
+        updatedProfile.profileName     !== oldProfile?.profileName ||
+        updatedProfile.profileHandle   !== oldProfile?.profileHandle ||
+        updatedProfile.profileVerified !== oldProfile?.profileVerified ||
+        updatedProfile.src             !== oldProfile?.src
       );
 
       const next = prev.map((p) =>
@@ -356,19 +370,17 @@ export default function EditorPage() {
           ...p,
           slides: p.slides.map((s) => {
             if (s.id === updated.id) return updated;
-            // Propaga campos visuais do perfil para os demais slides
+            // Propaga apenas identidade do perfil (nome, handle, avatar) — cores ficam por slide
             if (profileChanged && updatedProfile) {
               return {
                 ...s,
                 elements: s.elements.map((el) =>
                   el.type !== "profile" ? el : {
                     ...el,
-                    src:                updatedProfile.src,
-                    profileName:        updatedProfile.profileName,
-                    profileHandle:      updatedProfile.profileHandle,
-                    profileVerified:    updatedProfile.profileVerified,
-                    profileNameColor:   updatedProfile.profileNameColor,
-                    profileHandleColor: updatedProfile.profileHandleColor,
+                    src:             updatedProfile.src,
+                    profileName:     updatedProfile.profileName,
+                    profileHandle:   updatedProfile.profileHandle,
+                    profileVerified: updatedProfile.profileVerified,
                   }
                 ),
               };
@@ -562,6 +574,17 @@ export default function EditorPage() {
 
   const applyThemeToAll = useCallback((bg: string, textColor: string) => {
     const pid = activeProjectIdRef.current;
+
+    // Determina se o fundo é escuro para adaptar padrão e cores de perfil
+    const hexToLuminance = (hex: string) => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return r * 0.299 + g * 0.587 + b * 0.114;
+    };
+    const isDark = hexToLuminance(bg) < 128;
+    const profileHandleColor = isDark ? "rgba(255,255,255,0.50)" : "rgba(0,0,0,0.45)";
+
     setProjects((prev) => prev.map((p) => {
       if (p.id !== pid) return p;
       const newSlides = p.slides.map((s) => ({
@@ -569,16 +592,34 @@ export default function EditorPage() {
         backgroundColor: bg,
         backgroundImageUrl: undefined,
         backgroundGradient: undefined,
-        elements: s.elements.map((el) =>
-          el.type === "text"
-            ? { ...el, style: { ...(el.style as any), color: textColor } }
-            : el
-        ),
+        // Troca o padrão de grade conforme o brilho do fundo
+        ...(s.backgroundPattern ? { backgroundPattern: (isDark ? "grid-dark" : "grid-light") as "grid-light" | "grid-dark" } : {}),
+        elements: s.elements.map((el) => {
+          if (el.type === "text") return { ...el, style: { ...(el.style as any), color: textColor } };
+          if (el.type === "profile") return { ...el, profileNameColor: textColor, profileHandleColor };
+          return el;
+        }),
       }));
       pushHistory(newSlides);
       return { ...p, slides: newSlides };
     }));
   }, [setProjects, pushHistory]);
+
+  const applyProfileColorToAll = useCallback((nameColor: string, handleColor: string) => {
+    const pid = activeProjectIdRef.current;
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== pid) return p;
+      return {
+        ...p,
+        slides: p.slides.map((s) => ({
+          ...s,
+          elements: s.elements.map((el) =>
+            el.type !== "profile" ? el : { ...el, profileNameColor: nameColor, profileHandleColor: handleColor }
+          ),
+        })),
+      };
+    }));
+  }, [setProjects]);
 
   const handleFormatChange = (f: Format) => {
     setFormat(f);
@@ -712,6 +753,20 @@ export default function EditorPage() {
         </div>
 
         <div className="flex items-center gap-1.5">
+          {selectedElement && (
+            <button
+              onClick={() => {
+                updateSlide({ ...currentSlide, elements: currentSlide.elements.filter(el => el.id !== selectedElement.id) });
+                setSelectedElementId(null);
+              }}
+              title="Excluir elemento"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}
+            >
+              <Trash2 size={14} />
+              <span className="hidden sm:inline">Excluir</span>
+            </button>
+          )}
           <Link href="/queue"
             className="flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-semibold transition-opacity hover:opacity-80"
             style={{ background: "rgba(99,102,241,0.1)", borderColor: "rgba(99,102,241,0.3)", color: "#818cf8" }}>
@@ -769,12 +824,12 @@ export default function EditorPage() {
           <div className="hidden md:block">
             {igAccount ? (
               <button onClick={() => setShowPublish(true)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium">
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium text-white">
                 <User size={14} /> @{igAccount.username}
               </button>
             ) : (
               <button onClick={handleIGLogin}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium">
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium text-white">
                 <LogIn size={14} /> Login Instagram
               </button>
             )}
@@ -791,7 +846,7 @@ export default function EditorPage() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={restoreAutosave} className="px-3 py-1 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium transition-colors">Restaurar</button>
-            <button onClick={dismissAutosave} className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 text-xs transition-colors">Descartar</button>
+            <button onClick={dismissAutosave} className="px-3 py-1 rounded-lg bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)] text-xs transition-colors">Descartar</button>
           </div>
         </div>
       )}
@@ -814,7 +869,7 @@ export default function EditorPage() {
             </button>
             <button
               onClick={() => setTutorialNotif(null)}
-              className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 text-xs transition-colors"
+              className="px-3 py-1 rounded-lg bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)] text-xs transition-colors"
             >
               Ver depois
             </button>
@@ -881,6 +936,7 @@ export default function EditorPage() {
                 if (f) handleFormatChange(f);
               }}
               onApplyThemeToAll={applyThemeToAll}
+              onApplyProfileColorToAll={applyProfileColorToAll}
             />
           )}
 
@@ -984,7 +1040,7 @@ export default function EditorPage() {
       )}
 
       {showPublish && <PublishModal slides={slides} account={igAccount} onClose={() => setShowPublish(false)} onLoginClick={handleIGLogin} />}
-      <AIAssistant open={showAI} onClose={() => setShowAI(false)} />
+      <AIAssistant open={showAI} onClose={() => setShowAI(false)} onUseInGenerator={() => { setShowAI(false); setMobilePanel("side"); }} />
       <ProfileModal open={showProfile} initialTab={profileInitialTab} onClose={() => { setShowProfile(false); setProfileInitialTab(undefined); }} onOpenTutorial={() => setShowTutorial(true)} />
       <StyleSelectorModal
         open={showStyleSelector}

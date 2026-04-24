@@ -9,6 +9,7 @@ import {
   setTopicVideos,
   MemberVideo,
 } from "@/lib/members-area";
+import { redisLPush, redisLTrim } from "@/lib/redis";
 
 function isAdmin(email: string) {
   return email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase().trim();
@@ -41,6 +42,18 @@ export async function POST(req: NextRequest) {
   };
   videos.push(newVideo);
   await setTopicVideos(topicId, videos);
+
+  // Broadcast global notification
+  const topic = TOPIC_DEFS.find((t) => t.id === topicId);
+  const broadcastNotif = JSON.stringify({
+    id: uuid(),
+    type: "member_video",
+    title: `Novo conteúdo: ${topic?.title ?? topicId}`,
+    body: `"${newVideo.title}" está disponível na área de membros.`,
+    createdAt: new Date().toISOString(),
+  });
+  await redisLPush("global:notifs", broadcastNotif);
+  await redisLTrim("global:notifs", 0, 99);
 
   return NextResponse.json({ video: newVideo });
 }

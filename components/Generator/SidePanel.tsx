@@ -41,7 +41,7 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
             }`}
           >
             {t.icon}
-            <span className="hidden sm:inline">{t.label}</span>
+            <span>{t.label}</span>
           </button>
         ))}
       </div>

@@ -135,7 +135,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       setProgress(90);
       const canShare = typeof navigator.share === "function" && navigator.canShare?.({ files });
       if (canShare) {
-        await navigator.share({ files, title: "XPost Zone Carrossel" });
+        await navigator.share({ files, title: "XPost Carrossel" });
         setProgress(100); setStatus("success");
         setMessage("Imagens enviadas para o Instagram!");
       } else {
@@ -196,7 +196,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       setProgress(90);
       const canShare = typeof navigator.share === "function" && navigator.canShare?.({ files });
       if (canShare) {
-        await navigator.share({ files, text: caption, title: "XPost Zone" });
+        await navigator.share({ files, text: caption, title: "XPost" });
       } else {
         // Fallback: baixa as imagens
         for (let i = 0; i < dataUrls.length; i++) {
@@ -215,26 +215,26 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl w-full max-w-md flex flex-col max-h-[90vh] relative overflow-hidden">
+      <div className="bg-[var(--bg-3)] border border-[var(--border-2)] rounded-2xl w-full max-w-md flex flex-col max-h-[90vh] relative overflow-hidden">
 
         {/* Pop-up confirmação de música (overlay) */}
         {showMusicConfirm && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/75 backdrop-blur-sm p-6">
-            <div className="bg-[#1e1e1e] border border-[#333] rounded-2xl p-6 flex flex-col items-center gap-4 w-full max-w-xs text-center">
+            <div className="bg-[var(--bg-3)] border border-[var(--border)] rounded-2xl p-6 flex flex-col items-center gap-4 w-full max-w-xs text-center">
               <div className="w-12 h-12 rounded-full flex items-center justify-center"
                 style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)" }}>
                 <Music size={22} className="text-white" />
               </div>
               <div>
-                <p className="font-bold text-white text-base mb-1">Adicionar música?</p>
-                <p className="text-xs text-gray-400 leading-relaxed">
+                <p className="font-bold text-[var(--text)] text-base mb-1">Adicionar música?</p>
+                <p className="text-xs text-[var(--text-2)] leading-relaxed">
                   Deseja adicionar música ao post agendado? Você escolherá a música direto no Instagram.
                 </p>
               </div>
               <div className="flex gap-2 w-full">
                 <button
                   onClick={async () => { setShowMusicConfirm(false); await handleSchedule(); }}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-[#333] text-gray-300 hover:bg-[#2a2a2a] transition-colors"
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text)] hover:bg-[var(--bg-4)] transition-colors"
                 >
                   Não, agendar
                 </button>
@@ -251,21 +251,21 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a] shrink-0">
+        <div className="flex items-center justify-between p-5 border-b border-[var(--border-2)] shrink-0">
           <div className="flex items-center gap-2 font-semibold">
             <Instagram size={20} className="text-brand-500" />
             Publicar no Instagram
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button onClick={onClose} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={20} /></button>
         </div>
 
         {/* Steps */}
-        <div className="flex border-b border-[#2a2a2a] shrink-0">
+        <div className="flex border-b border-[var(--border-2)] shrink-0">
           {STEPS.map((s, i) => (
             <button key={s.key} onClick={() => setStep(s.key)}
-              className={`flex-1 py-2.5 text-xs font-medium transition-colors relative ${step === s.key ? "text-white" : "text-gray-500 hover:text-gray-300"}`}>
+              className={`flex-1 py-2.5 text-xs font-medium transition-colors relative ${step === s.key ? "text-[var(--text)]" : "text-[var(--text-3)] hover:text-[var(--text)]"}`}>
               <span className="inline-flex items-center justify-center gap-1">
-                <span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-bold ${step === s.key ? "bg-brand-600 text-white" : "bg-[#2a2a2a] text-gray-500"}`}>{i + 1}</span>
+                <span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-bold ${step === s.key ? "bg-brand-600 text-white" : "bg-[var(--bg-4)] text-[var(--text-3)]"}`}>{i + 1}</span>
                 <span className="hidden sm:inline">{s.label}</span>
               </span>
               {step === s.key && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500" />}
@@ -280,11 +280,11 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
           {step === "caption" && (
             <>
               <div>
-                <label className="text-sm text-gray-400 mb-1 block">Legenda</label>
+                <label className="text-sm text-[var(--text-2)] mb-1 block">Legenda</label>
                 <textarea value={caption} onChange={(e) => setCaption(e.target.value)}
                   placeholder="Digite a legenda, hashtags..."
                   rows={6}
-                  className="w-full bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600 resize-none"
+                  className="w-full bg-[var(--bg-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-600 resize-none"
                   autoFocus />
                 <p className="text-xs text-gray-600 mt-1">{caption.length} caracteres</p>
               </div>
@@ -295,52 +295,52 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
           {step === "mode" && (
             <>
               <div>
-                <p className="text-sm text-gray-400 mb-2">Tipo de post:</p>
+                <p className="text-sm text-[var(--text-2)] mb-2">Tipo de post:</p>
                 <div className="grid grid-cols-2 gap-2">
                   <button onClick={() => setPostType("carousel")}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${postType === "carousel" ? "border-brand-500 bg-brand-500/10" : "border-[#2a2a2a] hover:border-[#444]"}`}>
-                    <LayoutGrid size={20} className={postType === "carousel" ? "text-brand-400" : "text-gray-500"} />
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${postType === "carousel" ? "border-brand-500 bg-brand-500/10" : "border-[var(--border-2)] hover:border-[var(--border)]"}`}>
+                    <LayoutGrid size={20} className={postType === "carousel" ? "text-brand-400" : "text-[var(--text-3)]"} />
                     <div className="text-center">
-                      <p className="text-xs font-semibold text-white">Carrossel</p>
-                      <p className="text-[10px] text-gray-500">Feed · até 10 slides</p>
+                      <p className="text-xs font-semibold text-[var(--text)]">Carrossel</p>
+                      <p className="text-[10px] text-[var(--text-3)]">Feed · até 10 slides</p>
                     </div>
                   </button>
                   <button onClick={() => setPostType("stories")}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${postType === "stories" ? "border-brand-500 bg-brand-500/10" : "border-[#2a2a2a] hover:border-[#444]"}`}>
-                    <BookImage size={20} className={postType === "stories" ? "text-brand-400" : "text-gray-500"} />
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${postType === "stories" ? "border-brand-500 bg-brand-500/10" : "border-[var(--border-2)] hover:border-[var(--border)]"}`}>
+                    <BookImage size={20} className={postType === "stories" ? "text-brand-400" : "text-[var(--text-3)]"} />
                     <div className="text-center">
-                      <p className="text-xs font-semibold text-white">Stories</p>
-                      <p className="text-[10px] text-gray-500">1 story por slide</p>
+                      <p className="text-xs font-semibold text-[var(--text)]">Stories</p>
+                      <p className="text-[10px] text-[var(--text-3)]">1 story por slide</p>
                     </div>
                   </button>
                 </div>
               </div>
 
-              <div className="w-full h-px bg-[#2a2a2a]" />
-              <p className="text-sm text-gray-400">Como você quer publicar?</p>
+              <div className="w-full h-px bg-[var(--bg-4)]" />
+              <p className="text-sm text-[var(--text-2)]">Como você quer publicar?</p>
 
               <button onClick={() => setPublishMode("api")}
-                className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all text-left ${publishMode === "api" ? "border-brand-500 bg-brand-500/10" : "border-[#2a2a2a] hover:border-[#444]"}`}>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${publishMode === "api" ? "bg-brand-600" : "bg-[#222]"}`}>
+                className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all text-left ${publishMode === "api" ? "border-brand-500 bg-brand-500/10" : "border-[var(--border-2)] hover:border-[var(--border)]"}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${publishMode === "api" ? "bg-brand-600" : "bg-[var(--bg-4)]"}`}>
                   <Upload size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white mb-0.5">Upload direto</p>
-                  <p className="text-xs text-gray-400">Publica automaticamente via API. Rápido, sem abrir o Instagram.</p>
+                  <p className="text-sm font-semibold text-[var(--text)] mb-0.5">Upload direto</p>
+                  <p className="text-xs text-[var(--text-2)]">Publica automaticamente via API. Rápido, sem abrir o Instagram.</p>
                 </div>
-                <div className={`w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 ml-auto ${publishMode === "api" ? "border-brand-500 bg-brand-500" : "border-[#444]"}`} />
+                <div className={`w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 ml-auto ${publishMode === "api" ? "border-brand-500 bg-brand-500" : "border-[var(--border)]"}`} />
               </button>
 
               <button onClick={() => setPublishMode("manual")}
-                className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all text-left ${publishMode === "manual" ? "border-brand-500 bg-brand-500/10" : "border-[#2a2a2a] hover:border-[#444]"}`}>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${publishMode === "manual" ? "bg-brand-600" : "bg-[#222]"}`}>
+                className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all text-left ${publishMode === "manual" ? "border-brand-500 bg-brand-500/10" : "border-[var(--border-2)] hover:border-[var(--border)]"}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${publishMode === "manual" ? "bg-brand-600" : "bg-[var(--bg-4)]"}`}>
                   <Pencil size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white mb-0.5">Editar no Instagram</p>
-                  <p className="text-xs text-gray-400">Envia para o Instagram onde você adiciona música, localização e finaliza.</p>
+                  <p className="text-sm font-semibold text-[var(--text)] mb-0.5">Editar no Instagram</p>
+                  <p className="text-xs text-[var(--text-2)]">Envia para o Instagram onde você adiciona música, localização e finaliza.</p>
                 </div>
-                <div className={`w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 ml-auto ${publishMode === "manual" ? "border-brand-500 bg-brand-500" : "border-[#444]"}`} />
+                <div className={`w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 ml-auto ${publishMode === "manual" ? "border-brand-500 bg-brand-500" : "border-[var(--border)]"}`} />
               </button>
             </>
           )}
@@ -355,14 +355,14 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                       <User size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white">@{account.username}</p>
+                      <p className="text-sm font-medium text-[var(--text)]">@{account.username}</p>
                       <p className="text-xs text-green-400">Conta conectada</p>
                     </div>
-                    <button onClick={onLoginClick} className="text-xs text-gray-500 hover:text-white underline">Trocar</button>
+                    <button onClick={onLoginClick} className="text-xs text-[var(--text-3)] hover:text-[var(--text)] underline">Trocar</button>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    <p className="text-sm text-gray-400">Conecte sua conta Instagram:</p>
+                    <p className="text-sm text-[var(--text-2)]">Conecte sua conta Instagram:</p>
                     <button onClick={onLoginClick}
                       className="flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm">
                       <LogIn size={16} />Login com Instagram
@@ -371,23 +371,23 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 )
               )}
 
-              <div className="bg-[#111] rounded-xl p-3 flex flex-col gap-2 text-sm">
+              <div className="bg-[var(--bg-3)] rounded-xl p-3 flex flex-col gap-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Slides</span>
-                  <span className="text-white font-medium">{slides.length}</span>
+                  <span className="text-[var(--text-3)]">Slides</span>
+                  <span className="text-[var(--text)] font-medium">{slides.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Tipo</span>
-                  <span className="text-white font-medium">{postType === "carousel" ? "Carrossel (Feed)" : "Stories"}</span>
+                  <span className="text-[var(--text-3)]">Tipo</span>
+                  <span className="text-[var(--text)] font-medium">{postType === "carousel" ? "Carrossel (Feed)" : "Stories"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Modo</span>
-                  <span className="text-white font-medium">{publishMode === "api" ? "Upload direto" : "Editar no Instagram"}</span>
+                  <span className="text-[var(--text-3)]">Modo</span>
+                  <span className="text-[var(--text)] font-medium">{publishMode === "api" ? "Upload direto" : "Editar no Instagram"}</span>
                 </div>
                 {caption && (
                   <div className="flex justify-between gap-2">
-                    <span className="text-gray-500 shrink-0">Legenda</span>
-                    <span className="text-gray-300 text-xs text-right line-clamp-2">{caption.slice(0, 80)}{caption.length > 80 ? "…" : ""}</span>
+                    <span className="text-[var(--text-3)] shrink-0">Legenda</span>
+                    <span className="text-[var(--text)] text-xs text-right line-clamp-2">{caption.slice(0, 80)}{caption.length > 80 ? "…" : ""}</span>
                   </div>
                 )}
               </div>
@@ -398,8 +398,8 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
 
               {isLoading && (
                 <div>
-                  <p className="text-xs text-gray-400 mb-1.5">{statusLabel[status] ?? ""}</p>
-                  <div className="w-full bg-[#333] rounded-full h-1.5">
+                  <p className="text-xs text-[var(--text-2)] mb-1.5">{statusLabel[status] ?? ""}</p>
+                  <div className="w-full bg-[var(--bg-4)] rounded-full h-1.5">
                     <div className="bg-brand-500 h-full rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
                   </div>
                 </div>
@@ -430,12 +430,12 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 <div className="flex flex-col gap-2">
                   {!showSchedule ? (
                     <button onClick={() => setShowSchedule(true)}
-                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-[#2a2a2a] hover:border-brand-500/40 bg-[#111] hover:bg-brand-500/5 text-gray-400 hover:text-white text-sm transition-all">
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-[var(--border-2)] hover:border-brand-500/40 bg-[var(--bg-3)] hover:bg-brand-500/5 text-[var(--text-2)] hover:text-[var(--text)] text-sm transition-all">
                       <Calendar size={14} /> Agendar para depois
                     </button>
                   ) : (
                     <div className="flex flex-col gap-2 p-3 rounded-xl border border-brand-500/30 bg-brand-500/5">
-                      <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                      <p className="text-xs text-[var(--text-2)] flex items-center gap-1.5">
                         <Clock size={12} className="text-brand-400" /> Escolha data e hora:
                       </p>
                       <input
@@ -443,11 +443,11 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                         value={scheduledAt}
                         onChange={(e) => setScheduledAt(e.target.value)}
                         min={new Date(Date.now() + 11 * 60 * 1000).toISOString().slice(0, 16)}
-                        className="w-full bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                        className="w-full bg-[var(--bg-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-brand-500"
                       />
                       <div className="flex gap-2">
                         <button onClick={() => setShowSchedule(false)}
-                          className="flex-1 py-2 rounded-lg border border-[#333] text-xs text-gray-400 hover:text-white transition-colors">
+                          className="flex-1 py-2 rounded-lg border border-[var(--border)] text-xs text-[var(--text-2)] hover:text-[var(--text)] transition-colors">
                           Cancelar
                         </button>
                         <button
@@ -478,10 +478,10 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
 
         {/* Footer navegação */}
         {status !== "success" && (
-          <div className="flex gap-2 p-4 border-t border-[#2a2a2a] shrink-0">
+          <div className="flex gap-2 p-4 border-t border-[var(--border-2)] shrink-0">
             {prevStep[step] && (
               <button onClick={() => setStep(prevStep[step]!)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#222] hover:bg-[#2a2a2a] text-sm text-gray-300">
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--bg-4)] hover:bg-[var(--bg-4)] text-sm text-[var(--text)]">
                 <ChevronLeft size={15} />Voltar
               </button>
             )}

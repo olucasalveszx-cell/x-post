@@ -13,7 +13,7 @@ declare global {
 }
 
 interface Message { role: "user" | "assistant"; content: string; }
-interface Props { open: boolean; onClose: () => void; }
+interface Props { open: boolean; onClose: () => void; onUseInGenerator?: () => void; }
 
 const STORAGE_KEY = "nexa-chat-history";
 
@@ -177,7 +177,7 @@ function NexaOrb({ state, size = 56 }: { state: OrbState; size?: number }) {
 }
 
 // ── Componente principal ────────────────────────────────────────
-export default function AIAssistant({ open, onClose }: Props) {
+export default function AIAssistant({ open, onClose, onUseInGenerator }: Props) {
   const [messages, setMessages]       = useState<Message[]>([]);
   const [input, setInput]             = useState("");
   const [loading, setLoading]         = useState(false);
@@ -475,12 +475,12 @@ export default function AIAssistant({ open, onClose }: Props) {
   }, []);
 
   const sendPromptToGenerator = (prompt: string) => {
+    // sessionStorage garante entrega mesmo no mobile (GeneratorPanel ainda não montado)
+    sessionStorage.setItem("nexa-pending-prompt", prompt);
+    // evento para desktop (GeneratorPanel já montado e escutando)
     window.dispatchEvent(new CustomEvent("nexa-prompt", { detail: { prompt } }));
-    const toast = document.createElement("div");
-    toast.textContent = "✓ Prompt enviado ao Gerador!";
-    toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#4f46e5;color:white;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999999;pointer-events:none;";
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
+    onClose();
+    onUseInGenerator?.();
   };
 
   const renderText = (text: string) =>

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { geminiText } from "@/lib/gemini-text";
 
 export const maxDuration = 30;
-
-const client = new Anthropic();
 
 export async function POST(req: NextRequest) {
   const { topic, tone, format, slides } = await req.json();
@@ -40,13 +38,7 @@ Regras:
 - Escreva tudo em português brasileiro`;
 
   try {
-    const msg = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const raw = (msg.content[0] as any).text?.trim() ?? "";
+    const raw = await geminiText(prompt, { maxTokens: 1024 });
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Resposta inválida da IA");
 

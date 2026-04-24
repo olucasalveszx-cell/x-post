@@ -17,13 +17,13 @@ export default function LoginAnimation({ onComplete }: Props) {
   const imgRef     = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
-    const FLY     = 1900;
-    const launch  = 150;
+    const FLY     = 1450;
+    const launch  = 100;
     const landT   = launch + Math.round(FLY * 0.70);
-    const revealT = landT   + 220;
-    const floatT  = revealT + 650;
-    const outT    = floatT  + 1300;
-    const doneT   = outT    + 750;
+    const revealT = landT   + 180;
+    const floatT  = revealT + 450;
+    const outT    = floatT  + 950;
+    const doneT   = outT    + 700;
 
     const timers: ReturnType<typeof setTimeout>[] = [];
     const t = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));

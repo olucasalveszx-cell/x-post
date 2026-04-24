@@ -166,7 +166,16 @@ export async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
           sh = img.width / destAspect;
           sy = (img.height - sh) * (objPosY / 100);
         }
-        ctx.drawImage(img, sx, sy, sw, sh, el.x, el.y, el.width, el.height);
+        const fX = (el as any).flipX; const fY = (el as any).flipY;
+        if (fX || fY) {
+          ctx.save();
+          ctx.translate(fX ? el.x + el.width : el.x, fY ? el.y + el.height : el.y);
+          ctx.scale(fX ? -1 : 1, fY ? -1 : 1);
+          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, el.width, el.height);
+          ctx.restore();
+        } else {
+          ctx.drawImage(img, sx, sy, sw, sh, el.x, el.y, el.width, el.height);
+        }
       } catch {}
     } else if (el.type === "shape") {
       const s = el.style as any;

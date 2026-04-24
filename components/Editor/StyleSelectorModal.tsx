@@ -17,17 +17,17 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
       onClick={onClose}
     >
       <div
-        className="bg-[#0d0d0d] border border-[#222] rounded-2xl p-6 w-full max-w-[520px] shadow-2xl"
+        className="bg-[var(--bg-2)] border border-[var(--border-2)] rounded-2xl p-6 w-full max-w-[520px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-bold text-white">Como quer criar?</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Escolha o estilo do carrossel</p>
+            <h2 className="text-lg font-bold text-[var(--text)]">Como quer criar?</h2>
+            <p className="text-xs text-[var(--text-3)] mt-0.5">Escolha o estilo do carrossel</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[var(--bg-3)] text-[var(--text-3)] hover:text-[var(--text)] transition-colors"
           >
             <X size={18} />
           </button>
@@ -38,7 +38,7 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
           {/* ── Gerar Layouts ── */}
           <button
             onClick={() => onSelect("layouts")}
-            className="flex flex-col gap-3 p-4 rounded-xl border border-[#2a2a2a] hover:border-brand-500/50 hover:bg-brand-500/5 transition-all text-left group"
+            className="flex flex-col gap-3 p-4 rounded-xl border border-[var(--border-2)] hover:border-brand-500/50 hover:bg-brand-500/5 transition-all text-left group"
           >
             <div className="relative w-full rounded-lg overflow-hidden" style={{ aspectRatio: "4/5" }}>
               {/* Slide stack */}
@@ -67,8 +67,8 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
               </div>
             </div>
             <div>
-              <p className="font-bold text-white text-sm group-hover:text-brand-400 transition-colors">Gerar Layouts</p>
-              <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
+              <p className="font-bold text-[var(--text)] text-sm group-hover:text-brand-400 transition-colors">Gerar Layouts</p>
+              <p className="text-[11px] text-[var(--text-3)] leading-snug mt-0.5">
                 Imagens por IA em cada slide com gradientes
               </p>
             </div>
@@ -77,7 +77,7 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
           {/* ── Estilo Twitter / X ── */}
           <button
             onClick={() => onSelect("twitter")}
-            className="flex flex-col gap-3 p-4 rounded-xl border border-[#2a2a2a] hover:border-sky-500/50 hover:bg-sky-500/5 transition-all text-left group"
+            className="flex flex-col gap-3 p-4 rounded-xl border border-[var(--border-2)] hover:border-sky-500/50 hover:bg-sky-500/5 transition-all text-left group"
           >
             <div className="relative w-full rounded-lg overflow-hidden bg-[#f4f4f4]" style={{ aspectRatio: "4/5" }}>
 
@@ -158,15 +158,15 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
               </div>
             </div>
             <div>
-              <p className="font-bold text-white text-sm group-hover:text-sky-300 transition-colors">Estilo Twitter / X</p>
-              <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
+              <p className="font-bold text-[var(--text)] text-sm group-hover:text-sky-300 transition-colors">Estilo Twitter / X</p>
+              <p className="text-[11px] text-[var(--text-3)] leading-snug mt-0.5">
                 Capa com foto + slides brancos com grid + perfil fixo
               </p>
             </div>
           </button>
         </div>
 
-        <p className="text-center text-[10px] text-gray-700 mt-4">
+        <p className="text-center text-[10px] text-[var(--text-3)] mt-4">
           Você pode mudar o estilo a qualquer momento após gerar
         </p>
       </div>
