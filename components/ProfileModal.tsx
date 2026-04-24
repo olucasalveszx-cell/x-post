@@ -43,17 +43,34 @@ interface TutorialData {
   uploadedAt: string;
 }
 
+interface MemberVideo {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  addedAt: string;
+}
+
+interface MemberTopic {
+  id: string;
+  emoji: string;
+  title: string;
+  description: string;
+  videos: MemberVideo[];
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
   initialTab?: "history" | "images" | "instagram" | "tutorial";
+  onOpenTutorial?: () => void;
 }
 
 function fmt(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export default function ProfileModal({ open, onClose, initialTab }: Props) {
+export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial }: Props) {
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
   const [tab, setTab]         = useState<"history" | "images" | "instagram" | "tutorial">("history");
@@ -64,6 +81,11 @@ export default function ProfileModal({ open, onClose, initialTab }: Props) {
   const [credits, setCredits] = useState<CreditsInfo | null>(null);
   const [tutorial, setTutorial] = useState<TutorialData | null>(null);
   const [loadingTutorial, setLoadingTutorial] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [topics, setTopics] = useState<MemberTopic[]>([]);
+  const [loadingTopics, setLoadingTopics] = useState(false);
+  const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
+  const [activeVideo, setActiveVideo] = useState<MemberVideo | null>(null);
 
   /* ── Instagram ── */
   const [igAccount, setIgAccount] = useState<{ username: string; accountId: string; token: string } | null>(null);
@@ -96,10 +118,21 @@ export default function ProfileModal({ open, onClose, initialTab }: Props) {
       if (!res.ok) return;
       const data = await res.json();
       setTutorial(data.tutorial ?? null);
-      // Marca como visto
       await fetch("/api/tutorial", { method: "POST" });
     } finally {
       setLoadingTutorial(false);
+    }
+  }, []);
+
+  const loadTopics = useCallback(async () => {
+    setLoadingTopics(true);
+    try {
+      const res = await fetch("/api/members-area");
+      if (!res.ok) return;
+      const data = await res.json();
+      setTopics(data.topics ?? []);
+    } finally {
+      setLoadingTopics(false);
     }
   }, []);
 
@@ -114,7 +147,8 @@ export default function ProfileModal({ open, onClose, initialTab }: Props) {
 
   useEffect(() => {
     if (tab === "tutorial" && !tutorial && !loadingTutorial) loadTutorial();
-  }, [tab, tutorial, loadingTutorial, loadTutorial]);
+    if (tab === "tutorial" && topics.length === 0 && !loadingTopics) loadTopics();
+  }, [tab, tutorial, loadingTutorial, loadTutorial, topics.length, loadingTopics, loadTopics]);
 
   if (!open) return null;
 
@@ -341,35 +375,99 @@ export default function ProfileModal({ open, onClose, initialTab }: Props) {
 
           {tab === "tutorial" && (
             <div className="flex flex-col gap-4">
-              {loadingTutorial ? (
-                <div className="flex justify-center py-16">
-                  <Loader2 size={22} className="text-brand-500 animate-spin" />
-                </div>
-              ) : tutorial ? (
-                <>
-                  <div className="rounded-xl overflow-hidden bg-black border border-[#1e1e1e]">
-                    <video
-                      src={tutorial.url}
-                      controls
-                      className="w-full"
-                      style={{ maxHeight: 320 }}
-                    />
-                  </div>
+
+              {/* Ações principais */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => { onClose(); onOpenTutorial?.(); }}
+                  className="flex flex-col items-center gap-2.5 px-4 py-4 rounded-2xl border border-brand-500/25 bg-brand-500/8 hover:bg-brand-500/14 transition-colors text-center"
+                >
+                  <PlayCircle size={24} className="text-brand-400" />
                   <div>
-                    <p className="font-bold text-white text-sm">{tutorial.title}</p>
-                    {tutorial.description && (
-                      <p className="text-xs text-gray-500 mt-1 leading-relaxed">{tutorial.description}</p>
-                    )}
-                    <p className="text-[10px] text-gray-700 mt-2">
-                      Publicado em {new Date(tutorial.uploadedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
-                    </p>
+                    <p className="text-xs font-bold text-white">Ver tutorial</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">Tour interativo de 6 passos</p>
                   </div>
-                </>
-              ) : (
-                <div className="text-center py-16 text-gray-600 text-sm">
-                  <PlayCircle size={32} className="mx-auto mb-3 opacity-30" />
-                  Nenhum tutorial disponível ainda.<br />
-                  <span className="text-xs">Em breve um vídeo será publicado aqui.</span>
+                </button>
+                <button
+                  onClick={() => setInboxOpen((v) => !v)}
+                  className={`flex flex-col items-center gap-2.5 px-4 py-4 rounded-2xl border transition-colors text-center ${
+                    inboxOpen ? "border-purple-500/40 bg-purple-500/10" : "border-[#222] bg-[#111] hover:border-[#333]"
+                  }`}
+                >
+                  <span className="text-2xl">📬</span>
+                  <div>
+                    <p className="text-xs font-bold text-white">Caixa de entrada</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">Vídeos de tutorial por tópico</p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Caixa de entrada — tópicos */}
+              {inboxOpen && (
+                <div className="flex flex-col gap-2">
+                  {/* Player ativo */}
+                  {activeVideo && (
+                    <div className="rounded-xl overflow-hidden bg-black border border-[#1e1e1e] mb-1">
+                      <video src={activeVideo.url} controls autoPlay className="w-full" style={{ maxHeight: 260 }} />
+                      <div className="px-3 py-2.5">
+                        <p className="text-xs font-bold text-white">{activeVideo.title}</p>
+                        {activeVideo.description && (
+                          <p className="text-[10px] text-gray-500 mt-0.5 leading-relaxed">{activeVideo.description}</p>
+                        )}
+                        <button onClick={() => setActiveVideo(null)} className="text-[10px] text-gray-600 hover:text-gray-400 mt-1 transition-colors">
+                          Fechar player
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {loadingTopics ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 size={20} className="text-brand-500 animate-spin" />
+                    </div>
+                  ) : (
+                    topics.map((topic) => (
+                      <div key={topic.id} className="rounded-xl border border-[#1e1e1e] overflow-hidden">
+                        <button
+                          onClick={() => setExpandedTopic(expandedTopic === topic.id ? null : topic.id)}
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-colors text-left"
+                        >
+                          <span className="text-lg shrink-0">{topic.emoji}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-white truncate">{topic.title}</p>
+                            <p className="text-[10px] text-gray-600 truncate">{topic.videos.length === 0 ? "Em breve" : `${topic.videos.length} vídeo${topic.videos.length > 1 ? "s" : ""}`}</p>
+                          </div>
+                          <span className="text-gray-600 text-xs shrink-0">{expandedTopic === topic.id ? "▲" : "▼"}</span>
+                        </button>
+
+                        {expandedTopic === topic.id && (
+                          <div className="border-t border-[#1a1a1a] px-4 py-3 flex flex-col gap-2 bg-[#0a0a0a]">
+                            {topic.videos.length === 0 ? (
+                              <p className="text-[11px] text-gray-600 text-center py-3">
+                                Nenhum vídeo publicado ainda para este tópico.
+                              </p>
+                            ) : (
+                              topic.videos.map((video) => (
+                                <button
+                                  key={video.id}
+                                  onClick={() => setActiveVideo(video)}
+                                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#111] border border-[#1e1e1e] hover:border-brand-500/30 transition-colors text-left w-full"
+                                >
+                                  <PlayCircle size={18} className="text-brand-400 shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium text-white truncate">{video.title}</p>
+                                    {video.description && (
+                                      <p className="text-[10px] text-gray-600 truncate">{video.description}</p>
+                                    )}
+                                  </div>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>

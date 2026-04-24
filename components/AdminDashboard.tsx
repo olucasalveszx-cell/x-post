@@ -138,6 +138,22 @@ interface TutorialData {
   uploadedAt: string;
 }
 
+interface MemberVideo {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  addedAt: string;
+}
+
+interface MemberTopic {
+  id: string;
+  emoji: string;
+  title: string;
+  description: string;
+  videos: MemberVideo[];
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
@@ -166,6 +182,15 @@ export default function AdminDashboard() {
   const [tutorialTitle, setTutorialTitle] = useState("");
   const [tutorialDesc, setTutorialDesc] = useState("");
   const tutorialFileRef = useRef<HTMLInputElement>(null);
+
+  /* ── Área de Membros ── */
+  const [membersTopics, setMembersTopics] = useState<MemberTopic[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersExpandedTopic, setMembersExpandedTopic] = useState<string | null>(null);
+  const [membersVideoTitle, setMembersVideoTitle] = useState<Record<string, string>>({});
+  const [membersVideoDesc, setMembersVideoDesc] = useState<Record<string, string>>({});
+  const [membersVideoUrl, setMembersVideoUrl] = useState<Record<string, string>>({});
+  const [membersSaving, setMembersSaving] = useState<string | null>(null);
 
   /* ── Preview modal ── */
   const [previewDraft, setPreviewDraft] = useState<AdminDraftMeta | null>(null);
@@ -269,6 +294,44 @@ export default function AdminDashboard() {
     } finally { setTutorialLoading(false); }
   }, []);
 
+  const fetchMembers = useCallback(async () => {
+    setMembersLoading(true);
+    try {
+      const res = await fetch("/api/admin/members-area");
+      if (res.ok) { const d = await res.json(); setMembersTopics(d.topics ?? []); }
+    } finally { setMembersLoading(false); }
+  }, []);
+
+  const addMemberVideo = async (topicId: string) => {
+    const url = membersVideoUrl[topicId]?.trim();
+    if (!url) return;
+    setMembersSaving(topicId);
+    try {
+      const res = await fetch("/api/admin/members-area", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topicId,
+          url,
+          title: membersVideoTitle[topicId]?.trim() || "Sem título",
+          description: membersVideoDesc[topicId]?.trim() || "",
+        }),
+      });
+      if (res.ok) {
+        setMembersVideoUrl((p) => ({ ...p, [topicId]: "" }));
+        setMembersVideoTitle((p) => ({ ...p, [topicId]: "" }));
+        setMembersVideoDesc((p) => ({ ...p, [topicId]: "" }));
+        await fetchMembers();
+      }
+    } finally { setMembersSaving(null); }
+  };
+
+  const deleteMemberVideo = async (topicId: string, videoId: string) => {
+    if (!confirm("Remover este vídeo?")) return;
+    await fetch(`/api/admin/members-area?topicId=${topicId}&videoId=${videoId}`, { method: "DELETE" });
+    await fetchMembers();
+  };
+
   const uploadTutorial = async (file: File) => {
     if (!file) return;
     setTutorialUploading(true);
@@ -305,8 +368,8 @@ export default function AdminDashboard() {
     }
     if (tab === "images" && images.length === 0) fetchImages();
     if (tab === "users") fetchUsers();
-    if (tab === "tutorial") fetchTutorial();
-  }, [tab, images.length, fetchCarousels, fetchImages, fetchUsers, fetchTutorial]);
+    if (tab === "tutorial") { fetchTutorial(); fetchMembers(); }
+  }, [tab, images.length, fetchCarousels, fetchImages, fetchUsers, fetchTutorial, fetchMembers]);
 
   // detecta novos carrosséis
   useEffect(() => {
@@ -829,6 +892,96 @@ export default function AdminDashboard() {
                 >
                   <Upload size={15} /> Selecionar vídeo (.mp4, .webm)
                 </button>
+              )}
+            </div>
+
+            {/* ── Área de Membros ── */}
+            <div>
+              <p className="font-bold text-sm mb-0.5">Área de Membros</p>
+              <p className="text-[11px] text-gray-600 mb-4">Adicione vídeos por tópico. Usuários acessam pela caixa de entrada no perfil.</p>
+
+              {membersLoading ? (
+                <div className="flex justify-center py-10"><Loader2 size={22} className="text-brand-500 animate-spin" /></div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {membersTopics.map((topic) => (
+                    <div key={topic.id} className="rounded-2xl border border-[#1e1e1e] overflow-hidden" style={{ background: "#0d0d0d" }}>
+                      <button
+                        onClick={() => setMembersExpandedTopic(membersExpandedTopic === topic.id ? null : topic.id)}
+                        className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/3 transition-colors text-left"
+                      >
+                        <span className="text-xl shrink-0">{topic.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-white">{topic.title}</p>
+                          <p className="text-[11px] text-gray-600 mt-0.5 truncate">{topic.description}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${topic.videos.length > 0 ? "bg-green-500/15 text-green-400" : "bg-yellow-500/15 text-yellow-600"}`}>
+                            {topic.videos.length > 0 ? `${topic.videos.length} vídeo${topic.videos.length > 1 ? "s" : ""}` : "Pendente"}
+                          </span>
+                          <span className="text-gray-600 text-xs">{membersExpandedTopic === topic.id ? "▲" : "▼"}</span>
+                        </div>
+                      </button>
+
+                      {membersExpandedTopic === topic.id && (
+                        <div className="border-t border-[#1a1a1a] p-5 space-y-4">
+                          {/* Vídeos existentes */}
+                          {topic.videos.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                              {topic.videos.map((video) => (
+                                <div key={video.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#111] border border-[#1e1e1e]">
+                                  <PlayCircle size={15} className="text-brand-400 shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium text-white truncate">{video.title}</p>
+                                    {video.description && <p className="text-[10px] text-gray-600 truncate">{video.description}</p>}
+                                    <p className="text-[10px] text-gray-700 truncate">{video.url}</p>
+                                  </div>
+                                  <button
+                                    onClick={() => deleteMemberVideo(topic.id, video.id)}
+                                    className="shrink-0 text-gray-600 hover:text-red-400 transition-colors p-1"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Formulário de adição */}
+                          <div className="space-y-2.5 pt-1">
+                            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Adicionar vídeo</p>
+                            <input
+                              value={membersVideoTitle[topic.id] ?? ""}
+                              onChange={(e) => setMembersVideoTitle((p) => ({ ...p, [topic.id]: e.target.value }))}
+                              placeholder="Título do vídeo"
+                              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-brand-500/50"
+                            />
+                            <input
+                              value={membersVideoDesc[topic.id] ?? ""}
+                              onChange={(e) => setMembersVideoDesc((p) => ({ ...p, [topic.id]: e.target.value }))}
+                              placeholder="Descrição (opcional)"
+                              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-brand-500/50"
+                            />
+                            <input
+                              value={membersVideoUrl[topic.id] ?? ""}
+                              onChange={(e) => setMembersVideoUrl((p) => ({ ...p, [topic.id]: e.target.value }))}
+                              placeholder="URL do vídeo (mp4, YouTube embed, etc.)"
+                              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-brand-500/50"
+                            />
+                            <button
+                              onClick={() => addMemberVideo(topic.id)}
+                              disabled={!membersVideoUrl[topic.id]?.trim() || membersSaving === topic.id}
+                              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {membersSaving === topic.id ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                              Adicionar vídeo
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>

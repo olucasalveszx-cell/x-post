@@ -985,7 +985,7 @@ export default function EditorPage() {
 
       {showPublish && <PublishModal slides={slides} account={igAccount} onClose={() => setShowPublish(false)} onLoginClick={handleIGLogin} />}
       <AIAssistant open={showAI} onClose={() => setShowAI(false)} />
-      <ProfileModal open={showProfile} initialTab={profileInitialTab} onClose={() => { setShowProfile(false); setProfileInitialTab(undefined); }} />
+      <ProfileModal open={showProfile} initialTab={profileInitialTab} onClose={() => { setShowProfile(false); setProfileInitialTab(undefined); }} onOpenTutorial={() => setShowTutorial(true)} />
       <StyleSelectorModal
         open={showStyleSelector}
         onClose={() => setShowStyleSelector(false)}
