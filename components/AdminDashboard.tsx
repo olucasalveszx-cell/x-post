@@ -6,7 +6,7 @@ import {
   LogOut, Users, Loader2, RefreshCw,
   Activity, TrendingUp, Image, Layers, DollarSign, Crown, ArrowLeft,
   LayoutGrid, ImageOff, Download, ExternalLink, Eye, X, ChevronLeft, ChevronRight,
-  Trash2, Plus, RotateCcw, Zap, PlayCircle, Upload, MessageSquare, Lightbulb, Check, Reply, Sparkles, Wand2, Send, Bot,
+  Trash2, Plus, RotateCcw, Zap, PlayCircle, Upload, MessageSquare, Lightbulb, Check, Reply, Sparkles, Wand2, Send, Bot, Twitter,
 } from "lucide-react";
 import AppLogo from "@/components/AppLogo";
 import Link from "next/link";
@@ -241,6 +241,7 @@ export default function AdminDashboard() {
   const [xgenStatus, setXgenStatus] = useState<"idle" | "gen" | "done" | "opening">("idle");
   const [xgenContent, setXgenContent] = useState<GeneratedContent | null>(null);
   const [xgenError, setXgenError] = useState("");
+  const [xgenTwitter, setXgenTwitter] = useState(false);
   // Banco de imagens XPost
   type XPostImg = { id: string; url: string; name: string; uploadedAt: string };
   const [xpostImages, setXpostImages] = useState<XPostImg[]>([]);
@@ -1476,8 +1477,57 @@ export default function AdminDashboard() {
             { v: "viral", l: "Viral" }, { v: "informativo", l: "Informativo" },
             { v: "educativo", l: "Educativo" }, { v: "motivacional", l: "Motivacional" },
           ];
-          function buildAdminSlides(gc: GeneratedContent, imgs: string[]): Slide[] {
+          function buildAdminSlides(gc: GeneratedContent, imgs: string[], isTwitter: boolean): Slide[] {
             const W = 1080, H = 1350;
+            const PAD = Math.round(W * 0.055);
+
+            // ── Perfil salvo (mesmo comportamento do editor) ──
+            let profileData: { name?: string; handle?: string; avatarSrc?: string; verified?: boolean } | null = null;
+            try { const s = localStorage.getItem("xpz_profile"); if (s) profileData = JSON.parse(s); } catch {}
+
+            const makeProfile = (): any => ({
+              id: uuid(), type: "profile" as const,
+              x: PAD, y: Math.round(H * 0.03), width: W - PAD * 2, height: Math.round(H * 0.075),
+              src: profileData?.avatarSrc || undefined,
+              profileName: profileData?.name ?? "", profileHandle: profileData?.handle ?? "",
+              profileVerified: profileData?.verified ?? false,
+              profileNameColor: "#111111", profileHandleColor: "#666666", zIndex: 10,
+            });
+
+            if (isTwitter) {
+              const PROFILE_Y = Math.round(H * 0.03);
+              const PROFILE_H = Math.round(H * 0.075);
+              const IMG_TOP   = PROFILE_Y + PROFILE_H + Math.round(H * 0.025);
+              const IMG_H     = Math.round(H * 0.38);
+              const TEXT_TOP  = IMG_TOP + IMG_H + Math.round(H * 0.022);
+              const TEXT_H    = Math.round(H * 0.17);
+              const BODY_TOP  = TEXT_TOP + TEXT_H + Math.round(H * 0.012);
+              const BODY_H    = Math.round(H * 0.10);
+              const CTOP_TIT  = PROFILE_Y + PROFILE_H + Math.round(H * 0.07);
+              const CTOP_BOD  = CTOP_TIT + Math.round(H * 0.22) + Math.round(H * 0.02);
+
+              const twBase = { backgroundColor: "#ffffff" as string, backgroundPattern: "grid-light" as const, backgroundImageUrl: undefined, backgroundGradient: undefined, width: W, height: H };
+
+              const coverImgUrl = imgs.length > 0 ? imgs[0] : undefined;
+              const coverImgEl: any = coverImgUrl ? { id: uuid(), type: "image" as const, x: PAD, y: IMG_TOP, width: W - PAD * 2, height: IMG_H, src: coverImgUrl, zIndex: 2, imageObjectPositionY: 30 } : null;
+              const [cover, ...rest] = gc.slides;
+              const makeTwText = (content: string, i: number, isCover: boolean): any => ({
+                id: uuid(), type: "text" as const,
+                x: PAD, width: W - PAD * 2, zIndex: 5,
+                y: isCover ? (i === 0 ? TEXT_TOP : BODY_TOP) : (i === 0 ? CTOP_TIT : CTOP_BOD),
+                height: isCover ? (i === 0 ? TEXT_H : BODY_H) : (i === 0 ? Math.round(H * 0.22) : Math.round(H * 0.38)),
+                content,
+                style: { color: "#111111", fontFamily: "'Inter', sans-serif", fontSize: isCover ? (i === 0 ? Math.round(H * 0.036) : Math.round(H * 0.019)) : (i === 0 ? Math.round(H * 0.044) : Math.round(H * 0.021)), fontWeight: i === 0 ? "bold" as const : "normal" as const, lineHeight: i === 0 ? 1.15 : 1.5, textAlign: "left" as const },
+              });
+
+              const coverTexts = [cover.title, cover.body].filter(Boolean).map((c, i) => makeTwText(c!, i, true));
+              const coverSlide: Slide = { id: uuid(), ...twBase, elements: [makeProfile(), ...(coverImgEl ? [coverImgEl] : []), ...coverTexts] };
+              const contentSlides: Slide[] = rest.map(gs => ({ id: uuid(), ...twBase, elements: [makeProfile(), ...[gs.title, gs.body].filter(Boolean).map((c, i) => makeTwText(c!, i, false))] }));
+              const ctaTw: Slide = { id: uuid(), ...twBase, elements: [makeProfile(), makeTwText("Crie carrosséis que viralizam.", 0, false), makeTwText("Acesse xpostzone.online e comece grátis agora.", 1, false)] };
+              return [coverSlide, ...contentSlides, ctaTw];
+            }
+
+            // ── Modo escuro (padrão) ──
             function withBg(slide: any, idx: number): any {
               if (imgs.length === 0) return slide;
               return { ...slide, backgroundImageUrl: imgs[idx % imgs.length], backgroundGradient: "linear-gradient(180deg, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0.82) 100%)", backgroundOpacity: 0.48 };
@@ -1543,7 +1593,7 @@ export default function AdminDashboard() {
           const openInEditor = () => {
             if (!xgenContent) return;
             setXgenStatus("opening");
-            sessionStorage.setItem("xpost-admin-slides", JSON.stringify(buildAdminSlides(xgenContent, xpostImages.map(img => img.url))));
+            sessionStorage.setItem("xpost-admin-slides", JSON.stringify(buildAdminSlides(xgenContent, xpostImages.map(img => img.url), xgenTwitter)));
             router.push("/editor");
           };
           return (
@@ -1629,6 +1679,13 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+                <button onClick={() => setXgenTwitter(v => !v)}
+                  className="flex items-center gap-2 w-full px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all"
+                  style={{ background: xgenTwitter ? "rgba(14,165,233,0.12)" : "rgba(255,255,255,0.03)", border: xgenTwitter ? "1px solid rgba(14,165,233,0.4)" : "1px solid rgba(255,255,255,0.08)", color: xgenTwitter ? "#38bdf8" : "rgba(255,255,255,0.4)" }}>
+                  <Twitter size={13} />
+                  <span>Estilo X / Twitter</span>
+                  <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full" style={{ background: xgenTwitter ? "rgba(14,165,233,0.2)" : "rgba(255,255,255,0.06)", color: xgenTwitter ? "#38bdf8" : "rgba(255,255,255,0.3)" }}>{xgenTwitter ? "Ativado" : "Desativado"}</span>
+                </button>
                 <button onClick={generate} disabled={!xgenTopic.trim() || xgenStatus === "gen"}
                   className="w-full h-10 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-40"
                   style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)", color: "#c4b5fd" }}>
