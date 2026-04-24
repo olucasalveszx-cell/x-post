@@ -318,11 +318,28 @@ export default function AIAssistant({ open, onClose }: Props) {
     if (!ttsEnabled) { onDone?.(); return; }
 
     const limpo = text
+      // Remove emojis (todas as faixas Unicode de pictogramas)
+      .replace(/\p{Extended_Pictographic}/gu, "")
+      .replace(/[\u{1F000}-\u{1FFFF}]/gu, "")
+      .replace(/[\u{2600}-\u{27BF}]/gu, "")
+      .replace(/[︀-️]/g, "")
+      .replace(/‍/g, "")
+      // Remove markdown
       .replace(/\*\*(.*?)\*\*/g, "$1")
       .replace(/\*(.*?)\*/g, "$1")
-      .replace(/#{1,6}\s/g, "")
+      .replace(/_(.*?)_/g, "$1")
+      .replace(/#{1,6}\s*/g, "")
       .replace(/`{1,3}[^`]*`{1,3}/g, "")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      // Bullet points e listas viram pausa natural
+      .replace(/^[\-\*•]\s+/gm, "")
+      .replace(/^\d+\.\s+/gm, "")
+      // Slide X: → pausa
       .replace(/Slide \d+:\s*/gi, "")
+      // Em dash para vírgula
+      .replace(/—/g, ", ")
+      // Limpa espaços extras
+      .replace(/[ \t]{2,}/g, " ")
       .trim();
     if (!limpo) { onDone?.(); return; }
 
