@@ -424,6 +424,16 @@ export default function Toolbar({
 
         <div className={divider} />
 
+        {/* Formato */}
+        <div className="flex items-center gap-1 bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg p-0.5 shrink-0">
+          {FORMATS.map((f) => (
+            <button key={f} onClick={() => onFormatChange?.(f)}
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${format === f ? "bg-brand-600 text-white" : "text-[var(--text-2)] hover:text-[var(--text)]"}`}>{f}</button>
+          ))}
+        </div>
+
+        <div className={divider} />
+
         <button onClick={addText} className={btnBase}><Type size={14} /> Texto</button>
         <button onClick={() => fileInputRef.current?.click()} className={btnBase}><ImageIcon size={14} /> Imagem</button>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
@@ -468,16 +478,6 @@ export default function Toolbar({
             Editar com IA
           </button>
         )}
-
-        <div className={divider} />
-
-        {/* Formato */}
-        <div className="flex items-center gap-1 bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg p-0.5 shrink-0">
-          {FORMATS.map((f) => (
-            <button key={f} onClick={() => onFormatChange?.(f)}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${format === f ? "bg-brand-600 text-white" : "text-[var(--text-2)] hover:text-[var(--text)]"}`}>{f}</button>
-          ))}
-        </div>
 
         <div className={divider} />
 
