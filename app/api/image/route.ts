@@ -60,7 +60,7 @@ async function fromGemini(prompt: string, style: ImageStyle) {
 
   const fullPrompt = buildPrompt(prompt, style);
   const MODELS = [
-    "gemini-2.5-flash-preview-image",
+    "gemini-2.5-flash-image",
     "gemini-2.0-flash-exp",
   ];
 
@@ -170,7 +170,7 @@ async function fromGeminiWithReference(prompt: string, style: ImageStyle, refBas
   const styleGuide = PROMPTS[style] ?? PROMPTS.gemini;
   const textInstruction = `Use this image as visual reference. Transform it into a stylized Instagram carousel slide background: "${prompt}". Style: ${styleGuide}. Portrait 4:5. No text, no watermarks.`;
 
-  const MODELS = ["gemini-2.5-flash-preview-image", "gemini-2.0-flash-exp"];
+  const MODELS = ["gemini-2.5-flash-image", "gemini-2.0-flash-exp"];
   let lastError = "";
 
   for (const model of MODELS) {

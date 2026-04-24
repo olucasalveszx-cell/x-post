@@ -100,7 +100,7 @@ async function fromGemini(prompt: string): Promise<string> {
   const keys = getGeminiKeys();
   if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
 
-  const MODELS = ["gemini-2.5-flash-preview-image", "gemini-2.0-flash-exp"];
+  const MODELS = ["gemini-2.5-flash-image", "gemini-2.0-flash-exp"];
   let lastError = "";
 
   for (const key of keys) {
