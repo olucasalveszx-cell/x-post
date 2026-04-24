@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Slide, SlideElement } from "@/types";
-import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square, MoreVertical, LayoutTemplate } from "lucide-react";
+import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square, MoreVertical, LayoutTemplate, Video as VideoIcon } from "lucide-react";
 import { v4 as uuid } from "uuid";
 
 interface Props {
@@ -20,6 +20,7 @@ type CropState = { elementId: string; startX: number; startY: number; handle: st
 
 type CtxMenu = { x: number; y: number; el: SlideElement } | null;
 type BgCtxMenu = { x: number; y: number; mobile?: boolean } | null;
+type FrameCtxMenu = { x: number; y: number; el: SlideElement; mobile?: boolean } | null;
 
 const FRAME_CLIP: Record<string, { clip?: string; radius?: string }> = {
   circle:   { radius: "50%" },
@@ -52,7 +53,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const [generatingBg, setGeneratingBg] = useState(false);
   const [showThemeInput, setShowThemeInput] = useState(false);
   const [themeValue, setThemeValue] = useState("");
-  const [frameCtxMenu, setFrameCtxMenu] = useState<CtxMenu>(null);
+  const [frameCtxMenu, setFrameCtxMenu] = useState<FrameCtxMenu>(null);
   const [loadingFrames, setLoadingFrames] = useState<Set<string>>(new Set());
   const [framePendingId, setFramePendingId] = useState<string | null>(null);
   const [framePanId, setFramePanId] = useState<string | null>(null);
@@ -551,8 +552,12 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const handleFrameFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !framePendingId) return;
+    const isVideo = file.type.startsWith("video/");
     const reader = new FileReader();
-    reader.onload = (ev) => updateElement(framePendingId, { frameImageUrl: ev.target?.result as string });
+    reader.onload = (ev) => updateElement(framePendingId, {
+      frameImageUrl: ev.target?.result as string,
+      frameMediaType: isVideo ? "video" : "image",
+    });
     reader.readAsDataURL(file);
     e.target.value = "";
   };
@@ -562,9 +567,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     e.stopPropagation();
     closeCtx();
     closeBgCtx();
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setFrameCtxMenu({ x: (e.clientX - rect.left) / scale, y: (e.clientY - rect.top) / scale, el });
+    setFrameCtxMenu({ x: e.clientX, y: e.clientY, el, mobile: false });
   };
 
   const closeFrameCtx = () => setFrameCtxMenu(null);
@@ -723,8 +726,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       )}
       {/* Hidden file input for bg image replacement */}
       <input ref={bgFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgFileChange} />
-      {/* Hidden file input para foto de moldura */}
-      <input ref={frameFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFrameFileChange} />
+      {/* Hidden file input para foto/vídeo de moldura */}
+      <input ref={frameFileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFrameFileChange} />
 
       {/* Botões de crop do fundo */}
       {isCroppingBg && !bgCtxMenu && (
@@ -857,7 +860,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                 }
               }}
               onClick={(e) => e.stopPropagation()}
-              onDoubleClick={(e) => { if (el.frameImageUrl) { e.stopPropagation(); setFramePanId(el.id); } }}
+              onDoubleClick={(e) => { if (el.frameImageUrl && el.frameMediaType !== "video") { e.stopPropagation(); setFramePanId(el.id); } }}
               onContextMenu={(e) => handleFrameContextMenu(e, el)}
             >
               <div style={innerStyle}>
@@ -865,6 +868,12 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                   <div style={{ width: "100%", height: "100%", background: "rgba(76,110,245,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <div style={{ width: Math.round(el.width * 0.18), height: Math.round(el.width * 0.18), border: `${Math.round(el.width * 0.025)}px solid #4c6ef5`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                   </div>
+                ) : el.frameImageUrl && el.frameMediaType === "video" ? (
+                  <video
+                    src={el.frameImageUrl}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    autoPlay muted loop playsInline
+                  />
                 ) : el.frameImageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -885,14 +894,17 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                     style={{ width: "100%", height: "100%", background: "rgba(255,255,255,0.06)", border: `${Math.round(2 * S)}px dashed rgba(76,110,245,0.5)`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: Math.round(el.height * 0.05), color: "rgba(76,110,245,0.7)", cursor: "pointer", boxSizing: "border-box" }}
                     onClick={(e) => { e.stopPropagation(); if (isSelected) { setFramePendingId(el.id); frameFileInputRef.current?.click(); } else { setSelectedId(el.id); onSelectElement?.(el); } }}
                   >
-                    <ImageIcon style={{ width: Math.round(el.width * 0.22), height: Math.round(el.width * 0.22) }} />
-                    <span style={{ fontSize: Math.round(el.width * 0.07), fontFamily: "sans-serif", fontWeight: 600, textAlign: "center", padding: "0 8%" }}>Adicionar foto</span>
+                    <div style={{ display: "flex", gap: Math.round(el.width * 0.06), alignItems: "center" }}>
+                      <ImageIcon style={{ width: Math.round(el.width * 0.18), height: Math.round(el.width * 0.18) }} />
+                      <VideoIcon style={{ width: Math.round(el.width * 0.18), height: Math.round(el.width * 0.18) }} />
+                    </div>
+                    <span style={{ fontSize: Math.round(el.width * 0.07), fontFamily: "sans-serif", fontWeight: 600, textAlign: "center", padding: "0 8%" }}>Foto ou vídeo</span>
                   </div>
                 )}
               </div>
 
               {/* Botão "Ajustar foto" */}
-              {isSelected && !isLoading && el.frameImageUrl && !isPanning && (
+              {isSelected && !isLoading && el.frameImageUrl && el.frameMediaType !== "video" && !isPanning && (
                 <div style={{ position: "absolute", top: -Math.round(36 * S), left: 0, display: "flex", gap: Math.round(4 * S), zIndex: 15 }}
                   onClick={(e) => e.stopPropagation()}>
                   <button
@@ -906,7 +918,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               )}
 
               {/* Toolbar modo pan: label + zoom slider + concluir */}
-              {isPanning && el.frameImageUrl && (
+              {isPanning && el.frameImageUrl && el.frameMediaType !== "video" && (
                 <div
                   style={{ position: "absolute", top: -Math.round(52 * S), left: 0, right: 0, display: "flex", flexDirection: "column", gap: Math.round(3 * S), zIndex: 15 }}
                   onClick={(e) => e.stopPropagation()}
@@ -1163,67 +1175,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         </div>
       )}
 
-      {/* Context menu de moldura */}
-      {frameCtxMenu && (
-        <div
-          className="absolute z-[100] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1.5 min-w-[220px]"
-          style={{
-            left: Math.min(frameCtxMenu.x, slide.width - 240 / scale),
-            top: Math.min(frameCtxMenu.y, slide.height - 300 / scale),
-            transform: `scale(${1 / scale})`,
-            transformOrigin: "top left",
-          }}
-          onClick={(e) => e.stopPropagation()}
-          onContextMenu={(e) => e.preventDefault()}
-        >
-          <div className="px-4 py-2.5 border-b border-[#2a2a2a] flex items-center gap-2">
-            <Square size={15} className="text-brand-400" />
-            <span className="text-sm font-semibold text-gray-300 flex-1">Moldura</span>
-            <button onClick={(e) => { e.stopPropagation(); closeFrameCtx(); }} className="ml-auto text-gray-500 hover:text-gray-200 transition-colors p-0.5"><X size={15} /></button>
-          </div>
-          <button
-            onClick={() => generateFrameImage(frameCtxMenu.el)}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
-          >
-            <Wand2 size={15} /> Gerar foto com I.A
-          </button>
-          <button
-            onClick={() => { setFramePendingId(frameCtxMenu.el.id); frameFileInputRef.current?.click(); closeFrameCtx(); }}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
-          >
-            <RefreshCw size={15} className="text-blue-400" /> {frameCtxMenu.el.frameImageUrl ? "Trocar foto" : "Adicionar foto"}
-          </button>
-          {slide.backgroundImageUrl && (
-            <button
-              onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: slide.backgroundImageUrl, frameImageOffset: { x: 50, y: 50 }, frameImageZoom: 100 }); closeFrameCtx(); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-green-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
-            >
-              <ImageIcon size={15} /> Usar imagem de fundo
-            </button>
-          )}
-          {frameCtxMenu.el.frameImageUrl && (
-            <button
-              onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: undefined }); closeFrameCtx(); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
-            >
-              <X size={15} /> Remover foto
-            </button>
-          )}
-          <div className="border-b border-[#2a2a2a]">
-            <button onClick={() => { bringForward(frameCtxMenu.el); closeFrameCtx(); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
-              <ArrowUp size={15} className="text-blue-400" /> Trazer à frente
-            </button>
-            <button onClick={() => { sendBackward(frameCtxMenu.el); closeFrameCtx(); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
-              <ArrowDown size={15} className="text-blue-400" /> Enviar para trás
-            </button>
-          </div>
-          <button onClick={closeFrameCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
-            Fechar
-          </button>
-        </div>
-      )}
+      {/* frameCtxMenu movido para portal abaixo */}
 
 
       {/* Botão "Gerar imagem com I.A" quando não há fundo */}
@@ -1418,13 +1370,82 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           if (selectedId) {
             const el = slide.elements.find((el) => el.id === selectedId);
             if (el?.type === "image") { setCtxMenu({ x: 20, y: 70, el }); return; }
-            if (el?.type === "frame") { setFrameCtxMenu({ x: 20, y: 70, el }); return; }
+            if (el?.type === "frame") { setFrameCtxMenu({ x: 0, y: 0, el, mobile: true }); return; }
           }
           setBgCtxMenu({ x: 0, y: 0, mobile: true });
         }}
       >
         <MoreVertical size={18} />
       </button>,
+      document.body
+    )}
+
+    {/* Context menu de moldura — portal fixed, sem clipping do canvas */}
+    {frameCtxMenu && typeof window !== "undefined" && createPortal(
+      <>
+        <div className="fixed inset-0 z-[9990]" onClick={closeFrameCtx} />
+        <div
+          className="fixed z-[9991] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1.5 overflow-y-auto"
+          style={frameCtxMenu.mobile
+            ? { bottom: 76, left: "50%", transform: "translateX(-50%)", maxHeight: "70vh", width: "min(300px, 92vw)" }
+            : {
+                left: Math.min(frameCtxMenu.x, window.innerWidth - 270),
+                top: Math.max(8, Math.min(frameCtxMenu.y, window.innerHeight - 400)),
+                maxHeight: "80vh",
+                minWidth: 240,
+              }
+          }
+          onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <div className="px-4 py-2.5 border-b border-[#2a2a2a] flex items-center gap-2">
+            <Square size={15} className="text-brand-400" />
+            <span className="text-sm font-semibold text-gray-300 flex-1">Moldura</span>
+            <button onClick={(e) => { e.stopPropagation(); closeFrameCtx(); }} className="ml-auto text-gray-500 hover:text-gray-200 transition-colors p-0.5"><X size={15} /></button>
+          </div>
+          <button
+            onClick={() => generateFrameImage(frameCtxMenu.el)}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
+          >
+            <Wand2 size={15} /> Gerar foto com I.A
+          </button>
+          <button
+            onClick={() => { setFramePendingId(frameCtxMenu.el.id); frameFileInputRef.current?.click(); closeFrameCtx(); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
+          >
+            <RefreshCw size={15} className="text-blue-400" /> {frameCtxMenu.el.frameImageUrl ? "Trocar foto/vídeo" : "Adicionar foto/vídeo"}
+          </button>
+          {slide.backgroundImageUrl && (
+            <button
+              onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: slide.backgroundImageUrl, frameImageOffset: { x: 50, y: 50 }, frameImageZoom: 100 }); closeFrameCtx(); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-green-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
+            >
+              <ImageIcon size={15} /> Usar imagem de fundo
+            </button>
+          )}
+          {frameCtxMenu.el.frameImageUrl && (
+            <button
+              onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: undefined, frameMediaType: undefined }); closeFrameCtx(); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
+            >
+              <X size={15} /> {frameCtxMenu.el.frameMediaType === "video" ? "Remover vídeo" : "Remover foto"}
+            </button>
+          )}
+          <div className="border-b border-[#2a2a2a]">
+            <button onClick={() => { bringForward(frameCtxMenu.el); closeFrameCtx(); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
+              <ArrowUp size={15} className="text-blue-400" /> Trazer à frente
+            </button>
+            <button onClick={() => { sendBackward(frameCtxMenu.el); closeFrameCtx(); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
+              <ArrowDown size={15} className="text-blue-400" /> Enviar para trás
+            </button>
+          </div>
+          <button onClick={closeFrameCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
+            Fechar
+          </button>
+        </div>
+      </>,
       document.body
     )}
 
