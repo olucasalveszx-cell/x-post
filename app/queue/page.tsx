@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { X } from "lucide-react";
 import { AutoPostItem, AutoPostStatus } from "@/types";
 
 const STATUS_LABEL: Record<AutoPostStatus, string> = {
@@ -95,9 +96,14 @@ export default function QueuePage() {
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white p-6 md:p-10 max-w-3xl mx-auto">
       <div className="mb-8">
-        <Link href="/" className="text-zinc-500 text-sm hover:text-white transition-colors">
-          ← Voltar ao editor
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/editor" className="text-zinc-500 text-sm hover:text-white transition-colors">
+            ← Voltar ao editor
+          </Link>
+          <Link href="/editor" className="text-zinc-500 hover:text-white transition-colors p-1 rounded-lg hover:bg-zinc-800">
+            <X size={20} />
+          </Link>
+        </div>
         <h1 className="text-2xl font-bold mt-4 mb-1">Auto-post</h1>
         <p className="text-zinc-400 text-sm">
           Crie carrosséis com IA, revise o preview e agende direto no Instagram.
