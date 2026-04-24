@@ -244,7 +244,7 @@ async function generateImages(
   );
 }
 
-export default function GeneratorPanel({ onGenerate }: Props) {
+export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlides = [] }: Props) {
   const [status, setStatus] = useState<"idle" | "searching" | "generating" | "images" | "done" | "error">("idle");
   const [error, setError] = useState("");
   const [sources, setSources] = useState<SearchResult[]>([]);
@@ -415,23 +415,37 @@ export default function GeneratorPanel({ onGenerate }: Props) {
     if (!lastGenContent || !lastSettings) return;
     const newSettings: WizardSettings = { ...lastSettings, imageLayout: newLayout };
     setLastSettings(newSettings);
+
+    // Extrai imagens dos slides ATUAIS (mais confiável que slideImages que pode estar desatualizado)
+    const liveImages: Array<string | null> = currentSlides.length > 0
+      ? currentSlides.map((s) => {
+          if (s.backgroundImageUrl) return s.backgroundImageUrl;
+          const el = (s.elements as any[]).find((e) => e.type === "image" && e.src);
+          return el?.src ?? null;
+        })
+      : slideImages;
+
     const rawSlides = buildSlides(lastGenContent, newSettings);
     const slidesWithImages = rawSlides.map((s, i) => {
-      const imgUrl = slideImages[i] ?? null;
+      const imgUrl = liveImages[i] ?? null;
       const { _imagePrompt, _searchQuery, _elementImageId, ...clean } = s as any;
-      if (!imgUrl) return { ...clean, backgroundImageLoading: false };
       if (_elementImageId) {
         return {
           ...clean,
+          backgroundImageUrl: undefined,
           backgroundImageLoading: false,
-          elements: clean.elements.map((el: any) =>
-            el.id === _elementImageId ? { ...el, src: imgUrl } : el
+          elements: (clean.elements as any[]).map((el: any) =>
+            el.id === _elementImageId ? { ...el, src: imgUrl ?? el.src } : el
           ),
         };
       }
-      return { ...clean, backgroundImageUrl: imgUrl, backgroundImageLoading: false };
+      return {
+        ...clean,
+        backgroundImageUrl: imgUrl ?? undefined,
+        backgroundImageLoading: false,
+      };
     });
-    onGenerate(slidesWithImages);
+    (onLayoutChange ?? onGenerate)(slidesWithImages);
   };
 
   const loadingPopup = isLoading && typeof window !== "undefined"

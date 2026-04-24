@@ -465,7 +465,7 @@ export default function Toolbar({
 
         {/* Gerar fundo IA */}
         <button onClick={generateBackground} disabled={generating}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-brand-600/15 hover:bg-brand-600/30 border border-brand-600/25 text-brand-500 text-sm shrink-0 disabled:opacity-40 transition-colors">
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-brand-600/40 hover:bg-brand-600/60 border border-brand-500/60 text-brand-300 text-sm shrink-0 disabled:opacity-40 transition-colors">
           <Wand2 size={14} className={generating ? "animate-spin" : ""} />
           {generating ? "Gerando..." : "Fundo IA"}
         </button>
