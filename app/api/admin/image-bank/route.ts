@@ -139,6 +139,17 @@ function makeCacheKey(prompt: string, style: Style) {
   return `img:v1:${style}:${norm}`;
 }
 
+const XPOST_LIST = "xpost:image:ids";
+const xpostImgKey = (id: string) => `xpost:image:${id}`;
+
+async function saveToXpostBank(url: string, name: string) {
+  const { v4: uuid } = await import("uuid");
+  const id = uuid();
+  const entry = JSON.stringify({ id, url, name: name.slice(0, 80), uploadedAt: new Date().toISOString() });
+  await redisSet(xpostImgKey(id), entry);
+  await redisLPush(XPOST_LIST, id);
+}
+
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_COOKIE)?.value;
@@ -164,6 +175,7 @@ export async function POST(req: NextRequest) {
       await redisSet(makeCacheKey(tag, s), blob.url);
       const entry = JSON.stringify({ url: blob.url, email: "admin", prompt: tag, style: s, source: "upload", createdAt: new Date().toISOString() });
       await redisLPush("images:global", entry);
+      await saveToXpostBank(blob.url, tag);
       console.log(`[admin/image-bank] upload direto: ${blob.url.slice(0, 80)}`);
       return NextResponse.json({ url: blob.url, source: "upload" });
     } catch (e: any) {
@@ -205,6 +217,7 @@ export async function POST(req: NextRequest) {
     await redisSet(makeCacheKey(prompt.trim(), s), blob.url);
     const entry = JSON.stringify({ url: blob.url, email: "admin", prompt: prompt.trim(), style: s, source: result.source, createdAt: new Date().toISOString() });
     await redisLPush("images:global", entry);
+    await saveToXpostBank(blob.url, prompt.trim());
     console.log(`[admin/image-bank] gerada via ${result.source}: ${blob.url.slice(0, 80)}`);
     return NextResponse.json({ url: blob.url, source: result.source });
   } catch (e: any) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon, Palette, FlipHorizontal, FlipVertical } from "lucide-react";
+import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon, Palette, FlipHorizontal, FlipVertical, Database } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import { useRef, useState, useEffect } from "react";
@@ -93,8 +93,25 @@ export default function Toolbar({
   const [showMolds, setShowMolds] = useState(false);
   const [showTheme, setShowTheme] = useState(false);
   const [profileColorScope, setProfileColorScope] = useState<"this" | "all">("this");
+  const [showXpostBank, setShowXpostBank] = useState(false);
+  const [xpostBankImages, setXpostBankImages] = useState<{ id: string; url: string; name: string }[]>([]);
+  const [xpostBankLoading, setXpostBankLoading] = useState(false);
 
-  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); };
+  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); setShowXpostBank(false); };
+
+  const openXpostBank = () => {
+    if (showXpostBank) { setShowXpostBank(false); return; }
+    closeAll();
+    setShowXpostBank(true);
+    if (xpostBankImages.length === 0) {
+      setXpostBankLoading(true);
+      fetch("/api/xpost-images")
+        .then(r => r.json())
+        .then(d => { if (d.images) setXpostBankImages(d.images); })
+        .catch(() => {})
+        .finally(() => setXpostBankLoading(false));
+    }
+  };
 
   const MOLD_SHAPES = [
     { id: "circle",   label: "Círculo",  path: <circle cx="24" cy="24" r="22" /> },
@@ -618,6 +635,14 @@ export default function Toolbar({
           </button>
         )}
 
+        {/* Use XPost */}
+        <button
+          onClick={openXpostBank}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm shrink-0 transition-colors ${showXpostBank ? "bg-violet-600/30 border-violet-500/50 text-violet-300" : "bg-violet-600/10 hover:bg-violet-600/20 border-violet-600/25 text-violet-400"}`}>
+          <Database size={14} />
+          use xpost
+        </button>
+
         <div className={divider} />
 
         {/* Posição + Inverter — só quando elemento selecionado */}
@@ -949,6 +974,46 @@ export default function Toolbar({
           >
             {editLoading ? <><Loader2 size={14} className="animate-spin" /> Editando...</> : <><Sparkles size={14} /> Aplicar edição</>}
           </button>
+        </div>
+      )}
+
+      {/* ── Painel Use XPost ── */}
+      {showXpostBank && (
+        <div className={`${panelBase} w-[480px] max-h-[340px] flex flex-col`}>
+          <div className="flex items-center justify-between mb-3 shrink-0">
+            <span className="text-sm font-semibold text-[var(--text)] flex items-center gap-1.5">
+              <Database size={14} className="text-violet-400" /> Banco de Imagens XPost
+            </span>
+            <button onClick={() => setShowXpostBank(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
+          </div>
+          {xpostBankLoading && (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 size={22} className="animate-spin text-violet-400" />
+            </div>
+          )}
+          {!xpostBankLoading && xpostBankImages.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
+              <Database size={28} className="text-[var(--text-3)] opacity-40" />
+              <p className="text-xs text-[var(--text-3)]">Nenhuma imagem no banco ainda.</p>
+              <p className="text-[10px] text-[var(--text-3)] opacity-60">Adicione imagens pelo painel admin → Gerador XPost.</p>
+            </div>
+          )}
+          {!xpostBankLoading && xpostBankImages.length > 0 && (
+            <div className="overflow-y-auto flex-1 scrollbar-none">
+              <div className="grid grid-cols-5 gap-2">
+                {xpostBankImages.map((img) => (
+                  <button
+                    key={img.id}
+                    onClick={() => { onUpdate({ ...slide, backgroundImageUrl: img.url }); setShowXpostBank(false); }}
+                    className="aspect-[3/4] rounded-lg overflow-hidden border border-[var(--border-2)] hover:border-violet-500/60 transition-colors relative group"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.url} alt={img.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
