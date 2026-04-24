@@ -83,7 +83,13 @@ export const authOptions: NextAuthOptions = {
   ],
 
   secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 365 * 24 * 60 * 60, // 1 ano — expira só se o usuário deslogar
+  },
+  jwt: {
+    maxAge: 365 * 24 * 60 * 60,
+  },
   useSecureCookies: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
 
   callbacks: {
