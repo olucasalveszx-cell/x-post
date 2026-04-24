@@ -110,3 +110,33 @@ export interface PublishRequest {
   accessToken: string;
   instagramAccountId: string;
 }
+
+export type AutoPostStatus =
+  | "generating"
+  | "pending_approval"
+  | "approved"
+  | "cancelled"
+  | "published"
+  | "failed";
+
+export type ImageSource = "ai" | "real";
+
+export interface AutoPostItem {
+  id: string;
+  userId: string;
+  topic: string;
+  slideCount: number;
+  writingStyle: WritingStyle;
+  imageSource: ImageSource;
+  scheduledAt: string; // ISO
+  status: AutoPostStatus;
+  slides?: GeneratedSlide[];
+  slideImageUrls?: (string | null)[]; // URLs geradas/buscadas por slide
+  caption?: string;
+  imageUrls?: string[]; // URLs finais no Vercel Blob (após aprovação)
+  createdAt: string;
+  approvedAt?: string;
+  publishedAt?: string;
+  igPostId?: string;
+  error?: string;
+}

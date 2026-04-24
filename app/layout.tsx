@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "@/components/Providers";
+import RegisterSW from "@/components/RegisterSW";
 
 const APP_URL = process.env.NEXTAUTH_URL ?? "https://xpostzone.online";
 
@@ -9,10 +10,16 @@ export const metadata: Metadata = {
   description:
     "Chega de perder horas criando conteúdo. O XPost gera carrosséis completos com IA — do texto às imagens — em menos de 3 minutos.",
   metadataBase: new URL(APP_URL),
+  manifest: "/manifest.json",
   icons: {
     icon: "/tema_black.png",
     shortcut: "/tema_black.png",
     apple: "/tema_black.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "XPost",
   },
   openGraph: {
     title: "XPost — Criador de Carrosséis para Instagram com IA",
@@ -38,6 +45,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#6366f1",
 };
 
 export default function RootLayout({
@@ -50,7 +58,7 @@ export default function RootLayout({
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
       </head>
-      <body className="antialiased"><Providers>{children}</Providers></body>
+      <body className="antialiased"><Providers>{children}</Providers><RegisterSW /></body>
     </html>
   );
 }

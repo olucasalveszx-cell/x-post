@@ -1,0 +1,50 @@
+{
+  "name": "XPost — Carrosséis com IA",
+  "short_name": "XPost",
+  "description": "Crie carrosséis para Instagram com IA em minutos",
+  "start_url": "/editor",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "social"],
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/tema_black.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/tema_black.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/link.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "XPost Editor"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Novo carrossel",
+      "short_name": "Criar",
+      "url": "/editor",
+      "icons": [{ "src": "/tema_black.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Auto-post",
+      "short_name": "Agendar",
+      "url": "/queue",
+      "icons": [{ "src": "/tema_black.png", "sizes": "96x96" }]
+    }
+  ]
+}
