@@ -376,8 +376,36 @@ async function fromPexels(prompt: string) {
   return { imageUrl: photo.src?.large2x ?? photo.src?.original, source: "pexels" };
 }
 
+// ── Cache de imagens ─────────────────────────────────────────
+function makeCacheKey(prompt: string, style: ImageStyle): string {
+  const normalized = prompt
+    .toLowerCase().trim()
+    .replace(/[^\w\sà-ÿ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 220);
+  return `img:v1:${style}:${normalized}`;
+}
+
+async function getCachedImage(prompt: string, style: ImageStyle): Promise<string | null> {
+  try {
+    const url = await redisGet(makeCacheKey(prompt, style));
+    if (url) console.log(`[image] cache HIT — ${prompt.slice(0, 60)}`);
+    return url;
+  } catch { return null; }
+}
+
+async function cacheImage(prompt: string, style: ImageStyle, url: string): Promise<void> {
+  try {
+    await redisSet(makeCacheKey(prompt, style), url);
+    console.log(`[image] cache SET — ${prompt.slice(0, 60)}`);
+  } catch (e: any) {
+    console.warn("[image] cache set falhou:", e.message);
+  }
+}
+
 // ── Salva imagem no banco global (Blob + Redis) ───────────────
-async function saveToGallery(imageUrl: string, email: string | null | undefined, prompt: string, source: string) {
+async function saveToGallery(imageUrl: string, email: string | null | undefined, prompt: string, style: ImageStyle, source: string) {
   try {
     let finalUrl = imageUrl;
 
@@ -394,25 +422,27 @@ async function saveToGallery(imageUrl: string, email: string | null | undefined,
         );
         finalUrl = blob.url;
       } catch {
-        // Blob store privado ou indisponível — não salva na galeria
         console.warn("[image] blob upload falhou, galeria não salva");
         return;
       }
     }
 
-    const globalEntry = JSON.stringify({ url: finalUrl, email: email ?? "anon", prompt, source, createdAt: new Date().toISOString() });
+    // Salva no cache permanente (evita nova geração paga no futuro)
+    await cacheImage(prompt, style, finalUrl);
+
+    // Salva na lista global (sem limite — banco próprio de imagens)
+    const globalEntry = JSON.stringify({ url: finalUrl, email: email ?? "anon", prompt, style, source, createdAt: new Date().toISOString() });
     await redisLPush("images:global", globalEntry);
-    await redisLTrim("images:global", 0, 499);
 
     if (email) {
-      const userEntry = JSON.stringify({ url: finalUrl, savedAt: new Date().toISOString() });
+      const userEntry = JSON.stringify({ url: finalUrl, prompt, savedAt: new Date().toISOString() });
       await redisLPush(`user:imgs:${email}`, userEntry);
-      await redisLTrim(`user:imgs:${email}`, 0, 99);
+      await redisLTrim(`user:imgs:${email}`, 0, 499);
     }
 
-    console.log(`[image] gallery saved (${source}): ${finalUrl.slice(0, 80)}`);
+    console.log(`[image] salvo no banco (${source}): ${finalUrl.slice(0, 80)}`);
   } catch (e: any) {
-    console.error("[image] gallery save failed:", e.message);
+    console.error("[image] save failed:", e.message);
   }
 }
 
@@ -441,6 +471,20 @@ export async function POST(req: NextRequest) {
     isPro = plan !== "free";
   }
   if (!isPro && activationToken) { const { valid } = verifyToken(activationToken); isPro = valid; }
+
+  // ── Checar banco de imagens (cache permanente) ────────────────
+  // Imagens de referência nunca usam cache — são únicas por design
+  if (!hasReference) {
+    const cached = await getCachedImage(enhancedPrompt, style);
+    if (cached) {
+      if (email) {
+        const userEntry = JSON.stringify({ url: cached, prompt: enhancedPrompt, savedAt: new Date().toISOString() });
+        redisLPush(`user:imgs:${email}`, userEntry).catch(() => {});
+        redisLTrim(`user:imgs:${email}`, 0, 499).catch(() => {});
+      }
+      return NextResponse.json({ imageUrl: cached, source: "cache", plan: "cache" });
+    }
+  }
 
   type ImageResult = { imageUrl: string; source: string };
   let result: ImageResult | null = null;
@@ -477,7 +521,7 @@ export async function POST(req: NextRequest) {
   if (!result) return NextResponse.json({ error: errors.join(" | ") }, { status: 500 });
 
   // waitUntil garante que o Vercel mantém a função viva até o salvamento completar
-  waitUntil(saveToGallery(result.imageUrl, email, enhancedPrompt, result.source));
+  waitUntil(saveToGallery(result.imageUrl, email, enhancedPrompt, style, result.source));
 
   return NextResponse.json({ ...result, plan, ...(errors.length ? { fallbackErrors: errors } : {}) });
 }
