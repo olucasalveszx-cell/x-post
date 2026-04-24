@@ -10,6 +10,7 @@ import PostsPanel from "@/components/Calendar/PostsPanel";
 
 interface Props {
   onGenerate: (slides: Slide[]) => void;
+  onLayoutChange?: (slides: Slide[]) => void;
   currentSlides?: Slide[];
 }
 
@@ -22,7 +23,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "translate", label: "Traduzir",   icon: <Languages size={12} /> },
 ];
 
-export default function SidePanel({ onGenerate, currentSlides = [] }: Props) {
+export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = [] }: Props) {
   const [tab, setTab] = useState<Tab>("generate");
 
   return (
@@ -47,7 +48,7 @@ export default function SidePanel({ onGenerate, currentSlides = [] }: Props) {
 
       {/* Conteúdo */}
       <div className="flex-1 overflow-y-auto p-4">
-        {tab === "generate"  && <GeneratorPanel onGenerate={onGenerate} />}
+        {tab === "generate"  && <GeneratorPanel onGenerate={onGenerate} onLayoutChange={onLayoutChange} currentSlides={currentSlides} />}
         {tab === "promo"     && <PromoPanel onGenerate={onGenerate} />}
         {tab === "posts"     && <PostsPanel currentSlides={currentSlides} onLoad={onGenerate} />}
         {tab === "translate" && <TranslatePanel onGenerate={onGenerate} />}
