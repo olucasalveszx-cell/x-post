@@ -3,6 +3,8 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { redisGet, redisSet, redisListAdd } from "@/lib/redis";
 import { verifyPassword } from "@/lib/password";
+import { generateOTP, storeOTP, verifyOTP, deleteOTP } from "@/lib/otp";
+import { sendOTPEmail } from "@/lib/email";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,6 +18,33 @@ export const authOptions: NextAuthOptions = {
           access_type: "online",
           response_type: "code",
         },
+      },
+    }),
+
+    // Provider para verificação OTP após login Google
+    CredentialsProvider({
+      id: "otp",
+      name: "OTP",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        otp:   { label: "Código", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.otp) return null;
+
+        const emailNorm = credentials.email.toLowerCase().trim();
+        const valid = await verifyOTP(emailNorm, credentials.otp);
+        if (!valid) return null;
+
+        const raw = await redisGet(`user:${emailNorm}`);
+        if (!raw) return null;
+
+        const user = JSON.parse(raw);
+        user.verified = true;
+        await redisSet(`user:${emailNorm}`, JSON.stringify(user));
+        await deleteOTP(emailNorm);
+
+        return { id: emailNorm, email: emailNorm, name: user.name, image: user.picture ?? null };
       },
     }),
 
@@ -58,24 +87,44 @@ export const authOptions: NextAuthOptions = {
   useSecureCookies: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
 
   callbacks: {
-    // Auto-registra usuários Google no Redis e dá 4 créditos de boas-vindas
     async signIn({ user, account }) {
       if (account?.provider === "google" && user.email) {
         const emailNorm = user.email.toLowerCase().trim();
         const key = `user:${emailNorm}`;
+
+        // Admin nunca é bloqueado
+        const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+        if (adminEmail && emailNorm === adminEmail) return true;
+
         try {
           const existing = await redisGet(key);
-          if (!existing) {
+
+          if (existing) {
+            const userData = JSON.parse(existing);
+            // Usuários sem campo 'verified' (cadastrados antes desta feature) passam direto
+            if (userData.verified !== false) return true;
+            // Usuário pendente de verificação — reenviar OTP
+            const code = generateOTP();
+            await storeOTP(emailNorm, code);
+            await sendOTPEmail(emailNorm, code);
+            return `/verificar?email=${encodeURIComponent(emailNorm)}`;
+          } else {
+            // Novo usuário — cadastrar como não verificado e enviar OTP
             const newUser = {
               name: user.name ?? emailNorm.split("@")[0],
               email: emailNorm,
               passwordHash: "",
               createdAt: new Date().toISOString(),
               provider: "google",
+              verified: false,
             };
             await redisSet(key, JSON.stringify(newUser));
             await redisListAdd("users:list", emailNorm);
-            console.log(`[auth] novo usuário Google: ${emailNorm}`);
+            const code = generateOTP();
+            await storeOTP(emailNorm, code);
+            await sendOTPEmail(emailNorm, code);
+            console.log(`[auth] novo usuário Google (aguarda verificação): ${emailNorm}`);
+            return `/verificar?email=${encodeURIComponent(emailNorm)}`;
           }
         } catch (e: any) {
           console.error("[auth] signIn Google erro:", e.message);
