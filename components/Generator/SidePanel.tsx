@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Languages, ShoppingBag, CalendarClock, X } from "lucide-react";
+import { Sparkles, Languages, ShoppingBag, CalendarClock, X, RefreshCw } from "lucide-react";
 import { Slide } from "@/types";
 import GeneratorPanel from "./GeneratorPanel";
 import TranslatePanel from "./TranslatePanel";
@@ -55,16 +55,24 @@ export default function SidePanel({ onGenerate, currentSlides = [], onClose }: P
       </div>
 
       {/* Botão Fechar */}
-      {onClose && (
-        <div className="shrink-0 border-t border-[var(--border)] p-3">
+      <div className="shrink-0 border-t border-[var(--border)] p-3 flex gap-2">
+        {onClose && (
           <button
             onClick={onClose}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
           >
-            <X size={14} /> Fechar painel
+            <X size={14} /> Fechar
           </button>
-        </div>
-      )}
+        )}
+        <button
+          onClick={() => window.location.reload()}
+          title="Recarregar app"
+          className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
+        >
+          <RefreshCw size={14} />
+          <span className="hidden sm:inline">Recarregar</span>
+        </button>
+      </div>
     </div>
   );
 }
