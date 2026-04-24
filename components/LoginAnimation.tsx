@@ -1,115 +1,138 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
 interface Props {
   onComplete: () => void;
 }
 
-/*
- * XP icon fiel à spec:
- *
- * X (chevron ">"):
- *   Polígono com braços paralelos, espessura 13u, ângulo interno ~90°.
- *   Ponta em (44, 50). Notch interno em (20, 50).
- *   Gradiente horizontal #2563FF → #8A3FFC mapeado ao comprimento do chevron.
- *
- * P (letra geométrica):
- *   Haste x=47–58, y=21–79.
- *   Bowl: cúbica C(90,21)(90,62)(58,62) — pico em x≈83 y≈42, cantos naturalmente
- *   arredondados pela tangente horizontal.
- *   Furo interno: C(80,33)(80,54)(58,54) — parede ~10u na curva, 12u no topo, 8u na base.
- *   fill-rule="evenodd" para o furo.
- */
-function XPostIcon({ style }: { style?: React.CSSProperties }) {
-  return (
-    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={style}>
-      <defs>
-        <radialGradient id="la-bg" cx="50%" cy="40%" r="68%">
-          <stop offset="0%"   stopColor="#1a1a22" />
-          <stop offset="100%" stopColor="#0b0b0f" />
-        </radialGradient>
-
-        <linearGradient id="la-cg" x1="11" y1="0" x2="44" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#2563FF" />
-          <stop offset="100%" stopColor="#8A3FFC" />
-        </linearGradient>
-
-        <linearGradient id="la-shadow" x1="0%" y1="0%" x2="0%" y2="42%">
-          <stop offset="0%"   stopColor="rgba(0,0,0,0.55)" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0)" />
-        </linearGradient>
-
-        <radialGradient id="la-glow" cx="48%" cy="50%" r="35%">
-          <stop offset="0%"   stopColor="rgba(80,110,255,0.09)" />
-          <stop offset="100%" stopColor="rgba(80,110,255,0)" />
-        </radialGradient>
-      </defs>
-
-      <rect width="100" height="100" rx="20" fill="url(#la-bg)" />
-
-      {/* X — chevron com braços paralelos, gradiente horizontal */}
-      <polygon
-        points="11,21 28,21 44,50 28,79 11,79 11,66 20,50 11,34"
-        fill="url(#la-cg)"
-        style={{ animation: "la-x-in 0.44s cubic-bezier(0.22,1,0.36,1) 0.46s both" }}
-      />
-
-      {/* P — haste + bowl cúbico + furo interno */}
-      <path
-        fillRule="evenodd"
-        fill="white"
-        d="M47,21 L58,21 C90,21 90,62 58,62 L58,79 L47,79 Z
-           M58,33 C80,33 80,54 58,54 Z"
-        style={{ animation: "la-p-in 0.44s cubic-bezier(0.22,1,0.36,1) 0.62s both" }}
-      />
-
-      <rect width="100" height="100" rx="20" fill="url(#la-shadow)" style={{ pointerEvents: "none" }} />
-      <rect width="100" height="100" rx="20" fill="url(#la-glow)"   style={{ pointerEvents: "none" }} />
-    </svg>
-  );
-}
-
 export default function LoginAnimation({ onComplete }: Props) {
-  const [out, setOut] = useState(false);
+  const sceneRef   = useRef<HTMLDivElement>(null);
+  const glowRef    = useRef<HTMLDivElement>(null);
+  const flashRef   = useRef<HTMLDivElement>(null);
+  const ringRef    = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const cardRef    = useRef<HTMLDivElement>(null);
+  const backRef    = useRef<HTMLDivElement>(null);
+  const imgRef     = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setOut(true), 1900);
-    const t2 = setTimeout(onComplete, 2260);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const FLY     = 1900;
+    const launch  = 150;
+    const landT   = launch + Math.round(FLY * 0.70);
+    const revealT = landT   + 220;
+    const floatT  = revealT + 650;
+    const outT    = floatT  + 1300;
+    const doneT   = outT    + 750;
+
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const t = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
+
+    // card launches
+    t(launch, () => {
+      if (!wrapperRef.current || !cardRef.current) return;
+      wrapperRef.current.style.animation = `lca-path ${FLY}ms cubic-bezier(0.12,0.92,0.36,1) forwards`;
+      cardRef.current.style.animation    = `lca-spin  ${FLY}ms cubic-bezier(0.12,0.92,0.36,1) forwards`;
+    });
+
+    // landing impact
+    t(landT, () => {
+      if (!ringRef.current || !flashRef.current || !glowRef.current) return;
+      ringRef.current.style.animation  = "lca-ring  0.65s ease-out forwards";
+      flashRef.current.style.animation = "lca-flash 0.25s ease-out forwards";
+      glowRef.current.style.opacity    = "1";
+      glowRef.current.style.transform  = "scale(1)";
+    });
+
+    // logo reveals
+    t(revealT, () => {
+      if (!backRef.current || !imgRef.current) return;
+      backRef.current.style.transition = "opacity 0.35s ease";
+      backRef.current.style.opacity    = "0";
+      imgRef.current.style.animation   = "lca-logo-in 0.8s cubic-bezier(0.22,1,0.36,1) forwards";
+    });
+
+    // card floats + glow breathes
+    t(floatT, () => {
+      if (!cardRef.current || !glowRef.current) return;
+      cardRef.current.style.animation = "lca-float      3.4s ease-in-out infinite";
+      glowRef.current.style.animation = "lca-glow-pulse 3.4s ease-in-out infinite";
+    });
+
+    // app opens — card zooms to fill screen
+    t(outT, () => {
+      if (!wrapperRef.current || !cardRef.current || !glowRef.current) return;
+      cardRef.current.style.animation    = "none";
+      glowRef.current.style.animation    = "none";
+      glowRef.current.style.opacity      = "0";
+      wrapperRef.current.style.animation = "lca-open 0.65s cubic-bezier(0.4,0,1,1) forwards";
+    });
+
+    t(outT + 420, () => {
+      if (!sceneRef.current) return;
+      sceneRef.current.style.animation = "lca-fade-out 0.35s ease-out forwards";
+    });
+
+    t(doneT, onComplete);
+
+    return () => timers.forEach(clearTimeout);
   }, [onComplete]);
 
   return (
     <>
       <style>{`
-        @keyframes la-bg-in  { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes la-bg-out { from { opacity: 1 } to { opacity: 0 } }
+        @keyframes lca-fade-in  { from{opacity:0} to{opacity:1} }
+        @keyframes lca-fade-out { from{opacity:1} to{opacity:0} }
 
-        @keyframes la-icon-in {
-          0%   { transform: scale(0.04); opacity: 0 }
-          28%  { opacity: 1 }
-          100% { transform: scale(1);    opacity: 1 }
-        }
-        @keyframes la-icon-out {
-          to { transform: scale(0.88); opacity: 0 }
-        }
-
-        @keyframes la-x-in {
-          from { opacity: 0; transform: translateX(-26px) }
-          to   { opacity: 1; transform: translateX(0) }
-        }
-        @keyframes la-p-in {
-          from { opacity: 0; transform: translateX(20px) }
-          to   { opacity: 1; transform: translateX(0) }
+        @keyframes lca-path {
+          0%   { transform: translate(-420px,340px) scale(0.08); opacity:0; }
+          4%   { opacity:1; }
+          32%  { transform: translate(-100px,-65px) scale(0.50); }
+          70%  { transform: translate(0px,0px) scale(1.07); }
+          79%  { transform: translate(0px,13px) scale(1.0); }
+          90%  { transform: translate(0px,-7px) scale(0.97); }
+          96%  { transform: translate(0px,3px) scale(1.0); }
+          100% { transform: translate(0px,0px) scale(1.0); opacity:1; }
         }
 
-        @keyframes la-glow-breathe {
-          0%, 100% { opacity: 0.42; transform: scale(0.92) }
-          50%      { opacity: 0.95; transform: scale(1.08) }
+        @keyframes lca-spin {
+          0%   { transform: rotateZ(-270deg) rotateY(70deg); filter: blur(10px) brightness(0.7); }
+          28%  { filter: blur(5px) brightness(0.9); }
+          60%  { transform: rotateZ(-14deg) rotateY(10deg); filter: blur(1px) brightness(1); }
+          72%  { transform: rotateZ(0deg) rotateY(0deg); filter: blur(0) brightness(1); }
+          100% { transform: rotateZ(0deg) rotateY(0deg); }
+        }
+
+        @keyframes lca-logo-in {
+          0%   { opacity:0; transform:scale(0.82); filter:blur(8px); }
+          55%  { opacity:1; }
+          100% { opacity:1; transform:scale(1);   filter:blur(0); }
+        }
+
+        @keyframes lca-float {
+          0%,100% { transform:translateY(0px) scale(1); }
+          50%     { transform:translateY(-9px) scale(1.02); }
+        }
+
+        @keyframes lca-ring  {
+          0%   { transform:scale(1);   opacity:0.7; }
+          100% { transform:scale(2.6); opacity:0; }
+        }
+        @keyframes lca-flash { 0%{opacity:0.22} 100%{opacity:0} }
+
+        @keyframes lca-glow-pulse {
+          0%,100% { opacity:0.75; transform:scale(0.94); }
+          50%     { opacity:1.0;  transform:scale(1.08); }
+        }
+
+        @keyframes lca-open {
+          0%   { transform:translate(0,0) scale(1);  opacity:1; }
+          100% { transform:translate(0,0) scale(20); opacity:0; }
         }
       `}</style>
 
       <div
+        ref={sceneRef}
         style={{
           position: "fixed",
           inset: 0,
@@ -118,40 +141,131 @@ export default function LoginAnimation({ onComplete }: Props) {
           alignItems: "center",
           justifyContent: "center",
           background: "#060608",
-          animation: out
-            ? "la-bg-out 0.36s ease-out forwards"
-            : "la-bg-in 0.15s ease-out forwards",
+          overflow: "hidden",
+          animation: "lca-fade-in 0.2s ease-out both",
         }}
       >
+        {/* ambient glow */}
         <div
+          ref={glowRef}
           style={{
             position: "absolute",
-            width: 260,
-            height: 260,
+            width: 460,
+            height: 460,
             borderRadius: "50%",
             background:
-              "radial-gradient(circle, rgba(37,99,255,0.18) 0%, rgba(138,63,252,0.08) 50%, transparent 72%)",
+              "radial-gradient(circle, rgba(37,99,255,0.30) 0%, rgba(138,63,252,0.15) 50%, transparent 70%)",
+            opacity: 0,
+            transform: "scale(0.4)",
             pointerEvents: "none",
-            animation: "la-glow-breathe 3s 1.1s ease-in-out infinite",
+            transition: "opacity 0.7s ease, transform 0.7s ease",
           }}
         />
 
+        {/* white flash on impact */}
         <div
+          ref={flashRef}
           style={{
+            position: "absolute",
+            inset: 0,
+            background: "#fff",
+            opacity: 0,
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* impact ring */}
+        <div
+          ref={ringRef}
+          style={{
+            position: "absolute",
             width: 148,
             height: 148,
-            borderRadius: 34,
-            overflow: "hidden",
-            boxShadow:
-              "0 0 0 1px rgba(255,255,255,0.05), " +
-              "0 24px 64px rgba(0,0,0,0.95), " +
-              "0 0 120px rgba(37,99,255,0.12)",
-            animation: out
-              ? "la-icon-out 0.32s cubic-bezier(0.4,0,1,1) forwards"
-              : "la-icon-in 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.08s both",
+            borderRadius: "50%",
+            border: "1.5px solid rgba(255,255,255,0.6)",
+            opacity: 0,
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* card wrapper — handles arc path + scale */}
+        <div
+          ref={wrapperRef}
+          style={{
+            position: "absolute",
+            width: 148,
+            height: 148,
+            perspective: "900px",
+            transform: "translate(-420px,340px) scale(0.08)",
+            opacity: 0,
           }}
         >
-          <XPostIcon style={{ width: "100%", height: "100%", display: "block" }} />
+          {/* card — handles spin + blur */}
+          <div
+            ref={cardRef}
+            style={{
+              position: "relative",
+              width: 148,
+              height: 148,
+              borderRadius: 34,
+              overflow: "hidden",
+              boxShadow:
+                "0 0 0 1px rgba(255,255,255,0.07), " +
+                "0 28px 72px rgba(0,0,0,0.98), " +
+                "0 0 110px rgba(37,99,255,0.16)",
+            }}
+          >
+            {/* card back — visible during flight */}
+            <div
+              ref={backRef}
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: 34,
+                background: "radial-gradient(circle at 50% 40%, #1a1a22, #0b0b0f)",
+              }}
+            >
+              <svg
+                width="148"
+                height="148"
+                style={{ position: "absolute", inset: 0 }}
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <defs>
+                  <pattern
+                    id="lca-pat"
+                    x="0" y="0"
+                    width="14" height="14"
+                    patternUnits="userSpaceOnUse"
+                  >
+                    <path
+                      d="M7 0 L14 7 L7 14 L0 7 Z"
+                      fill="none"
+                      stroke="rgba(255,255,255,0.05)"
+                      strokeWidth="0.8"
+                    />
+                  </pattern>
+                </defs>
+                <rect width="148" height="148" fill="url(#lca-pat)" />
+              </svg>
+            </div>
+
+            {/* logo image — revealed after landing */}
+            <img
+              ref={imgRef}
+              src="/animation.png"
+              alt=""
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: 0,
+                borderRadius: 34,
+              }}
+            />
+          </div>
         </div>
       </div>
     </>
