@@ -653,6 +653,8 @@ export default function EditorPage() {
   const isEmpty = slides.length === 1 && slides[0].elements.length === 0 && !slides[0].backgroundImageUrl;
 
   return (
+    <>
+    {showLoginAnim && <LoginAnimation onComplete={() => { setShowLoginAnim(false); setLoginAnimDone(true); }} />}
     <SubscriptionGate>
     <div className="flex flex-col h-screen overflow-hidden bg-[var(--bg)]">
 
@@ -931,7 +933,6 @@ export default function EditorPage() {
         </div>
       )}
 
-      {showLoginAnim && <LoginAnimation onComplete={() => { setShowLoginAnim(false); setLoginAnimDone(true); }} />}
       {showPublish && <PublishModal slides={slides} account={igAccount} onClose={() => setShowPublish(false)} onLoginClick={handleIGLogin} />}
       <AIAssistant open={showAI} onClose={() => setShowAI(false)} />
       <ProfileModal open={showProfile} initialTab={profileInitialTab} onClose={() => { setShowProfile(false); setProfileInitialTab(undefined); }} />
@@ -952,5 +953,6 @@ export default function EditorPage() {
       />
     </div>
     </SubscriptionGate>
+    </>
   );
 }
