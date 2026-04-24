@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppLogo from "@/components/AppLogo";
 
-export default function VerificarPage() {
+function VerificarForm() {
   const router = useRouter();
   const params = useSearchParams();
   const email = params.get("email") ?? "";
@@ -165,5 +165,13 @@ export default function VerificarPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function VerificarPage() {
+  return (
+    <Suspense>
+      <VerificarForm />
+    </Suspense>
   );
 }
