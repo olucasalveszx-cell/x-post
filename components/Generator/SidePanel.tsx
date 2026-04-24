@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Languages, ShoppingBag, CalendarClock } from "lucide-react";
+import { Sparkles, Languages, ShoppingBag, CalendarClock, X } from "lucide-react";
 import { Slide } from "@/types";
 import GeneratorPanel from "./GeneratorPanel";
 import TranslatePanel from "./TranslatePanel";
@@ -11,6 +11,7 @@ import PostsPanel from "@/components/Calendar/PostsPanel";
 interface Props {
   onGenerate: (slides: Slide[]) => void;
   currentSlides?: Slide[];
+  onClose?: () => void;
 }
 
 type Tab = "generate" | "promo" | "posts" | "translate";
@@ -22,7 +23,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "translate", label: "Traduzir",   icon: <Languages size={12} /> },
 ];
 
-export default function SidePanel({ onGenerate, currentSlides = [] }: Props) {
+export default function SidePanel({ onGenerate, currentSlides = [], onClose }: Props) {
   const [tab, setTab] = useState<Tab>("generate");
 
   return (
@@ -52,6 +53,18 @@ export default function SidePanel({ onGenerate, currentSlides = [] }: Props) {
         {tab === "posts"     && <PostsPanel currentSlides={currentSlides} onLoad={onGenerate} />}
         {tab === "translate" && <TranslatePanel onGenerate={onGenerate} />}
       </div>
+
+      {/* Botão Fechar */}
+      {onClose && (
+        <div className="shrink-0 border-t border-[var(--border)] p-3">
+          <button
+            onClick={onClose}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
+          >
+            <X size={14} /> Fechar painel
+          </button>
+        </div>
+      )}
     </div>
   );
 }

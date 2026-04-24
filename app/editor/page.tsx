@@ -92,6 +92,7 @@ export default function EditorPage() {
   const [credits, setCredits] = useState<{ remaining: number; limit: number; unlimited: boolean } | null>(null);
   const [mobilePanel, setMobilePanel] = useState<"side" | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
   const [displayScale, setDisplayScale] = useState(560 / 1350);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [showProfilePicker, setShowProfilePicker] = useState(false);
@@ -782,10 +783,19 @@ export default function EditorPage() {
               <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} currentSlides={slides} />
             </div>
           </div>
-        ) : (
+        ) : showSidebar ? (
           <div className="flex flex-col overflow-hidden shrink-0" style={{ width: 300, background: "var(--bg-2)", borderRight: "1px solid var(--border)" }}>
-            <SidePanel onGenerate={handleGenerate} currentSlides={slides} />
+            <SidePanel onGenerate={handleGenerate} currentSlides={slides} onClose={() => setShowSidebar(false)} />
           </div>
+        ) : (
+          <button
+            onClick={() => setShowSidebar(true)}
+            className="shrink-0 flex flex-col items-center justify-center gap-1 px-2 text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
+            style={{ width: 28, borderRight: "1px solid var(--border)", background: "var(--bg-2)" }}
+            title="Abrir painel"
+          >
+            <Sparkles size={13} />
+          </button>
         )}
 
         {/* ── Área central ──────────────────────────────────────── */}
