@@ -112,7 +112,7 @@ export default function StorytellingAssistant({ onGenerate }: Props) {
           <div className="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
             <BookOpen size={13} className="text-purple-400" />
           </div>
-          <span className="text-xs font-semibold text-white">Assistente de Storytelling</span>
+          <span className="text-xs font-semibold text-[var(--text)]">Assistente de Storytelling</span>
         </div>
         {expanded ? <ChevronUp size={14} className="text-gray-500" /> : <ChevronDown size={14} className="text-gray-500" />}
       </button>
@@ -167,7 +167,7 @@ export default function StorytellingAssistant({ onGenerate }: Props) {
             <label className="text-[10px] text-gray-500 font-medium uppercase tracking-wide whitespace-nowrap">Nº de Stories</label>
             <input type="range" min="3" max="10" value={slides} onChange={e => setSlides(e.target.value)}
               className="flex-1 accent-purple-500" />
-            <span className="text-xs text-white w-4 text-right">{slides}</span>
+            <span className="text-xs text-[var(--text-2)] w-4 text-right">{slides}</span>
           </div>
 
           {/* Erro */}
@@ -216,7 +216,7 @@ export default function StorytellingAssistant({ onGenerate }: Props) {
                   ].join("\n\n---\n\n");
                   copyText(all, "all");
                 }}
-                className="flex items-center justify-center gap-1.5 py-1.5 text-[10px] text-gray-500 hover:text-white border border-[#2a2a2a] hover:border-[#3a3a3a] rounded-lg transition-colors"
+                className="flex items-center justify-center gap-1.5 py-1.5 text-[10px] text-gray-500 hover:text-[var(--text)] border border-[#2a2a2a] hover:border-[#3a3a3a] rounded-lg transition-colors"
               >
                 {copied === "all" ? <><Check size={11} className="text-green-400" /> Copiado!</> : <><Copy size={11} /> Copiar roteiro completo</>}
               </button>
@@ -257,7 +257,7 @@ function ScriptBlock({ label, text, tip, onCopy, copied, accent }: {
           {copied ? <Check size={11} /> : <Copy size={11} />}
         </button>
       </div>
-      <p className="text-[11px] text-white leading-relaxed">{text}</p>
+      <p className="text-[11px] text-[var(--text)] leading-relaxed">{text}</p>
       {tip && <p className="text-[9px] opacity-60 italic">{tip}</p>}
     </div>
   );

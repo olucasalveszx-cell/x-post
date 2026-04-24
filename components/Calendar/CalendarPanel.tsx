@@ -124,13 +124,13 @@ export default function CalendarPanel() {
 
       {/* Navegação do mês */}
       <div className="flex items-center justify-between">
-        <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+        <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-[var(--bg-4)] text-gray-400 hover:text-[var(--text)] transition-colors">
           <ChevronLeft size={16} />
         </button>
-        <span className="text-sm font-semibold text-white">
+        <span className="text-sm font-semibold text-[var(--text)]">
           {MONTHS[viewMonth]} {viewYear}
         </span>
-        <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+        <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-[var(--bg-4)] text-gray-400 hover:text-[var(--text)] transition-colors">
           <ChevronRight size={16} />
         </button>
       </div>
@@ -168,7 +168,7 @@ export default function CalendarPanel() {
                 `}
               >
                 <span className={`text-xs font-medium leading-none ${
-                  isToday ? "text-brand-400 font-bold" : isSelected ? "text-white" : "text-gray-400"
+                  isToday ? "text-brand-400 font-bold" : isSelected ? "text-[var(--text)]" : "text-gray-400"
                 }`}>
                   {day}
                 </span>

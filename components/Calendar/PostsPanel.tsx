@@ -349,7 +349,7 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
                     className="px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium disabled:opacity-40 flex items-center gap-1 transition-colors">
                     {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Salvar
                   </button>
-                  <button onClick={() => setShowNameInput(false)} className="p-2 rounded-lg text-gray-500 hover:text-white">
+                  <button onClick={() => setShowNameInput(false)} className="p-2 rounded-lg text-gray-500 hover:text-[var(--text)]">
                     <X size={14} />
                   </button>
                 </div>
@@ -578,11 +578,11 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
         <div className="flex flex-col gap-4">
           {/* Navegação */}
           <div className="flex items-center justify-between">
-            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-[var(--bg-4)] text-gray-400 hover:text-[var(--text)] transition-colors">
               <ChevronLeft size={16} />
             </button>
-            <span className="text-sm font-semibold text-white">{MONTHS_PT[viewMonth]} {viewYear}</span>
-            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+            <span className="text-sm font-semibold text-[var(--text)]">{MONTHS_PT[viewMonth]} {viewYear}</span>
+            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-[var(--bg-4)] text-gray-400 hover:text-[var(--text)] transition-colors">
               <ChevronRight size={16} />
             </button>
           </div>
@@ -603,7 +603,7 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
                 return (
                   <button key={day} onClick={() => setSelectedDay(isSelected ? null : day)}
                     className={`h-9 flex flex-col items-center justify-center gap-0.5 border-b transition-colors ${col < 6 ? "border-r" : ""} border-[#111] ${isSelected ? "bg-brand-500/20" : "hover:bg-white/[0.03]"}`}>
-                    <span className={`text-[11px] font-medium leading-none ${isToday ? "text-brand-400 font-bold" : isSelected ? "text-white" : "text-gray-400"}`}>
+                    <span className={`text-[11px] font-medium leading-none ${isToday ? "text-brand-400 font-bold" : isSelected ? "text-[var(--text)]" : "text-gray-400"}`}>
                       {day}
                     </span>
                     {dayPosts.length > 0 && (
@@ -686,7 +686,7 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
                           {post.imageUrls[0] ? <img src={post.imageUrls[0]} alt="" className="w-full h-full object-cover" /> : <ImageIcon size={12} className="text-gray-600" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] text-gray-300 truncate">{post.caption || "Sem legenda"}</p>
+                          <p className="text-[10px] text-[var(--text-2)] truncate">{post.caption || "Sem legenda"}</p>
                           <p className="text-[10px] text-blue-400 mt-0.5">
                             {d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} às {d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                           </p>
