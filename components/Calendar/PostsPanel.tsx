@@ -323,7 +323,7 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
           return (
             <button key={s} onClick={() => setSection(s)}
               className={`flex-1 py-2 text-[11px] font-medium transition-colors border-b-2 ${
-                section === s ? "text-white border-brand-500" : "text-gray-500 border-transparent hover:text-gray-300"
+                section === s ? "text-[var(--text)] border-brand-500" : "text-[var(--text-3)] border-transparent hover:text-[var(--text-2)]"
               }`}>
               {labels[s]}
             </button>
