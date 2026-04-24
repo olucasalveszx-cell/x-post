@@ -94,7 +94,6 @@ export default function EditorPage() {
   const [credits, setCredits] = useState<{ remaining: number; limit: number; unlimited: boolean } | null>(null);
   const [mobilePanel, setMobilePanel] = useState<"side" | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
   const [displayScale, setDisplayScale] = useState(560 / 1350);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [showProfilePicker, setShowProfilePicker] = useState(false);
@@ -163,22 +162,26 @@ export default function EditorPage() {
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo]);
 
-  // ── Animação de login (Google OAuth volta aqui) ───────────────
+  // ── Animação de login ─────────────────────────────────────────
+  const [loginAnimDone, setLoginAnimDone] = useState(false);
   useEffect(() => {
     try {
       if (localStorage.getItem("xpost_login_anim") === "1") {
         localStorage.removeItem("xpost_login_anim");
         setShowLoginAnim(true);
+        return; // ProfilePicker aguarda o fim da animação
       }
     } catch {}
+    setLoginAnimDone(true); // sem animação → libera imediatamente
   }, []);
 
-  // ── Profile picker ───────────────────────────────────────────
+  // ── Profile picker (aguarda animação de login se houver) ──────
   useEffect(() => {
+    if (!loginAnimDone) return;
     const stored = getStoredProfile();
     if (stored) { setUserProfile(stored); }
     else { setTimeout(() => setShowProfilePicker(true), 800); }
-  }, []);
+  }, [loginAnimDone]);
 
   // ── Tutorial notification ─────────────────────────────────────
   useEffect(() => {
@@ -795,19 +798,10 @@ export default function EditorPage() {
               <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} currentSlides={slides} />
             </div>
           </div>
-        ) : showSidebar ? (
-          <div className="flex flex-col overflow-hidden shrink-0" style={{ width: 300, background: "var(--bg-2)", borderRight: "1px solid var(--border)" }}>
-            <SidePanel onGenerate={handleGenerate} currentSlides={slides} onClose={() => setShowSidebar(false)} />
-          </div>
         ) : (
-          <button
-            onClick={() => setShowSidebar(true)}
-            className="shrink-0 flex flex-col items-center justify-center gap-1 px-2 text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
-            style={{ width: 28, borderRight: "1px solid var(--border)", background: "var(--bg-2)" }}
-            title="Abrir painel"
-          >
-            <Sparkles size={13} />
-          </button>
+          <div className="flex overflow-hidden shrink-0" style={{ width: 300, background: "var(--bg-2)", borderRight: "1px solid var(--border)" }}>
+            <SidePanel onGenerate={handleGenerate} currentSlides={slides} />
+          </div>
         )}
 
         {/* ── Área central ──────────────────────────────────────── */}
@@ -937,7 +931,7 @@ export default function EditorPage() {
         </div>
       )}
 
-      {showLoginAnim && <LoginAnimation onComplete={() => setShowLoginAnim(false)} />}
+      {showLoginAnim && <LoginAnimation onComplete={() => { setShowLoginAnim(false); setLoginAnimDone(true); }} />}
       {showPublish && <PublishModal slides={slides} account={igAccount} onClose={() => setShowPublish(false)} onLoginClick={handleIGLogin} />}
       <AIAssistant open={showAI} onClose={() => setShowAI(false)} />
       <ProfileModal open={showProfile} initialTab={profileInitialTab} onClose={() => { setShowProfile(false); setProfileInitialTab(undefined); }} />
