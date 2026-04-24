@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Slide, SlideElement } from "@/types";
-import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square, MoreVertical, LayoutTemplate, Video as VideoIcon } from "lucide-react";
+import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square, MoreVertical, LayoutTemplate, Video as VideoIcon, Upload } from "lucide-react";
 import { v4 as uuid } from "uuid";
 
 interface Props {
@@ -1385,63 +1385,60 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       <>
         <div className="fixed inset-0 z-[9990]" onClick={closeFrameCtx} />
         <div
-          className="fixed z-[9991] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-1.5 overflow-y-auto"
+          className="fixed z-[9991] bg-[#1a1a1a] border border-[#2a2a2a] shadow-2xl overflow-y-auto"
           style={frameCtxMenu.mobile
-            ? { bottom: 76, left: "50%", transform: "translateX(-50%)", maxHeight: "70vh", width: "min(300px, 92vw)" }
-            : {
-                left: Math.min(frameCtxMenu.x, window.innerWidth - 270),
-                top: Math.max(8, Math.min(frameCtxMenu.y, window.innerHeight - 400)),
-                maxHeight: "80vh",
-                minWidth: 240,
-              }
+            ? { bottom: 0, left: 0, right: 0, maxHeight: "72vh", borderRadius: "18px 18px 0 0", paddingBottom: "env(safe-area-inset-bottom, 8px)" }
+            : { left: Math.min(frameCtxMenu.x, window.innerWidth - 260), top: Math.max(8, Math.min(frameCtxMenu.y, window.innerHeight - 380)), maxHeight: "80vh", minWidth: 240, borderRadius: 12 }
           }
           onClick={(e) => e.stopPropagation()}
           onContextMenu={(e) => e.preventDefault()}
         >
-          <div className="px-4 py-2.5 border-b border-[#2a2a2a] flex items-center gap-2">
-            <Square size={15} className="text-brand-400" />
-            <span className="text-sm font-semibold text-gray-300 flex-1">Moldura</span>
-            <button onClick={(e) => { e.stopPropagation(); closeFrameCtx(); }} className="ml-auto text-gray-500 hover:text-gray-200 transition-colors p-0.5"><X size={15} /></button>
+          {/* Handle bar no mobile */}
+          {frameCtxMenu.mobile && (
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-9 h-1 rounded-full bg-white/20" />
+            </div>
+          )}
+          <div className="px-4 py-3 border-b border-[#2a2a2a] flex items-center gap-2">
+            <Square size={14} className="text-indigo-400" />
+            <span className="text-sm font-semibold text-white flex-1">Moldura</span>
+            <button onClick={(e) => { e.stopPropagation(); closeFrameCtx(); }} className="text-gray-500 hover:text-gray-200 transition-colors p-1"><X size={14} /></button>
           </div>
-          <button
-            onClick={() => generateFrameImage(frameCtxMenu.el)}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
-          >
+
+          <button onClick={() => generateFrameImage(frameCtxMenu.el)}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-indigo-400 hover:bg-white/5 transition-colors border-b border-[#2a2a2a]">
             <Wand2 size={15} /> Gerar foto com I.A
           </button>
-          <button
-            onClick={() => { setFramePendingId(frameCtxMenu.el.id); frameFileInputRef.current?.click(); closeFrameCtx(); }}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
-          >
-            <RefreshCw size={15} className="text-blue-400" /> {frameCtxMenu.el.frameImageUrl ? "Trocar foto/vídeo" : "Adicionar foto/vídeo"}
+
+          <button onClick={() => { setFramePendingId(frameCtxMenu.el.id); frameFileInputRef.current?.click(); closeFrameCtx(); }}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors border-b border-[#2a2a2a]">
+            <Upload size={15} className="text-blue-400" /> Fazer upload foto/vídeo
           </button>
+
           {slide.backgroundImageUrl && (
-            <button
-              onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: slide.backgroundImageUrl, frameImageOffset: { x: 50, y: 50 }, frameImageZoom: 100 }); closeFrameCtx(); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-green-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
-            >
+            <button onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: slide.backgroundImageUrl, frameImageOffset: { x: 50, y: 50 }, frameImageZoom: 100 }); closeFrameCtx(); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-green-400 hover:bg-white/5 transition-colors border-b border-[#2a2a2a]">
               <ImageIcon size={15} /> Usar imagem de fundo
             </button>
           )}
+
           {frameCtxMenu.el.frameImageUrl && (
-            <button
-              onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: undefined, frameMediaType: undefined }); closeFrameCtx(); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[#2a2a2a] transition-colors border-b border-[#2a2a2a]"
-            >
+            <button onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: undefined, frameMediaType: undefined }); closeFrameCtx(); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-white/5 transition-colors border-b border-[#2a2a2a]">
               <X size={15} /> {frameCtxMenu.el.frameMediaType === "video" ? "Remover vídeo" : "Remover foto"}
             </button>
           )}
-          <div className="border-b border-[#2a2a2a]">
-            <button onClick={() => { bringForward(frameCtxMenu.el); closeFrameCtx(); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
-              <ArrowUp size={15} className="text-blue-400" /> Trazer à frente
-            </button>
-            <button onClick={() => { sendBackward(frameCtxMenu.el); closeFrameCtx(); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] transition-colors">
-              <ArrowDown size={15} className="text-blue-400" /> Enviar para trás
-            </button>
-          </div>
-          <button onClick={closeFrameCtx} className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors">
+
+          <button onClick={() => { bringForward(frameCtxMenu.el); closeFrameCtx(); }}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 transition-colors border-b border-[#2a2a2a]">
+            <ArrowUp size={15} className="text-blue-400" /> Trazer à frente
+          </button>
+          <button onClick={() => { sendBackward(frameCtxMenu.el); closeFrameCtx(); }}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 transition-colors border-b border-[#2a2a2a]">
+            <ArrowDown size={15} className="text-blue-400" /> Enviar para trás
+          </button>
+
+          <button onClick={closeFrameCtx} className="w-full px-4 py-3 text-sm text-gray-500 hover:text-gray-300 transition-colors">
             Fechar
           </button>
         </div>
