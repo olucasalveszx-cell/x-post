@@ -197,15 +197,24 @@ export default function QueuePreviewPage() {
         <Link href="/queue" className="text-zinc-500 text-sm hover:text-white transition-colors">
           ← Agendamentos
         </Link>
-        <span
-          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-            item.status === "pending_approval"
-              ? "bg-blue-500/20 text-blue-300"
-              : "bg-zinc-500/20 text-zinc-400"
-          }`}
-        >
-          {item.status === "pending_approval" ? "Aguardando aprovação" : item.status}
-        </span>
+        <div className="flex items-center gap-3">
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+              item.status === "pending_approval"
+                ? "bg-blue-500/20 text-blue-300"
+                : "bg-zinc-500/20 text-zinc-400"
+            }`}
+          >
+            {item.status === "pending_approval" ? "Aguardando aprovação" : item.status}
+          </span>
+          <Link
+            href="/queue"
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors text-lg leading-none"
+            title="Fechar"
+          >
+            ✕
+          </Link>
+        </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-6 pt-8 space-y-8">
