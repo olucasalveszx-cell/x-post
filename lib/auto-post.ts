@@ -1,4 +1,4 @@
-import { redisGet, redisSet, redisListAdd, redisListAll } from "@/lib/redis";
+import { redisGet, redisSet, redisListAdd, redisListAll, redisDel, redisLRem } from "@/lib/redis";
 import { AutoPostItem, AutoPostStatus, GeneratedSlide, SearchResult, WritingStyle } from "@/types";
 
 // ─── Chaves Redis ──────────────────────────────────────────────────────────────
@@ -42,6 +42,11 @@ export async function listAutoPosts(email: string): Promise<AutoPostItem[]> {
 
 export async function registerAutoPostForUser(email: string, id: string): Promise<void> {
   await redisListAdd(userKey(email), id);
+}
+
+export async function deleteAutoPost(email: string, id: string): Promise<void> {
+  await redisDel(itemKey(id));
+  await redisLRem(userKey(email), 0, id);
 }
 
 // ─── Busca na web (Serper) ────────────────────────────────────────────────────

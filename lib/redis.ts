@@ -35,3 +35,6 @@ export async function redisListAdd(key: string, value: string): Promise<void> {
 /** Retorna todos os itens da lista */
 export const redisListAll = (key: string): Promise<string[]> =>
   call(["LRANGE", key, "0", "-1"]);
+
+export const redisDel  = (key: string): Promise<number> => call(["DEL", key]);
+export const redisLRem = (key: string, count: number, value: string): Promise<number> => call(["LREM", key, count, value]);

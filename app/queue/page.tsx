@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 import { AutoPostItem, AutoPostStatus } from "@/types";
 
 const STATUS_LABEL: Record<AutoPostStatus, string> = {
@@ -41,6 +41,7 @@ export default function QueuePage() {
   const [imageSource, setImageSource] = useState<"ai" | "real">("ai");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function fetchItems() {
     try {
@@ -88,6 +89,17 @@ export default function QueuePage() {
       body: JSON.stringify({ status: "cancelled" }),
     });
     await fetchItems();
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Excluir este agendamento permanentemente?")) return;
+    setDeletingId(id);
+    try {
+      await fetch(`/api/auto-post/${id}`, { method: "DELETE" });
+      await fetchItems();
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   // Data mínima: 15 min no futuro
@@ -268,9 +280,20 @@ export default function QueuePage() {
                 {(item.status === "pending_approval" || item.status === "generating") && (
                   <button
                     onClick={() => handleCancel(item.id)}
-                    className="text-xs text-zinc-400 hover:text-red-400 transition-colors"
+                    className="text-xs text-zinc-400 hover:text-yellow-400 transition-colors"
                   >
                     Cancelar
+                  </button>
+                )}
+                {item.status === "pending_approval" && (
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    disabled={deletingId === item.id}
+                    className="text-xs text-zinc-600 hover:text-red-400 disabled:opacity-40 transition-colors flex items-center gap-1"
+                    title="Excluir permanentemente"
+                  >
+                    <Trash2 size={12} />
+                    {deletingId === item.id ? "..." : "Excluir"}
                   </button>
                 )}
               </div>
