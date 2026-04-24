@@ -725,10 +725,6 @@ export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
 
-  // Se já estiver logado, redireciona direto ao editor
-  useEffect(() => {
-    if (status === "authenticated") router.replace("/editor");
-  }, [status, router]);
 
   const scrollToPricing = () =>
     pricingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -753,23 +749,13 @@ export default function LandingPage() {
         <nav className="hidden md:flex items-center gap-6 text-sm text-gray-400">
           <button onClick={scrollToPricing} className="hover:text-white transition-colors">Preços</button>
           <Link href="/editor" className="hover:text-white transition-colors">Editor</Link>
-          {session
-            ? <Link href="/editor" className="hover:text-white transition-colors text-brand-400 font-medium">Abrir editor</Link>
-            : <button onClick={() => setLoginOpen(true)} className="hover:text-white transition-colors">Entrar</button>
-          }
+          <button onClick={() => session ? router.push("/editor") : setLoginOpen(true)} className="hover:text-white transition-colors">Entrar</button>
         </nav>
         <div className="flex items-center gap-2">
-          {session ? (
-            <Link href="/editor"
-              className="px-4 py-2 rounded-full text-sm font-medium text-brand-300 border border-brand-500/30 hover:border-brand-500/60 hover:text-white transition-all">
-              Abrir editor
-            </Link>
-          ) : (
-            <button onClick={() => setLoginOpen(true)}
-              className="px-4 py-2 rounded-full text-sm font-medium text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all">
-              Entrar
-            </button>
-          )}
+          <button onClick={() => session ? router.push("/editor") : setLoginOpen(true)}
+            className="px-4 py-2 rounded-full text-sm font-medium text-gray-300 border border-white/10 hover:border-white/20 hover:text-white transition-all">
+            Entrar
+          </button>
           <button onClick={scrollToPricing}
             className="px-4 py-2 rounded-full text-sm font-bold text-white transition-all hover:opacity-90 hover:scale-105"
             style={{ background: "linear-gradient(135deg,#3b5bdb,#4c6ef5)" }}>
