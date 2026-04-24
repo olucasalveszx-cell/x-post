@@ -103,10 +103,12 @@ export const authOptions: NextAuthOptions = {
             const userData = JSON.parse(existing);
             // Usuários sem campo 'verified' (cadastrados antes desta feature) passam direto
             if (userData.verified !== false) return true;
-            // Usuário pendente de verificação — reenviar OTP
+            // Usuário pendente de verificação — gerar OTP e redirecionar
             const code = generateOTP();
             await storeOTP(emailNorm, code);
-            await sendOTPEmail(emailNorm, code);
+            try { await sendOTPEmail(emailNorm, code); } catch (e: any) {
+              console.error("[auth] erro ao enviar OTP:", e.message);
+            }
             return `/verificar?email=${encodeURIComponent(emailNorm)}`;
           } else {
             // Novo usuário — cadastrar como não verificado e enviar OTP
@@ -122,12 +124,15 @@ export const authOptions: NextAuthOptions = {
             await redisListAdd("users:list", emailNorm);
             const code = generateOTP();
             await storeOTP(emailNorm, code);
-            await sendOTPEmail(emailNorm, code);
+            try { await sendOTPEmail(emailNorm, code); } catch (e: any) {
+              console.error("[auth] erro ao enviar OTP:", e.message);
+            }
             console.log(`[auth] novo usuário Google (aguarda verificação): ${emailNorm}`);
             return `/verificar?email=${encodeURIComponent(emailNorm)}`;
           }
         } catch (e: any) {
           console.error("[auth] signIn Google erro:", e.message);
+          return false;
         }
       }
       return true;
