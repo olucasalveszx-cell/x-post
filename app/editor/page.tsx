@@ -22,6 +22,7 @@ import ProfilePickerModal, { UserProfile, getStoredProfile, saveProfile, PROFILE
 import { autosaveWrite, autosaveRead, autosaveClear } from "@/lib/autosave-db";
 import ProfileModal from "@/components/ProfileModal";
 import StyleSelectorModal from "@/components/Editor/StyleSelectorModal";
+import LoginAnimation from "@/components/LoginAnimation";
 import AppLogo from "@/components/AppLogo";
 
 interface IGAccount { token: string; accountId: string; username: string; }
@@ -81,6 +82,7 @@ export default function EditorPage() {
   useEffect(() => { slidesRef.current = slides; }, [slides]);
 
   // ── UI state ──────────────────────────────────────────────────
+  const [showLoginAnim, setShowLoginAnim] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -160,6 +162,16 @@ export default function EditorPage() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo]);
+
+  // ── Animação de login (Google OAuth volta aqui) ───────────────
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("xpost_login_anim") === "1") {
+        localStorage.removeItem("xpost_login_anim");
+        setShowLoginAnim(true);
+      }
+    } catch {}
+  }, []);
 
   // ── Profile picker ───────────────────────────────────────────
   useEffect(() => {
@@ -925,6 +937,7 @@ export default function EditorPage() {
         </div>
       )}
 
+      {showLoginAnim && <LoginAnimation onComplete={() => setShowLoginAnim(false)} />}
       {showPublish && <PublishModal slides={slides} account={igAccount} onClose={() => setShowPublish(false)} onLoginClick={handleIGLogin} />}
       <AIAssistant open={showAI} onClose={() => setShowAI(false)} />
       <ProfileModal open={showProfile} initialTab={profileInitialTab} onClose={() => { setShowProfile(false); setProfileInitialTab(undefined); }} />

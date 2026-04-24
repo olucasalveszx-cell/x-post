@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { signIn } from "next-auth/react";
 import { X, Mail, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
 import AppLogo from "@/components/AppLogo";
+import LoginAnimation from "@/components/LoginAnimation";
 
 interface Props {
   open: boolean;
@@ -35,8 +36,9 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
   const [confirm,  setConfirm]  = useState("");
   const [showPw,   setShowPw]   = useState(false);
 
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState("");
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState("");
+  const [showAnim,  setShowAnim]  = useState(false);
 
   if (!open) return null;
 
@@ -51,6 +53,8 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
   /* ── Google ── */
   const handleGoogle = () => {
     setLoading(true);
+    // Flag para mostrar animação na chegada ao editor
+    try { localStorage.setItem("xpost_login_anim", "1"); } catch {}
     signIn("google", { callbackUrl });
   };
 
@@ -66,8 +70,7 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
     });
     setLoading(false);
     if (res?.error) { setError("E-mail ou senha incorretos."); return; }
-    onClose();
-    window.location.href = callbackUrl;
+    setShowAnim(true);
   };
 
   /* ── Cadastro ── */
@@ -94,8 +97,7 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
     });
     setLoading(false);
     if (login?.error) { setError("Conta criada! Faça login para continuar."); switchMode("login"); return; }
-    onClose();
-    window.location.href = callbackUrl;
+    setShowAnim(true);
   };
 
   const inputClass = `
@@ -292,5 +294,13 @@ export default function LoginModal({ open, onClose, callbackUrl = "/editor" }: P
     </div>
   );
 
-  return createPortal(content, document.body);
+  return (
+    <>
+      {createPortal(content, document.body)}
+      {showAnim && createPortal(
+        <LoginAnimation onComplete={() => { window.location.href = callbackUrl; }} />,
+        document.body
+      )}
+    </>
+  );
 }
