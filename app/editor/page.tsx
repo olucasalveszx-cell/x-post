@@ -268,8 +268,45 @@ export default function EditorPage() {
   const updateSlide = useCallback((updated: Slide) => {
     const pid = activeProjectIdRef.current;
     setProjects((prev) => {
+      const project = prev.find((p) => p.id === pid);
+      const updatedProfile = updated.elements.find((el) => el.type === "profile");
+      const oldProfile = project?.slides.find((s) => s.id === updated.id)?.elements.find((el) => el.type === "profile");
+
+      // Verifica se algum campo visual do perfil mudou
+      const profileChanged = updatedProfile && (
+        updatedProfile.profileName       !== oldProfile?.profileName ||
+        updatedProfile.profileHandle     !== oldProfile?.profileHandle ||
+        updatedProfile.profileVerified   !== oldProfile?.profileVerified ||
+        updatedProfile.profileNameColor  !== oldProfile?.profileNameColor ||
+        updatedProfile.profileHandleColor !== oldProfile?.profileHandleColor ||
+        updatedProfile.src               !== oldProfile?.src
+      );
+
       const next = prev.map((p) =>
-        p.id !== pid ? p : { ...p, slides: p.slides.map((s) => s.id === updated.id ? updated : s) }
+        p.id !== pid ? p : {
+          ...p,
+          slides: p.slides.map((s) => {
+            if (s.id === updated.id) return updated;
+            // Propaga campos visuais do perfil para os demais slides
+            if (profileChanged && updatedProfile) {
+              return {
+                ...s,
+                elements: s.elements.map((el) =>
+                  el.type !== "profile" ? el : {
+                    ...el,
+                    src:                updatedProfile.src,
+                    profileName:        updatedProfile.profileName,
+                    profileHandle:      updatedProfile.profileHandle,
+                    profileVerified:    updatedProfile.profileVerified,
+                    profileNameColor:   updatedProfile.profileNameColor,
+                    profileHandleColor: updatedProfile.profileHandleColor,
+                  }
+                ),
+              };
+            }
+            return s;
+          }),
+        }
       );
       slidesRef.current = next.find((p) => p.id === pid)?.slides ?? slidesRef.current;
       return next;
