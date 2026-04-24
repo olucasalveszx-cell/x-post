@@ -560,20 +560,25 @@ export default function EditorPage() {
   }, []);
 
   useEffect(() => {
-    const update = () => {
+    const measure = () => {
+      if (!canvasContainerRef.current) return;
       const mob = window.innerWidth < 768;
       setIsMobile(mob);
-      if (!canvasContainerRef.current) return;
       const { width, height } = canvasContainerRef.current.getBoundingClientRect();
+      if (width === 0 || height === 0) return;
       const pad = mob ? 16 : 32;
-      // No mobile: cabe na largura da tela com 8px de margem em cada lado
       const mobileCap = mob ? (window.innerWidth - 16) / SLIDE_W : Infinity;
       const s = Math.min((width - pad) / SLIDE_W, (height - pad) / SLIDE_H, 560 / SLIDE_H, mobileCap);
       setDisplayScale(s);
     };
+    // rAF garante que o layout está completo antes de medir
+    const update = () => requestAnimationFrame(measure);
     update();
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    // ResizeObserver detecta mudanças no container (painéis abrindo, sidebar, etc.)
+    const ro = new ResizeObserver(update);
+    if (canvasContainerRef.current) ro.observe(canvasContainerRef.current);
+    return () => { window.removeEventListener("resize", update); ro.disconnect(); };
   }, [SLIDE_W, SLIDE_H]);
 
   const DISPLAY_W = SLIDE_W * displayScale;
