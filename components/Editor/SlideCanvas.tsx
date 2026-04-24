@@ -974,7 +974,9 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             key={el.id}
             className="slide-element"
             style={{
-              left: el.x, top: el.y, width: el.width, height: el.height,
+              left: el.x, top: el.y, width: el.width,
+              height: el.type === "text" ? "auto" : el.height,
+              minHeight: el.type === "text" ? undefined : undefined,
               opacity: el.opacity ?? 1, zIndex: el.zIndex, touchAction: "none",
               ...(isSelected ? { outline: `${oW}px solid #4c6ef5`, outlineOffset: `${Math.round(2 * S)}px` } : {}),
             }}
@@ -987,11 +989,20 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             {el.type === "text" && (
               <>
                 {editingId === el.id ? (
-                  <textarea autoFocus className="w-full h-full bg-transparent resize-none outline-none" style={{ ...textStyle(el), padding: 4 }}
-                    value={stripHtml(el.content ?? "")} onChange={(e) => updateElement(el.id, { content: e.target.value })}
-                    onBlur={() => setEditingId(null)} onClick={(e) => e.stopPropagation()} />
+                  <textarea autoFocus className="w-full bg-transparent resize-none outline-none block"
+                    style={{ ...textStyle(el), padding: 4, minHeight: el.height, height: "auto", overflow: "hidden" }}
+                    value={stripHtml(el.content ?? "")} onChange={(e) => {
+                      updateElement(el.id, { content: e.target.value });
+                      e.target.style.height = "auto";
+                      e.target.style.height = e.target.scrollHeight + "px";
+                    }}
+                    onBlur={(e) => {
+                      updateElement(el.id, { height: Math.max(e.target.scrollHeight, 20) });
+                      setEditingId(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()} />
                 ) : (
-                  <div className="w-full h-full overflow-hidden" style={{ ...textStyle(el), padding: 4, whiteSpace: "pre-wrap" }} dangerouslySetInnerHTML={{ __html: el.content ?? "" }} />
+                  <div className="w-full" style={{ ...textStyle(el), padding: 4, whiteSpace: "pre-wrap" }} dangerouslySetInnerHTML={{ __html: el.content ?? "" }} />
                 )}
               </>
             )}
