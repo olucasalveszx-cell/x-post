@@ -6,7 +6,7 @@ import {
   LogOut, Users, Loader2, RefreshCw,
   Activity, TrendingUp, Image, Layers, DollarSign, Crown, ArrowLeft,
   LayoutGrid, ImageOff, Download, ExternalLink, Eye, X, ChevronLeft, ChevronRight,
-  Trash2, Plus, RotateCcw, Zap,
+  Trash2, Plus, RotateCcw, Zap, PlayCircle, Upload,
 } from "lucide-react";
 import AppLogo from "@/components/AppLogo";
 import Link from "next/link";
@@ -129,7 +129,14 @@ interface AdminUser {
   total: number;
 }
 
-type Tab = "overview" | "carousels" | "images" | "users";
+type Tab = "overview" | "carousels" | "images" | "users" | "tutorial";
+
+interface TutorialData {
+  url: string;
+  title: string;
+  description: string;
+  uploadedAt: string;
+}
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -150,6 +157,15 @@ export default function AdminDashboard() {
   const [imagesTotal, setImagesTotal] = useState(0);
   const [imagesLoading, setImagesLoading] = useState(false);
   const [imagesError, setImagesError] = useState("");
+
+  /* ── Tutorial ── */
+  const [tutorial, setTutorial] = useState<TutorialData | null>(null);
+  const [tutorialLoading, setTutorialLoading] = useState(false);
+  const [tutorialUploading, setTutorialUploading] = useState(false);
+  const [tutorialUploadProgress, setTutorialUploadProgress] = useState(0);
+  const [tutorialTitle, setTutorialTitle] = useState("");
+  const [tutorialDesc, setTutorialDesc] = useState("");
+  const tutorialFileRef = useRef<HTMLInputElement>(null);
 
   /* ── Preview modal ── */
   const [previewDraft, setPreviewDraft] = useState<AdminDraftMeta | null>(null);
@@ -245,6 +261,42 @@ export default function AdminDashboard() {
     finally { setActionLoading(null); }
   };
 
+  const fetchTutorial = useCallback(async () => {
+    setTutorialLoading(true);
+    try {
+      const res = await fetch("/api/admin/tutorial");
+      if (res.ok) { const d = await res.json(); setTutorial(d.tutorial ?? null); }
+    } finally { setTutorialLoading(false); }
+  }, []);
+
+  const uploadTutorial = async (file: File) => {
+    if (!file) return;
+    setTutorialUploading(true);
+    setTutorialUploadProgress(0);
+    try {
+      const { upload } = await import("@vercel/blob/client");
+      const blob = await upload(`tutorials/${Date.now()}-${file.name}`, file, {
+        access: "public",
+        handleUploadUrl: "/api/admin/tutorial/upload",
+        onUploadProgress: ({ percentage }) => setTutorialUploadProgress(percentage),
+      });
+      await fetch("/api/admin/tutorial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: blob.url, title: tutorialTitle || "Tutorial", description: tutorialDesc }),
+      });
+      await fetchTutorial();
+      setTutorialTitle("");
+      setTutorialDesc("");
+      if (tutorialFileRef.current) tutorialFileRef.current.value = "";
+    } catch (e: any) {
+      alert("Erro no upload: " + e.message);
+    } finally {
+      setTutorialUploading(false);
+      setTutorialUploadProgress(0);
+    }
+  };
+
   useEffect(() => {
     if (tab === "carousels") {
       fetchCarousels();
@@ -253,7 +305,8 @@ export default function AdminDashboard() {
     }
     if (tab === "images" && images.length === 0) fetchImages();
     if (tab === "users") fetchUsers();
-  }, [tab, images.length, fetchCarousels, fetchImages, fetchUsers]);
+    if (tab === "tutorial") fetchTutorial();
+  }, [tab, images.length, fetchCarousels, fetchImages, fetchUsers, fetchTutorial]);
 
   // detecta novos carrosséis
   useEffect(() => {
@@ -423,7 +476,7 @@ export default function AdminDashboard() {
       {/* Tabs */}
       <div className="border-b border-white/5 px-6" style={{ background: "#0d0d0d" }}>
         <div className="flex gap-1 max-w-5xl mx-auto">
-          {(["overview", "users", "carousels", "images"] as Tab[]).map((t) => (
+          {(["overview", "users", "carousels", "images", "tutorial"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -433,8 +486,8 @@ export default function AdminDashboard() {
                   : "border-transparent text-gray-500 hover:text-gray-300"
               }`}
             >
-              {t === "overview" ? <Activity size={12} /> : t === "users" ? <Users size={12} /> : t === "carousels" ? <LayoutGrid size={12} /> : <Image size={12} />}
-              {t === "overview" ? "Visão geral" : t === "users" ? "Usuários" : t === "carousels" ? "Carrosséis" : "Imagens"}
+              {t === "overview" ? <Activity size={12} /> : t === "users" ? <Users size={12} /> : t === "carousels" ? <LayoutGrid size={12} /> : t === "images" ? <Image size={12} /> : <PlayCircle size={12} />}
+              {t === "overview" ? "Visão geral" : t === "users" ? "Usuários" : t === "carousels" ? "Carrosséis" : t === "images" ? "Imagens" : "Tutorial"}
               {t === "carousels" && draftsTotal > 0 && (
                 <span className="ml-1 bg-brand-500/15 text-brand-400 text-[10px] px-1.5 py-0.5 rounded-full">
                   {draftsTotal}
@@ -699,6 +752,86 @@ export default function AdminDashboard() {
               </div>
             )}
           </>
+        )}
+
+        {/* ═══ ABA TUTORIAL ═══ */}
+        {tab === "tutorial" && (
+          <div className="space-y-6">
+            <div>
+              <p className="font-bold text-sm">Tutorial em vídeo</p>
+              <p className="text-[11px] text-gray-600 mt-0.5">Faça upload do vídeo tutorial. Todos os usuários serão notificados.</p>
+            </div>
+
+            {/* Vídeo atual */}
+            {tutorialLoading ? (
+              <div className="flex justify-center py-12"><Loader2 size={24} className="text-brand-500 animate-spin" /></div>
+            ) : tutorial ? (
+              <div className="rounded-2xl border border-[#1e1e1e] overflow-hidden" style={{ background: "#0d0d0d" }}>
+                <video src={tutorial.url} controls className="w-full" style={{ maxHeight: 360 }} />
+                <div className="p-4">
+                  <p className="font-bold text-white text-sm">{tutorial.title}</p>
+                  {tutorial.description && <p className="text-xs text-gray-500 mt-1">{tutorial.description}</p>}
+                  <p className="text-[10px] text-gray-700 mt-2">
+                    Publicado em {new Date(tutorial.uploadedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[#333] flex flex-col items-center justify-center py-14 gap-3">
+                <PlayCircle size={32} className="text-gray-700" />
+                <p className="text-sm text-gray-600">Nenhum tutorial publicado ainda</p>
+              </div>
+            )}
+
+            {/* Formulário de upload */}
+            <div className="rounded-2xl border border-[#1e1e1e] p-5 space-y-4" style={{ background: "#0d0d0d" }}>
+              <p className="text-sm font-semibold text-gray-300">{tutorial ? "Substituir vídeo" : "Publicar tutorial"}</p>
+              <div>
+                <label className="text-[11px] text-gray-500 mb-1 block">Título</label>
+                <input
+                  value={tutorialTitle}
+                  onChange={e => setTutorialTitle(e.target.value)}
+                  placeholder="Ex: Como usar o xPost — Tutorial completo"
+                  className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-brand-500/50"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] text-gray-500 mb-1 block">Descrição (opcional)</label>
+                <textarea
+                  value={tutorialDesc}
+                  onChange={e => setTutorialDesc(e.target.value)}
+                  placeholder="Breve descrição do conteúdo do vídeo..."
+                  rows={2}
+                  className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-brand-500/50 resize-none"
+                />
+              </div>
+              <input
+                ref={tutorialFileRef}
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadTutorial(f); }}
+              />
+              {tutorialUploading ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>Enviando vídeo...</span>
+                    <span>{Math.round(tutorialUploadProgress)}%</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-[#1a1a1a] overflow-hidden">
+                    <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${tutorialUploadProgress}%` }} />
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => tutorialFileRef.current?.click()}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 transition-colors"
+                >
+                  <Upload size={15} /> Selecionar vídeo (.mp4, .webm)
+                </button>
+              )}
+            </div>
+          </div>
         )}
 
         {/* ═══ ABA CARROSSÉIS ═══ */}

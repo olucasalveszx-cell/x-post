@@ -96,7 +96,9 @@ export default function EditorPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [showProfilePicker, setShowProfilePicker] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [profileInitialTab, setProfileInitialTab] = useState<"history" | "images" | "instagram" | "tutorial" | undefined>(undefined);
   const [showStyleSelector, setShowStyleSelector] = useState(false);
+  const [tutorialNotif, setTutorialNotif] = useState<{ title: string } | null>(null);
   const twitterStyleRef = useRef(false);
   const pendingTopicRef = useRef<string | null>(null);
 
@@ -164,6 +166,15 @@ export default function EditorPage() {
     if (stored) { setUserProfile(stored); }
     else { setTimeout(() => setShowProfilePicker(true), 800); }
   }, []);
+
+  // ── Tutorial notification ─────────────────────────────────────
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch("/api/tutorial")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.hasNew && d.tutorial) setTutorialNotif({ title: d.tutorial.title }); })
+      .catch(() => {});
+  }, [session?.user?.email]);
 
   // ── Auto-save (IndexedDB — sem limite de tamanho, preserva imagens) ──
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -723,6 +734,32 @@ export default function EditorPage() {
         </div>
       )}
 
+      {/* ── Notificação tutorial ──────────────────────────────── */}
+      {tutorialNotif && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-purple-500/30 text-sm shrink-0"
+          style={{ background: "rgba(139,92,246,0.12)", color: "#c4b5fd" }}>
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: 15 }}>🎬</span>
+            <span><strong>Novo tutorial disponível:</strong> {tutorialNotif.title} — checar?</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => { setProfileInitialTab("tutorial"); setShowProfile(true); setTutorialNotif(null); }}
+              className="px-3 py-1 rounded-lg text-white text-xs font-semibold transition-colors"
+              style={{ background: "rgba(139,92,246,0.7)" }}
+            >
+              Checar agora
+            </button>
+            <button
+              onClick={() => setTutorialNotif(null)}
+              className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 text-xs transition-colors"
+            >
+              Ver depois
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Corpo ─────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden relative">
 
@@ -880,7 +917,7 @@ export default function EditorPage() {
 
       {showPublish && <PublishModal slides={slides} account={igAccount} onClose={() => setShowPublish(false)} onLoginClick={handleIGLogin} />}
       <AIAssistant open={showAI} onClose={() => setShowAI(false)} />
-      <ProfileModal open={showProfile} onClose={() => setShowProfile(false)} />
+      <ProfileModal open={showProfile} initialTab={profileInitialTab} onClose={() => { setShowProfile(false); setProfileInitialTab(undefined); }} />
       <StyleSelectorModal
         open={showStyleSelector}
         onClose={() => setShowStyleSelector(false)}

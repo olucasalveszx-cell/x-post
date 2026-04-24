@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard, Zap, Crown, ArrowRight, Instagram, Trash2, Sun, Moon } from "lucide-react";
+import { X, Download, Loader2, ImageIcon, Layers, RefreshCw, LogOut, LayoutDashboard, Zap, Crown, ArrowRight, Instagram, Trash2, Sun, Moon, PlayCircle } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 
@@ -36,24 +36,34 @@ const PLAN_COLOR: Record<string, string> = {
   free: "#9ca3af", basic: "#60a5fa", pro: "#4c6ef5", business: "#f59e0b",
 };
 
+interface TutorialData {
+  url: string;
+  title: string;
+  description: string;
+  uploadedAt: string;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
+  initialTab?: "history" | "images" | "instagram" | "tutorial";
 }
 
 function fmt(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export default function ProfileModal({ open, onClose }: Props) {
+export default function ProfileModal({ open, onClose, initialTab }: Props) {
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
-  const [tab, setTab]         = useState<"history" | "images" | "instagram">("history");
+  const [tab, setTab]         = useState<"history" | "images" | "instagram" | "tutorial">("history");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [images,  setImages]  = useState<ImageEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [credits, setCredits] = useState<CreditsInfo | null>(null);
+  const [tutorial, setTutorial] = useState<TutorialData | null>(null);
+  const [loadingTutorial, setLoadingTutorial] = useState(false);
 
   /* ── Instagram ── */
   const [igAccount, setIgAccount] = useState<{ username: string; accountId: string; token: string } | null>(null);
@@ -79,13 +89,32 @@ export default function ProfileModal({ open, onClose }: Props) {
     } catch {}
   }, []);
 
+  const loadTutorial = useCallback(async () => {
+    setLoadingTutorial(true);
+    try {
+      const res = await fetch("/api/tutorial");
+      if (!res.ok) return;
+      const data = await res.json();
+      setTutorial(data.tutorial ?? null);
+      // Marca como visto
+      await fetch("/api/tutorial", { method: "POST" });
+    } finally {
+      setLoadingTutorial(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     load();
     fetch("/api/admin/me").then(r => r.json()).then(d => setIsAdmin(!!d.isAdmin)).catch(() => {});
     fetch("/api/credits").then(r => r.ok ? r.json() : null).then(d => { if (d) setCredits(d); }).catch(() => {});
     loadInstagram();
-  }, [open, load, loadInstagram]);
+    if (initialTab) setTab(initialTab);
+  }, [open, load, loadInstagram, initialTab]);
+
+  useEffect(() => {
+    if (tab === "tutorial" && !tutorial && !loadingTutorial) loadTutorial();
+  }, [tab, tutorial, loadingTutorial, loadTutorial]);
 
   if (!open) return null;
 
@@ -180,7 +209,7 @@ export default function ProfileModal({ open, onClose }: Props) {
 
         {/* Tabs */}
         <div className="flex border-b border-[#1e1e1e] shrink-0 mt-2">
-          {(["history", "images", "instagram"] as const).map((t) => (
+          {(["history", "images", "instagram", "tutorial"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -188,7 +217,10 @@ export default function ProfileModal({ open, onClose }: Props) {
                 tab === t ? "text-white border-b-2 border-brand-500" : "text-gray-500 hover:text-gray-300"
               }`}
             >
-              {t === "history" ? <><Layers size={13} /> Histórico</> : t === "images" ? <><ImageIcon size={13} /> Biblioteca</> : <><Instagram size={13} /> Instagram</>}
+              {t === "history" ? <><Layers size={13} /> Histórico</>
+                : t === "images" ? <><ImageIcon size={13} /> Biblioteca</>
+                : t === "instagram" ? <><Instagram size={13} /> Instagram</>
+                : <><PlayCircle size={13} /> Tutorial</>}
             </button>
           ))}
         </div>
@@ -307,6 +339,42 @@ export default function ProfileModal({ open, onClose }: Props) {
             </div>
           )}
 
+          {tab === "tutorial" && (
+            <div className="flex flex-col gap-4">
+              {loadingTutorial ? (
+                <div className="flex justify-center py-16">
+                  <Loader2 size={22} className="text-brand-500 animate-spin" />
+                </div>
+              ) : tutorial ? (
+                <>
+                  <div className="rounded-xl overflow-hidden bg-black border border-[#1e1e1e]">
+                    <video
+                      src={tutorial.url}
+                      controls
+                      className="w-full"
+                      style={{ maxHeight: 320 }}
+                    />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white text-sm">{tutorial.title}</p>
+                    {tutorial.description && (
+                      <p className="text-xs text-gray-500 mt-1 leading-relaxed">{tutorial.description}</p>
+                    )}
+                    <p className="text-[10px] text-gray-700 mt-2">
+                      Publicado em {new Date(tutorial.uploadedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-16 text-gray-600 text-sm">
+                  <PlayCircle size={32} className="mx-auto mb-3 opacity-30" />
+                  Nenhum tutorial disponível ainda.<br />
+                  <span className="text-xs">Em breve um vídeo será publicado aqui.</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {!loading && tab === "images" && (
             <>
               {images.length === 0 ? (
@@ -368,7 +436,7 @@ export default function ProfileModal({ open, onClose }: Props) {
         {/* Footer */}
         <div className="px-5 py-3 border-t border-[#1e1e1e] shrink-0 flex items-center gap-3">
           <p className="text-[10px] text-gray-600 flex-1">
-            {tab === "history" ? `${history.length}/30 carrosséis` : `${images.length}/100 imagens`}
+            {tab === "history" ? `${history.length}/30 carrosséis` : tab === "images" ? `${images.length}/100 imagens` : ""}
           </p>
           <button onClick={load} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors">
             <RefreshCw size={12} />
