@@ -9,8 +9,8 @@ import { sendOTPEmail } from "@/lib/email";
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID_2!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET_2!,
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
