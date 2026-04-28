@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json({ item: updated });
 }
 
-// DELETE — remove permanentemente (apenas pending_approval)
+// DELETE — remove permanentemente (qualquer status exceto generating)
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email)
@@ -41,8 +41,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (!item) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
   if (item.userId !== session.user.email)
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
-  if (item.status !== "pending_approval")
-    return NextResponse.json({ error: "Apenas agendamentos não aprovados podem ser excluídos" }, { status: 400 });
+  if (item.status === "generating")
+    return NextResponse.json({ error: "Não é possível excluir enquanto está sendo gerado" }, { status: 400 });
 
   await deleteAutoPost(session.user.email, params.id);
   return NextResponse.json({ ok: true });

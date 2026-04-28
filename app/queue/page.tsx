@@ -285,7 +285,7 @@ export default function QueuePage() {
                     Cancelar
                   </button>
                 )}
-                {item.status === "pending_approval" && (
+                {item.status !== "generating" && (
                   <button
                     onClick={() => handleDelete(item.id)}
                     disabled={deletingId === item.id}
