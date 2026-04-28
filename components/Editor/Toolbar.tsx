@@ -1,6 +1,6 @@
 "use client";
 
-import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon, Palette, FlipHorizontal, FlipVertical, Database } from "lucide-react";
+import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon, Palette, FlipHorizontal, FlipVertical, Database, Search, RefreshCw } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import { useRef, useState, useEffect } from "react";
@@ -96,8 +96,13 @@ export default function Toolbar({
   const [showXpostBank, setShowXpostBank] = useState(false);
   const [xpostBankImages, setXpostBankImages] = useState<{ id: string; url: string; name: string }[]>([]);
   const [xpostBankLoading, setXpostBankLoading] = useState(false);
+  const [showWebSearch, setShowWebSearch] = useState(false);
+  const [webSearchQuery, setWebSearchQuery] = useState("");
+  const [webSearchImages, setWebSearchImages] = useState<{ url: string; thumb: string; title: string }[]>([]);
+  const [webSearchLoading, setWebSearchLoading] = useState(false);
+  const [webSearchPage, setWebSearchPage] = useState(1);
 
-  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); setShowXpostBank(false); };
+  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); setShowXpostBank(false); setShowWebSearch(false); };
 
   const openXpostBank = () => {
     if (showXpostBank) { setShowXpostBank(false); return; }
@@ -111,6 +116,44 @@ export default function Toolbar({
         .catch(() => {})
         .finally(() => setXpostBankLoading(false));
     }
+  };
+
+  const doWebSearch = async (query: string, page: number) => {
+    if (!query.trim()) return;
+    setWebSearchLoading(true);
+    setWebSearchImages([]);
+    try {
+      const res = await fetch("/api/image-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: query.trim(), page }),
+      });
+      const data = await res.json();
+      if (data.images) setWebSearchImages(data.images);
+    } catch {}
+    finally { setWebSearchLoading(false); }
+  };
+
+  const openWebSearch = () => {
+    if (showWebSearch) { setShowWebSearch(false); return; }
+    closeAll();
+    setShowWebSearch(true);
+    const texts = slide.elements
+      .filter((el) => el.type === "text")
+      .map((el) => (el.content ?? "").replace(/<[^>]+>/g, "").trim())
+      .filter(Boolean)
+      .slice(0, 2)
+      .join(" ");
+    const q = texts || "photography";
+    setWebSearchQuery(q);
+    setWebSearchPage(1);
+    doWebSearch(q, 1);
+  };
+
+  const reloadWebSearch = () => {
+    const nextPage = webSearchPage + 1;
+    setWebSearchPage(nextPage);
+    doWebSearch(webSearchQuery, nextPage);
   };
 
   const MOLD_SHAPES = [
@@ -625,6 +668,13 @@ export default function Toolbar({
           {generating ? "Gerando..." : "Fundo IA"}
         </button>
 
+        {/* Buscar na Web */}
+        <button onClick={openWebSearch}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm shrink-0 transition-colors ${showWebSearch ? "bg-sky-600/30 border-sky-500/50 text-sky-300" : "bg-sky-600/10 hover:bg-sky-600/20 border-sky-600/25 text-sky-400"}`}>
+          <Search size={14} />
+          Buscar na Web
+        </button>
+
         {/* Editar imagem com IA */}
         {slide.backgroundImageUrl && (
           <button
@@ -1013,6 +1063,74 @@ export default function Toolbar({
                 ))}
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Painel Buscar na Web ── */}
+      {showWebSearch && (
+        <div className={`${panelBase} w-[520px] flex flex-col gap-3`}>
+          <div className="flex items-center justify-between shrink-0">
+            <span className="text-sm font-semibold text-[var(--text)] flex items-center gap-1.5">
+              <Search size={14} className="text-sky-400" /> Buscar na Web
+            </span>
+            <button onClick={() => setShowWebSearch(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
+          </div>
+
+          <div className="flex gap-2 shrink-0">
+            <input
+              value={webSearchQuery}
+              onChange={(e) => setWebSearchQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { setWebSearchPage(1); doWebSearch(webSearchQuery, 1); } }}
+              placeholder="Ex: pôr do sol, negócios, tecnologia..."
+              className="flex-1 bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-sky-500 placeholder:text-[var(--text-3)]"
+            />
+            <button
+              onClick={() => { setWebSearchPage(1); doWebSearch(webSearchQuery, 1); }}
+              disabled={webSearchLoading}
+              className="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:opacity-40 text-white text-sm font-medium transition-colors shrink-0"
+            >
+              <Search size={14} />
+            </button>
+          </div>
+
+          {webSearchLoading && (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 size={22} className="animate-spin text-sky-400" />
+            </div>
+          )}
+
+          {!webSearchLoading && webSearchImages.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
+              <Search size={28} className="text-[var(--text-3)] opacity-40" />
+              <p className="text-xs text-[var(--text-3)]">Nenhuma imagem encontrada.</p>
+            </div>
+          )}
+
+          {!webSearchLoading && webSearchImages.length > 0 && (
+            <>
+              <div className="grid grid-cols-3 gap-2">
+                {webSearchImages.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { onUpdate({ ...slide, backgroundImageUrl: img.url }); setShowWebSearch(false); }}
+                    title={img.title}
+                    className="aspect-[3/4] rounded-lg overflow-hidden border border-[var(--border-2)] hover:border-sky-500/60 transition-colors relative group"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.thumb} alt={img.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={reloadWebSearch}
+                disabled={webSearchLoading}
+                className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border border-[var(--border-2)] hover:border-sky-500/40 text-sm text-[var(--text-3)] hover:text-sky-400 transition-colors disabled:opacity-40"
+              >
+                <RefreshCw size={13} /> Carregar mais imagens
+              </button>
+            </>
           )}
         </div>
       )}
