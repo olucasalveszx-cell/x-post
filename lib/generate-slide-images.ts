@@ -4,116 +4,45 @@ import { GeneratedSlide } from "@/types";
 const STYLE_SUFFIX =
   "cinematic high-quality image, dramatic lighting, rich colors, sharp focus, ultra-detailed, professional photography, Instagram editorial aesthetic, portrait 4:5 aspect ratio, no text, no watermarks, no logos";
 
-function getGeminiKeys(): string[] {
-  return [
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_API_KEY_2,
-    process.env.GEMINI_API_KEY_3,
-  ].filter(Boolean) as string[];
-}
-
-// ── Gemini Flash (geração nativa de imagem) ───────────────────────────────────
-async function callGeminiFlash(prompt: string): Promise<string | null> {
-  const keys = getGeminiKeys();
-  if (!keys.length) return null;
+// ── OpenAI DALL-E 3 ───────────────────────────────────────────────────────────
+async function callOpenAI(prompt: string): Promise<string | null> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return null;
 
   const fullPrompt = `${prompt}. ${STYLE_SUFFIX}`;
-  const MODELS = ["gemini-2.5-flash-image", "gemini-2.0-flash-exp"];
 
-  for (const key of keys) {
-    for (const model of MODELS) {
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: fullPrompt }] }],
-              generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-            }),
-            signal: AbortSignal.timeout(20000),
-          }
-        );
+  try {
+    const res = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "dall-e-3",
+        prompt: fullPrompt,
+        n: 1,
+        size: "1024x1792",
+        quality: "standard",
+        response_format: "b64_json",
+      }),
+      signal: AbortSignal.timeout(60000),
+    });
 
-        const data = await res.json();
-        if (!res.ok) {
-          console.warn(`[slide-img] ${model} HTTP ${res.status}:`, data.error?.message);
-          if (res.status === 429) break; // quota — tenta próxima chave
-          continue;
-        }
-
-        const parts = data.candidates?.[0]?.content?.parts ?? [];
-        const imagePart = parts.find((p: any) => p.inlineData);
-        if (!imagePart?.inlineData) {
-          console.warn(`[slide-img] ${model}: sem inlineData na resposta`);
-          continue;
-        }
-
-        const { data: b64, mimeType } = imagePart.inlineData;
-        return `data:${mimeType};base64,${b64}`;
-      } catch (e: any) {
-        console.warn(`[slide-img] ${model} exception:`, e.message);
-        continue;
-      }
+    const data = await res.json();
+    if (!res.ok) {
+      console.warn(`[slide-img] OpenAI HTTP ${res.status}:`, data.error?.message);
+      return null;
     }
+
+    const b64 = data.data?.[0]?.b64_json;
+    if (!b64) { console.warn("[slide-img] OpenAI: sem b64_json"); return null; }
+
+    return `data:image/png;base64,${b64}`;
+  } catch (e: any) {
+    console.warn("[slide-img] OpenAI exception:", e.message);
+    return null;
   }
-  return null;
-}
-
-// ── Imagen 4 Fast (fallback rápido) ──────────────────────────────────────────
-async function callImagen(prompt: string): Promise<string | null> {
-  const keys = getGeminiKeys();
-  if (!keys.length) return null;
-
-  const fullPrompt = `${prompt}. ${STYLE_SUFFIX}`;
-  const MODELS = [
-    "imagen-4.0-fast-generate-001",
-    "imagen-4.0-generate-001",
-  ];
-
-  for (const key of keys) {
-    for (const model of MODELS) {
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${key}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              instances: [{ prompt: fullPrompt }],
-              parameters: {
-                sampleCount: 1,
-                aspectRatio: "3:4",
-                safetyFilterLevel: "block_few",
-                personGeneration: "allow_adult",
-              },
-            }),
-            signal: AbortSignal.timeout(30000),
-          }
-        );
-
-        const data = await res.json();
-        if (!res.ok) {
-          console.warn(`[slide-img] ${model} HTTP ${res.status}:`, data.error?.message);
-          if (res.status === 429) break;
-          continue;
-        }
-
-        const pred = data.predictions?.[0];
-        if (!pred?.bytesBase64Encoded) {
-          console.warn(`[slide-img] ${model}: sem bytesBase64Encoded`);
-          continue;
-        }
-
-        return `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`;
-      } catch (e: any) {
-        console.warn(`[slide-img] ${model} exception:`, e.message);
-        continue;
-      }
-    }
-  }
-  return null;
 }
 
 // ── Pexels (fallback final com foto real) ─────────────────────────────────────
@@ -166,7 +95,7 @@ async function proxyUrlToBlob(url: string, name: string): Promise<string> {
 
 /**
  * Gera imagens para cada slide em paralelo.
- * Cadeia: Gemini Flash → Imagen 4 Fast → Pexels (foto real)
+ * Cadeia: OpenAI DALL-E 3 → Pexels (foto real)
  * Sempre retorna uma URL de imagem ou null se todos os fallbacks falharem.
  */
 export async function generateSlideImages(
@@ -179,23 +108,15 @@ export async function generateSlideImages(
       const fallbackQuery = slide.searchQuery?.trim() || slide.title;
 
       try {
-        // 1. Gemini Flash
-        const geminiData = await callGeminiFlash(slide.imagePrompt);
-        if (geminiData) {
-          const url = await uploadToBlob(geminiData, name);
-          console.log(`[slide-img] slide ${i + 1} — Gemini OK`);
+        // 1. OpenAI DALL-E 3
+        const openAIData = await callOpenAI(slide.imagePrompt);
+        if (openAIData) {
+          const url = await uploadToBlob(openAIData, name);
+          console.log(`[slide-img] slide ${i + 1} — OpenAI OK`);
           return url;
         }
 
-        // 2. Imagen 4
-        const imagenData = await callImagen(slide.imagePrompt);
-        if (imagenData) {
-          const url = await uploadToBlob(imagenData, name);
-          console.log(`[slide-img] slide ${i + 1} — Imagen OK`);
-          return url;
-        }
-
-        // 3. Pexels (foto real como fallback final)
+        // 2. Pexels (foto real como fallback final)
         const pexelsUrl = await callPexels(fallbackQuery);
         if (pexelsUrl) {
           const url = await proxyUrlToBlob(pexelsUrl, name);

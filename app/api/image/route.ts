@@ -39,64 +39,43 @@ function buildPrompt(subject: string, style: ImageStyle): string {
   return `${subject}. ${stylePrompt}. Portrait orientation 4:5 aspect ratio.`;
 }
 
-// ── Rotação de chaves Gemini ──────────────────────────────────
-function getGeminiKeys(): string[] {
-  return [
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_API_KEY_2,
-    process.env.GEMINI_API_KEY_3,
-  ].filter(Boolean) as string[];
-}
-
-// ── Gemini Flash Image Generation (tenta múltiplos modelos e chaves) ──
-async function fromGemini(prompt: string, style: ImageStyle) {
-  const keys = getGeminiKeys();
-  if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
+// ── OpenAI DALL-E 3 ──────────────────────────────────────────
+async function fromOpenAI(prompt: string, style: ImageStyle) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("OPENAI_API_KEY não configurada");
 
   const fullPrompt = buildPrompt(prompt, style);
-  const MODELS = [
-    "gemini-2.5-flash-image",
-    "gemini-3.1-flash-image-preview",
-  ];
 
-  let lastError = "";
-  for (const key of keys) {
-    for (const model of MODELS) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: fullPrompt }] }],
-            generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-          }),
-          signal: AbortSignal.timeout(22000),
-          cache: "no-store",
-        });
+  const res = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "dall-e-3",
+      prompt: fullPrompt,
+      n: 1,
+      size: "1024x1792",
+      quality: "standard",
+      response_format: "b64_json",
+    }),
+    signal: AbortSignal.timeout(60000),
+    cache: "no-store",
+  });
 
-        const data = await res.json();
-        if (!res.ok) {
-          lastError = data.error?.message ?? `Gemini HTTP ${res.status}`;
-          console.error(`[image] ${model} (key${keys.indexOf(key)+1}) falhou:`, lastError);
-          // Se for quota, tenta próxima chave imediatamente
-          if (res.status === 429) break;
-          continue;
-        }
-
-        const parts = data.candidates?.[0]?.content?.parts ?? [];
-        const imagePart = parts.find((p: any) => p.inlineData);
-        if (!imagePart?.inlineData) { lastError = `${model}: sem imagem`; continue; }
-
-        const { data: b64, mimeType } = imagePart.inlineData;
-        console.log(`[image] Gemini OK (${model}, key${keys.indexOf(key)+1})`);
-        return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini" };
-      } catch (e: any) {
-        lastError = e.message;
-      }
-    }
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data.error?.message ?? `OpenAI HTTP ${res.status}`;
+    console.error("[image] OpenAI falhou:", msg);
+    throw new Error(msg);
   }
-  throw new Error(lastError || "Gemini: falha em todos os modelos/chaves");
+
+  const b64 = data.data?.[0]?.b64_json;
+  if (!b64) throw new Error("OpenAI: sem imagem na resposta");
+
+  console.log("[image] OpenAI DALL-E 3 OK");
+  return { imageUrl: `data:image/png;base64,${b64}`, source: "openai" };
 }
 
 // ── fal.ai FLUX (geração gratuita) ───────────────────────────
@@ -129,108 +108,6 @@ async function fromFal(prompt: string, style: ImageStyle) {
   return { imageUrl, source: "fal" };
 }
 
-// ── Imagen 4 ──────────────────────────────────────────────────
-async function fromImagen4(prompt: string, style: ImageStyle) {
-  const keys = getGeminiKeys();
-  if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
-
-  let lastError = "";
-  for (const key of keys) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${key}`;
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instances: [{ prompt: buildPrompt(prompt, style) }],
-          parameters: { sampleCount: 1, aspectRatio: "3:4", safetyFilterLevel: "block_few", personGeneration: "allow_adult" },
-        }),
-        signal: AbortSignal.timeout(50000),
-        cache: "no-store",
-      });
-      const data = await res.json();
-      if (!res.ok) { lastError = data.error?.message ?? `Imagen4 HTTP ${res.status}`; continue; }
-      const pred = data.predictions?.[0];
-      if (!pred?.bytesBase64Encoded) { lastError = "Imagen4: sem imagem"; continue; }
-      console.log(`[image] Imagen 4 OK (key${keys.indexOf(key)+1})`);
-      return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen4" };
-    } catch (e: any) { lastError = e.message; }
-  }
-  throw new Error(lastError || "Imagen4: falha em todas as chaves");
-}
-
-// ── Imagen 4 Fast ─────────────────────────────────────────────
-async function fromImagen3(prompt: string, style: ImageStyle) {
-  const keys = getGeminiKeys();
-  if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
-
-  let lastError = "";
-  for (const key of keys) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict?key=${key}`;
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instances: [{ prompt: buildPrompt(prompt, style) }],
-          parameters: { sampleCount: 1, aspectRatio: "3:4", safetyFilterLevel: "block_few", personGeneration: "allow_adult" },
-        }),
-        signal: AbortSignal.timeout(40000),
-        cache: "no-store",
-      });
-      const data = await res.json();
-      if (!res.ok) { lastError = data.error?.message ?? `Imagen3 HTTP ${res.status}`; continue; }
-      const pred = data.predictions?.[0];
-      if (!pred?.bytesBase64Encoded) { lastError = "Imagen3: sem imagem"; continue; }
-      console.log(`[image] Imagen 4 Fast OK (key${keys.indexOf(key)+1})`);
-      return { imageUrl: `data:${pred.mimeType ?? "image/png"};base64,${pred.bytesBase64Encoded}`, source: "imagen3" };
-    } catch (e: any) { lastError = e.message; }
-  }
-  throw new Error(lastError || "Imagen3: falha em todas as chaves");
-}
-
-// ── Gemini com imagem de referência ──────────────────────────
-async function fromGeminiWithReference(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
-  const keys = getGeminiKeys();
-  if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
-  const key = keys[0];
-
-  const styleGuide = PROMPTS[style] ?? PROMPTS.gemini;
-  const textInstruction = `Use this image as visual reference. Transform it into a stylized Instagram carousel slide background: "${prompt}". Style: ${styleGuide}. Portrait 4:5. No text, no watermarks.`;
-
-  const MODELS = ["gemini-2.5-flash-image", "gemini-3.1-flash-image-preview"];
-  let lastError = "";
-
-  for (const model of MODELS) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ inlineData: { mimeType: refMime, data: refBase64 } }, { text: textInstruction }] }],
-          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-        }),
-        signal: AbortSignal.timeout(45000),
-        cache: "no-store",
-      });
-
-      const data = await res.json();
-      if (!res.ok) { lastError = data.error?.message ?? `Gemini HTTP ${res.status}`; continue; }
-
-      const parts = data.candidates?.[0]?.content?.parts ?? [];
-      const imagePart = parts.find((p: any) => p.inlineData);
-      if (!imagePart?.inlineData) { lastError = "sem imagem na resposta"; continue; }
-
-      const { data: b64, mimeType } = imagePart.inlineData;
-      console.log(`[image] Gemini reference OK (${model})`);
-      return { imageUrl: `data:${mimeType};base64,${b64}`, source: "gemini_ref" };
-    } catch (e: any) {
-      lastError = e.message;
-    }
-  }
-  throw new Error(lastError || "GeminiRef: falha");
-}
 
 // ── OpenRouter — Gemini Flash Image Preview ───────────────────
 async function fromOpenRouter(prompt: string, style: ImageStyle) {
@@ -521,8 +398,8 @@ export async function POST(req: NextRequest) {
 
   if (!isPro) {
     const tries: Array<() => Promise<ImageResult>> = [
+      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
       () => fromFal(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
-      () => fromGemini(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
       () => fromGoogleImages(prompt).then(r => { plan = "free_fallback"; return r; }),
       () => fromPexels(prompt).then(r => { plan = "free_fallback"; return r; }),
     ];
@@ -532,11 +409,8 @@ export async function POST(req: NextRequest) {
     }
   } else {
     const tries: Array<() => Promise<ImageResult>> = [
+      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromFal(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      () => fromGemini(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      ...(hasReference ? [() => fromGeminiWithReference(enhancedPrompt, style, referenceImageBase64, referenceImageMime).then(r => { plan = "pro_ref"; return r; })] : []),
-      () => fromImagen4(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      () => fromImagen3(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
       () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
