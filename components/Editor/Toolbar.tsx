@@ -97,6 +97,7 @@ export default function Toolbar({
   const [xpostBankImages, setXpostBankImages] = useState<{ id: string; url: string; name: string }[]>([]);
   const [xpostBankLoading, setXpostBankLoading] = useState(false);
   const [showWebSearch, setShowWebSearch] = useState(false);
+  const [webSearchMode, setWebSearchMode] = useState<"bg" | "el">("bg");
   const [webSearchQuery, setWebSearchQuery] = useState("");
   const [webSearchImages, setWebSearchImages] = useState<{ url: string; thumb: string; title: string }[]>([]);
   const [webSearchLoading, setWebSearchLoading] = useState(false);
@@ -135,8 +136,9 @@ export default function Toolbar({
   };
 
   const openWebSearch = () => {
-    if (showWebSearch) { setShowWebSearch(false); return; }
+    if (showWebSearch && webSearchMode === "bg") { setShowWebSearch(false); return; }
     closeAll();
+    setWebSearchMode("bg");
     setShowWebSearch(true);
     const texts = slide.elements
       .filter((el) => el.type === "text")
@@ -145,6 +147,22 @@ export default function Toolbar({
       .slice(0, 2)
       .join(" ");
     const q = texts || "photography";
+    setWebSearchQuery(q);
+    setWebSearchPage(1);
+    doWebSearch(q, 1);
+  };
+
+  const openElSearch = () => {
+    if (showWebSearch && webSearchMode === "el") { setShowWebSearch(false); return; }
+    setWebSearchMode("el");
+    setShowWebSearch(true);
+    const texts = slide.elements
+      .filter((el) => el.type === "text")
+      .map((el) => (el.content ?? "").replace(/<[^>]+>/g, "").trim())
+      .filter(Boolean)
+      .slice(0, 2)
+      .join(" ");
+    const q = imgElPrompt.trim() || texts || "photography";
     setWebSearchQuery(q);
     setWebSearchPage(1);
     doWebSearch(q, 1);
@@ -1072,7 +1090,8 @@ export default function Toolbar({
         <div className={`${panelBase} w-[520px] flex flex-col gap-3`}>
           <div className="flex items-center justify-between shrink-0">
             <span className="text-sm font-semibold text-[var(--text)] flex items-center gap-1.5">
-              <Search size={14} className="text-sky-400" /> Buscar na Web
+              <Search size={14} className="text-sky-400" />
+              {webSearchMode === "el" ? "Buscar na Web — Moldura" : "Buscar na Web"}
             </span>
             <button onClick={() => setShowWebSearch(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
           </div>
@@ -1113,7 +1132,15 @@ export default function Toolbar({
                 {webSearchImages.map((img, i) => (
                   <button
                     key={i}
-                    onClick={() => { onUpdate({ ...slide, backgroundImageUrl: img.url }); setShowWebSearch(false); }}
+                    onClick={() => {
+                      if (webSearchMode === "el") {
+                        if (isFrame) patchSelected({ frameImageUrl: img.url });
+                        else patchSelected({ src: img.url });
+                      } else {
+                        onUpdate({ ...slide, backgroundImageUrl: img.url });
+                      }
+                      setShowWebSearch(false);
+                    }}
                     title={img.title}
                     className="aspect-[3/4] rounded-lg overflow-hidden border border-[var(--border-2)] hover:border-sky-500/60 transition-colors relative group"
                   >
@@ -1193,7 +1220,13 @@ export default function Toolbar({
             disabled={imgElGenerating}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white text-xs font-medium shrink-0 transition-colors"
           >
-            {imgElGenerating ? <><Loader2 size={12} className="animate-spin" /> Gerando...</> : <><Sparkles size={12} /> Gerar imagem com IA</>}
+            {imgElGenerating ? <><Loader2 size={12} className="animate-spin" /> Gerando...</> : <><Sparkles size={12} /> Gerar com IA</>}
+          </button>
+          <button
+            onClick={openElSearch}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium shrink-0 transition-colors ${showWebSearch && webSearchMode === "el" ? "bg-sky-600/30 border-sky-500/50 text-sky-300" : "bg-sky-600/10 hover:bg-sky-600/20 border-sky-600/25 text-sky-400"}`}
+          >
+            <Search size={12} /> Buscar na Web
           </button>
         </div>
       )}
