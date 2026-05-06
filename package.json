@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "next build",
+    "build": "node -e \"try{require('fs').rmSync('.next/cache',{recursive:true,force:true})}catch(e){}\" && next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",
+    "@supabase/supabase-js": "^2.105.3",
     "@vercel/blob": "^2.3.3",
     "@vercel/functions": "^3.4.3",
     "axios": "^1.7.7",
