@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import RegisterSW from "@/components/RegisterSW";
+import Script from "next/script";
 
 const APP_URL = process.env.NEXTAUTH_URL ?? "https://xpostzone.online";
 
@@ -58,38 +59,39 @@ export default function RootLayout({
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
         <meta name="mobile-web-app-capable" content="yes" />
-        {/* Intercepts ALL localStorage.setItem calls — runs before any bundle, including cached ones */}
-        <script dangerouslySetInnerHTML={{ __html: `
+      </head>
+      <body className="antialiased">
+        {/* Runs before ANY bundle — overrides Storage.prototype.setItem to never throw */}
+        <Script id="ls-guard" strategy="beforeInteractive">{`
 (function(){try{
-  var _set=localStorage.setItem.bind(localStorage);
-  localStorage.setItem=function(k,v){
-    // Strip base64 avatars from profile keys before writing
-    if((k==='xpz_profile'||k==='xpz_profiles')&&typeof v==='string'&&v.indexOf('data:')!==-1){
-      try{
-        var p=JSON.parse(v);
-        if(Array.isArray(p)){p=p.map(function(x){return Object.assign({},x,{avatarSrc:(x.avatarSrc&&x.avatarSrc.indexOf('http')===0)?x.avatarSrc:undefined});});}
-        else if(p&&p.avatarSrc&&p.avatarSrc.indexOf('http')!==0){p.avatarSrc=undefined;}
-        v=JSON.stringify(p);
-      }catch(e){}
-    }
-    try{_set(k,v);}catch(e){}
+  var orig=Storage.prototype.setItem;
+  function clean(k,v){
+    if(typeof v!=='string'||v.indexOf('data:')===-1)return v;
+    try{
+      var p=JSON.parse(v);
+      if(Array.isArray(p)){p=p.map(function(x){return Object.assign({},x,{avatarSrc:(x.avatarSrc&&x.avatarSrc.indexOf('http')===0)?x.avatarSrc:undefined});});}
+      else if(p&&p.avatarSrc&&p.avatarSrc.indexOf('http')!==0){p.avatarSrc=undefined;}
+      return JSON.stringify(p);
+    }catch(e){return v;}
+  }
+  Storage.prototype.setItem=function(k,v){
+    if(k==='xpz_profile'||k==='xpz_profiles')v=clean(k,v);
+    try{orig.call(this,k,v);}catch(e){}
   };
-  // Clean existing base64 on load
   ['xpz_profile','xpz_profiles'].forEach(function(k){
     try{
       var val=localStorage.getItem(k);
       if(!val||val.indexOf('data:')===-1)return;
-      var p=JSON.parse(val);
-      if(Array.isArray(p)){p=p.map(function(x){return Object.assign({},x,{avatarSrc:(x.avatarSrc&&x.avatarSrc.indexOf('http')===0)?x.avatarSrc:undefined});});}
-      else if(p&&p.avatarSrc&&p.avatarSrc.indexOf('http')!==0){p.avatarSrc=undefined;}
+      var cleaned=clean(k,val);
       localStorage.removeItem(k);
-      try{_set(k,JSON.stringify(p));}catch(e){}
+      try{orig.call(localStorage,k,cleaned);}catch(e){}
     }catch(e){}
   });
 }catch(e){}})();
-        ` }} />
-      </head>
-      <body className="antialiased"><Providers>{children}</Providers><RegisterSW /></body>
+        `}</Script>
+        <Providers>{children}</Providers>
+        <RegisterSW />
+      </body>
     </html>
   );
 }
