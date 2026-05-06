@@ -39,7 +39,7 @@ function buildPrompt(subject: string, style: ImageStyle): string {
   return `${subject}. ${stylePrompt}. Portrait orientation 4:5 aspect ratio.`;
 }
 
-// ── OpenAI DALL-E 3 ──────────────────────────────────────────
+// ── OpenAI gpt-image-1 ────────────────────────────────────────
 async function fromOpenAI(prompt: string, style: ImageStyle) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OPENAI_API_KEY não configurada");
@@ -53,14 +53,13 @@ async function fromOpenAI(prompt: string, style: ImageStyle) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "dall-e-3",
+      model: "gpt-image-1",
       prompt: fullPrompt,
       n: 1,
-      size: "1024x1792",
-      quality: "standard",
-      response_format: "b64_json",
+      size: "1024x1536",
+      quality: "high",
     }),
-    signal: AbortSignal.timeout(60000),
+    signal: AbortSignal.timeout(120000),
     cache: "no-store",
   });
 
@@ -74,21 +73,21 @@ async function fromOpenAI(prompt: string, style: ImageStyle) {
   const b64 = data.data?.[0]?.b64_json;
   if (!b64) throw new Error("OpenAI: sem imagem na resposta");
 
-  console.log("[image] OpenAI DALL-E 3 OK");
+  console.log("[image] OpenAI gpt-image-1 OK");
   return { imageUrl: `data:image/png;base64,${b64}`, source: "openai" };
 }
 
-// ── fal.ai FLUX (geração gratuita) ───────────────────────────
+// ── fal.ai FLUX 1.1 Pro ──────────────────────────────────────
 async function fromFal(prompt: string, style: ImageStyle) {
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY não configurada");
 
   const fullPrompt = buildPrompt(prompt, style);
-  const res = await fetch("https://fal.run/fal-ai/flux/schnell", {
+  const res = await fetch("https://fal.run/fal-ai/flux-pro/v1.1", {
     method: "POST",
     headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt: fullPrompt, image_size: { width: 1080, height: 1350 }, num_images: 1, sync_mode: true }),
-    signal: AbortSignal.timeout(30000),
+    body: JSON.stringify({ prompt: fullPrompt, image_size: "portrait_4_3", num_images: 1, sync_mode: true, safety_tolerance: "5" }),
+    signal: AbortSignal.timeout(60000),
   });
 
   const data = await res.json();
@@ -104,7 +103,7 @@ async function fromFal(prompt: string, style: ImageStyle) {
     throw new Error("fal.ai: sem imagem na resposta");
   }
 
-  console.log("[image] fal.ai FLUX OK");
+  console.log("[image] fal.ai FLUX 1.1 Pro OK");
   return { imageUrl, source: "fal" };
 }
 
@@ -209,55 +208,6 @@ async function fromGoogleImages(prompt: string) {
   return { imageUrl: pick.link, source: "google" };
 }
 
-// ── Unsplash (fallback) ───────────────────────────────────────
-async function fromUnsplash(prompt: string) {
-  const key = process.env.UNSPLASH_ACCESS_KEY;
-  if (!key) throw new Error("UNSPLASH_ACCESS_KEY não configurada");
-
-  const query = prompt.replace(/<[^>]+>/g, "").replace(/[^\w\sÀ-ÿ]/g, "").trim()
-    .split(/\s+/).slice(0, 5).join(" ") || "business technology";
-
-  const res = await fetch(
-    `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=portrait&per_page=15&page=${Math.ceil(Math.random() * 3)}`,
-    { headers: { Authorization: `Client-ID ${key}` } }
-  );
-  if (!res.ok) throw new Error(`Unsplash HTTP ${res.status}`);
-
-  const data = await res.json();
-  const results = data.results ?? [];
-  if (!results.length) throw new Error("Unsplash: sem resultados");
-
-  const photo = results[Math.floor(Math.random() * results.length)];
-  const url = photo.urls?.regular ?? photo.urls?.full;
-  if (!url) throw new Error("Unsplash: URL inválida");
-  console.log("[image] Unsplash fallback OK");
-  return { imageUrl: url, source: "unsplash" };
-}
-
-// ── Pixabay (fallback) ────────────────────────────────────────
-async function fromPixabay(prompt: string) {
-  const key = process.env.PIXABAY_API_KEY;
-  if (!key) throw new Error("PIXABAY_API_KEY não configurada");
-
-  const query = prompt.replace(/<[^>]+>/g, "").replace(/[^\w\sÀ-ÿ]/g, "").trim()
-    .split(/\s+/).slice(0, 5).join(" ") || "business technology";
-
-  const res = await fetch(
-    `https://pixabay.com/api/?key=${key}&q=${encodeURIComponent(query)}&image_type=photo&orientation=vertical&per_page=15&page=${Math.ceil(Math.random() * 3)}`
-  );
-  if (!res.ok) throw new Error(`Pixabay HTTP ${res.status}`);
-
-  const data = await res.json();
-  const hits = data.hits ?? [];
-  if (!hits.length) throw new Error("Pixabay: sem resultados");
-
-  const photo = hits[Math.floor(Math.random() * hits.length)];
-  const url = photo.largeImageURL ?? photo.webformatURL;
-  if (!url) throw new Error("Pixabay: URL inválida");
-  console.log("[image] Pixabay fallback OK");
-  return { imageUrl: url, source: "pixabay" };
-}
-
 // ── Pexels (fallback final) ───────────────────────────────────
 async function fromPexels(prompt: string) {
   const key = process.env.PEXELS_API_KEY;
@@ -353,7 +303,7 @@ async function saveToGallery(imageUrl: string, email: string | null | undefined,
 
 // ── Handler principal ─────────────────────────────────────────
 export async function POST(req: NextRequest) {
-  const { prompt, imageStyle = "gemini", customerId, activationToken, referenceImageBase64, referenceImageMime } = await req.json();
+  const { prompt, imageStyle = "gemini", activationToken, referenceImageBase64, referenceImageMime } = await req.json();
   if (!prompt) return NextResponse.json({ error: "prompt obrigatório" }, { status: 400 });
 
   const today = new Date().toISOString().slice(0, 10);

@@ -4,7 +4,7 @@ import { GeneratedSlide } from "@/types";
 const STYLE_SUFFIX =
   "cinematic high-quality image, dramatic lighting, rich colors, sharp focus, ultra-detailed, professional photography, Instagram editorial aesthetic, portrait 4:5 aspect ratio, no text, no watermarks, no logos";
 
-// ── OpenAI DALL-E 3 ───────────────────────────────────────────────────────────
+// ── OpenAI gpt-image-1 ────────────────────────────────────────────────────────
 async function callOpenAI(prompt: string): Promise<string | null> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return null;
@@ -19,14 +19,13 @@ async function callOpenAI(prompt: string): Promise<string | null> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "dall-e-3",
+        model: "gpt-image-1",
         prompt: fullPrompt,
         n: 1,
-        size: "1024x1792",
-        quality: "standard",
-        response_format: "b64_json",
+        size: "1024x1536",
+        quality: "high",
       }),
-      signal: AbortSignal.timeout(60000),
+      signal: AbortSignal.timeout(120000),
     });
 
     const data = await res.json();
