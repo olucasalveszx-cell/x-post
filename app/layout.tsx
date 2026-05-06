@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   manifest: "/manifest.json",
   icons: {
-    icon: "/tema_black.png",
-    shortcut: "/tema_black.png",
+    icon: [{ url: "/favicon.ico" }, { url: "/tema_black.png" }],
+    shortcut: "/favicon.ico",
     apple: "/tema_black.png",
   },
   appleWebApp: {
@@ -57,6 +57,7 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="antialiased"><Providers>{children}</Providers><RegisterSW /></body>
     </html>
