@@ -29,6 +29,35 @@ import TutorialOverlay from "@/components/Tutorial/TutorialOverlay";
 
 interface IGAccount { token: string; accountId: string; username: string; }
 
+// Synchronous cleanup — runs before ANY React component mounts.
+// useEffect fires after children (Toolbar writes before parent cleans up), so we
+// must strip base64 avatars here, at module-load time, before the first render.
+if (typeof window !== "undefined") {
+  try {
+    for (const key of ["xpz_profiles", "xpz_profile"]) {
+      const val = localStorage.getItem(key);
+      if (!val || !val.includes("data:")) continue;
+      if (key === "xpz_profiles") {
+        try {
+          const arr = JSON.parse(val);
+          const clean = Array.isArray(arr)
+            ? arr.map((p: any) => ({ ...p, avatarSrc: p.avatarSrc?.startsWith("http") ? p.avatarSrc : undefined }))
+            : [];
+          localStorage.removeItem(key);
+          try { localStorage.setItem(key, JSON.stringify(clean)); } catch {}
+        } catch { localStorage.removeItem(key); }
+      } else {
+        try {
+          const p = JSON.parse(val);
+          const clean = JSON.stringify({ ...p, avatarSrc: p.avatarSrc?.startsWith("http") ? p.avatarSrc : undefined });
+          localStorage.removeItem(key);
+          try { localStorage.setItem(key, clean); } catch {}
+        } catch { localStorage.removeItem(key); }
+      }
+    }
+  } catch {}
+}
+
 const FORMATS = [
   { label: "1:1",  width: 1080, height: 1080 },
   { label: "4:5",  width: 1080, height: 1350 },
@@ -167,39 +196,6 @@ export default function EditorPage() {
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo]);
 
-  // ── Limpeza de emergência do localStorage (avatares base64 antigos) ─
-  useEffect(() => {
-    try {
-      // Remove chaves que podem conter base64 grande
-      const LARGE_KEYS = ["xpz_profiles", "xpz_profile", "xpost-admin-slides"];
-      for (const key of LARGE_KEYS) {
-        const val = localStorage.getItem(key);
-        if (val && val.length > 200_000) {
-          // Mais de ~200KB numa chave = provavelmente base64 de imagem
-          if (key === "xpz_profiles") {
-            try {
-              const profiles = JSON.parse(val);
-              if (Array.isArray(profiles)) {
-                const stripped = profiles.map((p: any) => ({ ...p, avatarSrc: p.avatarSrc?.startsWith("http") ? p.avatarSrc : undefined }));
-                localStorage.removeItem(key);
-                try { localStorage.setItem(key, JSON.stringify(stripped)); } catch { /* quota still full, leave empty */ }
-              } else { localStorage.removeItem(key); }
-            } catch { localStorage.removeItem(key); }
-          } else if (key === "xpz_profile") {
-            try {
-              const p = JSON.parse(val);
-              const clean = JSON.stringify({ ...p, avatarSrc: p.avatarSrc?.startsWith("http") ? p.avatarSrc : undefined });
-              localStorage.removeItem(key);
-              try { localStorage.setItem(key, clean); } catch { /* quota still full, leave empty */ }
-            } catch { localStorage.removeItem(key); }
-          } else {
-            localStorage.removeItem(key);
-          }
-        }
-      }
-    } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // ── Animação de splash (login ou abertura PWA) ────────────────
   const [showLoginAnim, setShowLoginAnim] = useState(false);
