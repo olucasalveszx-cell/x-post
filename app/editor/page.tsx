@@ -167,6 +167,37 @@ export default function EditorPage() {
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo]);
 
+  // ── Limpeza de emergência do localStorage (avatares base64 antigos) ─
+  useEffect(() => {
+    try {
+      // Remove chaves que podem conter base64 grande
+      const LARGE_KEYS = ["xpz_profiles", "xpz_profile", "xpost-admin-slides"];
+      for (const key of LARGE_KEYS) {
+        const val = localStorage.getItem(key);
+        if (val && val.length > 200_000) {
+          // Mais de ~200KB numa chave = provavelmente base64 de imagem
+          if (key === "xpz_profiles") {
+            try {
+              const profiles = JSON.parse(val);
+              if (Array.isArray(profiles)) {
+                const stripped = profiles.map((p: any) => ({ ...p, avatarSrc: p.avatarSrc?.startsWith("http") ? p.avatarSrc : undefined }));
+                localStorage.setItem(key, JSON.stringify(stripped));
+              }
+            } catch { localStorage.removeItem(key); }
+          } else if (key === "xpz_profile") {
+            try {
+              const p = JSON.parse(val);
+              localStorage.setItem(key, JSON.stringify({ ...p, avatarSrc: p.avatarSrc?.startsWith("http") ? p.avatarSrc : undefined }));
+            } catch { localStorage.removeItem(key); }
+          } else {
+            localStorage.removeItem(key);
+          }
+        }
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Animação de splash (login ou abertura PWA) ────────────────
   const [showLoginAnim, setShowLoginAnim] = useState(false);
   const [loginAnimDone, setLoginAnimDone] = useState(false);
@@ -191,8 +222,9 @@ export default function EditorPage() {
   // ── Carregar slides gerados pelo admin (XPost generator) ─────
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem("xpost-admin-slides");
+      const raw = localStorage.getItem("xpost-admin-slides") ?? sessionStorage.getItem("xpost-admin-slides");
       if (raw) {
+        localStorage.removeItem("xpost-admin-slides");
         sessionStorage.removeItem("xpost-admin-slides");
         const adminSlides = JSON.parse(raw);
         if (Array.isArray(adminSlides) && adminSlides.length > 0) {
@@ -304,7 +336,7 @@ export default function EditorPage() {
       };
       setIgAccount(account);
       // Salva junto com o email do dono para não vazar entre sessões
-      localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail }));
+      try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
       window.history.replaceState({}, "", "/editor");
     } else if (error) {
       if (error === "no_business_account") {

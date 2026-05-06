@@ -274,13 +274,11 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
   const [showWizard, setShowWizard] = useState(false);
   const [wizardTwitterMode, setWizardTwitterMode] = useState(false);
   const [recentTopics, setRecentTopics] = useState<string[]>([]);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem("xpz_recent_topics");
       if (stored) setRecentTopics(JSON.parse(stored));
-      if (localStorage.getItem("xpz_banner_dismissed")) setBannerDismissed(true);
     } catch {}
   }, []);
 
@@ -315,6 +313,7 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
     window.addEventListener("nexa-prompt", handler);
     return () => window.removeEventListener("nexa-prompt", handler);
   }, []);
+
 
   // Pro check via Kirvano
   useEffect(() => {
@@ -353,7 +352,8 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
     window.open(KIRVANO_URLS[plan] ?? KIRVANO_URLS.pro, "_blank");
   };
 
-  const handleWizardConfirm = async (ws: WizardSettings) => {
+  const handleWizardConfirm = async (wsRaw: WizardSettings) => {
+    const ws = wsRaw;
     setLastSettings(ws);
     setError(""); setSources([]); setImageProgress(0); setTotalImages(ws.slideCount);
 
@@ -528,8 +528,8 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
   return (
     <div className="flex flex-col h-full">
       {loadingPopup}
-      {/* User badge */}
-      <div className="p-4 shrink-0 border-b border-[var(--border)]">
+      {/* User badge + Reference row */}
+      <div className="p-4 shrink-0 border-b border-[var(--border)] flex flex-col gap-2">
         {!session?.user ? (
           <button
             onClick={() => setLoginOpen(true)}
@@ -567,6 +567,7 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
             </div>
           );
         })()}
+
       </div>
 
       {/* Main area */}
@@ -609,6 +610,7 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
               <Sparkles size={16} />
               {status === "done" ? "Gerar Novo Carrossel" : "Gerar Carrossel"}
             </button>
+
 
             {status === "done" && lastSettings && (
               <>
@@ -680,23 +682,6 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
               </div>
             )}
 
-            {/* Banner de novidade */}
-            {!bannerDismissed && status !== "done" && (
-              <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl border text-xs" style={{ background: "rgba(139,92,246,0.07)", borderColor: "rgba(139,92,246,0.22)" }}>
-                <Sparkles size={12} className="mt-0.5 shrink-0" style={{ color: "#a78bfa" }} />
-                <div className="flex-1">
-                  <p className="font-medium" style={{ color: "#c4b5fd" }}>Novo: imagem de referência</p>
-                  <p className="mt-0.5" style={{ color: "rgba(196,181,253,0.55)" }}>Use sua foto como base para as imagens geradas.</p>
-                </div>
-                <button
-                  onClick={() => { setBannerDismissed(true); try { localStorage.setItem("xpz_banner_dismissed", "1"); } catch {} }}
-                  className="shrink-0 transition-opacity opacity-40 hover:opacity-80"
-                  style={{ color: "#a78bfa" }}
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            )}
 
             {/* Tópicos recentes */}
             {recentTopics.length > 0 && status !== "done" && (
@@ -784,6 +769,7 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
       )}
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+
 
       <GeneratorWizard
         open={showWizard}

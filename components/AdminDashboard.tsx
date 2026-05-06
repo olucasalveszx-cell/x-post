@@ -249,6 +249,7 @@ export default function AdminDashboard() {
   const [xpostImgUploading, setXpostImgUploading] = useState(false);
   const [xpostImgDeleting, setXpostImgDeleting] = useState<string | null>(null);
   const xpostImgInputRef = useRef<HTMLInputElement>(null);
+  const [adminEditorOpen, setAdminEditorOpen] = useState(false);
 
   /* ── Novo carrossel indicator ── */
   const prevDraftsCount = useRef(0);
@@ -1592,9 +1593,8 @@ export default function AdminDashboard() {
           };
           const openInEditor = () => {
             if (!xgenContent) return;
-            setXgenStatus("opening");
-            sessionStorage.setItem("xpost-admin-slides", JSON.stringify(buildAdminSlides(xgenContent, xpostImages.map(img => img.url), xgenTwitter)));
-            router.push("/editor");
+            try { localStorage.setItem("xpost-admin-slides", JSON.stringify(buildAdminSlides(xgenContent, xpostImages.map(img => img.url), xgenTwitter))); } catch {}
+            setAdminEditorOpen(true);
           };
           return (
             <div className="space-y-5">
@@ -1693,14 +1693,14 @@ export default function AdminDashboard() {
                 </button>
                 {xgenError && <p className="text-xs text-red-400 text-center">{xgenError}</p>}
               </div>
-              {xgenContent && (xgenStatus === "done" || xgenStatus === "opening") && (
+              {xgenContent && xgenStatus === "done" && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-gray-400">{xgenContent.slides.length + 1} slides (+ CTA XPost)</p>
-                    <button onClick={openInEditor} disabled={xgenStatus === "opening"}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                    <button onClick={openInEditor}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
                       style={{ background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.5)", color: "#c4b5fd" }}>
-                      {xgenStatus === "opening" ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />} Abrir no Editor
+                      <Wand2 size={13} /> Editar no Admin
                     </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1895,6 +1895,22 @@ export default function AdminDashboard() {
           );
         })()}
       </main>
+
+      {/* ── Editor overlay (Gerador XPost) ── */}
+      {adminEditorOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "#000", display: "flex", flexDirection: "column" }}>
+          <div style={{ padding: "8px 16px", background: "#0d0d0d", borderBottom: "1px solid rgba(139,92,246,0.2)", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: "#a78bfa", fontWeight: 600 }}>Editor XPost — Admin</span>
+            <button
+              onClick={() => setAdminEditorOpen(false)}
+              style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#9ca3af", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "4px 10px", cursor: "pointer" }}
+            >
+              <X size={13} /> Voltar ao Admin
+            </button>
+          </div>
+          <iframe src="/editor" style={{ flex: 1, border: "none", width: "100%" }} />
+        </div>
+      )}
     </div>
   );
 }

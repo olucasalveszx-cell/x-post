@@ -7,6 +7,7 @@ import { getUserPlan } from "@/lib/credits";
 import { redisGet, redisSet, redisIncr, redisLPush, redisLTrim } from "@/lib/redis";
 import { put } from "@vercel/blob";
 import { geminiText } from "@/lib/gemini-text";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export const maxDuration = 60;
 
@@ -75,6 +76,55 @@ async function fromOpenAI(prompt: string, style: ImageStyle) {
 
   console.log("[image] OpenAI gpt-image-1 OK");
   return { imageUrl: `data:image/png;base64,${b64}`, source: "openai" };
+}
+
+// ── OpenAI gpt-image-1 com referência facial ─────────────────
+async function fromOpenAIWithReference(
+  prompt: string,
+  style: ImageStyle,
+  refBase64: string,
+  refMime: string
+) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("OPENAI_API_KEY não configurada");
+
+  const styleHint = PROMPTS[style] ?? PROMPTS.gemini;
+  const fullPrompt = `${prompt}. ${styleHint}. Portrait orientation 4:5 aspect ratio. Use the reference image to maintain the person's facial identity, features, skin tone, and proportions exactly as shown — do not alter the individual.`;
+
+  const imageBuffer = Buffer.from(refBase64, "base64");
+  const ext = refMime.split("/")[1]?.split("+")[0] ?? "jpg";
+
+  const formData = new FormData();
+  formData.append("model", "gpt-image-1");
+  formData.append(
+    "image",
+    new Blob([imageBuffer], { type: refMime }),
+    `reference.${ext}`
+  );
+  formData.append("prompt", fullPrompt);
+  formData.append("n", "1");
+  formData.append("size", "1024x1536");
+  formData.append("quality", "high");
+
+  const res = await fetch("https://api.openai.com/v1/images/edits", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${key}` },
+    body: formData,
+    signal: AbortSignal.timeout(120000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data.error?.message ?? `OpenAI edits HTTP ${res.status}`;
+    console.error("[image] OpenAI edits (referência) falhou:", msg);
+    throw new Error(msg);
+  }
+
+  const b64 = data.data?.[0]?.b64_json;
+  if (!b64) throw new Error("OpenAI edits: sem imagem na resposta");
+
+  console.log("[image] OpenAI gpt-image-1 edits (referência facial) OK");
+  return { imageUrl: `data:image/png;base64,${b64}`, source: "openai-reference" };
 }
 
 // ── fal.ai FLUX 1.1 Pro ──────────────────────────────────────
@@ -346,7 +396,20 @@ export async function POST(req: NextRequest) {
   let plan = "free";
   const errors: string[] = [];
 
-  if (!isPro) {
+  if (hasReference) {
+    // Cascade com referência: OpenAI edits primeiro, depois geração normal como fallback
+    const tries: Array<() => Promise<ImageResult>> = [
+      () => fromOpenAIWithReference(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
+      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
+      () => fromFal(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
+      () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
+      () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
+    ];
+    for (const fn of tries) {
+      if (result) break;
+      try { result = await fn(); } catch (e: any) { errors.push(e.message); }
+    }
+  } else if (!isPro) {
     const tries: Array<() => Promise<ImageResult>> = [
       () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
       () => fromFal(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
@@ -375,6 +438,48 @@ export async function POST(req: NextRequest) {
 
   // waitUntil garante que o Vercel mantém a função viva até o salvamento completar
   waitUntil(saveToGallery(result.imageUrl, email, enhancedPrompt, style, result.source));
+
+  // Salvar na tabela generated_images quando referência foi usada
+  if (hasReference && email && result.source === "openai-reference") {
+    waitUntil(
+      (async () => {
+        try {
+          // Resolver reference_image_id se existir no Supabase
+          const { data: refImg } = await supabaseAdmin
+            .from("user_reference_images")
+            .select("id")
+            .eq("user_id", email)
+            .eq("is_default", true)
+            .limit(1)
+            .single();
+
+          // Converter data URL para blob e salvar no Vercel Blob
+          let finalUrl = result!.imageUrl;
+          if (finalUrl.startsWith("data:")) {
+            const [header, b64] = finalUrl.split(",");
+            const mime = header.match(/data:([^;]+)/)?.[1] ?? "image/png";
+            const ext = mime.split("/")[1] ?? "png";
+            const buf = Buffer.from(b64, "base64");
+            const blob = await put(
+              `generated/${Date.now()}.${ext}`,
+              buf,
+              { access: "public" as any, contentType: mime }
+            );
+            finalUrl = blob.url;
+          }
+
+          await supabaseAdmin.from("generated_images").insert({
+            user_id: email,
+            prompt: enhancedPrompt,
+            reference_image_id: refImg?.id ?? null,
+            image_url: finalUrl,
+          });
+        } catch (e: any) {
+          console.warn("[image] generated_images save falhou:", e.message);
+        }
+      })()
+    );
+  }
 
   return NextResponse.json({ ...result, plan, ...(errors.length ? { fallbackErrors: errors } : {}) });
 }

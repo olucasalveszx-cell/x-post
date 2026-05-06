@@ -310,7 +310,7 @@ export default function Toolbar({
     try { return JSON.parse(localStorage.getItem("xpz_profiles") ?? "[]"); } catch { return []; }
   };
   const persistProfiles = (ps: SavedProfile[]) => {
-    localStorage.setItem("xpz_profiles", JSON.stringify(ps));
+    try { localStorage.setItem("xpz_profiles", JSON.stringify(ps)); } catch {}
     fetch("/api/profile", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -318,8 +318,14 @@ export default function Toolbar({
     }).catch(() => {});
   };
   const setActiveProfileLS = (p: SavedProfile) => {
-    localStorage.setItem("xpz_profile", JSON.stringify({ name: p.name, handle: p.handle, avatarSrc: p.avatarSrc, verified: p.verified }));
-    localStorage.setItem("xpz_active_profile_id", p.id);
+    const payload = { name: p.name, handle: p.handle, avatarSrc: p.avatarSrc, verified: p.verified };
+    try {
+      localStorage.setItem("xpz_profile", JSON.stringify(payload));
+    } catch {
+      // avatarSrc base64 too large — save without it
+      try { localStorage.setItem("xpz_profile", JSON.stringify({ ...payload, avatarSrc: undefined })); } catch {}
+    }
+    try { localStorage.setItem("xpz_active_profile_id", p.id); } catch {}
   };
   const getActiveProfileId = (): string | null => {
     try { return localStorage.getItem("xpz_active_profile_id"); } catch { return null; }
@@ -353,7 +359,7 @@ export default function Toolbar({
         const apiProfiles: SavedProfile[] = Array.isArray(data.profiles) ? data.profiles : [];
         if (apiProfiles.length > 0) {
           setSavedProfiles(apiProfiles);
-          localStorage.setItem("xpz_profiles", JSON.stringify(apiProfiles));
+          try { localStorage.setItem("xpz_profiles", JSON.stringify(apiProfiles)); } catch {}
           const curActive = getActiveProfileId();
           if (!curActive || !apiProfiles.find((p) => p.id === curActive)) {
             setActiveProfileId(apiProfiles[0].id);
