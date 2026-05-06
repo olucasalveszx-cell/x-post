@@ -181,13 +181,16 @@ export default function EditorPage() {
               const profiles = JSON.parse(val);
               if (Array.isArray(profiles)) {
                 const stripped = profiles.map((p: any) => ({ ...p, avatarSrc: p.avatarSrc?.startsWith("http") ? p.avatarSrc : undefined }));
-                localStorage.setItem(key, JSON.stringify(stripped));
-              }
+                localStorage.removeItem(key);
+                try { localStorage.setItem(key, JSON.stringify(stripped)); } catch { /* quota still full, leave empty */ }
+              } else { localStorage.removeItem(key); }
             } catch { localStorage.removeItem(key); }
           } else if (key === "xpz_profile") {
             try {
               const p = JSON.parse(val);
-              localStorage.setItem(key, JSON.stringify({ ...p, avatarSrc: p.avatarSrc?.startsWith("http") ? p.avatarSrc : undefined }));
+              const clean = JSON.stringify({ ...p, avatarSrc: p.avatarSrc?.startsWith("http") ? p.avatarSrc : undefined });
+              localStorage.removeItem(key);
+              try { localStorage.setItem(key, clean); } catch { /* quota still full, leave empty */ }
             } catch { localStorage.removeItem(key); }
           } else {
             localStorage.removeItem(key);
