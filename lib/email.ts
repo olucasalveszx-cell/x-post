@@ -1,6 +1,8 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY ?? "missing");
+}
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
@@ -18,7 +20,7 @@ export async function sendPreviewEmail(
     timeZone: "America/Sao_Paulo",
   });
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: "xPost <onboarding@resend.dev>",
     to,
     subject: `Preview pronto: "${topic}" — xPost`,
@@ -47,7 +49,7 @@ export async function sendPreviewEmail(
 }
 
 export async function sendOTPEmail(to: string, code: string) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: "xPost <onboarding@resend.dev>",
     to,
     subject: "Seu código de verificação — xPost",

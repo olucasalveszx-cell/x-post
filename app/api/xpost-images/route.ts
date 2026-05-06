@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { redisGet, redisLRange } from "@/lib/redis";
 
+export const dynamic = "force-dynamic";
+
 const LIST_KEY = "xpost:image:ids";
 const imgKey = (id: string) => `xpost:image:${id}`;
 
