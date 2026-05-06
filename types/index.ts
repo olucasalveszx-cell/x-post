@@ -124,60 +124,7 @@ export type AutoPostStatus =
 
 export type ImageSource = "ai" | "real";
 
-// ── Reference Images ──────────────────────────────────────────────────────────
 
-export interface UserReferenceImage {
-  id: string;
-  user_id: string;
-  image_url: string;
-  storage_path: string;
-  label: string;
-  is_default: boolean;
-  created_at: string;
-}
-
-export interface GeneratedImage {
-  id: string;
-  user_id: string;
-  prompt: string;
-  reference_image_id: string | null;
-  image_url: string;
-  created_at: string;
-}
-
-// ── Video Library ─────────────────────────────────────────────────────────────
-
-export type VideoStatus = "draft" | "scheduled" | "posted" | "error";
-export type VideoPlatform = "instagram" | "tiktok" | "youtube" | "facebook";
-export type ScheduledPostStatus = "pending" | "published" | "failed" | "cancelled";
-
-export interface Video {
-  id: string;
-  user_id: string;
-  title: string;
-  file_url: string;
-  storage_path: string;
-  thumbnail_url: string | null;
-  file_size: number;
-  duration: number | null;
-  status: VideoStatus;
-  created_at: string;
-  updated_at: string;
-  scheduled_posts?: ScheduledPost[];
-}
-
-export interface ScheduledPost {
-  id: string;
-  user_id: string;
-  video_id: string;
-  platform: VideoPlatform;
-  caption: string | null;
-  scheduled_at: string;
-  status: ScheduledPostStatus;
-  created_at: string;
-  updated_at: string;
-  video?: Video;
-}
 
 export interface AutoPostItem {
   id: string;

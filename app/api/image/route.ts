@@ -7,7 +7,6 @@ import { getUserPlan } from "@/lib/credits";
 import { redisGet, redisSet, redisIncr, redisLPush, redisLTrim } from "@/lib/redis";
 import { put } from "@vercel/blob";
 import { geminiText } from "@/lib/gemini-text";
-import { supabaseAdmin } from "@/lib/supabase";
 
 export const maxDuration = 60;
 
@@ -438,48 +437,6 @@ export async function POST(req: NextRequest) {
 
   // waitUntil garante que o Vercel mantém a função viva até o salvamento completar
   waitUntil(saveToGallery(result.imageUrl, email, enhancedPrompt, style, result.source));
-
-  // Salvar na tabela generated_images quando referência foi usada
-  if (hasReference && email && result.source === "openai-reference") {
-    waitUntil(
-      (async () => {
-        try {
-          // Resolver reference_image_id se existir no Supabase
-          const { data: refImg } = await supabaseAdmin
-            .from("user_reference_images")
-            .select("id")
-            .eq("user_id", email)
-            .eq("is_default", true)
-            .limit(1)
-            .single();
-
-          // Converter data URL para blob e salvar no Vercel Blob
-          let finalUrl = result!.imageUrl;
-          if (finalUrl.startsWith("data:")) {
-            const [header, b64] = finalUrl.split(",");
-            const mime = header.match(/data:([^;]+)/)?.[1] ?? "image/png";
-            const ext = mime.split("/")[1] ?? "png";
-            const buf = Buffer.from(b64, "base64");
-            const blob = await put(
-              `generated/${Date.now()}.${ext}`,
-              buf,
-              { access: "public" as any, contentType: mime }
-            );
-            finalUrl = blob.url;
-          }
-
-          await supabaseAdmin.from("generated_images").insert({
-            user_id: email,
-            prompt: enhancedPrompt,
-            reference_image_id: refImg?.id ?? null,
-            image_url: finalUrl,
-          });
-        } catch (e: any) {
-          console.warn("[image] generated_images save falhou:", e.message);
-        }
-      })()
-    );
-  }
 
   return NextResponse.json({ ...result, plan, ...(errors.length ? { fallbackErrors: errors } : {}) });
 }
