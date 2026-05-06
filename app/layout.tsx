@@ -62,33 +62,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         {/* Runs before ANY bundle — overrides Storage.prototype.setItem to never throw */}
-        <Script id="ls-guard" strategy="beforeInteractive">{`
-(function(){try{
-  var orig=Storage.prototype.setItem;
-  function clean(k,v){
-    if(typeof v!=='string'||v.indexOf('data:')===-1)return v;
-    try{
-      var p=JSON.parse(v);
-      if(Array.isArray(p)){p=p.map(function(x){return Object.assign({},x,{avatarSrc:(x.avatarSrc&&x.avatarSrc.indexOf('http')===0)?x.avatarSrc:undefined});});}
-      else if(p&&p.avatarSrc&&p.avatarSrc.indexOf('http')!==0){p.avatarSrc=undefined;}
-      return JSON.stringify(p);
-    }catch(e){return v;}
-  }
-  Storage.prototype.setItem=function(k,v){
-    if(k==='xpz_profile'||k==='xpz_profiles')v=clean(k,v);
-    try{orig.call(this,k,v);}catch(e){}
-  };
-  ['xpz_profile','xpz_profiles'].forEach(function(k){
-    try{
-      var val=localStorage.getItem(k);
-      if(!val||val.indexOf('data:')===-1)return;
-      var cleaned=clean(k,val);
-      localStorage.removeItem(k);
-      try{orig.call(localStorage,k,cleaned);}catch(e){}
-    }catch(e){}
-  });
-}catch(e){}})();
-        `}</Script>
+        <Script src="/ls-guard.js" strategy="beforeInteractive" />
         <Providers>{children}</Providers>
         <RegisterSW />
       </body>
