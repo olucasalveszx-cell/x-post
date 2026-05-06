@@ -1,4 +1,4 @@
-const CACHE = "xpost-v1";
+const CACHE = "xpost-v2";
 
 // Páginas e assets que ficam disponíveis offline
 const PRECACHE = ["/", "/editor", "/queue"];
