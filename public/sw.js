@@ -1,11 +1,6 @@
-// Service worker auto-destruct: limpa todos os caches e se desregistra
+// No-op service worker — previous version cleared caches and unregistered,
+// causing an infinite reload loop. This version does nothing.
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
-      .then(() => self.registration.unregister())
-      .then(() => self.clients.matchAll())
-      .then((clients) => clients.forEach((c) => c.navigate(c.url)))
-  );
+  e.waitUntil(self.clients.claim());
 });

@@ -810,7 +810,7 @@ export default function EditorPage() {
               style={{
                 background: (credits as any).total > 10 ? "rgba(76,110,245,0.1)" : (credits as any).total > 0 ? "rgba(251,191,36,0.1)" : "rgba(239,68,68,0.1)",
                 borderColor: (credits as any).total > 10 ? "rgba(76,110,245,0.3)" : (credits as any).total > 0 ? "rgba(251,191,36,0.3)" : "rgba(239,68,68,0.3)",
-                color: (credits as any).total > 10 ? "##818cf8" : (credits as any).total > 0 ? "#fbbf24" : "#f87171",
+                color: (credits as any).total > 10 ? "#818cf8" : (credits as any).total > 0 ? "#fbbf24" : "#f87171",
               }}>
               <Zap size={11} />
               {`${(credits as any).total ?? credits.remaining}/${credits.limit}`}
@@ -822,7 +822,7 @@ export default function EditorPage() {
               onClick={() => setShowProfilePicker(true)}
               title="Alterar perfil"
               className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all hover:brightness-110"
-              style={{ background: "rgba(59,91,219,0.15)", border: "1px solid rgba(76,110,245,0.3)", color: "##818cf8" }}>
+              style={{ background: "rgba(59,91,219,0.15)", border: "1px solid rgba(76,110,245,0.3)", color: "#818cf8" }}>
               <span style={{ fontSize: 13 }}>
                 {["advocacia","nutricao","odonto","saude","noticias","marketing","fitness","educacao","beleza","gastronomia"].includes(userProfile.key)
                   ? ["⚖️","🥗","🦷","🏥","📰","📈","💪","📚","💄","🍽️"][["advocacia","nutricao","odonto","saude","noticias","marketing","fitness","educacao","beleza","gastronomia"].indexOf(userProfile.key)]
