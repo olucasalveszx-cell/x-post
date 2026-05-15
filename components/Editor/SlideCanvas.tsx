@@ -387,8 +387,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     if (el.type !== "image") return;
     e.preventDefault();
     e.stopPropagation();
-    const rect = containerRef.current!.getBoundingClientRect();
-    setCtxMenu({ x: (e.clientX - rect.left) / scale, y: (e.clientY - rect.top) / scale, el });
+    setCtxMenu({ x: e.clientX, y: e.clientY, el });
     setSelectedId(el.id);
   };
 
@@ -1121,19 +1120,19 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         );
       })}
 
-      {/* Context menu — scale invertido para aparecer no tamanho real na tela */}
-      {ctxMenu && (
-        <div
-          className="absolute z-[100] bg-[var(--bg-2)] border border-[var(--border-2)] rounded-xl shadow-2xl py-1.5 min-w-[260px]"
-          style={{
-            left: Math.min(ctxMenu.x, slide.width - 290 / scale),
-            top: Math.min(ctxMenu.y, slide.height - 430 / scale),
-            transform: `scale(${1 / scale})`,
-            transformOrigin: "top left",
-          }}
-          onClick={(e) => e.stopPropagation()}
-          onContextMenu={(e) => e.preventDefault()}
-        >
+      {/* Context menu — portal fixed fora do canvas (sem distorção de scale) */}
+      {ctxMenu && typeof window !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0 z-[9990]" onClick={closeCtx} onContextMenu={(e) => { e.preventDefault(); closeCtx(); }} />
+          <div
+            className="fixed z-[9991] bg-[var(--bg-2)] border border-[var(--border-2)] rounded-xl shadow-2xl py-1.5 min-w-[240px] max-w-[280px]"
+            style={{
+              left: Math.min(ctxMenu.x, window.innerWidth - 288),
+              top: Math.max(8, Math.min(ctxMenu.y, window.innerHeight - 440)),
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.preventDefault()}
+          >
           {/* Header — arrastar menu */}
           <div className="px-4 py-2.5 border-b border-[var(--border)] flex items-center gap-2 cursor-move select-none"
             onMouseDown={(e) => startMenuDrag(e, () => ({ x: ctxMenu!.x, y: ctxMenu!.y }), (x, y) => setCtxMenu(m => m ? { ...m, x, y } : null))}
@@ -1197,7 +1196,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             Fechar
           </button>
         </div>
-      )}
+      </>, document.body)}
 
       {/* frameCtxMenu movido para portal abaixo */}
 
