@@ -4,6 +4,7 @@ import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import { useRef, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 const FONTS = [
   { label: "Sans-serif", value: "sans-serif" },
@@ -82,6 +83,10 @@ export default function Toolbar({
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const addBtnRef = useRef<HTMLButtonElement>(null);
+  const moreBtnRef = useRef<HTMLButtonElement>(null);
+  const [addPos, setAddPos] = useState({ x: 0, y: 0 });
+  const [morePos, setMorePos] = useState({ x: 0, y: 0 });
   const [generating, setGenerating] = useState(false);
   const [showEditAI, setShowEditAI] = useState(false);
   const [editPrompt, setEditPrompt] = useState("");
@@ -675,37 +680,19 @@ export default function Toolbar({
         <div className={divider} />
 
         {/* Botão + Adicionar */}
-        <div className="relative shrink-0">
-          <button
-            onClick={() => { if (showAdd) { setShowAdd(false); } else { closeAll(); setShowAdd(true); } }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${showAdd ? "bg-brand-600 text-white" : "bg-brand-600/20 hover:bg-brand-600/40 border border-brand-500/40 text-brand-300"}`}
-          >
-            <Plus size={14} /> Adicionar
-          </button>
-
-          {showAdd && (
-            <div className="absolute top-full left-0 z-50 mt-1 bg-[var(--bg-2)] border border-[var(--border-2)] rounded-xl shadow-2xl py-1.5 min-w-[160px]">
-              <button
-                onClick={() => { setShowAdd(false); addText(); }}
-                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
-              >
-                <Type size={14} className="text-brand-500 shrink-0" /> Texto
-              </button>
-              <button
-                onClick={() => { setShowAdd(false); fileInputRef.current?.click(); }}
-                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
-              >
-                <ImageIcon size={14} className="text-brand-500 shrink-0" /> Imagem
-              </button>
-              <button
-                onClick={() => { setShowAdd(false); setShowProfile(true); }}
-                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
-              >
-                <UserCircle size={14} className="text-brand-500 shrink-0" /> Perfil
-              </button>
-            </div>
-          )}
-        </div>
+        <button
+          ref={addBtnRef}
+          onClick={() => {
+            if (showAdd) { setShowAdd(false); return; }
+            const rect = addBtnRef.current?.getBoundingClientRect();
+            if (rect) setAddPos({ x: rect.left, y: rect.bottom + 4 });
+            closeAll();
+            setShowAdd(true);
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium shrink-0 transition-colors ${showAdd ? "bg-brand-600 text-white" : "bg-brand-600/20 hover:bg-brand-600/40 border border-brand-500/40 text-brand-300"}`}
+        >
+          <Plus size={14} /> Adicionar
+        </button>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
 
         {/* Gerar fundo IA */}
@@ -716,59 +703,20 @@ export default function Toolbar({
         </button>
 
         {/* Botão ··· — itens secundários */}
-        <div className="relative shrink-0">
-          <button
-            onClick={() => { if (showMore) { setShowMore(false); } else { closeAll(); setShowMore(true); } }}
-            title="Mais opções"
-            className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm transition-colors ${showMore ? "bg-brand-600 text-white" : btnBase}`}
-          >
-            <MoreHorizontal size={15} />
-          </button>
-
-          {showMore && (
-            <div className="absolute top-full left-0 z-50 mt-1 bg-[var(--bg-2)] border border-[var(--border-2)] rounded-xl shadow-2xl py-1.5 min-w-[190px]">
-              <button
-                onClick={() => { setShowMore(false); setShowLayouts(true); }}
-                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
-              >
-                <LayoutTemplate size={14} className="text-brand-500 shrink-0" /> Layout
-              </button>
-              <button
-                onClick={() => { setShowMore(false); setShowMolds(true); }}
-                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
-              >
-                <FrameIcon size={14} className="text-brand-500 shrink-0" /> Molduras
-              </button>
-              <button
-                onClick={() => { setShowMore(false); setShowTheme(true); }}
-                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
-              >
-                <Palette size={14} className="text-brand-500 shrink-0" /> Tema
-              </button>
-              <div className="w-full h-px bg-[var(--border-2)] my-1" />
-              <button
-                onClick={() => { setShowMore(false); openWebSearch(); }}
-                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-sky-400 hover:text-sky-300 hover:bg-[var(--bg-3)] transition-colors"
-              >
-                <Search size={14} className="shrink-0" /> Buscar na Web
-              </button>
-              {slide.backgroundImageUrl && (
-                <button
-                  onClick={() => { setShowMore(false); setShowEditAI(true); }}
-                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-pink-400 hover:text-pink-300 hover:bg-[var(--bg-3)] transition-colors"
-                >
-                  <Sparkles size={14} className="shrink-0" /> Editar com IA
-                </button>
-              )}
-              <button
-                onClick={() => { setShowMore(false); openXpostBank(); }}
-                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-violet-400 hover:text-violet-300 hover:bg-[var(--bg-3)] transition-colors"
-              >
-                <Database size={14} className="shrink-0" /> use xpost
-              </button>
-            </div>
-          )}
-        </div>
+        <button
+          ref={moreBtnRef}
+          onClick={() => {
+            if (showMore) { setShowMore(false); return; }
+            const rect = moreBtnRef.current?.getBoundingClientRect();
+            if (rect) setMorePos({ x: rect.left, y: rect.bottom + 4 });
+            closeAll();
+            setShowMore(true);
+          }}
+          title="Mais opções"
+          className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showMore ? "bg-brand-600 text-white" : btnBase}`}
+        >
+          <MoreHorizontal size={15} />
+        </button>
 
         <div className={divider} />
 
@@ -1361,6 +1309,66 @@ export default function Toolbar({
           <div className="w-px h-5 bg-[var(--border-2)]" />
           <input type="text" value={selectedElement?.content ?? ""} onChange={(e) => patchSelected({ content: e.target.value })} placeholder="Editar texto..." className="bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-2 py-1 text-xs text-[var(--text)] focus:outline-none focus:border-brand-500 w-48 placeholder:text-[var(--text-3)]" />
         </div>
+      )}
+
+      {/* ── Portais dos dropdowns (fora do overflow-x-auto) ── */}
+      {showAdd && typeof window !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0 z-[9990]" onClick={() => setShowAdd(false)} />
+          <div className="fixed z-[9991] bg-[var(--bg-2)] border border-[var(--border-2)] rounded-xl shadow-2xl py-1.5 min-w-[160px]"
+            style={{ left: addPos.x, top: addPos.y }}>
+            <button onClick={() => { setShowAdd(false); addText(); }}
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors">
+              <Type size={14} className="text-brand-500 shrink-0" /> Texto
+            </button>
+            <button onClick={() => { setShowAdd(false); fileInputRef.current?.click(); }}
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors">
+              <ImageIcon size={14} className="text-brand-500 shrink-0" /> Imagem
+            </button>
+            <button onClick={() => { setShowAdd(false); setShowProfile(true); }}
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors">
+              <UserCircle size={14} className="text-brand-500 shrink-0" /> Perfil
+            </button>
+          </div>
+        </>,
+        document.body
+      )}
+
+      {showMore && typeof window !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0 z-[9990]" onClick={() => setShowMore(false)} />
+          <div className="fixed z-[9991] bg-[var(--bg-2)] border border-[var(--border-2)] rounded-xl shadow-2xl py-1.5 min-w-[190px]"
+            style={{ left: morePos.x, top: morePos.y }}>
+            <button onClick={() => { setShowMore(false); setShowLayouts(true); }}
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors">
+              <LayoutTemplate size={14} className="text-brand-500 shrink-0" /> Layout
+            </button>
+            <button onClick={() => { setShowMore(false); setShowMolds(true); }}
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors">
+              <FrameIcon size={14} className="text-brand-500 shrink-0" /> Molduras
+            </button>
+            <button onClick={() => { setShowMore(false); setShowTheme(true); }}
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors">
+              <Palette size={14} className="text-brand-500 shrink-0" /> Tema
+            </button>
+            <div className="w-full h-px bg-[var(--border-2)] my-1" />
+            <button onClick={() => { setShowMore(false); openWebSearch(); }}
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-sky-400 hover:text-sky-300 hover:bg-[var(--bg-3)] transition-colors">
+              <Search size={14} className="shrink-0" /> Buscar na Web
+            </button>
+            {slide.backgroundImageUrl && (
+              <button onClick={() => { setShowMore(false); setShowEditAI(true); }}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-pink-400 hover:text-pink-300 hover:bg-[var(--bg-3)] transition-colors">
+                <Sparkles size={14} className="shrink-0" /> Editar com IA
+              </button>
+            )}
+            <button onClick={() => { setShowMore(false); openXpostBank(); }}
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-violet-400 hover:text-violet-300 hover:bg-[var(--bg-3)] transition-colors">
+              <Database size={14} className="shrink-0" /> use xpost
+            </button>
+          </div>
+        </>,
+        document.body
       )}
     </div>
   );
