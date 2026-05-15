@@ -170,6 +170,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     if (cropId === el.id) return;
     e.stopPropagation();
 
+    const wasSelected = selectedId === el.id;
     setSelectedId(el.id);
     onSelectElement?.(el);
 
@@ -190,7 +191,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     };
     const onUp = () => {
       clearTimeout(holdTimer);
-      if (!dragging && el.type === "text") setEditingId(el.id);
+      // Só entra em edição se o elemento JÁ estava selecionado (segundo clique)
+      if (!dragging && el.type === "text" && wasSelected) setEditingId(el.id);
       dragging = false;
       hideGuides();
       dragRef.current = null;
