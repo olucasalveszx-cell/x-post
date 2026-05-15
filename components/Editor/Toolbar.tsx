@@ -1,6 +1,6 @@
 "use client";
 
-import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon, Palette, FlipHorizontal, FlipVertical, Database, Search, RefreshCw } from "lucide-react";
+import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon, Palette, FlipHorizontal, FlipVertical, Database, Search, RefreshCw, MoreHorizontal } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import { useRef, useState, useEffect } from "react";
@@ -103,7 +103,10 @@ export default function Toolbar({
   const [webSearchLoading, setWebSearchLoading] = useState(false);
   const [webSearchPage, setWebSearchPage] = useState(1);
 
-  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); setShowXpostBank(false); setShowWebSearch(false); };
+  const [showMore, setShowMore] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+
+  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); setShowXpostBank(false); setShowWebSearch(false); setShowMore(false); setShowAdd(false); };
 
   const openXpostBank = () => {
     if (showXpostBank) { setShowXpostBank(false); return; }
@@ -671,33 +674,39 @@ export default function Toolbar({
 
         <div className={divider} />
 
-        <button onClick={addText} className={btnBase}><Type size={14} /> Texto</button>
-        <button onClick={() => fileInputRef.current?.click()} className={btnBase}><ImageIcon size={14} /> Imagem</button>
+        {/* Botão + Adicionar */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => { if (showAdd) { setShowAdd(false); } else { closeAll(); setShowAdd(true); } }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${showAdd ? "bg-brand-600 text-white" : "bg-brand-600/20 hover:bg-brand-600/40 border border-brand-500/40 text-brand-300"}`}
+          >
+            <Plus size={14} /> Adicionar
+          </button>
+
+          {showAdd && (
+            <div className="absolute top-full left-0 z-50 mt-1 bg-[var(--bg-2)] border border-[var(--border-2)] rounded-xl shadow-2xl py-1.5 min-w-[160px]">
+              <button
+                onClick={() => { setShowAdd(false); addText(); }}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
+              >
+                <Type size={14} className="text-brand-500 shrink-0" /> Texto
+              </button>
+              <button
+                onClick={() => { setShowAdd(false); fileInputRef.current?.click(); }}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
+              >
+                <ImageIcon size={14} className="text-brand-500 shrink-0" /> Imagem
+              </button>
+              <button
+                onClick={() => { setShowAdd(false); setShowProfile(true); }}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
+              >
+                <UserCircle size={14} className="text-brand-500 shrink-0" /> Perfil
+              </button>
+            </div>
+          )}
+        </div>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
-
-        {/* Perfil */}
-        <button onClick={() => { closeAll(); setShowProfile((v) => !v); }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showProfile ? "bg-brand-600 text-white" : btnBase}`}>
-          <UserCircle size={14} /> Perfil
-        </button>
-
-        {/* Layout */}
-        <button onClick={() => { closeAll(); setShowLayouts(v => !v); }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showLayouts ? "bg-brand-600 text-white" : btnBase}`}>
-          <LayoutTemplate size={14} /> Layout
-        </button>
-
-        {/* Molduras */}
-        <button onClick={() => { closeAll(); setShowMolds(v => !v); }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showMolds ? "bg-brand-600 text-white" : btnBase}`}>
-          <FrameIcon size={14} /> Molduras
-        </button>
-
-        {/* Tema dos slides */}
-        <button onClick={() => { closeAll(); setShowTheme(v => !v); }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm shrink-0 transition-colors ${showTheme ? "bg-brand-600 text-white" : btnBase}`}>
-          <Palette size={14} /> Tema
-        </button>
 
         {/* Gerar fundo IA */}
         <button onClick={generateBackground} disabled={generating}
@@ -706,30 +715,60 @@ export default function Toolbar({
           {generating ? "Gerando..." : "Fundo IA"}
         </button>
 
-        {/* Buscar na Web */}
-        <button onClick={openWebSearch}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm shrink-0 transition-colors ${showWebSearch ? "bg-sky-600/30 border-sky-500/50 text-sky-300" : "bg-sky-600/10 hover:bg-sky-600/20 border-sky-600/25 text-sky-400"}`}>
-          <Search size={14} />
-          Buscar na Web
-        </button>
-
-        {/* Editar imagem com IA */}
-        {slide.backgroundImageUrl && (
+        {/* Botão ··· — itens secundários */}
+        <div className="relative shrink-0">
           <button
-            onClick={() => { closeAll(); setShowEditAI((v) => !v); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm shrink-0 transition-colors ${showEditAI ? "bg-pink-600/30 border-pink-500/50 text-pink-300" : "bg-pink-600/10 hover:bg-pink-600/20 border-pink-600/25 text-pink-400"}`}>
-            <Sparkles size={14} />
-            Editar com IA
+            onClick={() => { if (showMore) { setShowMore(false); } else { closeAll(); setShowMore(true); } }}
+            title="Mais opções"
+            className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm transition-colors ${showMore ? "bg-brand-600 text-white" : btnBase}`}
+          >
+            <MoreHorizontal size={15} />
           </button>
-        )}
 
-        {/* Use XPost */}
-        <button
-          onClick={openXpostBank}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm shrink-0 transition-colors ${showXpostBank ? "bg-violet-600/30 border-violet-500/50 text-violet-300" : "bg-violet-600/10 hover:bg-violet-600/20 border-violet-600/25 text-violet-400"}`}>
-          <Database size={14} />
-          use xpost
-        </button>
+          {showMore && (
+            <div className="absolute top-full left-0 z-50 mt-1 bg-[var(--bg-2)] border border-[var(--border-2)] rounded-xl shadow-2xl py-1.5 min-w-[190px]">
+              <button
+                onClick={() => { setShowMore(false); setShowLayouts(true); }}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
+              >
+                <LayoutTemplate size={14} className="text-brand-500 shrink-0" /> Layout
+              </button>
+              <button
+                onClick={() => { setShowMore(false); setShowMolds(true); }}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
+              >
+                <FrameIcon size={14} className="text-brand-500 shrink-0" /> Molduras
+              </button>
+              <button
+                onClick={() => { setShowMore(false); setShowTheme(true); }}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
+              >
+                <Palette size={14} className="text-brand-500 shrink-0" /> Tema
+              </button>
+              <div className="w-full h-px bg-[var(--border-2)] my-1" />
+              <button
+                onClick={() => { setShowMore(false); openWebSearch(); }}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-sky-400 hover:text-sky-300 hover:bg-[var(--bg-3)] transition-colors"
+              >
+                <Search size={14} className="shrink-0" /> Buscar na Web
+              </button>
+              {slide.backgroundImageUrl && (
+                <button
+                  onClick={() => { setShowMore(false); setShowEditAI(true); }}
+                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-pink-400 hover:text-pink-300 hover:bg-[var(--bg-3)] transition-colors"
+                >
+                  <Sparkles size={14} className="shrink-0" /> Editar com IA
+                </button>
+              )}
+              <button
+                onClick={() => { setShowMore(false); openXpostBank(); }}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-violet-400 hover:text-violet-300 hover:bg-[var(--bg-3)] transition-colors"
+              >
+                <Database size={14} className="shrink-0" /> use xpost
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className={divider} />
 
