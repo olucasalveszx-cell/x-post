@@ -29,31 +29,29 @@ import TutorialOverlay from "@/components/Tutorial/TutorialOverlay";
 
 interface IGAccount { token: string; accountId: string; username: string; }
 
-// Synchronous cleanup — runs before ANY React component mounts.
-// useEffect fires after children (Toolbar writes before parent cleans up), so we
-// must strip base64 avatars here, at module-load time, before the first render.
+// Synchronous cleanup — runs at module-load time before ANY React component mounts.
+// Always sanitizes avatarSrc: only keeps short http(s) URLs, strips everything else.
 if (typeof window !== "undefined") {
   try {
+    const safeUrl = (src: unknown) =>
+      typeof src === "string" && src.startsWith("http") && src.length < 500 ? src : undefined;
     for (const key of ["xpz_profiles", "xpz_profile"]) {
-      const val = localStorage.getItem(key);
-      if (!val || !val.includes("data:")) continue;
-      if (key === "xpz_profiles") {
-        try {
-          const arr = JSON.parse(val);
-          const clean = Array.isArray(arr)
-            ? arr.map((p: any) => ({ ...p, avatarSrc: p.avatarSrc?.startsWith("http") ? p.avatarSrc : undefined }))
-            : [];
+      try {
+        const val = localStorage.getItem(key);
+        if (!val) continue;
+        const parsed = JSON.parse(val);
+        const clean =
+          key === "xpz_profiles"
+            ? (Array.isArray(parsed) ? parsed.map((p: any) => ({ ...p, avatarSrc: safeUrl(p.avatarSrc) })) : [])
+            : (parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                ? { ...(parsed as Record<string, unknown>), avatarSrc: safeUrl((parsed as any).avatarSrc) }
+                : parsed);
+        const cleanStr = JSON.stringify(clean);
+        if (cleanStr !== val) {
           localStorage.removeItem(key);
-          try { localStorage.setItem(key, JSON.stringify(clean)); } catch {}
-        } catch { localStorage.removeItem(key); }
-      } else {
-        try {
-          const p = JSON.parse(val);
-          const clean = JSON.stringify({ ...p, avatarSrc: p.avatarSrc?.startsWith("http") ? p.avatarSrc : undefined });
-          localStorage.removeItem(key);
-          try { localStorage.setItem(key, clean); } catch {}
-        } catch { localStorage.removeItem(key); }
-      }
+          try { localStorage.setItem(key, cleanStr); } catch {}
+        }
+      } catch { try { localStorage.removeItem(key); } catch {} }
     }
   } catch {}
 }

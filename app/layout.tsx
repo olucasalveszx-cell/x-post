@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import RegisterSW from "@/components/RegisterSW";
-import Script from "next/script";
 
 const APP_URL = process.env.NEXTAUTH_URL ?? "https://xpostzone.online";
 
@@ -59,10 +58,10 @@ export default function RootLayout({
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
         <meta name="mobile-web-app-capable" content="yes" />
+        {/* Inline — runs synchronously before any React/webpack bundle, preventing QuotaExceededError */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var _o=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){try{_o.call(this,k,v);}catch(e){}};var su=function(s){return typeof s==="string"&&s.indexOf("http")===0&&s.length<500?s:void 0;};["xpz_profile","xpz_profiles"].forEach(function(k){try{var v=localStorage.getItem(k);if(!v)return;var p=JSON.parse(v);var c=Array.isArray(p)?p.map(function(x){return Object.assign({},x,{avatarSrc:su(x.avatarSrc)});}):Object.assign({},p,{avatarSrc:su(p.avatarSrc)});var cs=JSON.stringify(c);if(cs!==v){localStorage.removeItem(k);try{_o.call(localStorage,k,cs);}catch(e){}}}catch(e){try{localStorage.removeItem(k);}catch(e2){}}});}catch(e){}})();` }} />
       </head>
       <body className="antialiased">
-        {/* Runs before ANY bundle — overrides Storage.prototype.setItem to never throw */}
-        <Script src="/ls-guard.js" strategy="beforeInteractive" />
         <Providers>{children}</Providers>
         <RegisterSW />
       </body>
