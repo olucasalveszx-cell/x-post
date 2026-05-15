@@ -420,8 +420,7 @@ export default function AIAssistant({ open, onClose, onUseInGenerator }: Props) 
         });
       }
 
-      // Fala com browser TTS — sem chamada de API, instantâneo
-      void falarWebSpeech(fullText || "Não consegui processar. Tenta de novo.", () => {
+      void falarTexto(fullText || "Não consegui processar. Tenta de novo.", () => {
         if (autoListenRef.current) startListenRef.current();
       });
     } catch {

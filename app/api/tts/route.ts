@@ -47,6 +47,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg || "TTS error" }, { status: res.status });
   }
 
-  const audio = await res.arrayBuffer();
-  return new NextResponse(audio, { headers: { "Content-Type": "audio/mpeg" } });
+  // Pipe direto da OpenAI pro cliente — sem bufferizar tudo na memória
+  return new NextResponse(res.body, { headers: { "Content-Type": "audio/mpeg" } });
 }
