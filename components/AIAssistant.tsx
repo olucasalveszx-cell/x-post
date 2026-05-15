@@ -451,7 +451,7 @@ export default function AIAssistant({ open, onClose, onUseInGenerator }: Props) 
       silenceTimerRef.current = setTimeout(() => {
         silenceTimerRef.current = null;
         try { rec.stop(); } catch {}
-      }, 1500);
+      }, 700);
     };
     rec.onend = () => {
       if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
