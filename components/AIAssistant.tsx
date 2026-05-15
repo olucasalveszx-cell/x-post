@@ -398,12 +398,30 @@ export default function AIAssistant({ open, onClose, onUseInGenerator }: Props) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next }),
       });
-      const data = await res.json();
-      const reply = data.text || "Não consegui processar. Tenta de novo.";
 
-      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+      if (!res.ok || !res.body) throw new Error("API error");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      // Adiciona mensagem vazia do assistente para ir preenchendo
+      setMessages(prev => [...prev, { role: "assistant", content: "" }]);
       setNexaStatus("");
-      void falarTexto(reply, () => {
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullText += decoder.decode(value, { stream: true });
+        setMessages(prev => {
+          const copy = [...prev];
+          copy[copy.length - 1] = { role: "assistant", content: fullText };
+          return copy;
+        });
+      }
+
+      // Fala com browser TTS — sem chamada de API, instantâneo
+      void falarWebSpeech(fullText || "Não consegui processar. Tenta de novo.", () => {
         if (autoListenRef.current) startListenRef.current();
       });
     } catch {

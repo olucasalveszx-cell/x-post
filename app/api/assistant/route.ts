@@ -69,9 +69,6 @@ export async function POST(req: NextRequest) {
   if (!key) return NextResponse.json({ error: "ANTHROPIC_API_KEY não configurada" }, { status: 500 });
   const client = new Anthropic({ apiKey: key });
 
-  // A API da Anthropic exige que a primeira mensagem seja do usuário.
-  // A mensagem de boas-vindas da Nexa (role "assistant") é apenas visual —
-  // removemos qualquer mensagem "assistant" no início do array antes de enviar.
   const apiMessages = messages.filter((_: any, i: number) =>
     !(i === 0 && messages[0].role === "assistant")
   );
@@ -81,15 +78,36 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const response = await client.messages.create({
+    const stream = client.messages.stream({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 400,
       system: SYSTEM,
       messages: apiMessages,
     });
 
-    const text = response.content[0]?.type === "text" ? response.content[0].text : "";
-    return NextResponse.json({ text });
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const event of stream) {
+            if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+              controller.enqueue(encoder.encode(event.delta.text));
+            }
+          }
+        } finally {
+          controller.close();
+        }
+      },
+      cancel() { stream.abort(); },
+    });
+
+    return new NextResponse(readable, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
