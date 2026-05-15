@@ -170,12 +170,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     if (cropId === el.id) return;
     e.stopPropagation();
 
-    const wasSelected = selectedId === el.id;
     setSelectedId(el.id);
     onSelectElement?.(el);
-
-    // Primeiro clique apenas seleciona; só arrasta se já estava selecionado
-    if (!wasSelected) return;
 
     let dragging = false;
     const holdTimer = setTimeout(() => {
@@ -254,7 +250,6 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     if (cropId === el.id) return;
     e.stopPropagation();
 
-    const wasSelected = selectedId === el.id;
     setSelectedId(el.id);
     onSelectElement?.(el);
 
@@ -292,9 +287,6 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       window.addEventListener("touchend", onEnd);
       return;
     }
-
-    // Um dedo → arrastar (só se já estava selecionado)
-    if (!wasSelected) return;
 
     const touch = e.touches[0];
     const startX = touch.clientX;
