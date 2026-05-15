@@ -202,6 +202,7 @@ export default function AIAssistant({ open, onClose, onUseInGenerator }: Props) 
   const startListenRef = useRef<() => void>(() => {});
   const isOperaRef     = useRef(false);
   const audioUnlockedRef = useRef(false);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadingRef     = useRef(false);
   const audioRef       = useRef<HTMLAudioElement | null>(null);
 
@@ -443,7 +444,17 @@ export default function AIAssistant({ open, onClose, onUseInGenerator }: Props) 
       const combined = (final || interim).trim();
       if (combined) { setTranscript(combined); transcriptRef.current = combined; }
     };
+    rec.onspeechstart = () => {
+      if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+    };
+    rec.onspeechend = () => {
+      silenceTimerRef.current = setTimeout(() => {
+        silenceTimerRef.current = null;
+        try { rec.stop(); } catch {}
+      }, 1500);
+    };
     rec.onend = () => {
+      if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
       setMicStarting(false); setListening(false);
       const captured = transcriptRef.current.trim();
       if (captured) sendMessage(captured);
@@ -470,6 +481,7 @@ export default function AIAssistant({ open, onClose, onUseInGenerator }: Props) 
   useEffect(() => { startListenRef.current = startListening; }, [startListening]);
 
   const stopListening = useCallback(() => {
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
     if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} }
     setListening(false); setMicStarting(false);
   }, []);
