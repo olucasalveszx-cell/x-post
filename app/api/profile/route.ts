@@ -5,6 +5,17 @@ import { redisGet, redisSet, redisLPush, redisLTrim, redisLRange } from "@/lib/r
 
 export const maxDuration = 30;
 
+// Keep only http(s) URLs shorter than 500 chars — strips base64 and raw image data
+function safeAvatar(src: unknown): string | undefined {
+  if (typeof src !== "string") return undefined;
+  return src.startsWith("http") && src.length < 500 ? src : undefined;
+}
+
+function sanitizeProfiles(raw: unknown): unknown[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((p: any) => ({ ...p, avatarSrc: safeAvatar(p.avatarSrc) }));
+}
+
 export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
@@ -18,7 +29,8 @@ export async function GET(_req: NextRequest) {
 
   const history  = histRaw.map((r) => { try { return JSON.parse(r); } catch { return null; } }).filter(Boolean);
   const images   = imgsRaw.map((r) => { try { return JSON.parse(r); } catch { return null; } }).filter(Boolean);
-  const profiles = profilesRaw ? (() => { try { return JSON.parse(profilesRaw); } catch { return []; } })() : [];
+  const profilesParsed = profilesRaw ? (() => { try { return JSON.parse(profilesRaw); } catch { return []; } })() : [];
+  const profiles = sanitizeProfiles(profilesParsed);
 
   return NextResponse.json({ history, images, profiles });
 }
@@ -40,7 +52,9 @@ export async function POST(req: NextRequest) {
     await redisLPush(`user:imgs:${email}`, value);
     await redisLTrim(`user:imgs:${email}`, 0, 99);
   } else if (type === "profiles") {
-    await redisSet(`user:profiles:${email}`, JSON.stringify(entry));
+    // Strip large avatars before persisting to Redis
+    const safe = sanitizeProfiles(entry);
+    await redisSet(`user:profiles:${email}`, JSON.stringify(safe));
   } else {
     return NextResponse.json({ error: "type inválido" }, { status: 400 });
   }

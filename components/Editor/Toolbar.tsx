@@ -308,7 +308,7 @@ export default function Toolbar({
 
   // Never write base64 DataURLs to localStorage — only keep http(s) URLs
   const stripBase64 = (src?: string): string | undefined =>
-    src && !src.startsWith("data:") ? src : undefined;
+    src && src.startsWith("http") && src.length < 500 ? src : undefined;
 
   const safeSetItem = (key: string, value: string) => {
     try { localStorage.setItem(key, value); } catch {}
@@ -346,6 +346,16 @@ export default function Toolbar({
   const [profileVerified, setProfileVerified] = useState(false);
 
   useEffect(() => {
+    // Purge oversized profile keys before any read/write to prevent QuotaExceededError
+    try {
+      ["xpz_profile", "xpz_profiles"].forEach((k) => {
+        try {
+          const v = localStorage.getItem(k);
+          if (v && v.length > 10000) localStorage.removeItem(k);
+        } catch {}
+      });
+    } catch {}
+
     // Carrega do localStorage imediatamente (sem flash)
     const cached = loadProfiles();
     const activeId = getActiveProfileId();
