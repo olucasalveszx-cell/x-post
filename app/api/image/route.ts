@@ -131,7 +131,34 @@ async function fromOpenAIWithReference(
   return { imageUrl: `data:image/png;base64,${b64}`, source: "openai-reference" };
 }
 
-// ── fal.ai FLUX 1.1 Pro ──────────────────────────────────────
+// ── fal.ai FLUX Schnell — rápido (3-8s) ─────────────────────
+async function fromFalSchnell(prompt: string, style: ImageStyle) {
+  const key = process.env.FAL_KEY;
+  if (!key) throw new Error("FAL_KEY não configurada");
+
+  const fullPrompt = buildPrompt(prompt, style);
+  const res = await fetch("https://fal.run/fal-ai/flux/schnell", {
+    method: "POST",
+    headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt: fullPrompt, image_size: "portrait_4_3", num_images: 1, sync_mode: true }),
+    signal: AbortSignal.timeout(30000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data.detail ?? data.error ?? `fal.ai Schnell HTTP ${res.status}`;
+    console.error("[image] fal.ai Schnell falhou:", msg);
+    throw new Error(msg);
+  }
+
+  const imageUrl = data.images?.[0]?.url;
+  if (!imageUrl) throw new Error("fal.ai Schnell: sem imagem na resposta");
+
+  console.log("[image] fal.ai FLUX Schnell OK");
+  return { imageUrl, source: "fal-schnell" };
+}
+
+// ── fal.ai FLUX 1.1 Pro — alta qualidade (30-60s) ────────────
 async function fromFal(prompt: string, style: ImageStyle) {
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY não configurada");
@@ -455,9 +482,11 @@ export async function POST(req: NextRequest) {
       try { result = await fn(); } catch (e: any) { errors.push(e.message); }
     }
   } else if (!isPro) {
+    // Schnell primeiro (3-8s) → Pro como fallback de qualidade → busca web
     const tries: Array<() => Promise<ImageResult>> = [
-      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
+      () => fromFalSchnell(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
       () => fromFal(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
+      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
       () => fromGoogleImages(prompt).then(r => { plan = "free_fallback"; return r; }),
       () => fromPexels(prompt).then(r => { plan = "free_fallback"; return r; }),
     ];
@@ -466,9 +495,11 @@ export async function POST(req: NextRequest) {
       try { result = await fn(); } catch (e: any) { errors.push(e.message); }
     }
   } else {
+    // Pro: Schnell rápido → Pro alta qualidade → OpenAI → OpenRouter → busca web
     const tries: Array<() => Promise<ImageResult>> = [
-      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
+      () => fromFalSchnell(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromFal(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
+      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
       () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
