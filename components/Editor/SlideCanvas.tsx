@@ -55,6 +55,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const [themeValue, setThemeValue] = useState("");
   const [frameCtxMenu, setFrameCtxMenu] = useState<FrameCtxMenu>(null);
   const [loadingFrames, setLoadingFrames] = useState<Set<string>>(new Set());
+  const [framePrompt, setFramePrompt] = useState<string>("");
   const [framePendingId, setFramePendingId] = useState<string | null>(null);
   const [framePanId, setFramePanId] = useState<string | null>(null);
   const [showLayoutPicker, setShowLayoutPicker] = useState(false);
@@ -543,15 +544,16 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     setBgCtxMenu((prev) => prev); // keep menu open to allow multiple picks
   };
 
-  const generateFrameImage = async (frameEl: SlideElement) => {
+  const generateFrameImage = async (frameEl: SlideElement, customPrompt?: string) => {
     setFrameCtxMenu(null);
-    const prompt = slideTexts || "professional lifestyle photography, vibrant colors, high quality";
+    const prompt = (customPrompt ?? framePrompt).trim() || slideTexts || "professional lifestyle photography, vibrant colors, high quality";
+    setFramePrompt("");
     setLoadingFrames((s) => new Set(s).add(frameEl.id));
     try {
       const res = await fetch("/api/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, imageStyle: "gemini" }),
+        body: JSON.stringify({ prompt, imageStyle: "cinematico" }),
       });
       const data = await res.json();
       if (data.imageUrl) updateElement(frameEl.id, { frameImageUrl: data.imageUrl });
@@ -1448,10 +1450,24 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             <button onClick={(e) => { e.stopPropagation(); closeFrameCtx(); }} className="text-[var(--text-3)] hover:text-[var(--text)] transition-colors p-1"><X size={14} /></button>
           </div>
 
-          <button onClick={() => generateFrameImage(frameCtxMenu.el)}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-indigo-400 hover:bg-white/5 transition-colors border-b border-[var(--border)]">
-            <Wand2 size={15} /> Gerar foto com I.A
-          </button>
+          {/* Prompt + botão gerar com IA */}
+          <div className="px-4 py-3 border-b border-[var(--border)]">
+            <p className="text-[11px] text-[var(--text-3)] mb-1.5">Descreva a imagem</p>
+            <textarea
+              value={framePrompt}
+              onChange={(e) => setFramePrompt(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); generateFrameImage(frameCtxMenu.el); } }}
+              placeholder="Ex: paisagem montanhosa ao pôr do sol..."
+              rows={2}
+              className="w-full bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-indigo-500 resize-none placeholder:text-[var(--text-3)] mb-2"
+            />
+            <button
+              onClick={() => generateFrameImage(frameCtxMenu.el)}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
+            >
+              <Wand2 size={14} /> Gerar com I.A
+            </button>
+          </div>
 
           <button onClick={() => { setFramePendingId(frameCtxMenu.el.id); frameFileInputRef.current?.click(); closeFrameCtx(); }}
             className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors border-b border-[var(--border)]">

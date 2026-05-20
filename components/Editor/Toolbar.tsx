@@ -278,9 +278,10 @@ export default function Toolbar({
     const layout = LAYOUTS.find(l => l.id === layoutId);
     if (!layout) return;
 
-    const contentEls = slide.elements.filter(e =>
-      e.type === "text" && e.y >= H * 0.12 && e.y <= H * 0.82
-    );
+    // Pega todos os textos, ordenados por tamanho de fonte (maior = título)
+    const contentEls = slide.elements
+      .filter(e => e.type === "text")
+      .sort((a, b) => ((b.style as any)?.fontSize ?? 0) - ((a.style as any)?.fontSize ?? 0));
     const [titleEl, bodyEl] = contentEls;
 
     let newElements = [...slide.elements];
