@@ -275,6 +275,88 @@ async function fromFalInstantId(prompt: string, style: ImageStyle, refBase64: st
   return { imageUrl, source: "fal-instant-id" };
 }
 
+// ── fal.ai PuLID — identidade pura (rosto 100% fiel) ────────
+async function fromFalPulid(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
+  const key = process.env.FAL_KEY;
+  if (!key) throw new Error("FAL_KEY não configurada");
+
+  const styleHint = PROMPTS[style] ?? PROMPTS.gemini;
+  const fullPrompt = `${prompt}. ${styleHint}. ${QUALITY_SUFFIX}. Instagram 4:5 portrait format.`;
+  const imageDataUrl = `data:${refMime};base64,${refBase64}`;
+
+  const res = await fetch("https://fal.run/fal-ai/pulid", {
+    method: "POST",
+    headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prompt: fullPrompt,
+      negative_prompt: "nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, out of focus, grainy, overexposed",
+      reference_images: [{ image_url: imageDataUrl }],
+      num_inference_steps: 20,
+      guidance_scale: 1.5,
+      true_cfg: 1.0,
+      image_size: FAL_SIZE_4x5,
+      sync_mode: true,
+    }),
+    signal: AbortSignal.timeout(90000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data.detail ?? data.error ?? `fal.ai PuLID HTTP ${res.status}`;
+    console.error("[image] fal.ai PuLID falhou:", msg);
+    throw new Error(msg);
+  }
+
+  const imageUrl = data.images?.[0]?.url;
+  if (!imageUrl) throw new Error("fal.ai PuLID: sem imagem na resposta");
+
+  console.log("[image] fal.ai PuLID OK");
+  return { imageUrl, source: "fal-pulid" };
+}
+
+// ── fal.ai Face Swap — copia pixels reais do rosto ───────────
+async function fromFalFaceSwap(sceneUrl: string, refBase64: string, refMime: string): Promise<string> {
+  const key = process.env.FAL_KEY;
+  if (!key) throw new Error("FAL_KEY não configurada");
+
+  const refDataUrl = `data:${refMime};base64,${refBase64}`;
+
+  const res = await fetch("https://fal.run/fal-ai/face-swap", {
+    method: "POST",
+    headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      base_image_url: sceneUrl,
+      swap_image_url: refDataUrl,
+      sync_mode: true,
+    }),
+    signal: AbortSignal.timeout(60000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data.detail ?? data.error ?? `fal.ai Face Swap HTTP ${res.status}`;
+    console.error("[image] fal.ai Face Swap falhou:", msg);
+    throw new Error(msg);
+  }
+
+  const imageUrl = data.image?.url ?? data.images?.[0]?.url;
+  if (!imageUrl) throw new Error("fal.ai Face Swap: sem imagem na resposta");
+
+  console.log("[image] fal.ai Face Swap OK");
+  return imageUrl;
+}
+
+// ── Cena + Face Swap — gera cena rápida e troca rosto ────────
+async function fromSceneAndSwap(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
+  // Garante que o prompt inclui uma pessoa com rosto visível
+  const scenePrompt = `${prompt}, person facing camera, face clearly visible`;
+  const scene = await fromFalSchnell(scenePrompt, style);
+  if (scene.imageUrl.startsWith("data:")) throw new Error("Schnell retornou data: URI, face-swap não suportado");
+  const swapped = await fromFalFaceSwap(scene.imageUrl, refBase64, refMime);
+  console.log("[image] Cena+FaceSwap pipeline OK");
+  return { imageUrl: swapped, source: "fal-scene-swap" };
+}
+
 // ── fal.ai Clarity Upscaler — 2x resolução ───────────────────
 async function upscaleImage(imageUrl: string, prompt = ""): Promise<string> {
   const key = process.env.FAL_KEY;
@@ -603,8 +685,16 @@ export async function POST(req: NextRequest) {
   const errors: string[] = [];
 
   if (hasReference) {
-    // Cascade com referência: InstantID (fidelidade máxima) → Kontext → OpenAI edits → fallback
+    // Cascade com referência — ordem por fidelidade facial:
+    // 1. PuLID (identidade pura, modelo dedicado)
+    // 2. Cena+FaceSwap (gera cena rápida, copia pixels reais do rosto)
+    // 3. InstantID (preservação por condicionamento)
+    // 4. Kontext img2img
+    // 5. OpenAI edits
+    // 6. Geração sem referência + fallbacks
     const tries: Array<() => Promise<ImageResult>> = [
+      () => fromFalPulid(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-pulid"; return r; }),
+      () => fromSceneAndSwap(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-faceswap"; return r; }),
       () => fromFalInstantId(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-instantid"; return r; }),
       () => fromFalKontext(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }),
       () => fromOpenAIWithReference(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
@@ -618,7 +708,7 @@ export async function POST(req: NextRequest) {
       try { result = await fn(); } catch (e: any) { errors.push(e.message); }
     }
 
-    // Upscaling automático 2x quando temos referência e URL real (não data:)
+    // Upscaling automático 2x — só para URLs reais (não data:, não buscas)
     if (result && !result.imageUrl.startsWith("data:") && result.source !== "pexels" && result.source !== "google") {
       result.imageUrl = await upscaleImage(result.imageUrl, enhancedPrompt);
     }
