@@ -8,32 +8,32 @@ import { redisGet, redisSet, redisIncr, redisLPush, redisLTrim } from "@/lib/red
 import { put } from "@vercel/blob";
 import { geminiText } from "@/lib/gemini-text";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 async function enhancePrompt(raw: string): Promise<string> {
   try {
     const timeout = new Promise<string>((_, reject) =>
-      setTimeout(() => reject(new Error("timeout")), 5000)
+      setTimeout(() => reject(new Error("timeout")), 6000)
     );
 
     const INSTRUCTION = `You are a world-class AI image prompt engineer specializing in photorealistic, premium-quality image generation.
 
-Your task: transform a short subject description into a rich, detailed English image prompt that produces stunning, magazine-quality results.
+Your task: transform a short subject description into a rich, detailed English prompt that produces stunning, magazine-quality results with perfect exposure, color grade, and sharpness.
 
 Rules:
 - Translate to English if needed
-- Expand the subject with: age/appearance, clothing details, exact action/pose
-- Add a specific environment: city/nature/studio, time of day, weather
-- Specify cinematic lighting: golden hour / blue hour / soft box / rim light / backlight
-- Add camera settings: lens (85mm / 35mm / 50mm), aperture (f/1.4 / f/2.8), camera body (Sony A7IV / Canon R5)
-- Include mood and emotion
-- End with quality tags: ultra-detailed, 8K, sharp focus, professional photography, no text, no watermarks, no logos
-- Max 80 words total
-- Return ONLY the prompt, no explanation
+- Expand subject: age/appearance, clothing details, exact action/pose, expression
+- Environment: specific location, time of day, natural or artificial light source
+- Lighting: direction (45°/backlit/split), quality (soft/hard), color temperature (warm 3200K/daylight 5600K)
+- Color grade: specific LUT name or color science (teal-orange / muted film / vivid editorial / neutral RAW)
+- Camera: body (Sony A7IV / Canon R5 / Leica M11), lens (85mm f/1.4 / 35mm f/2), DOF description
+- Exposure: +0 EV balanced / +0.7 EV bright / -0.5 EV moody, no blown highlights, shadow detail preserved
+- Quality suffix: 8K ultra-sharp, micro skin texture, no noise, no artifacts, no text, no watermarks, no logos
+- Max 90 words. Return ONLY the prompt.
 
 Input: "${raw}"`;
 
-    const call = geminiText(INSTRUCTION, { maxTokens: 160 }).then((t) => t.trim() || raw);
+    const call = geminiText(INSTRUCTION, { maxTokens: 180 }).then((t) => t.trim() || raw);
     const enhanced = await Promise.race([call, timeout]);
     console.log(`[image] prompt: "${raw}" → "${enhanced}"`);
     return enhanced;
@@ -45,18 +45,27 @@ Input: "${raw}"`;
 type ImageStyle = "gemini" | "foto_real" | "cinematico" | "editorial" | "dark_mood" | "vibrante" | "minimalista";
 
 const PROMPTS: Record<ImageStyle, string> = {
-  gemini:      `shot on Sony A7IV 85mm f/1.8, cinematic lighting, shallow depth of field, rich color grade, ultra-detailed skin texture, professional Instagram editorial, 8K sharp, no text, no watermarks, no logos`,
-  foto_real:   `shot on Leica M11 35mm f/2, natural available light, authentic candid moment, true-to-life skin tones, documentary photojournalism, ultra-sharp micro-detail, no retouching, no text, no watermarks`,
-  cinematico:  `anamorphic 2.39:1 movie still, golden hour rim light, Kodak Portra 800 film grain, dramatic depth of field, teal-orange color grade, bokeh lens flares, shot on ARRI Alexa, no text, no watermarks`,
-  editorial:   `Vogue cover shot, large format studio strobe lighting, 100mm macro sharpness, luxury fashion aesthetic, perfect skin, high-key white background, shot on Phase One IQ4 150MP, no text, no watermarks`,
-  dark_mood:   `noir cinematic atmosphere, single dramatic key light from below, deep crushed blacks, teal shadow tones, fog machine haze, high contrast, shot on Canon R5 50mm f/1.2, no text, no watermarks`,
-  vibrante:    `golden hour lifestyle photography, oversaturated warm tones, HDR-like vibrance, lens flare burst, shot on Sony A1 24mm f/2.8, energetic composition, crisp edge-to-edge sharpness, no text, no watermarks`,
-  minimalista: `soft northern window light, neutral palette, generous breathing room, Scandinavian minimalism, shot on Hasselblad X2D 90mm, ultra-clean background, whisper-quiet elegance, no text, no watermarks`,
+  gemini: `Sony A7IV 85mm f/1.8, balanced exposure +0 EV, soft key light 45° from left, warm 4800K daylight color temperature, gentle S-curve contrast, lifted shadows RGB(20,18,16), accurate vivid skin tones, shallow depth of field creamy bokeh, ultra-detailed pore-level skin texture, no chromatic aberration, 8K pixel-perfect sharpness, no noise, no artifacts, no text, no watermarks`,
+
+  foto_real: `Leica M11 35mm f/2 natural available light, exposure +0 EV true-to-life, neutral color profile accurate skin tones, shadow detail preserved RGB(12,12,12) floor, highlights not clipped, soft diffused overcast fill, candid authentic moment, zero digital manipulation, documentary photojournalism color science, 8K ultra-sharp no retouching, no text, no watermarks`,
+
+  cinematico: `ARRI Alexa Mini LF anamorphic 40mm T1.9, teal-orange color grade LUT DI, exposure -0.3 EV moody, deep blacks RGB(8,6,4) crushed slightly, shadows tinted cool teal, midtones neutral, skin highlights warm amber, horizontal oval bokeh, Kodak 2383 print film emulation grain, rim backlight golden hour 3200K, ultra-sharp subject soft background, no text, no watermarks`,
+
+  editorial: `Phase One IQ4 150MP studio, large format key light softbox 90cm + fill reflector 2:1 ratio, exposure +0.7 EV high-key, perfectly neutral white balance 5600K, flawless skin retouching poreless, ultra-fine fabric texture, Vogue cover color science vivid yet accurate, razor-sharp edge-to-edge 100mm macro, pristine white background, luxury fashion aesthetic, no text, no watermarks`,
+
+  dark_mood: `Canon R5 50mm f/1.2, single harsh key light 90° hard side lit, exposure -1.5 EV noir, deep crushed blacks RGB(4,4,4), high local contrast, shadows dark teal tint, skin highlights cool blue-grey, heavy vignette 70% corners, fog haze atmosphere, minimal fill near-silhouette drama, ultra-sharp subject, no text, no watermarks`,
+
+  vibrante: `Sony A1 24mm f/2.8, golden hour backlit exposure +0.5 EV, vibrance +40 saturation +25 Lightroom equivalent, warm orange skin tones, dynamic HDR microcontrast, 6-blade aperture sun flare burst, sky deep saturated blue, crisp edge-to-edge sharpness zero blur, energetic composition, vivid color pop, no text, no watermarks`,
+
+  minimalista: `Hasselblad X2D 90mm f/3.5, north-facing window soft diffused light, exposure +0.3 EV airy, neutral muted color palette, lifted shadows RGB(30,28,26), clean pure background minimal distractions, Scandinavian muted tones desaturated slightly, whisper-quiet gentle contrast, ultra-clean render zero noise, generous negative space, no text, no watermarks`,
 };
+
+// Sufixo global de qualidade aplicado a todos os prompts
+const QUALITY_SUFFIX = `hyperrealistic, photorealistic, 8K resolution, ultra-detailed, sharp focus, professional color grade, perfect exposure, no artifacts, no plastic skin, no blur, no text, no watermarks, no logos`;
 
 function buildPrompt(subject: string, style: ImageStyle): string {
   const stylePrompt = PROMPTS[style] ?? PROMPTS.gemini;
-  return `${subject}. ${stylePrompt}. Portrait orientation 4:5 aspect ratio.`;
+  return `${subject}. ${stylePrompt}. ${QUALITY_SUFFIX}. Instagram 4:5 portrait format.`;
 }
 
 // ── OpenAI gpt-image-1 ────────────────────────────────────────
@@ -146,7 +155,10 @@ async function fromOpenAIWithReference(
   return { imageUrl: `data:image/png;base64,${b64}`, source: "openai-reference" };
 }
 
-// ── fal.ai FLUX Schnell — rápido (3-8s) ─────────────────────
+// Tamanho 4:5 real para Instagram (1024×1280px)
+const FAL_SIZE_4x5 = { width: 1024, height: 1280 };
+
+// ── fal.ai FLUX Schnell — rápido (5-10s) ────────────────────
 async function fromFalSchnell(prompt: string, style: ImageStyle) {
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY não configurada");
@@ -155,8 +167,16 @@ async function fromFalSchnell(prompt: string, style: ImageStyle) {
   const res = await fetch("https://fal.run/fal-ai/flux/schnell", {
     method: "POST",
     headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt: fullPrompt, image_size: "portrait_4_3", num_images: 1, sync_mode: true }),
-    signal: AbortSignal.timeout(30000),
+    body: JSON.stringify({
+      prompt: fullPrompt,
+      image_size: FAL_SIZE_4x5,
+      num_inference_steps: 8,
+      num_images: 1,
+      output_format: "jpeg",
+      enable_safety_checker: false,
+      sync_mode: true,
+    }),
+    signal: AbortSignal.timeout(35000),
   });
 
   const data = await res.json();
@@ -182,8 +202,16 @@ async function fromFal(prompt: string, style: ImageStyle) {
   const res = await fetch("https://fal.run/fal-ai/flux-pro/v1.1", {
     method: "POST",
     headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt: fullPrompt, image_size: "portrait_4_3", num_images: 1, sync_mode: true, safety_tolerance: "5" }),
-    signal: AbortSignal.timeout(60000),
+    body: JSON.stringify({
+      prompt: fullPrompt,
+      image_size: FAL_SIZE_4x5,
+      num_images: 1,
+      output_format: "jpeg",
+      output_quality: 95,
+      safety_tolerance: "5",
+      sync_mode: true,
+    }),
+    signal: AbortSignal.timeout(70000),
   });
 
   const data = await res.json();
@@ -204,6 +232,96 @@ async function fromFal(prompt: string, style: ImageStyle) {
 }
 
 
+// ── fal.ai InstantID — preservação facial premium (~40-60s) ─
+async function fromFalInstantId(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
+  const key = process.env.FAL_KEY;
+  if (!key) throw new Error("FAL_KEY não configurada");
+
+  const styleHint = PROMPTS[style] ?? PROMPTS.gemini;
+  const fullPrompt = `${prompt}. ${styleHint}. Portrait orientation 4:5 aspect ratio.`;
+  const imageDataUrl = `data:${refMime};base64,${refBase64}`;
+
+  const res = await fetch("https://fal.run/fal-ai/instant-id", {
+    method: "POST",
+    headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      face_image_url: imageDataUrl,
+      prompt: fullPrompt,
+      negative_prompt: "nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, illustration, out of focus, grainy, overexposed, underexposed",
+      num_inference_steps: 35,
+      guidance_scale: 6,
+      ip_adapter_scale: 0.85,
+      controlnet_conditioning_scale: 0.85,
+      enhance_face_region: true,
+      image_size: FAL_SIZE_4x5,
+      output_format: "jpeg",
+      output_quality: 95,
+      sync_mode: true,
+    }),
+    signal: AbortSignal.timeout(100000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data.detail ?? data.error ?? `fal.ai InstantID HTTP ${res.status}`;
+    console.error("[image] fal.ai InstantID falhou:", msg);
+    throw new Error(msg);
+  }
+
+  const imageUrl = data.images?.[0]?.url;
+  if (!imageUrl) throw new Error("fal.ai InstantID: sem imagem na resposta");
+
+  console.log("[image] fal.ai InstantID OK");
+  return { imageUrl, source: "fal-instant-id" };
+}
+
+// ── fal.ai Clarity Upscaler — 2x resolução ───────────────────
+async function upscaleImage(imageUrl: string, prompt = ""): Promise<string> {
+  const key = process.env.FAL_KEY;
+  if (!key) return imageUrl;
+  // Só upscala URLs reais — data: URIs não são aceitas pelo upscaler
+  if (imageUrl.startsWith("data:")) return imageUrl;
+
+  try {
+    const upscalePrompt = prompt
+      ? `${prompt}, ultra-detailed skin pores, sharp hair strands, crisp fabric texture, 8K resolution, professional color grade, no noise, no artifacts`
+      : `ultra-detailed skin pores, sharp hair strands, crisp fabric texture, 8K resolution, professional color grade, no noise, no artifacts`;
+
+    const res = await fetch("https://fal.run/fal-ai/clarity-upscaler", {
+      method: "POST",
+      headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image_url: imageUrl,
+        scale_factor: 2,
+        prompt: upscalePrompt,
+        negative_prompt: "blurry, noise, artifacts, plastic skin, oversmoothed, cartoon, anime, illustration",
+        creativity: 0.1,
+        resemblance: 0.95,
+        output_quality: 95,
+        enable_safety_checker: false,
+        sync_mode: true,
+      }),
+      signal: AbortSignal.timeout(60000),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      console.warn("[image] upscaler falhou:", data.detail ?? data.error);
+      return imageUrl;
+    }
+
+    const upscaled = data.image?.url ?? data.images?.[0]?.url;
+    if (upscaled) {
+      console.log("[image] Clarity Upscaler 2x OK");
+      return upscaled;
+    }
+    return imageUrl;
+  } catch (e: any) {
+    console.warn("[image] upscale exception:", e.message);
+    return imageUrl;
+  }
+}
+
 // ── fal.ai FLUX Kontext Pro — img2img preserva rosto ─────────
 async function fromFalKontext(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
   const key = process.env.FAL_KEY;
@@ -220,13 +338,15 @@ async function fromFalKontext(prompt: string, style: ImageStyle, refBase64: stri
     body: JSON.stringify({
       prompt: fullPrompt,
       image_url: imageDataUrl,
-      guidance_scale: 3.5,
-      num_inference_steps: 28,
+      guidance_scale: 4.0,
+      num_inference_steps: 32,
       num_images: 1,
+      image_size: FAL_SIZE_4x5,
       output_format: "jpeg",
+      output_quality: 95,
       sync_mode: true,
     }),
-    signal: AbortSignal.timeout(90000),
+    signal: AbortSignal.timeout(100000),
   });
 
   const data = await res.json();
@@ -483,8 +603,9 @@ export async function POST(req: NextRequest) {
   const errors: string[] = [];
 
   if (hasReference) {
-    // Cascade com referência: Kontext → OpenAI edits → geração normal → fallback
+    // Cascade com referência: InstantID (fidelidade máxima) → Kontext → OpenAI edits → fallback
     const tries: Array<() => Promise<ImageResult>> = [
+      () => fromFalInstantId(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-instantid"; return r; }),
       () => fromFalKontext(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }),
       () => fromOpenAIWithReference(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
       () => fromOpenAI(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
@@ -495,6 +616,11 @@ export async function POST(req: NextRequest) {
     for (const fn of tries) {
       if (result) break;
       try { result = await fn(); } catch (e: any) { errors.push(e.message); }
+    }
+
+    // Upscaling automático 2x quando temos referência e URL real (não data:)
+    if (result && !result.imageUrl.startsWith("data:") && result.source !== "pexels" && result.source !== "google") {
+      result.imageUrl = await upscaleImage(result.imageUrl, enhancedPrompt);
     }
   } else if (!isPro) {
     // Schnell primeiro (3-8s) → Pro como fallback de qualidade → busca web
