@@ -7,17 +7,30 @@ import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 const FONTS = [
-  { label: "Sans-serif", value: "sans-serif" },
-  { label: "Inter",       value: "'Inter', sans-serif" },
-  { label: "Montserrat",  value: "'Montserrat', sans-serif" },
-  { label: "Oswald",      value: "'Oswald', sans-serif" },
-  { label: "Poppins",     value: "'Poppins', sans-serif" },
-  { label: "Playfair",    value: "'Playfair Display', serif" },
-  { label: "Bebas Neue",  value: "'Bebas Neue', sans-serif" },
-  { label: "Roboto",      value: "'Roboto', sans-serif" },
-  { label: "Lato",        value: "'Lato', sans-serif" },
-  { label: "Serif",       value: "serif" },
-  { label: "Monospace",   value: "monospace" },
+  { label: "Sans-serif",     value: "sans-serif" },
+  { label: "Inter",          value: "'Inter', sans-serif" },
+  { label: "Montserrat",     value: "'Montserrat', sans-serif" },
+  { label: "Oswald",         value: "'Oswald', sans-serif" },
+  { label: "Poppins",        value: "'Poppins', sans-serif" },
+  { label: "Playfair",       value: "'Playfair Display', serif" },
+  { label: "Bebas Neue",     value: "'Bebas Neue', sans-serif" },
+  // Display / impacto
+  { label: "Anton",          value: "'Anton', sans-serif" },
+  { label: "Archivo Black",  value: "'Archivo Black', sans-serif" },
+  { label: "Black Han Sans", value: "'Black Han Sans', sans-serif" },
+  { label: "Space Grotesk",  value: "'Space Grotesk', sans-serif" },
+  { label: "Roboto",         value: "'Roboto', sans-serif" },
+  { label: "Lato",           value: "'Lato', sans-serif" },
+  { label: "Serif",          value: "serif" },
+  { label: "Monospace",      value: "monospace" },
+];
+
+const TEXT_PRESETS = [
+  { id: "viral",     label: "🔥 Viral",    style: { fontFamily: "'Bebas Neue', sans-serif",    fontWeight: "bold",   textTransform: "uppercase", color: "#facc15", lineHeight: 1.05 } },
+  { id: "editorial", label: "✦ Editorial", style: { fontFamily: "'Playfair Display', serif",   fontWeight: "normal", textTransform: "none",      color: "#ffffff", lineHeight: 1.4  } },
+  { id: "impact",    label: "💥 Impact",   style: { fontFamily: "'Anton', sans-serif",           fontWeight: "bold",   textTransform: "uppercase", color: "#ffffff", lineHeight: 1.0  } },
+  { id: "moderno",   label: "◈ Moderno",  style: { fontFamily: "'Space Grotesk', sans-serif",  fontWeight: "bold",   textTransform: "none",      color: "#e2e8f0", lineHeight: 1.2  } },
+  { id: "drama",     label: "★ Drama",    style: { fontFamily: "'Archivo Black', sans-serif",  fontWeight: "bold",   textTransform: "uppercase", color: "#ef4444", lineHeight: 1.1  } },
 ];
 
 const FORMATS = ["1:1", "4:5", "9:16", "16:9"] as const;
@@ -119,6 +132,7 @@ export default function Toolbar({
 
   const [showMore, setShowMore] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [accentColor, setAccentColor] = useState("#facc15");
 
   const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); setShowXpostBank(false); setShowWebSearch(false); setShowMore(false); setShowAdd(false); setShowFundoPanel(false); };
 
@@ -1338,28 +1352,88 @@ export default function Toolbar({
       )}
 
       {isText && s && (
-        <div className="flex items-center gap-3 px-4 py-2 border-t border-[var(--border)] overflow-x-auto whitespace-nowrap scrollbar-none">
-          <select value={s.fontFamily ?? "sans-serif"} onChange={(e) => { loadFont(e.target.value); patchStyle({ fontFamily: e.target.value }); }}
-            className="bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-2 py-1 text-xs text-[var(--text)] focus:outline-none focus:border-brand-500 max-w-[130px]" style={{ fontFamily: s.fontFamily }}>
-            {FONTS.map((f) => (<option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>))}
-          </select>
-          <div className="flex items-center gap-1">
-            <button onClick={() => patchStyle({ fontSize: Math.max(8, (s.fontSize ?? 20) - 2) })} className="w-6 h-6 flex items-center justify-center rounded bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text)] text-sm font-bold">−</button>
-            <input type="number" min={8} max={300} value={s.fontSize ?? 20} onChange={(e) => patchStyle({ fontSize: Number(e.target.value) })} className="w-14 bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-1 py-1 text-xs text-center text-[var(--text)] focus:outline-none focus:border-brand-500" />
-            <button onClick={() => patchStyle({ fontSize: (s.fontSize ?? 20) + 2 })} className="w-6 h-6 flex items-center justify-center rounded bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text)] text-sm font-bold">+</button>
+        <>
+          {/* Linha 1 — fonte, tamanho, alinhamento, cor, destaque, AA */}
+          <div className="flex items-center gap-2 px-4 py-2 border-t border-[var(--border)] overflow-x-auto whitespace-nowrap scrollbar-none">
+            {/* Fonte */}
+            <select value={s.fontFamily ?? "sans-serif"} onChange={(e) => { loadFont(e.target.value); patchStyle({ fontFamily: e.target.value }); }}
+              className="bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-2 py-1 text-xs text-[var(--text)] focus:outline-none focus:border-brand-500 max-w-[130px] shrink-0" style={{ fontFamily: s.fontFamily }}>
+              {FONTS.map((f) => (<option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>))}
+            </select>
+
+            {/* Tamanho */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => patchStyle({ fontSize: Math.max(8, (s.fontSize ?? 20) - 2) })} className="w-6 h-6 flex items-center justify-center rounded bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text)] text-sm font-bold">−</button>
+              <input type="number" min={8} max={300} value={s.fontSize ?? 20} onChange={(e) => patchStyle({ fontSize: Number(e.target.value) })} className="w-14 bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-1 py-1 text-xs text-center text-[var(--text)] focus:outline-none focus:border-brand-500" />
+              <button onClick={() => patchStyle({ fontSize: (s.fontSize ?? 20) + 2 })} className="w-6 h-6 flex items-center justify-center rounded bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text)] text-sm font-bold">+</button>
+            </div>
+
+            <div className="w-px h-5 bg-[var(--border-2)] shrink-0" />
+
+            {/* Negrito + alinhamento */}
+            <button onClick={() => patchStyle({ fontWeight: s.fontWeight === "bold" ? "normal" : "bold" })} className={`p-1.5 rounded text-sm shrink-0 ${s.fontWeight === "bold" ? "bg-brand-500/20 text-brand-500" : "bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)]"}`}><Bold size={14} /></button>
+            {(["left", "center", "right"] as const).map((align) => {
+              const Icon = align === "left" ? AlignLeft : align === "center" ? AlignCenter : AlignRight;
+              return (<button key={align} onClick={() => patchStyle({ textAlign: align })} className={`p-1.5 rounded shrink-0 ${s.textAlign === align ? "bg-brand-500/20 text-brand-500" : "bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)]"}`}><Icon size={14} /></button>);
+            })}
+
+            {/* AA — maiúsculas */}
+            <button
+              title="Maiúsculas"
+              onClick={() => patchStyle({ textTransform: s.textTransform === "uppercase" ? "none" : "uppercase" })}
+              className={`px-2 py-1 rounded text-xs font-bold shrink-0 transition-colors ${s.textTransform === "uppercase" ? "bg-brand-500/20 text-brand-500" : "bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)]"}`}
+            >AA</button>
+
+            <div className="w-px h-5 bg-[var(--border-2)] shrink-0" />
+
+            {/* Cor do texto */}
+            <label className="flex items-center gap-1.5 text-xs text-[var(--text-2)] cursor-pointer shrink-0">
+              Cor:
+              <input type="color" value={s.color ?? "#ffffff"} onChange={(e) => patchStyle({ color: e.target.value })} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent" />
+            </label>
+
+            {/* Cor de destaque (palavras coloridas) */}
+            <label className="flex items-center gap-1 text-xs text-[var(--text-2)] cursor-pointer shrink-0">
+              <span className="text-yellow-400 font-bold">A</span>
+              <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent" title="Cor de destaque" />
+            </label>
+            <button
+              title="Aplicar cor na seleção"
+              onMouseDown={(e) => { e.preventDefault(); document.execCommand("foreColor", false, accentColor); }}
+              className="px-2 py-1 rounded text-xs font-semibold shrink-0 transition-colors"
+              style={{ background: accentColor + "33", color: accentColor, border: `1px solid ${accentColor}66` }}
+            >Aplicar</button>
+            <button
+              title="Limpar formatação inline"
+              onMouseDown={(e) => { e.preventDefault(); document.execCommand("removeFormat"); }}
+              className="px-2 py-1 rounded text-xs shrink-0 bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
+            >Limpar</button>
+
+            <div className="w-px h-5 bg-[var(--border-2)] shrink-0" />
+
+            {/* Espaçamento */}
+            <label className="flex items-center gap-1.5 text-xs text-[var(--text-2)] shrink-0">
+              Espaç:
+              <input type="number" min={0.8} max={3} step={0.1} value={s.lineHeight ?? 1.4} onChange={(e) => patchStyle({ lineHeight: Number(e.target.value) })} className="w-12 bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-1 py-1 text-xs text-center text-[var(--text)] focus:outline-none focus:border-brand-500" />
+            </label>
           </div>
-          <div className="w-px h-5 bg-[var(--border-2)]" />
-          <button onClick={() => patchStyle({ fontWeight: s.fontWeight === "bold" ? "normal" : "bold" })} className={`p-1.5 rounded text-sm ${s.fontWeight === "bold" ? "bg-brand-500/20 text-brand-500" : "bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)]"}`}><Bold size={14} /></button>
-          {(["left", "center", "right"] as const).map((align) => {
-            const Icon = align === "left" ? AlignLeft : align === "center" ? AlignCenter : AlignRight;
-            return (<button key={align} onClick={() => patchStyle({ textAlign: align })} className={`p-1.5 rounded ${s.textAlign === align ? "bg-brand-500/20 text-brand-500" : "bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)]"}`}><Icon size={14} /></button>);
-          })}
-          <div className="w-px h-5 bg-[var(--border-2)]" />
-          <label className="flex items-center gap-1.5 text-xs text-[var(--text-2)] cursor-pointer">Cor:<input type="color" value={s.color ?? "#ffffff"} onChange={(e) => patchStyle({ color: e.target.value })} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent" /></label>
-          <label className="flex items-center gap-1.5 text-xs text-[var(--text-2)]">Espaç:<input type="number" min={0.8} max={3} step={0.1} value={s.lineHeight ?? 1.4} onChange={(e) => patchStyle({ lineHeight: Number(e.target.value) })} className="w-12 bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-1 py-1 text-xs text-center text-[var(--text)] focus:outline-none focus:border-brand-500" /></label>
-          <div className="w-px h-5 bg-[var(--border-2)]" />
-          <input type="text" value={selectedElement?.content ?? ""} onChange={(e) => patchSelected({ content: e.target.value })} placeholder="Editar texto..." className="bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-2 py-1 text-xs text-[var(--text)] focus:outline-none focus:border-brand-500 w-48 placeholder:text-[var(--text-3)]" />
-        </div>
+
+          {/* Linha 2 — presets de estilo viral */}
+          <div className="flex items-center gap-2 px-4 py-1.5 border-t border-[var(--border)] overflow-x-auto whitespace-nowrap scrollbar-none">
+            <span className="text-[10px] text-[var(--text-3)] shrink-0">Preset:</span>
+            {TEXT_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => {
+                  loadFont((preset.style as any).fontFamily);
+                  patchStyle(preset.style);
+                }}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium border border-[var(--border-2)] bg-[var(--bg-3)] hover:border-brand-500/50 hover:bg-brand-500/10 text-[var(--text-2)] hover:text-[var(--text)] transition-all shrink-0"
+                style={{ fontFamily: (preset.style as any).fontFamily }}
+              >{preset.label}</button>
+            ))}
+          </div>
+        </>
       )}
 
       {/* ── Portal Fundo IA — painel de referência e estilo ── */}

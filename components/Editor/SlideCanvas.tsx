@@ -1,6 +1,45 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
+
+// ── ContentEditable para edição de texto com HTML inline ──────
+function ContentEditableDiv({
+  content, style, onUpdate, onDone,
+}: {
+  content: string;
+  style: React.CSSProperties;
+  onUpdate: (html: string) => void;
+  onDone: (html: string, height: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.innerHTML = content;
+    el.focus();
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      className="w-full bg-transparent outline-none"
+      style={{ ...style, padding: 4, whiteSpace: "pre-wrap", wordBreak: "break-word", minHeight: 24 }}
+      onInput={() => { if (ref.current) onUpdate(ref.current.innerHTML); }}
+      onBlur={() => { if (ref.current) onDone(ref.current.innerHTML, ref.current.scrollHeight); }}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => { if (e.key === "Escape" && ref.current) onDone(ref.current.innerHTML, ref.current.scrollHeight); }}
+    />
+  );
+}
 import { createPortal } from "react-dom";
 import { Slide, SlideElement } from "@/types";
 import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square, MoreVertical, LayoutTemplate, Video as VideoIcon, Upload } from "lucide-react";
@@ -638,7 +677,15 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
   const textStyle = (el: SlideElement) => {
     const s = el.style as any;
-    return { fontSize: s?.fontSize ?? 20, fontWeight: s?.fontWeight ?? "normal", fontFamily: s?.fontFamily ?? "sans-serif", color: s?.color ?? "#ffffff", textAlign: (s?.textAlign ?? "left") as "left" | "center" | "right", lineHeight: s?.lineHeight ?? 1.4 };
+    return {
+      fontSize: s?.fontSize ?? 20,
+      fontWeight: s?.fontWeight ?? "normal",
+      fontFamily: s?.fontFamily ?? "sans-serif",
+      color: s?.color ?? "#ffffff",
+      textAlign: (s?.textAlign ?? "left") as "left" | "center" | "right",
+      lineHeight: s?.lineHeight ?? 1.4,
+      textTransform: (s?.textTransform ?? "none") as React.CSSProperties["textTransform"],
+    };
   };
 
   const handleCanvasClick = () => {
@@ -1005,18 +1052,16 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             {el.type === "text" && (
               <>
                 {editingId === el.id ? (
-                  <textarea autoFocus className="w-full bg-transparent resize-none outline-none block"
-                    style={{ ...textStyle(el), padding: 4, minHeight: el.height, height: "auto", overflow: "hidden" }}
-                    value={stripHtml(el.content ?? "")} onChange={(e) => {
-                      updateElement(el.id, { content: e.target.value });
-                      e.target.style.height = "auto";
-                      e.target.style.height = e.target.scrollHeight + "px";
-                    }}
-                    onBlur={(e) => {
-                      updateElement(el.id, { height: Math.max(e.target.scrollHeight, 20) });
+                  <ContentEditableDiv
+                    key={el.id}
+                    content={el.content ?? ""}
+                    style={textStyle(el)}
+                    onUpdate={(html) => updateElement(el.id, { content: html })}
+                    onDone={(html, height) => {
+                      updateElement(el.id, { content: html, height: Math.max(height, 20) });
                       setEditingId(null);
                     }}
-                    onClick={(e) => e.stopPropagation()} />
+                  />
                 ) : (
                   <div className="w-full" style={{ ...textStyle(el), padding: 4, whiteSpace: "pre-wrap" }} dangerouslySetInnerHTML={{ __html: el.content ?? "" }} />
                 )}
