@@ -27,11 +27,16 @@ async function enhancePrompt(raw: string): Promise<string> {
   }
 }
 
-type ImageStyle = "gemini" | "foto_real";
+type ImageStyle = "gemini" | "foto_real" | "cinematico" | "editorial" | "dark_mood" | "vibrante" | "minimalista";
 
 const PROMPTS: Record<ImageStyle, string> = {
-  gemini: `cinematic high-quality image, dramatic lighting, rich colors, sharp focus, ultra-detailed, professional photography, Instagram editorial aesthetic, no text, no watermarks, no logos`,
-  foto_real: `ultra-realistic documentary photograph, natural light, sharp focus, authentic candid moment, photojournalism quality, true-to-life colors, no retouching, no text, no watermarks`,
+  gemini:      `cinematic high-quality image, dramatic lighting, rich colors, sharp focus, ultra-detailed, professional photography, Instagram editorial aesthetic, no text, no watermarks, no logos`,
+  foto_real:   `ultra-realistic documentary photograph, natural light, sharp focus, authentic candid moment, photojournalism quality, true-to-life colors, no retouching, no text, no watermarks`,
+  cinematico:  `cinematic movie still, anamorphic lens, golden hour or dramatic blue hour lighting, bokeh background, film grain, Kodak Portra 400 color grade, depth of field, 35mm, no text, no watermarks`,
+  editorial:   `high-end fashion editorial, magazine cover quality, studio lighting with softboxes, clean background, sharp focus, Vogue aesthetic, luxury lifestyle, no text, no watermarks`,
+  dark_mood:   `dark moody atmosphere, noir style, deep shadows, single dramatic key light, high contrast, desaturated colors with subtle teal tones, mysterious cinematic feel, no text, no watermarks`,
+  vibrante:    `vibrant punchy colors, high saturation, golden sunlight, warm tones, energetic lifestyle photography, Instagram-optimized, sharp details, no text, no watermarks`,
+  minimalista: `clean minimal composition, soft diffused light, neutral tones, white or light background, generous negative space, elegant simplicity, Scandinavian aesthetic, no text, no watermarks`,
 };
 
 function buildPrompt(subject: string, style: ImageStyle): string {
@@ -156,6 +161,45 @@ async function fromFal(prompt: string, style: ImageStyle) {
   return { imageUrl, source: "fal" };
 }
 
+
+// ── fal.ai FLUX Kontext Pro — img2img preserva rosto ─────────
+async function fromFalKontext(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
+  const key = process.env.FAL_KEY;
+  if (!key) throw new Error("FAL_KEY não configurada");
+
+  const styleHint = PROMPTS[style] ?? PROMPTS.gemini;
+  const fullPrompt = `${prompt}. Keep the same person's face, identity, skin tone and facial features exactly as in the reference image. ${styleHint}. Portrait orientation 4:5 aspect ratio.`;
+
+  const imageDataUrl = `data:${refMime};base64,${refBase64}`;
+
+  const res = await fetch("https://fal.run/fal-ai/flux-pro/kontext", {
+    method: "POST",
+    headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prompt: fullPrompt,
+      image_url: imageDataUrl,
+      guidance_scale: 3.5,
+      num_inference_steps: 28,
+      num_images: 1,
+      output_format: "jpeg",
+      sync_mode: true,
+    }),
+    signal: AbortSignal.timeout(90000),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data.detail ?? data.error ?? `fal.ai Kontext HTTP ${res.status}`;
+    console.error("[image] fal.ai Kontext falhou:", msg);
+    throw new Error(msg);
+  }
+
+  const imageUrl = data.images?.[0]?.url;
+  if (!imageUrl) throw new Error("fal.ai Kontext: sem imagem na resposta");
+
+  console.log("[image] fal.ai FLUX Kontext Pro OK");
+  return { imageUrl, source: "fal-kontext" };
+}
 
 // ── OpenRouter — Gemini Flash Image Preview ───────────────────
 async function fromOpenRouter(prompt: string, style: ImageStyle) {
@@ -358,7 +402,8 @@ export async function POST(req: NextRequest) {
   const today = new Date().toISOString().slice(0, 10);
   redisIncr(`stats:images:${today}`).catch(() => {});
 
-  const style: ImageStyle = (imageStyle === "foto_real") ? "foto_real" : "gemini";
+  const VALID_STYLES: ImageStyle[] = ["gemini", "foto_real", "cinematico", "editorial", "dark_mood", "vibrante", "minimalista"];
+  const style: ImageStyle = VALID_STYLES.includes(imageStyle) ? imageStyle : "gemini";
   const hasReference = !!(referenceImageBase64 && referenceImageMime);
 
   // Rodam em paralelo para economizar tempo
@@ -396,8 +441,9 @@ export async function POST(req: NextRequest) {
   const errors: string[] = [];
 
   if (hasReference) {
-    // Cascade com referência: OpenAI edits primeiro, depois geração normal como fallback
+    // Cascade com referência: Kontext → OpenAI edits → geração normal → fallback
     const tries: Array<() => Promise<ImageResult>> = [
+      () => fromFalKontext(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }),
       () => fromOpenAIWithReference(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
       () => fromOpenAI(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
       () => fromFal(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
