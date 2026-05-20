@@ -741,7 +741,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
           />
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{ background: slide.backgroundGradient ?? "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.75) 35%, rgba(0,0,0,0.35) 65%, rgba(0,0,0,0.15) 100%)" }}
+            style={{ background: slide.backgroundGradient ?? "linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 40%, rgba(0,0,0,0.08) 70%, rgba(0,0,0,0) 100%)" }}
           />
 
           {/* ── Handles de crop do fundo ── */}
