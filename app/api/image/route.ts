@@ -45,23 +45,23 @@ Input: "${raw}"`;
 type ImageStyle = "gemini" | "foto_real" | "cinematico" | "editorial" | "dark_mood" | "vibrante" | "minimalista";
 
 const PROMPTS: Record<ImageStyle, string> = {
-  gemini: `Sony A7IV 85mm f/1.8, balanced exposure +0 EV, soft key light 45° from left, warm 4800K daylight color temperature, gentle S-curve contrast, lifted shadows RGB(20,18,16), accurate vivid skin tones, shallow depth of field creamy bokeh, ultra-detailed pore-level skin texture, no chromatic aberration, 8K pixel-perfect sharpness, no noise, no artifacts, no text, no watermarks`,
+  gemini: `Sony A7IV 85mm f/1.8, well-lit exposure +0.4 EV bright and clear, soft key light 45° from left, warm 4800K daylight, gentle S-curve contrast with lifted shadows RGB(30,28,24), vivid accurate skin tones, shallow DOF creamy bokeh, face clearly visible and bright, ultra-detailed skin texture, no chromatic aberration, 8K sharp, no noise, no text, no watermarks`,
 
-  foto_real: `Leica M11 35mm f/2 natural available light, exposure +0 EV true-to-life, neutral color profile accurate skin tones, shadow detail preserved RGB(12,12,12) floor, highlights not clipped, soft diffused overcast fill, candid authentic moment, zero digital manipulation, documentary photojournalism color science, 8K ultra-sharp no retouching, no text, no watermarks`,
+  foto_real: `Leica M11 35mm f/2, natural daylight exposure +0.3 EV, neutral color profile true-to-life skin tones, shadows lifted RGB(20,18,16) no crushed blacks, highlights clean not clipped, soft overcast fill light, face well-exposed and sharp, documentary photojournalism, 8K ultra-sharp, no text, no watermarks`,
 
-  cinematico: `ARRI Alexa Mini LF anamorphic 40mm T1.9, teal-orange color grade LUT DI, exposure -0.3 EV moody, deep blacks RGB(8,6,4) crushed slightly, shadows tinted cool teal, midtones neutral, skin highlights warm amber, horizontal oval bokeh, Kodak 2383 print film emulation grain, rim backlight golden hour 3200K, ultra-sharp subject soft background, no text, no watermarks`,
+  cinematico: `ARRI Alexa Mini LF anamorphic 40mm T1.9, teal-orange color grade, exposure +0.2 EV well-lit cinematic, blacks lifted RGB(18,14,10) not crushed, shadows warm amber, skin tones bright and rich golden hour glow, rim backlight 3200K, horizontal oval bokeh background, Kodak 2383 film emulation slight grain, face fully lit and visible, ultra-sharp subject, no text, no watermarks`,
 
-  editorial: `Phase One IQ4 150MP studio, large format key light softbox 90cm + fill reflector 2:1 ratio, exposure +0.7 EV high-key, perfectly neutral white balance 5600K, flawless skin retouching poreless, ultra-fine fabric texture, Vogue cover color science vivid yet accurate, razor-sharp edge-to-edge 100mm macro, pristine white background, luxury fashion aesthetic, no text, no watermarks`,
+  editorial: `Phase One IQ4 150MP, large format studio strobe key + fill 2:1, exposure +0.8 EV high-key bright, neutral white balance 5600K, perfect skin luminous and glowing, face bright and flattering, Vogue editorial vivid color, razor-sharp 100mm f/4, pristine background, luxury fashion aesthetic, no text, no watermarks`,
 
-  dark_mood: `Canon R5 50mm f/1.2, single harsh key light 90° hard side lit, exposure -1.5 EV noir, deep crushed blacks RGB(4,4,4), high local contrast, shadows dark teal tint, skin highlights cool blue-grey, heavy vignette 70% corners, fog haze atmosphere, minimal fill near-silhouette drama, ultra-sharp subject, no text, no watermarks`,
+  dark_mood: `Canon R5 50mm f/1.2, dramatic side key light 90°, exposure -0.7 EV moody but face visible, blacks RGB(15,12,10) slightly lifted, high local contrast, shadows teal tint, skin highlights cool blue-grey, vignette 50% corners, face clearly readable despite drama, ultra-sharp subject, no text, no watermarks`,
 
-  vibrante: `Sony A1 24mm f/2.8, golden hour backlit exposure +0.5 EV, vibrance +40 saturation +25 Lightroom equivalent, warm orange skin tones, dynamic HDR microcontrast, 6-blade aperture sun flare burst, sky deep saturated blue, crisp edge-to-edge sharpness zero blur, energetic composition, vivid color pop, no text, no watermarks`,
+  vibrante: `Sony A1 24mm f/2.8, golden hour backlit exposure +0.7 EV bright vibrant, vibrance +45 saturation +30, warm glowing skin tones, HDR microcontrast, 6-blade aperture sun flare burst, sky vivid blue, face luminous and energetic, crisp edge-to-edge sharpness, no text, no watermarks`,
 
-  minimalista: `Hasselblad X2D 90mm f/3.5, north-facing window soft diffused light, exposure +0.3 EV airy, neutral muted color palette, lifted shadows RGB(30,28,26), clean pure background minimal distractions, Scandinavian muted tones desaturated slightly, whisper-quiet gentle contrast, ultra-clean render zero noise, generous negative space, no text, no watermarks`,
+  minimalista: `Hasselblad X2D 90mm f/3.5, north window soft light, exposure +0.5 EV airy and bright, shadows lifted RGB(40,38,36), neutral muted palette, face softly lit and clear, clean background generous space, Scandinavian minimal tone, ultra-clean zero noise, no text, no watermarks`,
 };
 
 // Sufixo global de qualidade aplicado a todos os prompts
-const QUALITY_SUFFIX = `hyperrealistic, photorealistic, 8K resolution, ultra-detailed, sharp focus, professional color grade, perfect exposure, no artifacts, no plastic skin, no blur, no text, no watermarks, no logos`;
+const QUALITY_SUFFIX = `hyperrealistic, photorealistic, 8K resolution, ultra-detailed, sharp focus, well-exposed bright and clear, professional color grade, face fully visible and luminous, no underexposure, no dark shadows on face, no artifacts, no plastic skin, no blur, no text, no watermarks, no logos`;
 
 function buildPrompt(subject: string, style: ImageStyle): string {
   const stylePrompt = PROMPTS[style] ?? PROMPTS.gemini;
