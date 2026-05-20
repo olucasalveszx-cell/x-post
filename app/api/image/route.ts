@@ -13,12 +13,27 @@ export const maxDuration = 60;
 async function enhancePrompt(raw: string): Promise<string> {
   try {
     const timeout = new Promise<string>((_, reject) =>
-      setTimeout(() => reject(new Error("timeout")), 4000)
+      setTimeout(() => reject(new Error("timeout")), 5000)
     );
-    const call = geminiText(
-      `Transform this into a vivid cinematic English image prompt (max 50 words). Translate if needed. Add lighting, mood, composition details. Return ONLY the prompt.\n\nInput: "${raw}"`,
-      { maxTokens: 100 }
-    ).then((t) => t.trim() || raw);
+
+    const INSTRUCTION = `You are a world-class AI image prompt engineer specializing in photorealistic, premium-quality image generation.
+
+Your task: transform a short subject description into a rich, detailed English image prompt that produces stunning, magazine-quality results.
+
+Rules:
+- Translate to English if needed
+- Expand the subject with: age/appearance, clothing details, exact action/pose
+- Add a specific environment: city/nature/studio, time of day, weather
+- Specify cinematic lighting: golden hour / blue hour / soft box / rim light / backlight
+- Add camera settings: lens (85mm / 35mm / 50mm), aperture (f/1.4 / f/2.8), camera body (Sony A7IV / Canon R5)
+- Include mood and emotion
+- End with quality tags: ultra-detailed, 8K, sharp focus, professional photography, no text, no watermarks, no logos
+- Max 80 words total
+- Return ONLY the prompt, no explanation
+
+Input: "${raw}"`;
+
+    const call = geminiText(INSTRUCTION, { maxTokens: 160 }).then((t) => t.trim() || raw);
     const enhanced = await Promise.race([call, timeout]);
     console.log(`[image] prompt: "${raw}" → "${enhanced}"`);
     return enhanced;
@@ -30,13 +45,13 @@ async function enhancePrompt(raw: string): Promise<string> {
 type ImageStyle = "gemini" | "foto_real" | "cinematico" | "editorial" | "dark_mood" | "vibrante" | "minimalista";
 
 const PROMPTS: Record<ImageStyle, string> = {
-  gemini:      `cinematic high-quality image, dramatic lighting, rich colors, sharp focus, ultra-detailed, professional photography, Instagram editorial aesthetic, no text, no watermarks, no logos`,
-  foto_real:   `ultra-realistic documentary photograph, natural light, sharp focus, authentic candid moment, photojournalism quality, true-to-life colors, no retouching, no text, no watermarks`,
-  cinematico:  `cinematic movie still, anamorphic lens, golden hour or dramatic blue hour lighting, bokeh background, film grain, Kodak Portra 400 color grade, depth of field, 35mm, no text, no watermarks`,
-  editorial:   `high-end fashion editorial, magazine cover quality, studio lighting with softboxes, clean background, sharp focus, Vogue aesthetic, luxury lifestyle, no text, no watermarks`,
-  dark_mood:   `dark moody atmosphere, noir style, deep shadows, single dramatic key light, high contrast, desaturated colors with subtle teal tones, mysterious cinematic feel, no text, no watermarks`,
-  vibrante:    `vibrant punchy colors, high saturation, golden sunlight, warm tones, energetic lifestyle photography, Instagram-optimized, sharp details, no text, no watermarks`,
-  minimalista: `clean minimal composition, soft diffused light, neutral tones, white or light background, generous negative space, elegant simplicity, Scandinavian aesthetic, no text, no watermarks`,
+  gemini:      `shot on Sony A7IV 85mm f/1.8, cinematic lighting, shallow depth of field, rich color grade, ultra-detailed skin texture, professional Instagram editorial, 8K sharp, no text, no watermarks, no logos`,
+  foto_real:   `shot on Leica M11 35mm f/2, natural available light, authentic candid moment, true-to-life skin tones, documentary photojournalism, ultra-sharp micro-detail, no retouching, no text, no watermarks`,
+  cinematico:  `anamorphic 2.39:1 movie still, golden hour rim light, Kodak Portra 800 film grain, dramatic depth of field, teal-orange color grade, bokeh lens flares, shot on ARRI Alexa, no text, no watermarks`,
+  editorial:   `Vogue cover shot, large format studio strobe lighting, 100mm macro sharpness, luxury fashion aesthetic, perfect skin, high-key white background, shot on Phase One IQ4 150MP, no text, no watermarks`,
+  dark_mood:   `noir cinematic atmosphere, single dramatic key light from below, deep crushed blacks, teal shadow tones, fog machine haze, high contrast, shot on Canon R5 50mm f/1.2, no text, no watermarks`,
+  vibrante:    `golden hour lifestyle photography, oversaturated warm tones, HDR-like vibrance, lens flare burst, shot on Sony A1 24mm f/2.8, energetic composition, crisp edge-to-edge sharpness, no text, no watermarks`,
+  minimalista: `soft northern window light, neutral palette, generous breathing room, Scandinavian minimalism, shot on Hasselblad X2D 90mm, ultra-clean background, whisper-quiet elegance, no text, no watermarks`,
 };
 
 function buildPrompt(subject: string, style: ImageStyle): string {
