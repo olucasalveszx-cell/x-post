@@ -290,14 +290,14 @@ async function fromFalPulid(prompt: string, style: ImageStyle, refBase64: string
     body: JSON.stringify({
       prompt: fullPrompt,
       negative_prompt: "nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, out of focus, grainy, overexposed",
-      reference_images: [{ image_url: imageDataUrl }],
+      id_image: imageDataUrl,
       num_inference_steps: 20,
       guidance_scale: 1.5,
       true_cfg: 1.0,
       image_size: FAL_SIZE_4x5,
       sync_mode: true,
     }),
-    signal: AbortSignal.timeout(90000),
+    signal: AbortSignal.timeout(65000),
   });
 
   const data = await res.json();
@@ -685,16 +685,14 @@ export async function POST(req: NextRequest) {
   const errors: string[] = [];
 
   if (hasReference) {
-    // Cascade com referência — ordem por fidelidade facial:
-    // 1. PuLID (identidade pura, modelo dedicado)
-    // 2. Cena+FaceSwap (gera cena rápida, copia pixels reais do rosto)
-    // 3. InstantID (preservação por condicionamento)
-    // 4. Kontext img2img
-    // 5. OpenAI edits
-    // 6. Geração sem referência + fallbacks
+    // Cascade com referência — ordem: velocidade + fidelidade
+    // 1. Cena+FaceSwap: Schnell (~8s) + face-swap (~15s) = ~25s | copia pixels reais do rosto
+    // 2. PuLID (~50s): modelo treinado para identidade pura
+    // 3. InstantID (~45s): condicionamento de keypoints faciais
+    // 4. Kontext → OpenAI edits → OpenAI → fallbacks
     const tries: Array<() => Promise<ImageResult>> = [
-      () => fromFalPulid(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-pulid"; return r; }),
       () => fromSceneAndSwap(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-faceswap"; return r; }),
+      () => fromFalPulid(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-pulid"; return r; }),
       () => fromFalInstantId(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-instantid"; return r; }),
       () => fromFalKontext(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }),
       () => fromOpenAIWithReference(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
