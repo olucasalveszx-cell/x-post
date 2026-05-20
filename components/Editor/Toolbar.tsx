@@ -537,12 +537,23 @@ export default function Toolbar({
   const handleRefPhotoUpload = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      const [header, b64] = dataUrl.split(",");
-      const mime = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
-      setRefPhotoBase64(b64);
-      setRefPhotoMime(mime);
-      setRefPhotoPreview(dataUrl);
+      const img = new window.Image();
+      img.onload = () => {
+        // Redimensiona para máx 800px antes de enviar — evita erro 413
+        const MAX = 800;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        const b64 = dataUrl.split(",")[1];
+        setRefPhotoBase64(b64);
+        setRefPhotoMime("image/jpeg");
+        setRefPhotoPreview(dataUrl);
+      };
+      img.src = e.target?.result as string;
     };
     reader.readAsDataURL(file);
   };
