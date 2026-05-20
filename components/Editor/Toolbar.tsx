@@ -95,6 +95,7 @@ export default function Toolbar({
   const [refPhotoMime, setRefPhotoMime] = useState<string>("");
   const [refPhotoPreview, setRefPhotoPreview] = useState<string>("");
   const [fundoStyle, setFundoStyle] = useState<string>("cinematico");
+  const [fundoPrompt, setFundoPrompt] = useState<string>("");
   const [generating, setGenerating] = useState(false);
   const [showEditAI, setShowEditAI] = useState(false);
   const [editPrompt, setEditPrompt] = useState("");
@@ -504,12 +505,13 @@ export default function Toolbar({
 
   // ── Gerar fundo (com ou sem foto de referência) ────────────
   const generateBackground = async () => {
-    const texts = slide.elements
+    const slideTexts = slide.elements
       .filter((el) => el.type === "text")
       .map((el) => (el.content ?? "").replace(/<[^>]+>/g, "").trim())
       .filter(Boolean)
       .join(". ");
-    const prompt = texts || "modern dark cinematic professional background";
+    // Usa prompt do usuário se preenchido, senão usa texto do slide
+    const prompt = fundoPrompt.trim() || slideTexts || "modern dark cinematic professional background";
     setGenerating(true);
     setShowFundoPanel(false);
     try {
@@ -1361,6 +1363,16 @@ export default function Toolbar({
               </span>
               <button onClick={() => setShowFundoPanel(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={15} /></button>
             </div>
+
+            {/* Prompt customizado */}
+            <p className="text-[11px] text-[var(--text-3)] mb-1.5">Descreva a imagem</p>
+            <textarea
+              value={fundoPrompt}
+              onChange={(e) => setFundoPrompt(e.target.value)}
+              placeholder="Ex: homem de terno em Nova York à noite, luzes da cidade ao fundo..."
+              rows={3}
+              className="w-full bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-brand-500 resize-none placeholder:text-[var(--text-3)] mb-3"
+            />
 
             {/* Upload de foto de referência */}
             <p className="text-[11px] text-[var(--text-3)] mb-2">Foto de referência (opcional) — mantém a pessoa na cena</p>
