@@ -83,10 +83,18 @@ export default function Toolbar({
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const refPhotoInputRef = useRef<HTMLInputElement>(null);
   const addBtnRef = useRef<HTMLButtonElement>(null);
   const moreBtnRef = useRef<HTMLButtonElement>(null);
+  const fundoBtnRef = useRef<HTMLButtonElement>(null);
   const [addPos, setAddPos] = useState({ x: 0, y: 0 });
   const [morePos, setMorePos] = useState({ x: 0, y: 0 });
+  const [fundoPos, setFundoPos] = useState({ x: 0, y: 0 });
+  const [showFundoPanel, setShowFundoPanel] = useState(false);
+  const [refPhotoBase64, setRefPhotoBase64] = useState<string>("");
+  const [refPhotoMime, setRefPhotoMime] = useState<string>("");
+  const [refPhotoPreview, setRefPhotoPreview] = useState<string>("");
+  const [fundoStyle, setFundoStyle] = useState<string>("cinematico");
   const [generating, setGenerating] = useState(false);
   const [showEditAI, setShowEditAI] = useState(false);
   const [editPrompt, setEditPrompt] = useState("");
@@ -111,7 +119,7 @@ export default function Toolbar({
   const [showMore, setShowMore] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
 
-  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); setShowXpostBank(false); setShowWebSearch(false); setShowMore(false); setShowAdd(false); };
+  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); setShowXpostBank(false); setShowWebSearch(false); setShowMore(false); setShowAdd(false); setShowFundoPanel(false); };
 
   const openXpostBank = () => {
     if (showXpostBank) { setShowXpostBank(false); return; }
@@ -494,7 +502,7 @@ export default function Toolbar({
     setShowProfile(false);
   };
 
-  // ── Gerar fundo ────────────────────────────────────────────
+  // ── Gerar fundo (com ou sem foto de referência) ────────────
   const generateBackground = async () => {
     const texts = slide.elements
       .filter((el) => el.type === "text")
@@ -503,18 +511,37 @@ export default function Toolbar({
       .join(". ");
     const prompt = texts || "modern dark cinematic professional background";
     setGenerating(true);
+    setShowFundoPanel(false);
     try {
-      const customerId = localStorage.getItem("xpz_customer_id") ?? undefined;
       const activationToken = localStorage.getItem("xpz_activation_token") ?? undefined;
+      const body: Record<string, unknown> = { prompt, imageStyle: fundoStyle, activationToken };
+      // Envia foto de referência se o usuário fez upload — ativa FLUX Kontext no backend
+      if (refPhotoBase64 && refPhotoMime) {
+        body.referenceImageBase64 = refPhotoBase64;
+        body.referenceImageMime = refPhotoMime;
+      }
       const res = await fetch("/api/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, imageStyle: "cinematico", customerId, activationToken }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.imageUrl) onUpdate({ ...slide, backgroundImageUrl: data.imageUrl });
     } catch {}
     finally { setGenerating(false); }
+  };
+
+  const handleRefPhotoUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const [header, b64] = dataUrl.split(",");
+      const mime = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
+      setRefPhotoBase64(b64);
+      setRefPhotoMime(mime);
+      setRefPhotoPreview(dataUrl);
+    };
+    reader.readAsDataURL(file);
   };
 
   const addText = () => {
@@ -694,10 +721,20 @@ export default function Toolbar({
           <Plus size={14} /> Adicionar
         </button>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
+        <input ref={refPhotoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleRefPhotoUpload(f); e.target.value = ""; }} />
 
         {/* Gerar fundo IA */}
-        <button onClick={generateBackground} disabled={generating}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-brand-600/40 hover:bg-brand-600/60 border border-brand-500/60 text-brand-300 text-sm shrink-0 disabled:opacity-40 transition-colors">
+        <button
+          ref={fundoBtnRef}
+          disabled={generating}
+          onClick={() => {
+            if (showFundoPanel) { setShowFundoPanel(false); return; }
+            const rect = fundoBtnRef.current?.getBoundingClientRect();
+            if (rect) setFundoPos({ x: rect.left, y: rect.bottom + 4 });
+            closeAll();
+            setShowFundoPanel(true);
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm shrink-0 disabled:opacity-40 transition-colors ${showFundoPanel ? "bg-brand-600 border-brand-500 text-white" : "bg-brand-600/40 hover:bg-brand-600/60 border-brand-500/60 text-brand-300"}`}>
           <Wand2 size={14} className={generating ? "animate-spin" : ""} />
           {generating ? "Gerando..." : "Fundo IA"}
         </button>
@@ -1309,6 +1346,75 @@ export default function Toolbar({
           <div className="w-px h-5 bg-[var(--border-2)]" />
           <input type="text" value={selectedElement?.content ?? ""} onChange={(e) => patchSelected({ content: e.target.value })} placeholder="Editar texto..." className="bg-[var(--bg-3)] border border-[var(--border-2)] rounded px-2 py-1 text-xs text-[var(--text)] focus:outline-none focus:border-brand-500 w-48 placeholder:text-[var(--text-3)]" />
         </div>
+      )}
+
+      {/* ── Portal Fundo IA — painel de referência e estilo ── */}
+      {showFundoPanel && typeof window !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0 z-[9990]" onClick={() => setShowFundoPanel(false)} />
+          <div className="fixed z-[9991] bg-[var(--bg-2)] border border-[var(--border-2)] rounded-xl shadow-2xl p-4 w-72"
+            style={{ left: Math.min(fundoPos.x, window.innerWidth - 296), top: fundoPos.y }}>
+
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-[var(--text)] flex items-center gap-1.5">
+                <Wand2 size={14} className="text-brand-400" /> Gerar Fundo com IA
+              </span>
+              <button onClick={() => setShowFundoPanel(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={15} /></button>
+            </div>
+
+            {/* Upload de foto de referência */}
+            <p className="text-[11px] text-[var(--text-3)] mb-2">Foto de referência (opcional) — mantém a pessoa na cena</p>
+            <button
+              onClick={() => refPhotoInputRef.current?.click()}
+              className="w-full h-24 rounded-xl border-2 border-dashed border-[var(--border-2)] hover:border-brand-500/60 flex items-center justify-center gap-2 transition-colors mb-3 overflow-hidden relative"
+            >
+              {refPhotoPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={refPhotoPreview} alt="referência" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xs text-[var(--text-3)] flex items-center gap-1.5">
+                  <ImageIcon size={14} /> Clique para enviar foto
+                </span>
+              )}
+            </button>
+            {refPhotoPreview && (
+              <button onClick={() => { setRefPhotoBase64(""); setRefPhotoMime(""); setRefPhotoPreview(""); }}
+                className="text-[10px] text-red-400 hover:text-red-300 mb-3 block">
+                ✕ Remover foto
+              </button>
+            )}
+
+            {/* Seletor de estilo */}
+            <p className="text-[11px] text-[var(--text-3)] mb-1.5">Estilo visual</p>
+            <div className="grid grid-cols-2 gap-1.5 mb-4">
+              {([
+                { id: "cinematico",   label: "Cinematográfico" },
+                { id: "editorial",    label: "Editorial" },
+                { id: "foto_real",    label: "Foto Real" },
+                { id: "dark_mood",    label: "Dark Mood" },
+                { id: "vibrante",     label: "Vibrante" },
+                { id: "minimalista",  label: "Minimalista" },
+              ] as const).map((s) => (
+                <button key={s.id} onClick={() => setFundoStyle(s.id)}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${fundoStyle === s.id ? "bg-brand-600 text-white" : "bg-[var(--bg-3)] text-[var(--text-2)] hover:bg-[var(--bg-4)]"}`}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={generateBackground}
+              disabled={generating}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-sm font-semibold text-white transition-colors"
+            >
+              {generating
+                ? <><Loader2 size={14} className="animate-spin" /> Gerando...</>
+                : <><Wand2 size={14} /> {refPhotoPreview ? "Gerar com minha foto" : "Gerar fundo"}</>
+              }
+            </button>
+          </div>
+        </>,
+        document.body
       )}
 
       {/* ── Portais dos dropdowns (fora do overflow-x-auto) ── */}
