@@ -187,6 +187,7 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
           slideCount,
           writingStyle: "viral",
           imageStyle: "gemini",
+          withFace: !!faceBase64,
         }),
       });
       const genData: GeneratedContent = await genRes.json();
@@ -204,8 +205,16 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
         rawSlides.map(async (slide) => {
           const { _imagePrompt, _faceBase64: fb, ...clean } = slide as any;
           try {
+            // Prompt da spec: cena coerente com o texto + instrução de preservar rosto
+            const faceInstructions = fb
+              ? `\n\nThe person MUST have the same face as the reference image. Preserve identity, facial structure, skin tone and proportions exactly. Do not change the person. Do not generate a different face.`
+              : "";
+            const finalPrompt = fb
+              ? `Create a realistic image of a person in the following scenario: ${_imagePrompt}.${faceInstructions}`
+              : _imagePrompt;
+
             const body: Record<string, unknown> = {
-              prompt: _imagePrompt,
+              prompt: finalPrompt,
               imageStyle: "gemini",
             };
             if (fb) {

@@ -52,8 +52,8 @@ const styleInstructions: Record<WritingStyle, string> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const body: GenerateRequest & { imageStyle?: string } = await req.json();
-    const { topic, searchResults, slideCount, writingStyle = "viral", imageStyle } = body;
+    const body: GenerateRequest & { imageStyle?: string; withFace?: boolean } = await req.json();
+    const { topic, searchResults, slideCount, writingStyle = "viral", imageStyle, withFace = false } = body;
 
     const session = await getServerSession(authOptions);
     const email = session?.user?.email;
@@ -100,7 +100,19 @@ REGRA CRÍTICA PARA TÍTULO:
 - Exemplo: "SEU [CHURRASCO] PODE ESTAR ERRADO" ou "A [CIÊNCIA] EXPLICA TUDO"
 - O título deve ter máx 6 palavras no total
 
-REGRA CRÍTICA PARA imagePrompt:
+${withFace ? `REGRA CRÍTICA PARA imagePrompt (MODO COM ROSTO):
+- SEMPRE coloque UMA PESSOA como sujeito principal da cena — a pessoa DEVE ser o foco
+- A pessoa deve estar FAZENDO exatamente o que o texto/título do slide descreve
+- Formato obrigatório: "[pessoa] [ação do texto], [ambiente], [iluminação natural]"
+- NUNCA gere cenas sem pessoa (paisagens, objetos soltos, símbolos, troféus isolados)
+- Exemplos CORRETOS:
+  * Slide sobre produtividade: "person focused on laptop at clean modern desk, natural window light, shallow depth of field"
+  * Slide sobre vendas: "person presenting confidently to small group in meeting room, corporate environment, warm light"
+  * Slide sobre redes sociais: "person smiling holding smartphone, creating content, bright home studio background"
+  * Slide sobre investimentos: "person analyzing financial charts on dual monitors, home office, focused expression"
+  * Slide sobre saúde: "person doing yoga on mat in bright minimalist room, morning light"
+- A ação deve ser DIRETAMENTE derivada do texto: leu "publicar conteúdo"? → pessoa com câmera/celular
+- NUNCA use prompts genéricos ou cenas sem pessoa visível` : `REGRA CRÍTICA PARA imagePrompt:
 - Cada slide DEVE ter um imagePrompt ÚNICO e ESPECÍFICO que descreve visualmente o conteúdo daquele slide
 - O imagePrompt deve ser em INGLÊS, detalhado como um prompt de IA de imagem (Midjourney/Stable Diffusion)
 - NUNCA mencione nomes de pessoas reais (políticos, atletas, celebridades) no imagePrompt — isso causa bloqueio pela IA geradora
@@ -109,7 +121,7 @@ REGRA CRÍTICA PARA imagePrompt:
 - Exemplo para slide sobre eleições americanas: "American flag waving dramatically, presidential podium, crowd in background, powerful spotlight, patriotic atmosphere, cinematic wide shot, 8k"
 - Exemplo para slide sobre Copa do Mundo: "golden FIFA World Cup trophy on pedestal, stadium crowd, confetti falling, green field, intense floodlights, celebration atmosphere, photorealistic"
 - Exemplo para slide sobre marketing: "businessman looking at holographic social media analytics dashboard, neon lights, dark office background, futuristic, high contrast, dramatic lighting"
-- NUNCA use prompts genéricos. Cada prompt deve ser único e diretamente ligado ao conteúdo do slide
+- NUNCA use prompts genéricos. Cada prompt deve ser único e diretamente ligado ao conteúdo do slide`}
 
 REGRA CRÍTICA PARA searchQuery:
 - Campo SEPARADO do imagePrompt, usado para buscar FOTOS REAIS no Google Images
