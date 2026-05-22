@@ -785,22 +785,9 @@ export default function Toolbar({
 
         <div className={divider} />
 
-        {/* Posição + Inverter — só quando elemento selecionado */}
+        {/* Inverter — só quando elemento selecionado */}
         {selectedElement && (
           <>
-            <div className="grid grid-cols-3 gap-0.5 shrink-0" title="Posição no slide">
-              {["tl","tc","tr","ml","mc","mr","bl","bc","br"].map((a) => (
-                <button
-                  key={a}
-                  title={ALIGN_TITLES[a]}
-                  onClick={() => alignElement(a)}
-                  className="w-5 h-5 rounded-sm flex items-center justify-center text-[11px] bg-[var(--bg-3)] hover:bg-brand-500/40 text-[var(--text-3)] hover:text-brand-300 transition-colors leading-none"
-                >
-                  {ALIGN_ARROWS[a]}
-                </button>
-              ))}
-            </div>
-
             {(isImage || isFrame) && (
               <>
                 <button

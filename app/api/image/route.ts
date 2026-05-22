@@ -278,7 +278,7 @@ async function fromFalInstantId(prompt: string, style: ImageStyle, refBase64: st
       output_quality: 95,
       sync_mode: true,
     }),
-    signal: AbortSignal.timeout(100000),
+    signal: AbortSignal.timeout(55000),
   });
 
   const data = await res.json();
@@ -317,7 +317,7 @@ async function fromFalPulid(prompt: string, style: ImageStyle, refBase64: string
       image_size: FAL_SIZE_4x5,
       sync_mode: true,
     }),
-    signal: AbortSignal.timeout(75000),
+    signal: AbortSignal.timeout(55000),
   });
 
   const data = await res.json();
@@ -714,14 +714,21 @@ export async function POST(req: NextRequest) {
   const errors: string[] = [];
 
   if (hasReference) {
-    // Cascade com referência — prioridade: FIDELIDADE FACIAL máxima
-    // 1. PuLID (~55s): modelo treinado para identidade pura, mais confiável
-    // 2. InstantID (~55s): keypoints faciais, segunda melhor fidelidade
-    // 3. Cena+FaceSwap (~30s): pixel-copy, mas depende da cena ter rosto detectável
-    // 4. Kontext → OpenAI edits → fallbacks sem referência
-    const tries: Array<() => Promise<ImageResult>> = [
-      () => fromFalPulid(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-pulid"; return r; }),
-      () => fromFalInstantId(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-instantid"; return r; }),
+    // PuLID + InstantID em PARALELO — primeiro que responder vence (~50s total, não 130s)
+    // Evita estourar o limite de 120s do Vercel com tentativas sequenciais
+    try {
+      const r = await Promise.any([
+        fromFalPulid(facePrompt, style, referenceImageBase64!, referenceImageMime!),
+        fromFalInstantId(facePrompt, style, referenceImageBase64!, referenceImageMime!),
+      ]);
+      plan = `reference-${r.source}`;
+      result = r;
+    } catch (e: any) {
+      errors.push(`PuLID+InstantID paralelo: ${e.message}`);
+    }
+
+    // Fallbacks sequenciais se o paralelo falhou (~70s restantes do budget de 120s)
+    const fallbackTries: Array<() => Promise<ImageResult>> = [
       () => fromSceneAndSwap(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-faceswap"; return r; }),
       () => fromFalKontext(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }),
       () => fromOpenAIWithReference(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
@@ -730,7 +737,7 @@ export async function POST(req: NextRequest) {
       () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
       () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
     ];
-    for (const fn of tries) {
+    for (const fn of fallbackTries) {
       if (result) break;
       try { result = await fn(); } catch (e: any) { errors.push(e.message); }
     }
