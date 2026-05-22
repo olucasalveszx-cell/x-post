@@ -63,6 +63,10 @@ const PROMPTS: Record<ImageStyle, string> = {
 // Sufixo global de qualidade aplicado a todos os prompts
 const QUALITY_SUFFIX = `hyperrealistic, photorealistic, 8K resolution, ultra-detailed, sharp focus, well-exposed bright and clear, professional color grade, face fully visible and luminous, no underexposure, no dark shadows on face, no artifacts, no plastic skin, no blur, no text, no watermarks, no logos`;
 
+// Hint de estilo simplificado para modelos de identidade facial
+// Evita specs de câmera (bokeh, Sony A7IV) que conflitam com a preservação do rosto
+const FACE_STYLE_HINT = `photorealistic, well-lit natural daylight, warm skin tones accurate, face fully visible and bright, no shadows on face, clean background, 8K sharp, no text, no watermarks`;
+
 function buildPrompt(subject: string, style: ImageStyle): string {
   const stylePrompt = PROMPTS[style] ?? PROMPTS.gemini;
   return `${subject}. ${stylePrompt}. ${QUALITY_SUFFIX}. Instagram 4:5 portrait format.`;
@@ -159,7 +163,7 @@ async function fromOpenAIWithReference(
 const FAL_SIZE_4x5 = { width: 1024, height: 1280 };
 
 // ── fal.ai FLUX Schnell — rápido (5-10s) ────────────────────
-async function fromFalSchnell(prompt: string, style: ImageStyle) {
+async function fromFalSchnell(prompt: string, style: ImageStyle, inferenceSteps = 8) {
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY não configurada");
 
@@ -170,7 +174,7 @@ async function fromFalSchnell(prompt: string, style: ImageStyle) {
     body: JSON.stringify({
       prompt: fullPrompt,
       image_size: FAL_SIZE_4x5,
-      num_inference_steps: 8,
+      num_inference_steps: inferenceSteps,
       num_images: 1,
       output_format: "jpeg",
       enable_safety_checker: false,
@@ -237,8 +241,8 @@ async function fromFalInstantId(prompt: string, style: ImageStyle, refBase64: st
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY não configurada");
 
-  const styleHint = PROMPTS[style] ?? PROMPTS.gemini;
-  const fullPrompt = `${prompt}. ${styleHint}. Portrait orientation 4:5 aspect ratio.`;
+  // Prompt limpo sem specs de câmera
+  const fullPrompt = `${prompt}. ${FACE_STYLE_HINT}. Portrait orientation 4:5 aspect ratio.`;
   const imageDataUrl = `data:${refMime};base64,${refBase64}`;
 
   const res = await fetch("https://fal.run/fal-ai/instant-id", {
@@ -247,11 +251,11 @@ async function fromFalInstantId(prompt: string, style: ImageStyle, refBase64: st
     body: JSON.stringify({
       face_image_url: imageDataUrl,
       prompt: fullPrompt,
-      negative_prompt: "nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, illustration, out of focus, grainy, overexposed, underexposed",
-      num_inference_steps: 35,
-      guidance_scale: 6,
-      ip_adapter_scale: 0.85,
-      controlnet_conditioning_scale: 0.85,
+      negative_prompt: "nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, illustration, out of focus, grainy, overexposed, underexposed, sunglasses, hat, mask",
+      num_inference_steps: 40,
+      guidance_scale: 7.0,
+      ip_adapter_scale: 1.0,
+      controlnet_conditioning_scale: 0.9,
       enhance_face_region: true,
       image_size: FAL_SIZE_4x5,
       output_format: "jpeg",
@@ -280,8 +284,8 @@ async function fromFalPulid(prompt: string, style: ImageStyle, refBase64: string
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY não configurada");
 
-  const styleHint = PROMPTS[style] ?? PROMPTS.gemini;
-  const fullPrompt = `${prompt}. ${styleHint}. ${QUALITY_SUFFIX}. Instagram 4:5 portrait format.`;
+  // Prompt limpo sem specs de câmera: preserva melhor a identidade facial
+  const fullPrompt = `${prompt}. ${FACE_STYLE_HINT}. Portrait orientation 4:5.`;
   const imageDataUrl = `data:${refMime};base64,${refBase64}`;
 
   const res = await fetch("https://fal.run/fal-ai/pulid", {
@@ -289,15 +293,15 @@ async function fromFalPulid(prompt: string, style: ImageStyle, refBase64: string
     headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       prompt: fullPrompt,
-      negative_prompt: "nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, out of focus, grainy, overexposed",
+      negative_prompt: "nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, out of focus, grainy, overexposed, sunglasses, hat, mask",
       id_image: imageDataUrl,
-      num_inference_steps: 20,
+      num_inference_steps: 28,
       guidance_scale: 1.5,
-      true_cfg: 1.0,
+      true_cfg: 1.5,
       image_size: FAL_SIZE_4x5,
       sync_mode: true,
     }),
-    signal: AbortSignal.timeout(65000),
+    signal: AbortSignal.timeout(75000),
   });
 
   const data = await res.json();
@@ -346,11 +350,12 @@ async function fromFalFaceSwap(sceneUrl: string, refBase64: string, refMime: str
   return imageUrl;
 }
 
-// ── Cena + Face Swap — gera cena rápida e troca rosto ────────
+// ── Cena + Face Swap — gera cena e troca rosto ───────────────
 async function fromSceneAndSwap(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
-  // Garante que o prompt inclui uma pessoa com rosto visível
-  const scenePrompt = `${prompt}, person facing camera, face clearly visible`;
-  const scene = await fromFalSchnell(scenePrompt, style);
+  // Prompt com rosto frontal explícito + mais steps para cena mais nítida
+  const scenePrompt = `${prompt}, close-up portrait, person facing camera directly, face prominently visible and sharp, frontal angle`;
+  // 16 steps: cena melhor que 8, face mais definida para o swap funcionar bem
+  const scene = await fromFalSchnell(scenePrompt, style, 16);
   if (scene.imageUrl.startsWith("data:")) throw new Error("Schnell retornou data: URI, face-swap não suportado");
   const swapped = await fromFalFaceSwap(scene.imageUrl, refBase64, refMime);
   console.log("[image] Cena+FaceSwap pipeline OK");
@@ -685,15 +690,15 @@ export async function POST(req: NextRequest) {
   const errors: string[] = [];
 
   if (hasReference) {
-    // Cascade com referência — ordem: velocidade + fidelidade
-    // 1. Cena+FaceSwap: Schnell (~8s) + face-swap (~15s) = ~25s | copia pixels reais do rosto
-    // 2. PuLID (~50s): modelo treinado para identidade pura
-    // 3. InstantID (~45s): condicionamento de keypoints faciais
-    // 4. Kontext → OpenAI edits → OpenAI → fallbacks
+    // Cascade com referência — prioridade: FIDELIDADE FACIAL máxima
+    // 1. PuLID (~55s): modelo treinado para identidade pura, mais confiável
+    // 2. InstantID (~55s): keypoints faciais, segunda melhor fidelidade
+    // 3. Cena+FaceSwap (~30s): pixel-copy, mas depende da cena ter rosto detectável
+    // 4. Kontext → OpenAI edits → fallbacks sem referência
     const tries: Array<() => Promise<ImageResult>> = [
+      () => fromFalPulid(prompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-pulid"; return r; }),
+      () => fromFalInstantId(prompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-instantid"; return r; }),
       () => fromSceneAndSwap(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-faceswap"; return r; }),
-      () => fromFalPulid(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-pulid"; return r; }),
-      () => fromFalInstantId(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-instantid"; return r; }),
       () => fromFalKontext(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }),
       () => fromOpenAIWithReference(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
       () => fromOpenAI(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
