@@ -671,20 +671,26 @@ export async function POST(req: NextRequest) {
   const style: ImageStyle = VALID_STYLES.includes(imageStyle) ? imageStyle : "gemini";
   const hasReference = !!(referenceImageBase64 && referenceImageMime);
 
-  // Rodam em paralelo para economizar tempo
+  // Em modo com rosto: skip enhancePrompt (destrói instruções de face preservation)
   const [enhancedPrompt, session, personDesc] = await Promise.all([
-    enhancePrompt(prompt),
+    hasReference ? Promise.resolve(prompt) : enhancePrompt(prompt),
     getServerSession(authOptions),
     hasReference
       ? detectPersonDescription(referenceImageBase64!, referenceImageMime!)
       : Promise.resolve("person"),
   ]);
 
-  // Prompt curto para face ID: "[gênero/aparência], [cena curta]"
-  // PuLID/InstantID injetam o rosto da referência automaticamente — prompt simples = mais fiel
-  const rawSceneShort = prompt.replace(/^photorealistic portrait of a [^:]+:\s*/i, "").slice(0, 120);
+  // Extrai só a cena curta do prompt — suporta o novo formato "Create a realistic image..."
+  // e o formato antigo "photorealistic portrait of a X: ..."
+  const rawSceneShort = prompt
+    .replace(/^Create a realistic image of a person in the following scenario:\s*/i, "")
+    .replace(/\n\nThe person MUST[\s\S]*$/i, "")
+    .replace(/^photorealistic portrait of a [^:]+:\s*/i, "")
+    .trim()
+    .slice(0, 150);
+
   const facePrompt = hasReference
-    ? `${personDesc}, ${rawSceneShort}, facing camera, photorealistic`
+    ? `${personDesc}, ${rawSceneShort || prompt.slice(0, 100)}, facing camera, photorealistic`
     : prompt;
 
   // ── Verificar plano ───────────────────────────────────────────
