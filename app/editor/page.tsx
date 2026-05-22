@@ -22,6 +22,7 @@ import ProfilePickerModal, { UserProfile, getStoredProfile, saveProfile, PROFILE
 import { autosaveWrite, autosaveRead, autosaveClear } from "@/lib/autosave-db";
 import ProfileModal from "@/components/ProfileModal";
 import StyleSelectorModal from "@/components/Editor/StyleSelectorModal";
+import CarouselFaceModal, { FaceCarouselMode } from "@/components/Editor/CarouselFaceModal";
 import AppLogo from "@/components/AppLogo";
 import LoginAnimation from "@/components/LoginAnimation";
 import TutorialPromptModal, { NEVER_KEY, SESSION_KEY as TUTORIAL_SESSION_KEY } from "@/components/Tutorial/TutorialPromptModal";
@@ -130,6 +131,7 @@ export default function EditorPage() {
   const [showProfile, setShowProfile] = useState(false);
   const [profileInitialTab, setProfileInitialTab] = useState<"history" | "images" | "instagram" | "tutorial" | undefined>(undefined);
   const [showStyleSelector, setShowStyleSelector] = useState(false);
+  const [showFaceCarousel, setShowFaceCarousel] = useState(false);
   const [tutorialNotif, setTutorialNotif] = useState<{ title: string } | null>(null);
   const [showTutorialPrompt, setShowTutorialPrompt] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -363,8 +365,12 @@ export default function EditorPage() {
 
   const handleIGLogin = () => { window.location.href = "/api/instagram/auth"; };
 
-  const handleStyleSelect = useCallback((style: "layouts" | "twitter") => {
+  const handleStyleSelect = useCallback((style: "layouts" | "twitter" | "comrosto") => {
     setShowStyleSelector(false);
+    if (style === "comrosto") {
+      setShowFaceCarousel(true);
+      return;
+    }
     twitterStyleRef.current = style === "twitter";
     const topic = pendingTopicRef.current;
     pendingTopicRef.current = null;
@@ -600,6 +606,19 @@ export default function EditorPage() {
       if (matched) setFormat(matched);
     }
   }, [setProjects, pushHistory, applyTwitterStyle]);
+
+  const handleFaceCarouselGenerate = useCallback(async (slides: Slide[], mode: FaceCarouselMode) => {
+    const pid = activeProjectIdRef.current;
+    const final = mode === "twitter" ? await applyTwitterStyle(slides) : slides;
+    setProjects((prev) => prev.map((p) => p.id !== pid ? p : { ...p, slides: final }));
+    slidesRef.current = final;
+    setCurrentIndex(0);
+    pushHistory(final);
+    if (final[0]) {
+      const matched = FORMATS.find((f) => f.width === final[0].width && f.height === final[0].height);
+      if (matched) setFormat(matched);
+    }
+  }, [applyTwitterStyle, setProjects, pushHistory]);
 
   const applyThemeToAll = useCallback((bg: string, textColor: string) => {
     const pid = activeProjectIdRef.current;
@@ -1075,6 +1094,11 @@ export default function EditorPage() {
         open={showStyleSelector}
         onClose={() => setShowStyleSelector(false)}
         onSelect={handleStyleSelect}
+      />
+      <CarouselFaceModal
+        open={showFaceCarousel}
+        onClose={() => setShowFaceCarousel(false)}
+        onGenerate={handleFaceCarouselGenerate}
       />
       <OnboardingModal
         onConfirm={(topic) => {

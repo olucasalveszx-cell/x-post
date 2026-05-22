@@ -1,11 +1,11 @@
 "use client";
 
-import { X, Sparkles, Twitter } from "lucide-react";
+import { X, Sparkles, Twitter, UserRound } from "lucide-react";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSelect: (style: "layouts" | "twitter") => void;
+  onSelect: (style: "layouts" | "twitter" | "comrosto") => void;
 }
 
 export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
@@ -33,7 +33,7 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
 
           {/* ── Gerar Layouts ── */}
           <button
@@ -161,6 +161,40 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
               <p className="font-bold text-[var(--text)] text-sm group-hover:text-sky-300 transition-colors">Estilo Twitter / X</p>
               <p className="text-[11px] text-[var(--text-3)] leading-snug mt-0.5">
                 Capa com foto + slides brancos com grid + perfil fixo
+              </p>
+            </div>
+          </button>
+          {/* ── Com Rosto ── */}
+          <button
+            onClick={() => onSelect("comrosto")}
+            className="flex flex-col gap-3 p-4 rounded-xl border border-[var(--border-2)] hover:border-purple-500/50 hover:bg-purple-500/5 transition-all text-left group"
+          >
+            <div className="relative w-full rounded-lg overflow-hidden bg-[#0d0014]" style={{ aspectRatio: "4/5" }}>
+              {/* Dark purple bg */}
+              <div className="absolute inset-0" style={{ background: "linear-gradient(145deg,#1a0030,#3b0068,#6d28d9)" }} />
+              {/* Gradient overlay */}
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.2) 55%,transparent 100%)" }} />
+              {/* Face silhouette */}
+              <div className="absolute top-[10%] left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5">
+                <div className="w-8 h-8 rounded-full bg-purple-300/40 border border-purple-400/40" />
+                <div className="w-12 h-5 rounded-full bg-purple-300/20 border border-purple-400/20" />
+              </div>
+              {/* Glow */}
+              <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-14 h-14 rounded-full bg-purple-500/15 blur-md" />
+              {/* Text lines */}
+              <div className="absolute bottom-[28%] left-[8%] right-[8%] space-y-1.5">
+                <div className="h-2 rounded-md bg-white/85" style={{ height: 9 }} />
+                <div className="h-1.5 rounded-md bg-white/50" style={{ height: 6, width: "70%" }} />
+              </div>
+              {/* Badge */}
+              <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold text-purple-200 bg-purple-500/25 border border-purple-400/20">
+                <UserRound size={7} /> Rosto
+              </div>
+            </div>
+            <div>
+              <p className="font-bold text-[var(--text)] text-sm group-hover:text-purple-400 transition-colors">Com Rosto</p>
+              <p className="text-[11px] text-[var(--text-3)] leading-snug mt-0.5">
+                Seu rosto preservado em cada imagem
               </p>
             </div>
           </button>
