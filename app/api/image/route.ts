@@ -6,7 +6,7 @@ import { verifyToken } from "@/lib/activation";
 import { getUserPlan } from "@/lib/credits";
 import { redisGet, redisSet, redisIncr, redisLPush, redisLTrim } from "@/lib/redis";
 import { put } from "@vercel/blob";
-import { geminiText } from "@/lib/gemini-text";
+import { geminiText, geminiVision } from "@/lib/gemini-text";
 
 export const maxDuration = 120;
 
@@ -39,6 +39,22 @@ Input: "${raw}"`;
     return enhanced;
   } catch {
     return raw;
+  }
+}
+
+// Detecta gênero/aparência da pessoa na foto de referência para usar nos prompts
+async function detectPersonDescription(base64: string, mime: string): Promise<string> {
+  try {
+    const desc = await geminiVision(
+      `Look at this photo and describe the person in 4-6 words. Focus on: gender (man/woman/boy/girl), approximate age range, and one visible trait (hair color/ethnicity). Examples: "adult man dark hair", "young woman blonde hair", "middle-aged man". Return ONLY those 4-6 words, nothing else.`,
+      base64,
+      mime,
+      { maxTokens: 20, temperature: 0.1 }
+    );
+    const clean = desc.trim().toLowerCase().replace(/[^a-z\s-]/g, "").trim();
+    return clean || "person";
+  } catch {
+    return "person";
   }
 }
 
@@ -656,10 +672,18 @@ export async function POST(req: NextRequest) {
   const hasReference = !!(referenceImageBase64 && referenceImageMime);
 
   // Rodam em paralelo para economizar tempo
-  const [enhancedPrompt, session] = await Promise.all([
+  const [enhancedPrompt, session, personDesc] = await Promise.all([
     enhancePrompt(prompt),
     getServerSession(authOptions),
+    hasReference
+      ? detectPersonDescription(referenceImageBase64!, referenceImageMime!)
+      : Promise.resolve("person"),
   ]);
+
+  // Prompt com gênero/aparência corretos detectados da foto — evita gerar gênero errado
+  const facePrompt = hasReference
+    ? prompt.replace(/\bperson\b/gi, personDesc).replace(/\bphotorealistic portrait of a person\b/gi, `photorealistic portrait of a ${personDesc}`)
+    : prompt;
 
   // ── Verificar plano ───────────────────────────────────────────
   let isPro = false;
@@ -696,11 +720,11 @@ export async function POST(req: NextRequest) {
     // 3. Cena+FaceSwap (~30s): pixel-copy, mas depende da cena ter rosto detectável
     // 4. Kontext → OpenAI edits → fallbacks sem referência
     const tries: Array<() => Promise<ImageResult>> = [
-      () => fromFalPulid(prompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-pulid"; return r; }),
-      () => fromFalInstantId(prompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-instantid"; return r; }),
-      () => fromSceneAndSwap(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-faceswap"; return r; }),
-      () => fromFalKontext(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }),
-      () => fromOpenAIWithReference(enhancedPrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
+      () => fromFalPulid(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-pulid"; return r; }),
+      () => fromFalInstantId(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-instantid"; return r; }),
+      () => fromSceneAndSwap(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-faceswap"; return r; }),
+      () => fromFalKontext(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }),
+      () => fromOpenAIWithReference(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
       () => fromOpenAI(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
       () => fromFal(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
       () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),

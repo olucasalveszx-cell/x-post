@@ -87,10 +87,11 @@ function buildFaceSlides(
       style: { fontSize: 25, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.4)", textAlign: "right" as const, lineHeight: 1 },
     });
 
-    // For face mode: nudge prompt so the generated scene has a person for face-swap
+    // Para face mode: prepend para garantir cena com pessoa visível
+    // Gênero é detectado no servidor via Gemini Vision — não especificar aqui
     const rawPrompt = gs.imagePrompt || "";
     const imagePrompt = faceBase64
-      ? `Photorealistic portrait of a person in this scene: ${rawPrompt}. Face clearly visible, realistic lighting, 8k`
+      ? `photorealistic portrait of a person in this scene: ${rawPrompt}. face clearly visible, frontal angle, realistic lighting, 8k`
       : rawPrompt;
 
     return {
