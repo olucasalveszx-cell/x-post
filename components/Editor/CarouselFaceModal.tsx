@@ -87,12 +87,10 @@ function buildFaceSlides(
       style: { fontSize: 25, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.4)", textAlign: "right" as const, lineHeight: 1 },
     });
 
-    // Para face mode: prepend para garantir cena com pessoa visível
-    // Gênero é detectado no servidor via Gemini Vision — não especificar aqui
+    // Para face mode: usa o imagePrompt do Gemini direto — PuLID/InstantID
+    // injetam o rosto automaticamente. Prompt complexo conflita com face fidelity.
     const rawPrompt = gs.imagePrompt || "";
-    const imagePrompt = faceBase64
-      ? `photorealistic portrait of a person in this scene: ${rawPrompt}. face clearly visible, frontal angle, realistic lighting, 8k`
-      : rawPrompt;
+    const imagePrompt = rawPrompt;
 
     return {
       id: uuid(),
@@ -143,14 +141,26 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
   const handleFaceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setFaceMime(file.type || "image/jpeg");
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
+    // Redimensiona para max 768px — face ID não precisa de mais que isso,
+    // e foto de celular (3-5MB) em base64 estoura o timeout dos modelos
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const MAX = 768;
+      const scale = Math.min(MAX / img.width, MAX / img.height, 1);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+      setFaceMime("image/jpeg");
       setFacePreview(dataUrl);
       setFaceBase64(dataUrl.split(",")[1]);
     };
-    reader.readAsDataURL(file);
+    img.src = objectUrl;
   };
 
   const handleGenerate = async () => {

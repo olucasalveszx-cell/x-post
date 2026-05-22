@@ -311,9 +311,9 @@ async function fromFalPulid(prompt: string, style: ImageStyle, refBase64: string
       prompt: fullPrompt,
       negative_prompt: "nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, out of focus, grainy, overexposed, sunglasses, hat, mask",
       id_image: imageDataUrl,
-      num_inference_steps: 28,
+      num_inference_steps: 30,
       guidance_scale: 1.5,
-      true_cfg: 1.5,
+      true_cfg: 1.0,
       image_size: FAL_SIZE_4x5,
       sync_mode: true,
     }),
@@ -680,9 +680,11 @@ export async function POST(req: NextRequest) {
       : Promise.resolve("person"),
   ]);
 
-  // Prompt com gênero/aparência corretos detectados da foto — evita gerar gênero errado
+  // Prompt curto para face ID: "[gênero/aparência], [cena curta]"
+  // PuLID/InstantID injetam o rosto da referência automaticamente — prompt simples = mais fiel
+  const rawSceneShort = prompt.replace(/^photorealistic portrait of a [^:]+:\s*/i, "").slice(0, 120);
   const facePrompt = hasReference
-    ? prompt.replace(/\bperson\b/gi, personDesc).replace(/\bphotorealistic portrait of a person\b/gi, `photorealistic portrait of a ${personDesc}`)
+    ? `${personDesc}, ${rawSceneShort}, facing camera, photorealistic`
     : prompt;
 
   // ── Verificar plano ───────────────────────────────────────────
