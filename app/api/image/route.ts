@@ -368,10 +368,10 @@ async function fromFalFaceSwap(sceneUrl: string, refBase64: string, refMime: str
 
 // ── Cena + Face Swap — gera cena e troca rosto ───────────────
 async function fromSceneAndSwap(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
-  // Prompt com rosto frontal explícito + mais steps para cena mais nítida
-  const scenePrompt = `${prompt}, close-up portrait, person facing camera directly, face prominently visible and sharp, frontal angle`;
-  // 16 steps: cena melhor que 8, face mais definida para o swap funcionar bem
-  const scene = await fromFalSchnell(scenePrompt, style, 16);
+  // Rosto frontal explícito garante área de face grande o suficiente para o swap funcionar
+  const scenePrompt = `${prompt}, close-up portrait, person looking directly at camera, face fully visible and centered, natural frontal lighting, clean background, sharp face`;
+  // 20 steps: melhor qualidade de cena para o swap ter mais pixels de face para trabalhar
+  const scene = await fromFalSchnell(scenePrompt, style, 20);
   if (scene.imageUrl.startsWith("data:")) throw new Error("Schnell retornou data: URI, face-swap não suportado");
   const swapped = await fromFalFaceSwap(scene.imageUrl, refBase64, refMime);
   console.log("[image] Cena+FaceSwap pipeline OK");
@@ -722,22 +722,21 @@ export async function POST(req: NextRequest) {
   const errors: string[] = [];
 
   if (hasReference) {
-    // PuLID + InstantID em PARALELO — primeiro que responder vence (~50s total, não 130s)
-    // Evita estourar o limite de 120s do Vercel com tentativas sequenciais
+    // 1º: Schnell (20 steps) + Face Swap — ~40s, fidelidade pixel-perfect (copia o rosto real)
     try {
-      const r = await Promise.any([
-        fromFalPulid(facePrompt, style, referenceImageBase64!, referenceImageMime!),
-        fromFalInstantId(facePrompt, style, referenceImageBase64!, referenceImageMime!),
-      ]);
-      plan = `reference-${r.source}`;
+      const r = await fromSceneAndSwap(facePrompt, style, referenceImageBase64!, referenceImageMime!);
+      plan = "reference-faceswap";
       result = r;
     } catch (e: any) {
-      errors.push(`PuLID+InstantID paralelo: ${e.message}`);
+      errors.push(`SceneAndSwap: ${e.message}`);
     }
 
-    // Fallbacks sequenciais se o paralelo falhou (~70s restantes do budget de 120s)
+    // Fallbacks: PuLID + InstantID em paralelo se o swap falhou
     const fallbackTries: Array<() => Promise<ImageResult>> = [
-      () => fromSceneAndSwap(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-faceswap"; return r; }),
+      () => Promise.any([
+        fromFalPulid(facePrompt, style, referenceImageBase64!, referenceImageMime!),
+        fromFalInstantId(facePrompt, style, referenceImageBase64!, referenceImageMime!),
+      ]).then(r => { plan = `reference-${r.source}`; return r; }),
       () => fromFalKontext(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }),
       () => fromOpenAIWithReference(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
       () => fromOpenAI(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
