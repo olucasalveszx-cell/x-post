@@ -102,9 +102,6 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
       gradient = "linear-gradient(180deg, rgba(0,0,0,0.86) 0%, rgba(0,0,0,0.14) 30%, rgba(0,0,0,0.14) 55%, rgba(0,0,0,0.93) 100%)";
       titleY = Math.round(H * 0.28); titleAlign = "left"; titleSize = 82; titleH = 300;
       bodyY = Math.min(titleY + 310, H - 210);
-      elements.push({ id: uuid(), type: "text" as const, x: W - 220, y: 56, width: 200, height: 200,
-        content: String(i + 1).padStart(2, "0"),
-        style: { fontSize: 160, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.06)", textAlign: "right" as const, lineHeight: 1 } });
       elements.push({ id: uuid(), type: "shape" as const, x: 60, y: titleY - 28, width: 56, height: 6, content: "",
         style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 3 } });
 
