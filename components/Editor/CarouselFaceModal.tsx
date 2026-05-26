@@ -200,17 +200,27 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
       // Preview immediately with loading state
       onGenerate(rawSlides, "comrosto");
 
+      // Upload da referência UMA vez para todos os slides — evita N uploads idênticos em paralelo
+      let refUrl: string | null = null;
+      if (faceBase64) {
+        try {
+          const upRes = await fetch("/api/upload-ref", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ base64: faceBase64, mime: faceMime }),
+          });
+          const upData = await upRes.json();
+          refUrl = upData.url ?? null;
+        } catch { /* se falhar, cada slide fará o upload individualmente como fallback */ }
+      }
+
       let done = 0;
       const withImages = await Promise.all(
         rawSlides.map(async (slide) => {
           const { _imagePrompt, _faceBase64: fb, ...clean } = slide as any;
           try {
-            // Prompt da spec: cena coerente com o texto + instrução de preservar rosto
-            const faceInstructions = fb
-              ? `\n\nThe person MUST have the same face as the reference image. Preserve identity, facial structure, skin tone and proportions exactly. Do not change the person. Do not generate a different face.`
-              : "";
             const finalPrompt = fb
-              ? `Create a realistic image of a person in the following scenario: ${_imagePrompt}.${faceInstructions}`
+              ? `Create a realistic image of a person in the following scenario: ${_imagePrompt}.`
               : _imagePrompt;
 
             const body: Record<string, unknown> = {
@@ -218,8 +228,13 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
               imageStyle: "gemini",
             };
             if (fb) {
-              body.referenceImageBase64 = fb;
-              body.referenceImageMime = faceMime;
+              // Passa URL pré-uploadada (rápido) ou base64 como fallback
+              if (refUrl) {
+                body.referenceImageUrl = refUrl;
+              } else {
+                body.referenceImageBase64 = fb;
+                body.referenceImageMime = faceMime;
+              }
             }
             const res = await fetch("/api/image", {
               method: "POST",
