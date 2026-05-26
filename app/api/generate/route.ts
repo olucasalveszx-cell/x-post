@@ -115,22 +115,28 @@ ${withFace ? `REGRA CRÍTICA PARA imagePrompt (MODO COM ROSTO):
 - NUNCA use prompts genéricos ou cenas sem pessoa visível` : `REGRA CRÍTICA PARA imagePrompt:
 - Cada slide DEVE ter um imagePrompt ÚNICO e ESPECÍFICO que descreve visualmente o conteúdo daquele slide
 - O imagePrompt deve ser em INGLÊS, detalhado como um prompt de IA de imagem (Midjourney/Stable Diffusion)
-- NUNCA mencione nomes de pessoas reais (políticos, atletas, celebridades) no imagePrompt — isso causa bloqueio pela IA geradora
-- Em vez de nomear a pessoa, descreva o CENÁRIO, SÍMBOLO ou EMOÇÃO: "presidential podium with American flag", "soccer stadium golden celebration", "boxing ring dramatic moment"
-- Descreva: ambiente, objetos icônicos, iluminação, emoção, atmosfera — sem rostos ou nomes reais
-- Exemplo para slide sobre eleições americanas: "American flag waving dramatically, presidential podium, crowd in background, powerful spotlight, patriotic atmosphere, cinematic wide shot, 8k"
-- Exemplo para slide sobre Copa do Mundo: "golden FIFA World Cup trophy on pedestal, stadium crowd, confetti falling, green field, intense floodlights, celebration atmosphere, photorealistic"
-- Exemplo para slide sobre marketing: "businessman looking at holographic social media analytics dashboard, neon lights, dark office background, futuristic, high contrast, dramatic lighting"
-- NUNCA use prompts genéricos. Cada prompt deve ser único e diretamente ligado ao conteúdo do slide`}
+- NUNCA use nomes próprios de pessoas reais (celebridades, políticos, atletas) — isso bloqueia a IA geradora
+- Em vez do NOME, descreva os ELEMENTOS VISUAIS ICÔNICOS que tornam o assunto imediatamente reconhecível:
+  * Michael Jackson → "performer in white glove and black fedora, sequined military jacket, moonwalk silhouette on neon-lit stage, single spotlight, concert fog, dramatic contrast"
+  * Neymar → "Brazilian soccer player with distinctive blond hair, colorful boots, celebrating goal, green field, stadium crowd in yellow jerseys"
+  * Steve Jobs → "presenter in black turtleneck holding sleek silver device, minimalist white stage, single spotlight, tech event atmosphere"
+  * Copa do Mundo → "golden FIFA World Cup trophy held by gloved hands, stadium confetti rain, ecstatic crowd in team jerseys, green field"
+  * Bitcoin → "gold coin with B symbol glowing in neon-lit dark room, rising price charts, digital matrix background"
+  * Eleições → "presidential podium with national flag, crowd waving banners, dramatic spotlight, patriotic atmosphere"
+- A imagem deve ser IMEDIATAMENTE RECONHECÍVEL como o assunto sem precisar do nome
+- Descreva: objetos de assinatura, roupas/estilo característico, ambiente icônico, momento famoso, era/época, cores
+- Inclua iluminação, ângulo de câmera, atmosfera, estilo fotográfico (cinematic, documentary, editorial)
+- NUNCA use prompts genéricos ("concert stage", "man running"). Cada prompt deve ser único e visualmente conectado ao conteúdo`}
 
 REGRA CRÍTICA PARA searchQuery:
 - Campo SEPARADO do imagePrompt, usado para buscar FOTOS REAIS no Google Images
 - Deve ser uma busca curta, objetiva, em português, de 2 a 5 palavras
-- Foque no SUJEITO REAL: nome da pessoa, evento ou produto — sem termos de IA ou fotografia
-- Exemplo para slide sobre Neymar jogando: "Neymar Santos 2025"
-- Exemplo para slide sobre Copa do Mundo: "Copa do Mundo 2026 Brasil"
-- Exemplo para slide sobre marketing digital: "marketing digital estratégia"
-- Exemplo para slide sobre Lula: "Lula presidente 2025"
+- Foque no SUJEITO REAL e no CONTEÚDO ESPECÍFICO daquele slide: nome da pessoa + contexto do slide
+- Exemplo slide sobre Michael Jackson dançando: "Michael Jackson moonwalk performance"
+- Exemplo slide sobre Neymar gol importante: "Neymar gol Copa do Mundo"
+- Exemplo slide sobre Copa do Mundo troféu: "Copa do Mundo 2026 troféu"
+- Exemplo slide sobre Steve Jobs lançamento iPhone: "Steve Jobs iPhone lançamento 2007"
+- NUNCA use termos genéricos como: "palco", "estádio", "pessoa", "profissional"
 - NUNCA inclua palavras como: cinematic, dark, moody, photorealistic, 8k, dramatic, lighting
 
 Responda APENAS com JSON válido (sem markdown, sem comentários):
