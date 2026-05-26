@@ -334,19 +334,32 @@ async function fromFalPulid(prompt: string, style: ImageStyle, refBase64: string
   return { imageUrl, source: "fal-pulid" };
 }
 
+// ── Faz upload da referência para o Vercel Blob e retorna URL pública ────────
+async function uploadRefToPublicUrl(base64: string, mime: string): Promise<string> {
+  const buffer = Buffer.from(base64, "base64");
+  const ext = mime.split("/")[1]?.split("+")[0] ?? "jpg";
+  const blob = await put(
+    `facerefs/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`,
+    buffer,
+    { access: "public" as any, contentType: mime }
+  );
+  return blob.url;
+}
+
 // ── fal.ai Face Swap — copia pixels reais do rosto ───────────
 async function fromFalFaceSwap(sceneUrl: string, refBase64: string, refMime: string): Promise<string> {
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY não configurada");
 
-  const refDataUrl = `data:${refMime};base64,${refBase64}`;
+  // data: URIs falham silenciosamente no face-swap — precisa de URL pública real
+  const refUrl = await uploadRefToPublicUrl(refBase64, refMime);
 
   const res = await fetch("https://fal.run/fal-ai/face-swap", {
     method: "POST",
     headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      base_image_url: sceneUrl,
-      swap_image_url: refDataUrl,
+      base_image_url: sceneUrl,  // cena gerada (corpo/fundo)
+      swap_image_url: refUrl,    // rosto da referência (URL pública)
       sync_mode: true,
     }),
     signal: AbortSignal.timeout(60000),
