@@ -16,6 +16,7 @@ import Toolbar from "@/components/Editor/Toolbar";
 import HorizontalSlidePanel from "@/components/Editor/HorizontalSlidePanel";
 import OnboardingModal from "@/components/Editor/OnboardingModal";
 import PublishModal from "@/components/Actions/PublishModal";
+import IGTokenModal from "@/components/Actions/IGTokenModal";
 import AIAssistant from "@/components/AIAssistant";
 import SubscriptionGate from "@/components/SubscriptionGate";
 import ProfilePickerModal, { UserProfile, getStoredProfile, saveProfile, PROFILE_STORAGE_KEY } from "@/components/Editor/ProfilePickerModal";
@@ -117,6 +118,7 @@ export default function EditorPage() {
   const [exporting, setExporting] = useState(false);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [igAccount, setIgAccount] = useState<IGAccount | null>(null);
+  const [showIGTokenModal, setShowIGTokenModal] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [showRestoreBanner, setShowRestoreBanner] = useState(false);
@@ -396,6 +398,12 @@ export default function EditorPage() {
   }, [session?.user?.email]);
 
   const handleIGLogin = () => { window.location.href = "/api/instagram/auth"; };
+
+  const handleIGTokenSave = (account: IGAccount) => {
+    setIgAccount(account);
+    try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: session?.user?.email ?? null })); } catch {}
+    setShowIGTokenModal(false);
+  };
 
   const handleStyleSelect = useCallback((style: "layouts" | "twitter" | "comrosto") => {
     setShowStyleSelector(false);
@@ -923,17 +931,29 @@ export default function EditorPage() {
             <UserCircle size={15} />
             <span className="hidden md:inline">Perfil</span>
           </button>
-          <div className="hidden md:block">
+          <div className="hidden md:flex flex-col items-end gap-0.5">
             {igAccount ? (
-              <button onClick={() => setShowPublish(true)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium text-white">
-                <User size={14} /> @{igAccount.username}
-              </button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setShowPublish(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium text-white">
+                  <User size={14} /> @{igAccount.username}
+                </button>
+                <button onClick={() => setShowIGTokenModal(true)} title="Reconfigurar token"
+                  className="p-2 rounded-lg text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--bg-4)] transition-colors">
+                  <Instagram size={14} />
+                </button>
+              </div>
             ) : (
-              <button onClick={handleIGLogin}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium text-white">
-                <LogIn size={14} /> Login Instagram
-              </button>
+              <div className="flex flex-col items-end gap-0.5">
+                <button onClick={handleIGLogin}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium text-white">
+                  <LogIn size={14} /> Login Instagram
+                </button>
+                <button onClick={() => setShowIGTokenModal(true)}
+                  className="text-[10px] text-[var(--text-3)] hover:text-[var(--text-2)] underline transition-colors">
+                  configurar manualmente
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -1142,6 +1162,7 @@ export default function EditorPage() {
       )}
 
       {showPublish && <PublishModal slides={slides} account={igAccount} onClose={() => setShowPublish(false)} onLoginClick={handleIGLogin} />}
+      {showIGTokenModal && <IGTokenModal onSave={handleIGTokenSave} onClose={() => setShowIGTokenModal(false)} />}
       <AIAssistant open={showAI} onClose={() => setShowAI(false)} onUseInGenerator={() => { setShowAI(false); setMobilePanel("side"); }} />
       <ProfileModal open={showProfile} initialTab={profileInitialTab} onClose={() => { setShowProfile(false); setProfileInitialTab(undefined); }} onOpenTutorial={() => setShowTutorial(true)} />
       <StyleSelectorModal
