@@ -36,7 +36,11 @@ export async function GET(req: NextRequest) {
         `&fb_exchange_token=${shortData.access_token}`
     );
     const longData = await longRes.json();
-    const longToken = longData.access_token ?? shortData.access_token;
+    // NÃO usar fallback para token curto — page tokens só são permanentes se
+    // gerados a partir de um long-lived user token
+    if (!longData.access_token) throw new Error("Falha ao obter token de longa duração: " + JSON.stringify(longData));
+    const longToken = longData.access_token;
+    console.log("[ig/callback] long-lived token obtido, expires_in:", longData.expires_in);
 
     // 3. Lista páginas do Facebook do usuário
     const pagesRes = await fetch(

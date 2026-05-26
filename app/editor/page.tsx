@@ -339,6 +339,28 @@ export default function EditorPage() {
     return () => clearInterval(id);
   }, []);
 
+  // ── Instagram — renova token em background silenciosamente ─────
+  const tryRefreshIGToken = (account: IGAccount, owner: string | null) => {
+    fetch("/api/instagram/refresh-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: account.token }),
+    }).then((r) => r.json()).then((data) => {
+      if (data.token) {
+        const updated = { ...account, token: data.token, expiresAt: data.expiresAt };
+        setIgAccount(updated);
+        try { localStorage.setItem("ig_account", JSON.stringify({ ...updated, _owner: owner })); } catch {}
+      } else {
+        // Refresh falhou (token inválido) — limpa
+        setIgAccount(null);
+        localStorage.removeItem("ig_account");
+      }
+    }).catch(() => {
+      // Falha de rede — mantém o token atual
+      setIgAccount(account);
+    });
+  };
+
   // ── Instagram — vinculado ao e-mail do usuário ───────────────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -374,20 +396,14 @@ export default function EditorPage() {
           if (!saved._owner || saved._owner === currentEmail) {
             const { _owner, ...account } = saved;
             if (account.expiresAt && account.expiresAt < Date.now()) {
-              localStorage.removeItem("ig_account");
+              // Já expirou — tenta renovar antes de descartar
+              tryRefreshIGToken(account, currentEmail);
             } else {
               setIgAccount(account);
-              // Valida o token em background — limpa silenciosamente se inválido
-              fetch("/api/instagram/validate-token", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ token: account.token }),
-              }).then((r) => r.json()).then((data) => {
-                if (!data.valid) {
-                  setIgAccount(null);
-                  localStorage.removeItem("ig_account");
-                }
-              }).catch(() => {});
+              // Renova em background se faltar menos de 7 dias ou não tiver expiresAt
+              const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+              const needsRefresh = !account.expiresAt || (account.expiresAt - Date.now()) < SEVEN_DAYS;
+              if (needsRefresh) tryRefreshIGToken(account, currentEmail);
             }
           } else {
             localStorage.removeItem("ig_account");
