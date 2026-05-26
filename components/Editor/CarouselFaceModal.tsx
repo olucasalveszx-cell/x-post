@@ -225,9 +225,30 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
             const data = await res.json();
             done++;
             setImageProgress(done);
-            return data.imageUrl
-              ? { ...clean, backgroundImageUrl: data.imageUrl, backgroundImageLoading: false }
-              : { ...clean, backgroundImageLoading: false };
+
+            if (!data.imageUrl) return { ...clean, backgroundImageLoading: false };
+
+            // Detect subject position and adjust backgroundPosition.y to keep subject above text overlay
+            let backgroundPositionY = 25;
+            try {
+              const posRes = await fetch("/api/detect-position", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ imageUrl: data.imageUrl }),
+                signal: AbortSignal.timeout(12000),
+              });
+              if (posRes.ok) {
+                const pos = await posRes.json();
+                if (typeof pos.backgroundPositionY === "number") backgroundPositionY = pos.backgroundPositionY;
+              }
+            } catch { /* keep default */ }
+
+            return {
+              ...clean,
+              backgroundImageUrl: data.imageUrl,
+              backgroundImageLoading: false,
+              backgroundPosition: { x: 50, y: backgroundPositionY },
+            };
           } catch {
             done++;
             setImageProgress(done);

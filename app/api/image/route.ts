@@ -369,7 +369,8 @@ async function fromFalFaceSwap(sceneUrl: string, refBase64: string, refMime: str
 
 // ── Cena + Face Swap — gera cena e troca rosto ───────────────
 async function fromSceneAndSwap(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
-  const scenePrompt = `${prompt}, close-up portrait, person looking directly at camera, face fully visible and centered, natural frontal lighting, clean background, sharp face`;
+  // Face must be in the UPPER THIRD of the frame — text overlay covers the bottom 40% of the slide
+  const scenePrompt = `${prompt}, portrait photo, person's FACE POSITIONED IN THE UPPER PORTION of the frame (face center between 20%-45% from the top), head and shoulders clearly visible, looking directly at camera, natural frontal lighting, clean background, lower portion of image has minimal important content`;
   const scene = await fromFalSchnell(scenePrompt, style, 20);
   if (scene.imageUrl.startsWith("data:")) throw new Error("Schnell retornou data: URI, face-swap não suportado");
   const swapped = await fromFalFaceSwap(scene.imageUrl, refBase64, refMime);
