@@ -6,6 +6,14 @@ import { v4 as uuid } from "uuid";
 import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 
+function toHexColor(color: string): string {
+  if (!color) return "#000000";
+  if (/^#[0-9a-fA-F]{6}$/.test(color)) return color;
+  const m = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (m) return `#${parseInt(m[1]).toString(16).padStart(2,"0")}${parseInt(m[2]).toString(16).padStart(2,"0")}${parseInt(m[3]).toString(16).padStart(2,"0")}`;
+  return "#000000";
+}
+
 const FONTS = [
   { label: "Sans-serif",     value: "sans-serif" },
   { label: "Inter",          value: "'Inter', sans-serif" },
@@ -812,7 +820,7 @@ export default function Toolbar({
 
         <label className="flex items-center gap-1.5 text-sm text-[var(--text-2)] cursor-pointer shrink-0">
           Fundo:
-          <input type="color" value={slide.backgroundColor} onChange={(e) => onUpdate({ ...slide, backgroundColor: e.target.value })} className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent" />
+          <input type="color" value={toHexColor(slide.backgroundColor)} onChange={(e) => onUpdate({ ...slide, backgroundColor: e.target.value })} className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent" />
         </label>
 
         <div className="flex gap-2 shrink-0 ml-3">

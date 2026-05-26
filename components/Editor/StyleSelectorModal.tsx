@@ -82,8 +82,8 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
             <div className="relative w-full rounded-lg overflow-hidden bg-[#f4f4f4]" style={{ aspectRatio: "4/5" }}>
 
               {/* Wave grid SVG — igual ao gerado no canvas */}
-              <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="100%" height="100%" fill="#f7f7f7" />
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100" height="100" fill="#f7f7f7" />
                 {/* Linhas horizontais onduladas */}
                 {[0,1,2,3,4,5,6,7,8].map((i) => {
                   const y = (i / 8) * 100;
@@ -92,7 +92,7 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
                   return (
                     <path
                       key={`h${i}`}
-                      d={`M0,${y + wave}% Q25%,${y + wave2}% 50%,${y - wave}% T100%,${y + wave * 0.5}%`}
+                      d={`M0,${y + wave} Q25,${y + wave2} 50,${y - wave} T100,${y + wave * 0.5}`}
                       stroke="rgba(0,0,0,0.07)" strokeWidth="0.8" fill="none"
                     />
                   );
@@ -104,7 +104,7 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
                   return (
                     <path
                       key={`v${i}`}
-                      d={`M${x + wave}%,0 Q${x - wave}%,50% ${x + wave * 0.5}%,100%`}
+                      d={`M${x + wave},0 Q${x - wave},50 ${x + wave * 0.5},100`}
                       stroke="rgba(0,0,0,0.07)" strokeWidth="0.8" fill="none"
                     />
                   );
