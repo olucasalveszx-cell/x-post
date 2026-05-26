@@ -334,32 +334,20 @@ async function fromFalPulid(prompt: string, style: ImageStyle, refBase64: string
   return { imageUrl, source: "fal-pulid" };
 }
 
-// ── Faz upload da referência para o Vercel Blob e retorna URL pública ────────
-async function uploadRefToPublicUrl(base64: string, mime: string): Promise<string> {
-  const buffer = Buffer.from(base64, "base64");
-  const ext = mime.split("/")[1]?.split("+")[0] ?? "jpg";
-  const blob = await put(
-    `facerefs/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`,
-    buffer,
-    { access: "public" as any, contentType: mime }
-  );
-  return blob.url;
-}
-
 // ── fal.ai Face Swap — copia pixels reais do rosto ───────────
-async function fromFalFaceSwap(sceneUrl: string, refBase64: string | null, refMime: string | null, preUploadedRefUrl?: string): Promise<string> {
+async function fromFalFaceSwap(sceneUrl: string, refBase64: string, refMime: string): Promise<string> {
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY não configurada");
 
-  // Usa URL pré-uploadada se disponível — evita upload redundante por slide
-  const refUrl = preUploadedRefUrl ?? await uploadRefToPublicUrl(refBase64!, refMime!);
+  // fal.ai aceita data URIs internamente — sem necessidade de upload externo
+  const refDataUrl = `data:${refMime};base64,${refBase64}`;
 
   const res = await fetch("https://fal.run/fal-ai/face-swap", {
     method: "POST",
     headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      base_image_url: sceneUrl,  // cena gerada (corpo/fundo)
-      swap_image_url: refUrl,    // rosto da referência (URL pública)
+      base_image_url: sceneUrl,   // cena gerada (corpo/fundo)
+      swap_image_url: refDataUrl, // rosto da referência
       sync_mode: true,
     }),
     signal: AbortSignal.timeout(60000),
@@ -380,13 +368,11 @@ async function fromFalFaceSwap(sceneUrl: string, refBase64: string | null, refMi
 }
 
 // ── Cena + Face Swap — gera cena e troca rosto ───────────────
-async function fromSceneAndSwap(prompt: string, style: ImageStyle, refBase64: string | null, refMime: string | null, preUploadedRefUrl?: string) {
-  // Rosto frontal explícito garante área de face grande o suficiente para o swap funcionar
+async function fromSceneAndSwap(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
   const scenePrompt = `${prompt}, close-up portrait, person looking directly at camera, face fully visible and centered, natural frontal lighting, clean background, sharp face`;
-  // 20 steps: melhor qualidade de cena para o swap ter mais pixels de face para trabalhar
   const scene = await fromFalSchnell(scenePrompt, style, 20);
   if (scene.imageUrl.startsWith("data:")) throw new Error("Schnell retornou data: URI, face-swap não suportado");
-  const swapped = await fromFalFaceSwap(scene.imageUrl, refBase64, refMime, preUploadedRefUrl);
+  const swapped = await fromFalFaceSwap(scene.imageUrl, refBase64, refMime);
   console.log("[image] Cena+FaceSwap pipeline OK");
   return { imageUrl: swapped, source: "fal-scene-swap" };
 }
@@ -674,7 +660,7 @@ async function saveToGallery(imageUrl: string, email: string | null | undefined,
 
 // ── Handler principal ─────────────────────────────────────────
 export async function POST(req: NextRequest) {
-  const { prompt, imageStyle = "gemini", activationToken, referenceImageBase64, referenceImageMime, referenceImageUrl } = await req.json();
+  const { prompt, imageStyle = "gemini", activationToken, referenceImageBase64, referenceImageMime } = await req.json();
   if (!prompt) return NextResponse.json({ error: "prompt obrigatório" }, { status: 400 });
 
   const today = new Date().toISOString().slice(0, 10);
@@ -682,21 +668,15 @@ export async function POST(req: NextRequest) {
 
   const VALID_STYLES: ImageStyle[] = ["gemini", "foto_real", "cinematico", "editorial", "dark_mood", "vibrante", "minimalista"];
   const style: ImageStyle = VALID_STYLES.includes(imageStyle) ? imageStyle : "gemini";
-  const hasReference = !!(referenceImageUrl || (referenceImageBase64 && referenceImageMime));
+  const hasReference = !!(referenceImageBase64 && referenceImageMime);
 
   // Em modo com rosto: skip enhancePrompt (destrói instruções de face preservation)
-  // Se já veio URL pública do frontend (upload único), usa direto; senão faz o upload agora
-  const [enhancedPrompt, session, personDesc, resolvedRefUrl] = await Promise.all([
+  const [enhancedPrompt, session, personDesc] = await Promise.all([
     hasReference ? Promise.resolve(prompt) : enhancePrompt(prompt),
     getServerSession(authOptions),
-    hasReference && referenceImageBase64 && referenceImageMime
-      ? detectPersonDescription(referenceImageBase64, referenceImageMime)
+    hasReference
+      ? detectPersonDescription(referenceImageBase64!, referenceImageMime!)
       : Promise.resolve("person"),
-    referenceImageUrl
-      ? Promise.resolve(referenceImageUrl as string)
-      : hasReference && referenceImageBase64 && referenceImageMime
-        ? uploadRefToPublicUrl(referenceImageBase64, referenceImageMime)
-        : Promise.resolve(null as null),
   ]);
 
   // Extrai só a cena curta do prompt — suporta o novo formato "Create a realistic image..."
@@ -744,7 +724,7 @@ export async function POST(req: NextRequest) {
     // 1º: Schnell (20 steps) + Face Swap — ~40s, fidelidade pixel-perfect (copia o rosto real)
     // resolvedRefUrl já está uploadado — sem custo extra de upload aqui
     try {
-      const r = await fromSceneAndSwap(facePrompt, style, referenceImageBase64 ?? null, referenceImageMime ?? null, resolvedRefUrl ?? undefined);
+      const r = await fromSceneAndSwap(facePrompt, style, referenceImageBase64!, referenceImageMime!);
       plan = "reference-faceswap";
       result = r;
     } catch (e: any) {
@@ -754,11 +734,11 @@ export async function POST(req: NextRequest) {
     // Fallbacks: PuLID + InstantID em paralelo se o swap falhou
     const fallbackTries: Array<() => Promise<ImageResult>> = [
       () => Promise.any([
-        fromFalPulid(facePrompt, style, referenceImageBase64 ?? "", referenceImageMime ?? ""),
-        fromFalInstantId(facePrompt, style, referenceImageBase64 ?? "", referenceImageMime ?? ""),
+        fromFalPulid(facePrompt, style, referenceImageBase64!, referenceImageMime!),
+        fromFalInstantId(facePrompt, style, referenceImageBase64!, referenceImageMime!),
       ]).then(r => { plan = `reference-${r.source}`; return r; }),
-      () => fromFalKontext(facePrompt, style, referenceImageBase64 ?? "", referenceImageMime ?? "").then(r => { plan = "reference-kontext"; return r; }),
-      () => fromOpenAIWithReference(facePrompt, style, referenceImageBase64 ?? "", referenceImageMime ?? "").then(r => { plan = "reference"; return r; }),
+      () => fromFalKontext(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }),
+      () => fromOpenAIWithReference(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
       () => fromOpenAI(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
       () => fromFal(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
       () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),

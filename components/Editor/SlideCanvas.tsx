@@ -1144,16 +1144,9 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
               </div>
             )}
 
-            {/* Handle resize — escalonado, maior e com label para texto */}
+            {/* Handle resize — escalonado */}
             {isSelected && !isCropping && (
               <>
-                {el.type === "text" && (
-                  <div style={{ position: "absolute", bottom: -Math.round(rS / 2) - Math.round(20 * S), right: 0, display: "flex", alignItems: "center", gap: Math.round(4 * S), zIndex: 11, pointerEvents: "none" }}>
-                    <span style={{ fontSize: Math.round(11 * S), color: "rgba(76,110,245,0.9)", background: "rgba(0,0,0,0.6)", borderRadius: Math.round(4 * S), padding: `${Math.round(2 * S)}px ${Math.round(6 * S)}px`, whiteSpace: "nowrap", fontFamily: "sans-serif" }}>
-                      ↕↔ tamanho
-                    </span>
-                  </div>
-                )}
                 <div
                   style={{ position: "absolute", width: rS, height: rS, background: el.type === "text" ? "#3b5bdb" : "#4c6ef5", border: `${Math.max(1, Math.round(2 * S))}px solid white`, borderRadius: "50%", cursor: "se-resize", bottom: -Math.round(rS / 2), right: -Math.round(rS / 2), zIndex: 10, touchAction: "none", boxShadow: el.type === "text" ? `0 0 ${Math.round(8 * S)}px rgba(59,91,219,0.8)` : "none", display: "flex", alignItems: "center", justifyContent: "center" }}
                   onMouseDown={(e) => { e.stopPropagation(); handleResizeDown(e, el); }}
