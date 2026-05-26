@@ -22,7 +22,8 @@ export async function POST(req: NextRequest) {
     // A URL do blob é acessível server-side com BLOB_READ_WRITE_TOKEN
     const blob = await put(`ig-media/${Date.now()}.${ext}`, buffer, {
       contentType: mimeType,
-    } as any);
+      access: "private",
+    });
 
     // Armazena só a URL no Redis (string pequena, < 200 bytes)
     const id = uuid();
