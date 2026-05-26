@@ -769,10 +769,7 @@ export async function POST(req: NextRequest) {
       try { result = await fn(); } catch (e: any) { errors.push(e.message); }
     }
 
-    // Upscaling automático 2x — só para URLs reais (não data:, não buscas)
-    if (result && !result.imageUrl.startsWith("data:") && result.source !== "pexels" && result.source !== "google") {
-      result.imageUrl = await upscaleImage(result.imageUrl, enhancedPrompt);
-    }
+    // Sem upscaling no modo com rosto — Schnell+FaceSwap já usa ~50s, upscaling estouraria os 120s do Vercel
   } else if (!isPro) {
     // Schnell primeiro (3-8s) → Pro como fallback de qualidade → busca web
     const tries: Array<() => Promise<ImageResult>> = [
