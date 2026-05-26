@@ -371,11 +371,21 @@ export default function EditorPage() {
           const saved = JSON.parse(raw);
           if (!saved._owner || saved._owner === currentEmail) {
             const { _owner, ...account } = saved;
-            // Token expirado — limpa e força reconexão
             if (account.expiresAt && account.expiresAt < Date.now()) {
               localStorage.removeItem("ig_account");
             } else {
               setIgAccount(account);
+              // Valida o token em background — limpa silenciosamente se inválido
+              fetch("/api/instagram/validate-token", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token: account.token }),
+              }).then((r) => r.json()).then((data) => {
+                if (!data.valid) {
+                  setIgAccount(null);
+                  localStorage.removeItem("ig_account");
+                }
+              }).catch(() => {});
             }
           } else {
             localStorage.removeItem("ig_account");
