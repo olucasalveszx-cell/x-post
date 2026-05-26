@@ -102,10 +102,12 @@ export async function GET(req: NextRequest) {
     }
 
     // 5. Redireciona de volta ao editor com os dados no URL
+    const expiresAt = Date.now() + (longData.expires_in ?? 5184000) * 1000; // default 60 days
     const params = new URLSearchParams({
       ig_token: igToken,
       ig_account: igAccountId,
       ig_username: igUsername,
+      ig_expires_at: String(expiresAt),
       ig_success: "1",
     });
 

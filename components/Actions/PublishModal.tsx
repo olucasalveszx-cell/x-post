@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Upload, Pencil, LayoutGrid, BookImage, Calendar, Clock, Music, ChevronRight, ChevronLeft } from "lucide-react";
+import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Upload, Pencil, LayoutGrid, BookImage, Calendar, Clock, Music, ChevronRight, ChevronLeft, RefreshCw } from "lucide-react";
 import { renderSlide } from "@/lib/render-slide";
 
 interface IGAccount {
@@ -39,11 +39,22 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState(0);
   const [permalink, setPermalink] = useState("");
+  const [isAuthError, setIsAuthError] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [showMusicConfirm, setShowMusicConfirm] = useState(false);
 
   const isLoading = ["exporting", "uploading", "publishing", "scheduling"].includes(status);
+
+  const handleError = (err: any, fallback: string) => {
+    const msg: string = err?.message ?? fallback;
+    // OAuthException code 190 = expired/invalid token
+    const authKeywords = ["OAuthException", "190", "Authorization Error", "token expirado", "token expired", "Invalid OAuth", "Session has expired", "access token", "Token inválido"];
+    const isAuth = authKeywords.some((k) => msg.includes(k));
+    setIsAuthError(isAuth);
+    setStatus("error");
+    setMessage(isAuth ? "Token do Instagram expirado. Reconecte sua conta." : msg);
+  };
   const statusLabel: Record<string, string> = {
     exporting: "Exportando slides...",
     uploading: "Enviando para o servidor...",
@@ -61,20 +72,37 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     return urls;
   };
 
+  // Compress to fit Redis's 1MB body limit (~850KB base64 = ~637KB binary is the safe max)
+  const compressForUpload = async (dataUrl: string): Promise<string> => {
+    const maxB64Bytes = 850 * 1024;
+    if (dataUrl.split(",")[1].length <= maxB64Bytes) return dataUrl;
+    const img = new Image();
+    await new Promise<void>((res) => { img.onload = () => res(); img.src = dataUrl; });
+    const cvs = document.createElement("canvas");
+    cvs.width = img.width; cvs.height = img.height;
+    cvs.getContext("2d")!.drawImage(img, 0, 0);
+    for (const q of [0.85, 0.75, 0.65, 0.55]) {
+      const result = cvs.toDataURL("image/jpeg", q);
+      if (result.split(",")[1].length <= maxB64Bytes) return result;
+    }
+    return cvs.toDataURL("image/jpeg", 0.55);
+  };
+
   const uploadImages = async (dataUrls: string[]): Promise<string[]> => {
-    const publicUrls: string[] = [];
-    for (let i = 0; i < dataUrls.length; i++) {
-      setProgress(40 + Math.round((i / dataUrls.length) * 40));
-      const base64 = dataUrls[i].split(",")[1];
+    setProgress(42);
+    // Compress + upload all slides in parallel
+    const publicUrls = await Promise.all(dataUrls.map(async (dataUrl, i) => {
+      const compressed = await compressForUpload(dataUrl);
+      const base64 = compressed.split(",")[1];
       const res = await fetch("/api/instagram/media", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ base64, mimeType: "image/jpeg" }),
       });
       const data = await res.json();
-      if (!data.url) throw new Error("Falha ao hospedar imagem " + (i + 1));
-      publicUrls.push(data.url);
-    }
+      if (!res.ok || !data.url) throw new Error(data.error ?? "Falha ao hospedar imagem " + (i + 1));
+      return data.url as string;
+    }));
     return publicUrls;
   };
 
@@ -100,8 +128,9 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     setStatus("exporting"); setMessage(""); setProgress(0);
     try {
       const dataUrls = await exportSlides();
-      if (dataUrls.length < 2) throw new Error("O carrossel precisa ter pelo menos 2 slides");
+      if (postType === "carousel" && dataUrls.length < 2) throw new Error("O carrossel precisa ter pelo menos 2 slides");
       setStatus("uploading");
+      // Use Redis-backed media endpoint (shared across all Vercel instances)
       const publicUrls = await uploadImages(dataUrls);
       setProgress(80);
       setStatus("publishing");
@@ -115,7 +144,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       setProgress(100); setStatus("success"); setMessage(data.message);
       setPermalink(data.permalink ?? "");
     } catch (err: any) {
-      setStatus("error"); setMessage(err.message ?? "Erro ao publicar");
+      handleError(err, "Erro ao publicar");
     }
   };
 
@@ -172,7 +201,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       setProgress(100); setStatus("success");
       setMessage(`Post agendado para ${new Date(scheduledAt).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`);
     } catch (err: any) {
-      setStatus("error"); setMessage(err.message ?? "Erro ao agendar");
+      handleError(err, "Erro ao agendar");
     }
   };
 
@@ -406,8 +435,17 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
               )}
 
               {status === "error" && (
-                <div className="flex items-start gap-2 rounded-lg p-3 text-sm bg-red-900/30 border border-red-800/50 text-red-300">
-                  <AlertCircle size={14} className="mt-0.5 shrink-0" />{message}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start gap-2 rounded-lg p-3 text-sm bg-red-900/30 border border-red-800/50 text-red-300">
+                    <AlertCircle size={14} className="mt-0.5 shrink-0" />{message}
+                  </div>
+                  {isAuthError && (
+                    <button
+                      onClick={() => { onClose(); onLoginClick(); }}
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all">
+                      <RefreshCw size={14} /> Reconectar Instagram
+                    </button>
+                  )}
                 </div>
               )}
 

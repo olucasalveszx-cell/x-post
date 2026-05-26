@@ -9,6 +9,7 @@ async function call(command: unknown[]): Promise<any> {
     cache: "no-store",
   });
   const json = await res.json();
+  if (json.error) throw new Error(`Redis error: ${json.error}`);
   return json.result;
 }
 
@@ -36,5 +37,6 @@ export async function redisListAdd(key: string, value: string): Promise<void> {
 export const redisListAll = (key: string): Promise<string[]> =>
   call(["LRANGE", key, "0", "-1"]);
 
+export const redisSetex = (key: string, seconds: number, value: string): Promise<void> => call(["SETEX", key, seconds, value]);
 export const redisDel  = (key: string): Promise<number> => call(["DEL", key]);
 export const redisLRem = (key: string, count: number, value: string): Promise<number> => call(["LREM", key, count, value]);

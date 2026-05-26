@@ -257,7 +257,6 @@ async function fromFalInstantId(prompt: string, style: ImageStyle, refBase64: st
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY não configurada");
 
-  // Prompt limpo sem specs de câmera
   const fullPrompt = `${prompt}. ${FACE_STYLE_HINT}. Portrait orientation 4:5 aspect ratio.`;
   const imageDataUrl = `data:${refMime};base64,${refBase64}`;
 
@@ -268,17 +267,17 @@ async function fromFalInstantId(prompt: string, style: ImageStyle, refBase64: st
       face_image_url: imageDataUrl,
       prompt: fullPrompt,
       negative_prompt: "nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, illustration, out of focus, grainy, overexposed, underexposed, sunglasses, hat, mask",
-      num_inference_steps: 40,
-      guidance_scale: 7.0,
-      ip_adapter_scale: 1.0,
-      controlnet_conditioning_scale: 0.9,
+      num_inference_steps: 50,
+      guidance_scale: 5.0,
+      ip_adapter_scale: 0.85,
+      controlnet_conditioning_scale: 0.8,
       enhance_face_region: true,
       image_size: FAL_SIZE_4x5,
       output_format: "jpeg",
       output_quality: 95,
       sync_mode: true,
     }),
-    signal: AbortSignal.timeout(55000),
+    signal: AbortSignal.timeout(65000),
   });
 
   const data = await res.json();
@@ -311,13 +310,13 @@ async function fromFalPulid(prompt: string, style: ImageStyle, refBase64: string
       prompt: fullPrompt,
       negative_prompt: "nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, out of focus, grainy, overexposed, sunglasses, hat, mask",
       id_image: imageDataUrl,
-      num_inference_steps: 30,
-      guidance_scale: 1.5,
-      true_cfg: 1.0,
+      num_inference_steps: 35,
+      guidance_scale: 2.0,
+      true_cfg: 4.0,
       image_size: FAL_SIZE_4x5,
       sync_mode: true,
     }),
-    signal: AbortSignal.timeout(55000),
+    signal: AbortSignal.timeout(60000),
   });
 
   const data = await res.json();
@@ -371,7 +370,8 @@ async function fromFalFaceSwap(sceneUrl: string, refBase64: string, refMime: str
 async function fromSceneAndSwap(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
   // Face must be in the UPPER THIRD of the frame — text overlay covers the bottom 40% of the slide
   const scenePrompt = `${prompt}, portrait photo, person's FACE POSITIONED IN THE UPPER PORTION of the frame (face center between 20%-45% from the top), head and shoulders clearly visible, looking directly at camera, natural frontal lighting, clean background, lower portion of image has minimal important content`;
-  const scene = await fromFalSchnell(scenePrompt, style, 20);
+  // 30 steps for better face quality (was 20 — too few caused poor face regions for the swap)
+  const scene = await fromFalSchnell(scenePrompt, style, 30);
   if (scene.imageUrl.startsWith("data:")) throw new Error("Schnell retornou data: URI, face-swap não suportado");
   const swapped = await fromFalFaceSwap(scene.imageUrl, refBase64, refMime);
   console.log("[image] Cena+FaceSwap pipeline OK");
@@ -561,9 +561,34 @@ async function fromGoogleImages(prompt: string) {
   const items: any[] = data.items ?? [];
   if (!items.length) throw new Error("Google Images: sem resultados");
 
-  const pick = items[Math.floor(Math.random() * Math.min(items.length, 5))];
-  console.log("[image] Google Images OK");
-  return { imageUrl: pick.link, source: "google" };
+  // Try each candidate until one proxies successfully (CORS protection on many sites)
+  const candidates = items.slice(0, 5);
+  for (const candidate of candidates) {
+    try {
+      const imgRes = await fetch(candidate.link, {
+        signal: AbortSignal.timeout(6000),
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          "Referer": "https://www.google.com/",
+          "Accept": "image/*,*/*;q=0.8",
+        },
+      });
+      if (!imgRes.ok) continue;
+      const ct = imgRes.headers.get("content-type") ?? "";
+      if (!ct.startsWith("image/")) continue;
+      const buffer = await imgRes.arrayBuffer();
+      if (buffer.byteLength < 5000) continue;
+      const ext = ct.split("/")[1]?.split("+")[0] ?? "jpg";
+      const blob = await put(
+        `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`,
+        Buffer.from(buffer),
+        { access: "public" as any, contentType: ct.split(";")[0] }
+      );
+      console.log("[image] Google Images + Blob OK");
+      return { imageUrl: blob.url, source: "google" };
+    } catch { continue; }
+  }
+  throw new Error("Google Images: nenhuma imagem pôde ser baixada");
 }
 
 // ── Pexels (fallback final) ───────────────────────────────────
@@ -722,22 +747,15 @@ export async function POST(req: NextRequest) {
   const errors: string[] = [];
 
   if (hasReference) {
-    // 1º: Schnell (20 steps) + Face Swap — ~40s, fidelidade pixel-perfect (copia o rosto real)
-    // resolvedRefUrl já está uploadado — sem custo extra de upload aqui
-    try {
-      const r = await fromSceneAndSwap(facePrompt, style, referenceImageBase64!, referenceImageMime!);
-      plan = "reference-faceswap";
-      result = r;
-    } catch (e: any) {
-      errors.push(`SceneAndSwap: ${e.message}`);
-    }
-
-    // Fallbacks: PuLID + InstantID em paralelo se o swap falhou
-    const fallbackTries: Array<() => Promise<ImageResult>> = [
-      () => Promise.any([
-        fromFalPulid(facePrompt, style, referenceImageBase64!, referenceImageMime!),
-        fromFalInstantId(facePrompt, style, referenceImageBase64!, referenceImageMime!),
-      ]).then(r => { plan = `reference-${r.source}`; return r; }),
+    // Pipeline ordenado por fidelidade facial:
+    // 1. InstantID — mais natural (sem costuras), boa fidelidade (~50-60s)
+    // 2. PuLID — identidade forte via injeção direta no FLUX (~50s)
+    // 3. Scene+FaceSwap — copia pixels reais do rosto, boa fidelidade mas pode ter costuras (~50s)
+    // 4. Kontext / OpenAI edits como safety nets
+    const faceTries: Array<() => Promise<ImageResult>> = [
+      () => fromFalInstantId(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-instantid"; return r; }),
+      () => fromFalPulid(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-pulid"; return r; }),
+      () => fromSceneAndSwap(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-faceswap"; return r; }),
       () => fromFalKontext(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }),
       () => fromOpenAIWithReference(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
       () => fromOpenAI(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
@@ -745,12 +763,12 @@ export async function POST(req: NextRequest) {
       () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
       () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
     ];
-    for (const fn of fallbackTries) {
+    for (const fn of faceTries) {
       if (result) break;
       try { result = await fn(); } catch (e: any) { errors.push(e.message); }
     }
 
-    // Sem upscaling no modo com rosto — Schnell+FaceSwap já usa ~50s, upscaling estouraria os 120s do Vercel
+    // Sem upscaling no modo com rosto — pipeline já usa ~60s, upscaling estouraria os 120s do Vercel
   } else if (!isPro) {
     // Schnell primeiro (3-8s) → Pro como fallback de qualidade → busca web
     const tries: Array<() => Promise<ImageResult>> = [

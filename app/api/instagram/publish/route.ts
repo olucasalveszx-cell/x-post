@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const GRAPH = "https://graph.facebook.com/v20.0";
 
@@ -16,29 +16,52 @@ async function uploadCarouselItem(igAccountId: string, imageUrl: string, token: 
     }),
   });
   const data = await res.json();
-  if (!data.id) throw new Error(`Erro ao fazer upload: ${JSON.stringify(data.error ?? data)}`);
+  if (!data.id) {
+    const code = data.error?.code ?? 0;
+    const msg  = data.error?.message ?? JSON.stringify(data);
+    if (code === 190 || msg.includes("Authorization Error") || msg.includes("OAuthException")) {
+      throw new Error(`Instagram API: Authorization Error — token expirado ou revogado (code ${code})`);
+    }
+    throw new Error(`Erro ao fazer upload: ${msg}`);
+  }
   return data.id;
 }
 
 // Aguarda até o container estar FINISHED (pronto para publicar)
-async function waitUntilReady(mediaId: string, token: string, maxWaitMs = 30000): Promise<void> {
-  const interval = 2000;
-  const maxAttempts = Math.ceil(maxWaitMs / interval);
+async function waitUntilReady(mediaId: string, token: string, maxWaitMs = 90000): Promise<void> {
+  const deadline = Date.now() + maxWaitMs;
+  let attempt = 0;
 
-  for (let i = 0; i < maxAttempts; i++) {
+  while (Date.now() < deadline) {
     const res = await fetch(
       `${GRAPH}/${mediaId}?fields=status_code&access_token=${token}`
     );
     const data = await res.json();
+
+    // Surface Instagram API errors immediately instead of timing out silently
+    if (data.error) {
+      const code = data.error.code ?? 0;
+      const msg  = data.error.message ?? JSON.stringify(data.error);
+      // code 190 = expired/invalid OAuth token
+      if (code === 190 || msg.includes("Authorization Error") || msg.includes("OAuthException")) {
+        throw new Error(`Instagram API: Authorization Error — token expirado ou revogado (code ${code})`);
+      }
+      throw new Error(`Instagram API: ${msg}`);
+    }
+
     const status: string = data.status_code ?? "";
-    console.log(`[publish] media ${mediaId} status: ${status} (tentativa ${i + 1})`);
+    console.log(`[publish] media ${mediaId} status: "${status}" (tentativa ${++attempt})`);
 
     if (status === "FINISHED") return;
-    if (status === "ERROR") throw new Error(`Mídia ${mediaId} falhou no processamento`);
+    if (status === "ERROR")   throw new Error(`Mídia ${mediaId} falhou no processamento — verifique se a URL da imagem está pública e acessível`);
+    if (status === "EXPIRED") throw new Error(`Mídia ${mediaId} expirou — a URL da imagem pode ter ficado inacessível`);
+    if (status && status !== "IN_PROGRESS") console.warn(`[publish] status inesperado: ${status}`);
 
+    // Poll: 3s for first 10 attempts, then 5s
+    const interval = attempt < 10 ? 3000 : 5000;
     await new Promise((r) => setTimeout(r, interval));
   }
-  throw new Error(`Timeout aguardando processamento da mídia ${mediaId}`);
+  throw new Error(`Instagram demorou demais para processar a mídia ${mediaId}. Tente novamente.`);
 }
 
 async function createCarousel(igAccountId: string, childIds: string[], caption: string, token: string): Promise<string> {
@@ -94,6 +117,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Nenhuma imagem para publicar" }, { status: 400 });
     }
 
+    // Verify all image URLs are accessible before sending to Instagram
+    console.log(`[publish] Verificando ${imageUrls.length} URLs de imagem...`);
+    await Promise.all((imageUrls as string[]).map(async (url: string, i: number) => {
+      const check = await fetch(url, { method: "HEAD" }).catch(() => null);
+      if (!check || !check.ok) {
+        throw new Error(`Imagem ${i + 1} não está acessível (${check?.status ?? "sem resposta"}). Tente publicar novamente.`);
+      }
+    }));
+
     // ── Stories ──────────────────────────────────────────────
     if (postType === "stories") {
       console.log(`[publish] Publicando ${imageUrls.length} story(ies)...`);
@@ -120,13 +152,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "O carrossel precisa ter entre 2 e 10 imagens" }, { status: 400 });
     }
 
-    console.log(`[publish] Fazendo upload de ${imageUrls.length} imagens...`);
-    const childIds: string[] = [];
-    for (let i = 0; i < imageUrls.length; i++) {
-      const id = await uploadCarouselItem(igAccountId, imageUrls[i], igToken);
-      childIds.push(id);
-      console.log(`[publish] Imagem ${i + 1}/${imageUrls.length} enviada: ${id}`);
-    }
+    console.log(`[publish] Criando ${imageUrls.length} containers em paralelo...`);
+    // Create all containers in parallel — saves N×300ms compared to sequential
+    const childIds = await Promise.all(
+      (imageUrls as string[]).map((url: string, i: number) =>
+        uploadCarouselItem(igAccountId, url, igToken).then((id) => {
+          console.log(`[publish] Container ${i + 1}/${imageUrls.length}: ${id}`);
+          return id;
+        })
+      )
+    );
 
     console.log("[publish] Aguardando processamento...");
     await Promise.all(childIds.map((id) => waitUntilReady(id, igToken)));

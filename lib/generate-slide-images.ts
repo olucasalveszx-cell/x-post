@@ -104,7 +104,7 @@ export async function generateSlideImages(
   return Promise.all(
     slides.map(async (slide, i) => {
       const name = `${postId}/slide-${i + 1}`;
-      const fallbackQuery = slide.searchQuery?.trim() || slide.title;
+      const fallbackQuery = slide.searchQuery?.trim() || slide.imageContext?.trim() || slide.title;
 
       try {
         // 1. OpenAI DALL-E 3

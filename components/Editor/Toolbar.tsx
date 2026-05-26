@@ -137,6 +137,7 @@ export default function Toolbar({
   const [webSearchImages, setWebSearchImages] = useState<{ url: string; thumb: string; title: string }[]>([]);
   const [webSearchLoading, setWebSearchLoading] = useState(false);
   const [webSearchPage, setWebSearchPage] = useState(1);
+  const [webSearchSelectingIdx, setWebSearchSelectingIdx] = useState<number | null>(null);
 
   const [showMore, setShowMore] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -172,6 +173,32 @@ export default function Toolbar({
       if (data.images) setWebSearchImages(data.images);
     } catch {}
     finally { setWebSearchLoading(false); }
+  };
+
+  const selectWebImage = async (img: { url: string; thumb: string }, idx: number) => {
+    setWebSearchSelectingIdx(idx);
+    try {
+      const res = await fetch("/api/image-proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // No thumbUrl fallback — thumbnail is low-res, better to fail and let user pick another
+        body: JSON.stringify({ url: img.url }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.base64) throw new Error(data.error ?? "imagem bloqueada pelo site de origem. Tente outra.");
+      const dataUrl = `data:${data.mimeType};base64,${data.base64}`;
+      if (webSearchMode === "el") {
+        if (isFrame) patchSelected({ frameImageUrl: dataUrl });
+        else patchSelected({ src: dataUrl });
+      } else {
+        onUpdate({ ...slide, backgroundImageUrl: dataUrl });
+      }
+      setShowWebSearch(false);
+    } catch (e: any) {
+      alert(e.message ?? "Não foi possível carregar essa imagem. Tente outra.");
+    } finally {
+      setWebSearchSelectingIdx(null);
+    }
   };
 
   const openWebSearch = () => {
@@ -1199,20 +1226,18 @@ export default function Toolbar({
                 {webSearchImages.map((img, i) => (
                   <button
                     key={i}
-                    onClick={() => {
-                      if (webSearchMode === "el") {
-                        if (isFrame) patchSelected({ frameImageUrl: img.url });
-                        else patchSelected({ src: img.url });
-                      } else {
-                        onUpdate({ ...slide, backgroundImageUrl: img.url });
-                      }
-                      setShowWebSearch(false);
-                    }}
+                    onClick={() => selectWebImage(img, i)}
+                    disabled={webSearchSelectingIdx !== null}
                     title={img.title}
-                    className="aspect-[3/4] rounded-lg overflow-hidden border border-[var(--border-2)] hover:border-sky-500/60 transition-colors relative group"
+                    className="aspect-[3/4] rounded-lg overflow-hidden border border-[var(--border-2)] hover:border-sky-500/60 transition-colors relative group disabled:opacity-60"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={img.thumb} alt={img.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                    {webSearchSelectingIdx === i && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <svg className="animate-spin w-5 h-5 text-white" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" /></svg>
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>

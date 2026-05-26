@@ -68,6 +68,7 @@ export default function ImageSearchModal({ open, onClose, onSelect, defaultQuery
       const res = await fetch("/api/image-proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // No thumbUrl fallback — thumbnail is low-res, better to show error
         body: JSON.stringify({ url: img.url }),
       });
       const data = await res.json();
@@ -76,7 +77,7 @@ export default function ImageSearchModal({ open, onClose, onSelect, defaultQuery
       onSelect(data.base64, data.mimeType, img.url);
       setTimeout(onClose, 300);
     } catch {
-      setError("Falha ao carregar imagem. Tente outra.");
+      setError("Imagem bloqueada pelo site de origem. Tente outra.");
     } finally {
       setLoadingIdx(null);
     }

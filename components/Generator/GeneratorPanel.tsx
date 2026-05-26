@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { Sparkles, Search, Loader2, AlertCircle, Crown, Zap, LogIn, CheckCircle2, Clock, X, Lightbulb, TrendingUp, Dumbbell, Briefcase, Star, BookOpen } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
@@ -187,8 +186,8 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
       elements,
       width: W,
       height: H,
-      _imagePrompt: gs.imagePrompt || ws.topic,
-      _searchQuery: gs.searchQuery || ws.topic,
+      _imagePrompt: gs.imagePrompt || gs.imageContext || ws.topic,
+      _searchQuery: gs.searchQuery || gs.imageContext || ws.topic,
       _elementImageId: elementImageId,
     };
   });
@@ -339,6 +338,13 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
 
   const isLoading = ["searching", "generating", "images"].includes(status);
 
+  // Broadcast loading state so editor page can show overlay even when this panel is unmounted (mobile)
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("generator-loading", {
+      detail: { isLoading, status, imageProgress, totalImages },
+    }));
+  }, [isLoading, status, imageProgress, totalImages]);
+
   const KIRVANO_URLS: Record<string, string> = {
     basic:    "https://pay.kirvano.com/d3f6da72-a6be-4d54-8268-20c725e4ab5b",
     pro:      "https://pay.kirvano.com/e5bdb60b-3d05-4338-bbb7-59e17b1b636f",
@@ -462,69 +468,8 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
     (onLayoutChange ?? onGenerate)(slidesWithImages);
   };
 
-  const loadingPopup = isLoading && typeof window !== "undefined"
-    ? createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center md:hidden" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}>
-          <div className="flex flex-col items-center gap-5 px-8 py-10 rounded-3xl bg-[var(--bg-2)] border border-[var(--border)] shadow-2xl mx-4 w-full max-w-xs">
-            {/* Animated icon */}
-            <div className="relative">
-              <div className="p-5 rounded-full bg-brand-500/10 border border-brand-500/20">
-                <Loader2 size={36} className="animate-spin text-brand-400" />
-              </div>
-              <div className="absolute inset-0 rounded-full bg-brand-500/5 animate-ping" />
-            </div>
-
-            {/* Status text */}
-            <div className="text-center">
-              <p className="text-base font-semibold text-[var(--text)]">
-                {status === "searching" && "Pesquisando na web..."}
-                {status === "generating" && "Gerando com I.A..."}
-                {status === "images" && "Gerando imagens com I.A"}
-              </p>
-              <p className="text-xs text-[var(--text-3)] mt-1.5">
-                {status === "searching" && "Buscando informações atualizadas"}
-                {status === "generating" && "Criando o conteúdo dos slides"}
-                {status === "images" && totalImages > 0 ? `${imageProgress} de ${totalImages} slides` : "Aguarde um momento..."}
-              </p>
-            </div>
-
-            {/* Progress bar */}
-            {status === "images" && totalImages > 0 && (
-              <div className="w-full flex flex-col gap-1.5">
-                <div className="w-full bg-[var(--bg-4)] rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-brand-500 h-full transition-all duration-500 rounded-full"
-                    style={{ width: `${(imageProgress / totalImages) * 100}%` }}
-                  />
-                </div>
-                <p className="text-[11px] text-[var(--text-3)] text-right">{Math.round((imageProgress / totalImages) * 100)}%</p>
-              </div>
-            )}
-
-            {/* Steps indicator */}
-            <div className="flex items-center gap-2 mt-1">
-              {["searching", "generating", "images"].map((s, i) => (
-                <div key={s} className="flex items-center gap-2">
-                  <div
-                    className="w-2 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      background: status === s ? "#4c6ef5" : ["searching", "generating", "images"].indexOf(status) > i ? "#6b21a8" : "#1f1f1f",
-                      boxShadow: status === s ? "0 0 8px #4c6ef5" : "none",
-                    }}
-                  />
-                  {i < 2 && <div className="w-6 h-px bg-[var(--border-2)]" />}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>,
-        document.body
-      )
-    : null;
-
   return (
     <div className="flex flex-col h-full">
-      {loadingPopup}
       {/* User badge + Reference row */}
       <div className="p-4 shrink-0 border-b border-[var(--border)] flex flex-col gap-2">
         {!session?.user ? (

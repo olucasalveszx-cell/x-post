@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuid } from "uuid";
-import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle, Instagram, Check, Trash2 } from "lucide-react";
+import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle, Instagram, Check, Trash2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
@@ -28,7 +28,7 @@ import LoginAnimation from "@/components/LoginAnimation";
 import TutorialPromptModal, { NEVER_KEY, SESSION_KEY as TUTORIAL_SESSION_KEY } from "@/components/Tutorial/TutorialPromptModal";
 import TutorialOverlay from "@/components/Tutorial/TutorialOverlay";
 
-interface IGAccount { token: string; accountId: string; username: string; }
+interface IGAccount { token: string; accountId: string; username: string; expiresAt?: number; }
 
 // Synchronous cleanup — runs at module-load time before ANY React component mounts.
 // Always sanitizes avatarSrc: only keeps short http(s) URLs, strips everything else.
@@ -137,6 +137,23 @@ export default function EditorPage() {
   const [showTutorial, setShowTutorial] = useState(false);
   const twitterStyleRef = useRef(false);
   const pendingTopicRef = useRef<string | null>(null);
+
+  // ── Loading overlay state (driven by GeneratorPanel events) ──
+  const [genLoadingState, setGenLoadingState] = useState<{
+    isLoading: boolean;
+    status: string;
+    imageProgress: number;
+    totalImages: number;
+  }>({ isLoading: false, status: "idle", imageProgress: 0, totalImages: 0 });
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setGenLoadingState(detail);
+    };
+    window.addEventListener("generator-loading", handler);
+    return () => window.removeEventListener("generator-loading", handler);
+  }, []);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -328,10 +345,12 @@ export default function EditorPage() {
     const currentEmail = session?.user?.email ?? null;
 
     if (success === "1") {
+      const expiresAtParam = params.get("ig_expires_at");
       const account: IGAccount = {
         token: params.get("ig_token") ?? "",
         accountId: params.get("ig_account") ?? "",
         username: params.get("ig_username") ?? "",
+        expiresAt: expiresAtParam ? Number(expiresAtParam) : undefined,
       };
       setIgAccount(account);
       // Salva junto com o email do dono para não vazar entre sessões
@@ -350,12 +369,15 @@ export default function EditorPage() {
         const raw = localStorage.getItem("ig_account");
         if (raw) {
           const saved = JSON.parse(raw);
-          // Só carrega se pertencer ao usuário atual (ou não tiver dono registrado)
           if (!saved._owner || saved._owner === currentEmail) {
             const { _owner, ...account } = saved;
-            setIgAccount(account);
+            // Token expirado — limpa e força reconexão
+            if (account.expiresAt && account.expiresAt < Date.now()) {
+              localStorage.removeItem("ig_account");
+            } else {
+              setIgAccount(account);
+            }
           } else {
-            // Pertence a outro usuário — limpa
             localStorage.removeItem("ig_account");
           }
         }
@@ -544,45 +566,67 @@ export default function EditorPage() {
       ...coverSlide,
       backgroundColor: "#ffffff",
       backgroundGradient: undefined,
-      backgroundPattern: "grid-light",
+      backgroundPattern: undefined,
       backgroundImageUrl: undefined,
       backgroundCrop: undefined,
       elements: [makeProfile(), ...(coverImgEl ? [coverImgEl] : []), ...coverTexts],
     };
 
-    // ── Slides 2+ (conteúdo) ──
-    const CTOP_TITLE  = PROFILE_Y + PROFILE_H + Math.round(H * 0.07);
-    const CTOP_BODY   = CTOP_TITLE + Math.round(H * 0.22) + Math.round(H * 0.02);
+    // ── Slides 2+ (conteúdo) — texto topo, imagem base ──
+    const C_TITLE_Y = PROFILE_Y + PROFILE_H + Math.round(H * 0.05);
+    const C_TITLE_H = Math.round(H * 0.17);
+    const C_BODY_Y  = C_TITLE_Y + C_TITLE_H + Math.round(H * 0.02);
+    const C_BODY_H  = Math.round(H * 0.10);
+    const C_IMG_TOP = Math.round(H * 0.50);
+    const C_IMG_H   = Math.round(H * 0.44);
 
     const contentSlides = rest.map((slide) => {
+      const contentImgUrl =
+        slide.backgroundImageUrl ??
+        (slide.elements.find((el) => el.type === "image" && (el as any).src) as any)?.src ?? null;
+
       const texts = pickTitleBody(slide.elements)
         .map((el, i) => ({
           ...el,
           x: PAD,
-          y: i === 0 ? CTOP_TITLE : CTOP_BODY,
+          y: i === 0 ? C_TITLE_Y : C_BODY_Y,
           width: W - PAD * 2,
-          height: i === 0 ? Math.round(H * 0.22) : Math.round(H * 0.38),
+          height: i === 0 ? C_TITLE_H : C_BODY_H,
           style: {
             ...(el.style as any),
             color: "#111111",
             fontFamily: "'Inter', sans-serif",
-            fontSize: i === 0 ? Math.round(H * 0.044) : Math.round(H * 0.021),
+            fontSize: i === 0 ? Math.round(H * 0.042) : Math.round(H * 0.021),
             fontWeight: i === 0 ? "bold" : "normal",
             lineHeight: i === 0 ? 1.15 : 1.5,
           },
           zIndex: 5,
         }));
 
+      const contentImgEl: import("@/types").SlideElement | null = contentImgUrl
+        ? {
+            id: uuidv4(),
+            type: "image" as const,
+            x: PAD,
+            y: C_IMG_TOP,
+            width: W - PAD * 2,
+            height: C_IMG_H,
+            src: contentImgUrl,
+            zIndex: 2,
+            imageObjectPositionY: 40,
+          }
+        : null;
+
       return {
         ...slide,
         backgroundColor: "#ffffff",
         backgroundGradient: undefined,
-        backgroundPattern: "grid-light" as const,
+        backgroundPattern: undefined,
         backgroundImageUrl: undefined,
         backgroundCrop: undefined,
         backgroundPosition: undefined,
         backgroundZoom: 100,
-        elements: [makeProfile(), ...texts],
+        elements: [makeProfile(), ...texts, ...(contentImgEl ? [contentImgEl] : [])],
       };
     });
 
@@ -1120,6 +1164,61 @@ export default function EditorPage() {
         open={showProfilePicker}
         onClose={(profile) => { setUserProfile(profile); setShowProfilePicker(false); }}
       />
+
+      {/* ── Loading overlay mobile (ativo mesmo com painel fechado) ─── */}
+      {isMobile && genLoadingState.isLoading && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}>
+          <div className="flex flex-col items-center gap-5 px-8 py-10 rounded-3xl mx-4 w-full max-w-xs"
+            style={{ background: "var(--bg-2)", border: "1px solid var(--border)" }}>
+            <div className="relative">
+              <div className="p-5 rounded-full" style={{ background: "rgba(76,110,245,0.1)", border: "1px solid rgba(76,110,245,0.2)" }}>
+                <Loader2 size={36} className="animate-spin" style={{ color: "#818cf8" }} />
+              </div>
+              <div className="absolute inset-0 rounded-full animate-ping" style={{ background: "rgba(76,110,245,0.05)" }} />
+            </div>
+            <div className="text-center">
+              <p className="text-base font-semibold" style={{ color: "var(--text)" }}>
+                {genLoadingState.status === "searching" && "Pesquisando na web..."}
+                {genLoadingState.status === "generating" && "Gerando com I.A..."}
+                {genLoadingState.status === "images" && "Gerando imagens..."}
+              </p>
+              <p className="text-xs mt-1.5" style={{ color: "var(--text-3)" }}>
+                {genLoadingState.status === "searching" && "Buscando informações atualizadas"}
+                {genLoadingState.status === "generating" && "Criando o conteúdo dos slides"}
+                {genLoadingState.status === "images" && genLoadingState.totalImages > 0
+                  ? `${genLoadingState.imageProgress}/${genLoadingState.totalImages} slides`
+                  : "Aguarde um momento..."}
+              </p>
+            </div>
+            {genLoadingState.status === "images" && genLoadingState.totalImages > 0 && (
+              <div className="w-full flex flex-col gap-1.5">
+                <div className="w-full rounded-full overflow-hidden" style={{ background: "var(--bg-4)", height: 6 }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${(genLoadingState.imageProgress / genLoadingState.totalImages) * 100}%`, background: "#4c6ef5" }}
+                  />
+                </div>
+                <p className="text-right text-[11px]" style={{ color: "var(--text-3)" }}>
+                  {Math.round((genLoadingState.imageProgress / genLoadingState.totalImages) * 100)}%
+                </p>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              {(["searching", "generating", "images"] as const).map((s, i) => (
+                <div key={s} className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full transition-all duration-300" style={{
+                    background: genLoadingState.status === s ? "#4c6ef5"
+                      : (["searching", "generating", "images"] as const).indexOf(genLoadingState.status as any) > i ? "#6b21a8" : "#1f1f1f",
+                    boxShadow: genLoadingState.status === s ? "0 0 8px #4c6ef5" : "none",
+                  }} />
+                  {i < 2 && <div className="w-6 rounded-full" style={{ height: 1, background: "var(--border-2)" }} />}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </SubscriptionGate>
     </>

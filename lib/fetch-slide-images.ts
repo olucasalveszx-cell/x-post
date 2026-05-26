@@ -230,7 +230,7 @@ export async function enrichSlidesWithImages(
 ): Promise<EnrichedSlide[]> {
   const results = await Promise.all(
     slides.map(async (slide, i) => {
-      const query = slide.searchQuery?.trim() || slide.title;
+      const query = slide.searchQuery?.trim() || slide.imageContext?.trim() || slide.title;
       const imagem = await fetchImages(query, new Set());
       return {
         slide: i + 1,

@@ -8,6 +8,23 @@ import { geminiText } from "@/lib/gemini-text";
 
 export const maxDuration = 60;
 
+function repairJson(str: string): string {
+  let inString = false;
+  let escaped = false;
+  let result = "";
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (escaped) { result += ch; escaped = false; continue; }
+    if (ch === "\\") { escaped = true; result += ch; continue; }
+    if (ch === '"') { inString = !inString; result += ch; continue; }
+    if (inString && (ch === "\n" || ch === "\r" || ch === "\t")) {
+      result += " "; continue;
+    }
+    result += ch;
+  }
+  return result.replace(/,(\s*[}\]])/g, "$1");
+}
+
 const styleInstructions: Record<WritingStyle, string> = {
   viral: `
 - Títulos CURTOS, em MAIÚSCULAS, chocantes e que param o scroll (máx 7 palavras)
@@ -100,44 +117,38 @@ REGRA CRÍTICA PARA TÍTULO:
 - Exemplo: "SEU [CHURRASCO] PODE ESTAR ERRADO" ou "A [CIÊNCIA] EXPLICA TUDO"
 - O título deve ter máx 6 palavras no total
 
-${withFace ? `REGRA CRÍTICA PARA imagePrompt (MODO COM ROSTO):
-- SEMPRE coloque UMA PESSOA como sujeito principal da cena — a pessoa DEVE ser o foco
-- A pessoa deve estar FAZENDO exatamente o que o texto/título do slide descreve
-- Formato obrigatório: "[pessoa] [ação do texto], [ambiente], [iluminação natural]"
-- NUNCA gere cenas sem pessoa (paisagens, objetos soltos, símbolos, troféus isolados)
-- Exemplos CORRETOS:
-  * Slide sobre produtividade: "person focused on laptop at clean modern desk, natural window light, shallow depth of field"
-  * Slide sobre vendas: "person presenting confidently to small group in meeting room, corporate environment, warm light"
-  * Slide sobre redes sociais: "person smiling holding smartphone, creating content, bright home studio background"
-  * Slide sobre investimentos: "person analyzing financial charts on dual monitors, home office, focused expression"
-  * Slide sobre saúde: "person doing yoga on mat in bright minimalist room, morning light"
-- A ação deve ser DIRETAMENTE derivada do texto: leu "publicar conteúdo"? → pessoa com câmera/celular
-- NUNCA use prompts genéricos ou cenas sem pessoa visível` : `REGRA CRÍTICA PARA imagePrompt:
-- Cada slide DEVE ter um imagePrompt ÚNICO e ESPECÍFICO que descreve visualmente o conteúdo daquele slide
-- O imagePrompt deve ser em INGLÊS, detalhado como um prompt de IA de imagem (Midjourney/Stable Diffusion)
-- NUNCA use nomes próprios de pessoas reais (celebridades, políticos, atletas) — isso bloqueia a IA geradora
-- Em vez do NOME, descreva os ELEMENTOS VISUAIS ICÔNICOS que tornam o assunto imediatamente reconhecível:
-  * Michael Jackson → "performer in white glove and black fedora, sequined military jacket, moonwalk silhouette on neon-lit stage, single spotlight, concert fog, dramatic contrast"
-  * Neymar → "Brazilian soccer player with distinctive blond hair, colorful boots, celebrating goal, green field, stadium crowd in yellow jerseys"
-  * Steve Jobs → "presenter in black turtleneck holding sleek silver device, minimalist white stage, single spotlight, tech event atmosphere"
-  * Copa do Mundo → "golden FIFA World Cup trophy held by gloved hands, stadium confetti rain, ecstatic crowd in team jerseys, green field"
-  * Bitcoin → "gold coin with B symbol glowing in neon-lit dark room, rising price charts, digital matrix background"
-  * Eleições → "presidential podium with national flag, crowd waving banners, dramatic spotlight, patriotic atmosphere"
-- A imagem deve ser IMEDIATAMENTE RECONHECÍVEL como o assunto sem precisar do nome
-- Descreva: objetos de assinatura, roupas/estilo característico, ambiente icônico, momento famoso, era/época, cores
-- Inclua iluminação, ângulo de câmera, atmosfera, estilo fotográfico (cinematic, documentary, editorial)
-- NUNCA use prompts genéricos ("concert stage", "man running"). Cada prompt deve ser único e visualmente conectado ao conteúdo`}
+PROCESSO OBRIGATÓRIO PARA IMAGEM DE CADA SLIDE (3 passos em sequência):
 
-REGRA CRÍTICA PARA searchQuery:
-- Campo SEPARADO do imagePrompt, usado para buscar FOTOS REAIS no Google Images
-- Deve ser uma busca curta, objetiva, em português, de 2 a 5 palavras
-- Foque no SUJEITO REAL e no CONTEÚDO ESPECÍFICO daquele slide: nome da pessoa + contexto do slide
-- Exemplo slide sobre Michael Jackson dançando: "Michael Jackson moonwalk performance"
-- Exemplo slide sobre Neymar gol importante: "Neymar gol Copa do Mundo"
-- Exemplo slide sobre Copa do Mundo troféu: "Copa do Mundo 2026 troféu"
-- Exemplo slide sobre Steve Jobs lançamento iPhone: "Steve Jobs iPhone lançamento 2007"
-- NUNCA use termos genéricos como: "palco", "estádio", "pessoa", "profissional"
-- NUNCA inclua palavras como: cinematic, dark, moody, photorealistic, 8k, dramatic, lighting
+PASSO 1 — imageContext (raciocínio interno):
+Leia o título + body deste slide específico. Escreva em 1 frase o que está acontecendo NESTE SLIDE:
+quem/o quê é o sujeito, qual ação/momento específico, em qual cenário.
+Exemplo slide "MJ revolucionou o pop com o Moonwalk": "Michael Jackson executando o Moonwalk em palco iluminado, luva branca, jaqueta sequenciada, multidão em êxtase"
+Este campo é OBRIGATÓRIO — nunca deixe vazio ou genérico como "pessoa no palco" ou "cena relacionada ao tema".
+
+PASSO 2 — imagePrompt (derivado do imageContext):
+${withFace ? `- SEMPRE coloque UMA PESSOA como sujeito principal da cena — a pessoa DEVE ser o foco
+- A pessoa deve estar FAZENDO exatamente o que o texto/título do slide descreve
+- Formato: "[pessoa] [ação específica do texto], [ambiente concreto], [iluminação natural]"
+- Derive DIRETAMENTE do texto: "publicar conteúdo" → pessoa com câmera/celular; "investir" → pessoa com gráficos; "vender" → pessoa em reunião
+- NUNCA gere cenas sem pessoa visível` : `- Derive DIRETAMENTE do imageContext — não invente cenas não relacionadas ao texto
+- Escreva em INGLÊS, detalhado como prompt Midjourney/Stable Diffusion
+- NUNCA use nomes próprios de pessoas reais — descreva elementos visuais ICÔNICOS reconhecíveis:
+  * Michael Jackson moonwalk → "performer in white sequined glove and black fedora executing iconic backwards slide on spotlit stage, concert fog, 80s arena atmosphere, dramatic single spotlight, cinematic"
+  * Neymar gol → "Brazilian forward with blond hair #10 jersey celebrating decisive goal, stadium crowd in yellow-green, confetti rain, emotional close-up, documentary photography"
+  * Steve Jobs iPhone → "visionary presenter in black turtleneck holding minimalist glass device on white stage, single spotlight, attentive crowd silhouettes, product launch atmosphere"
+  * Copa do Mundo troféu → "golden FIFA trophy raised by gloved hands amid stadium confetti explosion, team jerseys blur in background, golden hour lighting"
+  * Eleições → "political rally podium with national flag backdrop, crowd waving banners under flood lights, photojournalism style"
+- A cena deve ser IMEDIATAMENTE reconhecível como o assunto sem precisar do nome
+- Inclua: assinatura visual (objeto, roupa, gesto), ambiente específico do momento, iluminação dramática, estilo fotográfico
+- NUNCA use prompts genéricos desconectados do texto do slide`}
+
+PASSO 3 — searchQuery (derivado do imageContext):
+- Extraia do imageContext o SUJEITO REAL + MOMENTO ESPECÍFICO para busca no Google Images
+- 2 a 5 palavras, objetivas, em inglês ou português conforme o assunto
+- Se o slide fala de um momento específico, inclua esse momento: não "Michael Jackson" mas "Michael Jackson moonwalk Billie Jean 1983"
+- Se é evento recente, inclua ano: "Copa do Mundo 2026 troféu"
+- NUNCA use termos genéricos: "palco", "estádio", "pessoa", "profissional", "apresentação"
+- NUNCA inclua: cinematic, dark, moody, photorealistic, 8k, dramatic, lighting
 
 Responda APENAS com JSON válido (sem markdown, sem comentários):
 {
@@ -147,8 +158,9 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
       "title": "TÍTULO COM [PALAVRA] DESTACADA",
       "body": "1-2 frases curtas e diretas com dados reais",
       "callToAction": "apenas no último slide, senão omita este campo",
-      "imagePrompt": "descrição visual detalhada e específica do conteúdo deste slide em inglês, cinematic lighting, dark moody background, high contrast, photorealistic",
-      "searchQuery": "busca curta e objetiva em português para foto real no Google, ex: Neymar Santos 2025",
+      "imageContext": "1 frase: quem/o quê está acontecendo neste slide especificamente, derivado do texto acima",
+      "imagePrompt": "prompt detalhado em inglês derivado do imageContext, elementos icônicos, cinematic lighting, dark moody background, high contrast, photorealistic",
+      "searchQuery": "sujeito + momento específico do slide para Google Images, 2-5 palavras",
       "colorScheme": {
         "background": "#0a0a0a",
         "text": "#ffffff",
@@ -158,14 +170,21 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
   ]
 }`;
 
-    const rawText = await geminiText(prompt, { maxTokens: 1500 });
+    const rawText = await geminiText(prompt, { maxTokens: 1800 });
 
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return NextResponse.json({ error: "Resposta inválida da IA" }, { status: 500 });
     }
 
-    const generated: GeneratedContent = JSON.parse(jsonMatch[0]);
+    let generated: GeneratedContent;
+    try {
+      generated = JSON.parse(jsonMatch[0]);
+    } catch {
+      // Repair common LLM JSON issues using a state machine
+      const repaired = repairJson(jsonMatch[0]);
+      generated = JSON.parse(repaired);
+    }
 
     // Remove numeração/bullets que o modelo às vezes adiciona mesmo sendo proibido
     const stripNumbering = (text: string) =>
