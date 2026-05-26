@@ -53,7 +53,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     const isAuth = authKeywords.some((k) => msg.includes(k));
     setIsAuthError(isAuth);
     setStatus("error");
-    setMessage(isAuth ? "Token do Instagram expirado. Reconecte sua conta." : msg);
+    setMessage(isAuth ? "Não foi possível publicar. Reconecte sua conta do Instagram." : msg);
   };
   const statusLabel: Record<string, string> = {
     exporting: "Exportando slides...",

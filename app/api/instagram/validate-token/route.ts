@@ -13,11 +13,16 @@ export async function POST(req: NextRequest) {
     );
     const data = await res.json();
     if (data.error) {
-      console.log("[ig/validate]", data.error.code, data.error.message);
-      return NextResponse.json({ valid: false, code: data.error.code });
+      const code = data.error.code ?? 0;
+      console.log("[ig/validate]", code, data.error.message);
+      // Só invalida em erros explícitos de auth — não em erros de rede ou temporários
+      if (code === 190 || code === 102 || code === 2500) {
+        return NextResponse.json({ valid: false, code });
+      }
     }
     return NextResponse.json({ valid: true });
   } catch {
-    return NextResponse.json({ valid: false });
+    // Falha de rede — não invalida token por isso
+    return NextResponse.json({ valid: true });
   }
 }
