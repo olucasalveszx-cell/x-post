@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Upload, Pencil, LayoutGrid, BookImage, Calendar, Clock, Music, ChevronRight, ChevronLeft, RefreshCw } from "lucide-react";
+import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Upload, Pencil, LayoutGrid, BookImage, Calendar, Clock, Music, ChevronRight, ChevronLeft } from "lucide-react";
 import { renderSlide } from "@/lib/render-slide";
 
 interface IGAccount {
@@ -39,7 +39,6 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState(0);
   const [permalink, setPermalink] = useState("");
-  const [isAuthError, setIsAuthError] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [showMusicConfirm, setShowMusicConfirm] = useState(false);
@@ -47,13 +46,8 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
   const isLoading = ["exporting", "uploading", "publishing", "scheduling"].includes(status);
 
   const handleError = (err: any, fallback: string) => {
-    const msg: string = err?.message ?? fallback;
-    // OAuthException code 190 = expired/invalid token
-    const authKeywords = ["OAuthException", "190", "Authorization Error", "token expirado", "token expired", "Invalid OAuth", "Session has expired", "access token", "Token inválido"];
-    const isAuth = authKeywords.some((k) => msg.includes(k));
-    setIsAuthError(isAuth);
     setStatus("error");
-    setMessage(isAuth ? "Não foi possível publicar. Reconecte sua conta do Instagram." : msg);
+    setMessage(err?.message ?? fallback);
   };
   const statusLabel: Record<string, string> = {
     exporting: "Exportando slides...",
@@ -435,17 +429,8 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
               )}
 
               {status === "error" && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-start gap-2 rounded-lg p-3 text-sm bg-red-900/30 border border-red-800/50 text-red-300">
-                    <AlertCircle size={14} className="mt-0.5 shrink-0" />{message}
-                  </div>
-                  {isAuthError && (
-                    <button
-                      onClick={() => { onClose(); onLoginClick(); }}
-                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all">
-                      <RefreshCw size={14} /> Reconectar Instagram
-                    </button>
-                  )}
+                <div className="flex items-start gap-2 rounded-lg p-3 text-sm bg-red-900/30 border border-red-800/50 text-red-300">
+                  <AlertCircle size={14} className="mt-0.5 shrink-0" />{message}
                 </div>
               )}
 
