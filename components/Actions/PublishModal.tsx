@@ -66,12 +66,30 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     return urls;
   };
 
+  const compressSlide = (dataUrl: string): Promise<string> =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const cvs = document.createElement("canvas");
+        cvs.width = img.width; cvs.height = img.height;
+        cvs.getContext("2d")!.drawImage(img, 0, 0);
+        // Reduz qualidade até caber em 350 KB de base64 (~260 KB binário)
+        for (const q of [0.92, 0.82, 0.72, 0.60]) {
+          const out = cvs.toDataURL("image/jpeg", q);
+          if (out.split(",")[1].length <= 350 * 1024) { resolve(out); return; }
+        }
+        resolve(cvs.toDataURL("image/jpeg", 0.60));
+      };
+      img.src = dataUrl;
+    });
+
   const uploadImages = async (dataUrls: string[]): Promise<string[]> => {
     setProgress(30);
     const publicUrls: string[] = [];
     for (let i = 0; i < dataUrls.length; i++) {
       setProgress(30 + Math.round((i / dataUrls.length) * 50));
-      const base64 = dataUrls[i].split(",")[1];
+      const compressed = await compressSlide(dataUrls[i]);
+      const base64 = compressed.split(",")[1];
       const res = await fetch("/api/instagram/media", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

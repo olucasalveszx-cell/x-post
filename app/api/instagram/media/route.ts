@@ -1,23 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
+import { redisSetex } from "@/lib/redis";
+import { v4 as uuid } from "uuid";
 
-export const maxDuration = 30;
+export const maxDuration = 20;
+
+const TTL = 900; // 15 min
 
 export async function POST(req: NextRequest) {
   const { base64, mimeType = "image/jpeg" } = await req.json();
   if (!base64) return NextResponse.json({ error: "base64 obrigatório" }, { status: 400 });
 
-  try {
-    const buffer = Buffer.from(base64, "base64");
-    const ext    = mimeType.split("/")[1] ?? "jpg";
-    const blob   = await put(`ig-media/${Date.now()}.${ext}`, buffer, {
-      access: "public",
-      contentType: mimeType,
-    } as any);
+  const id  = uuid();
+  const key = `ig:media:${id}`;
+  // Armazena "mimeType|base64" — simples, sem JSON wrapper
+  await redisSetex(key, TTL, `${mimeType}|${base64}`);
 
-    return NextResponse.json({ url: blob.url });
-  } catch (err: any) {
-    console.error("[ig-media]", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://xpostzone.online";
+  return NextResponse.json({ url: `${baseUrl}/api/instagram/media/${id}` });
 }
