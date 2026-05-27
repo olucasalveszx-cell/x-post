@@ -357,6 +357,8 @@ export default function EditorPage() {
       if (error === "no_business_account") {
         const pages = params.get("pages") ?? "nenhuma";
         alert(`Conta Instagram Business não encontrada.\nPáginas do Facebook: ${pages}`);
+      } else {
+        alert(`Erro ao conectar Instagram: ${decodeURIComponent(error)}`);
       }
       window.history.replaceState({}, "", "/editor");
     } else {
