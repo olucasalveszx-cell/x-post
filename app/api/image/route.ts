@@ -80,8 +80,10 @@ const PROMPTS: Record<ImageStyle, string> = {
 const QUALITY_SUFFIX = `hyperrealistic, photorealistic, 8K resolution, ultra-detailed, sharp focus, well-exposed bright and clear, professional color grade, face fully visible and luminous, no underexposure, no dark shadows on face, no artifacts, no plastic skin, no blur, no text, no watermarks, no logos`;
 
 // Hint de estilo simplificado para modelos de identidade facial
-// Evita specs de câmera (bokeh, Sony A7IV) que conflitam com a preservação do rosto
 const FACE_STYLE_HINT = `photorealistic, well-lit natural daylight, warm skin tones accurate, face fully visible and bright, no shadows on face, clean background, 8K sharp, no text, no watermarks`;
+
+// Prompt obrigatório de preservação de identidade — incluído em TODOS os métodos de face
+const FACE_IDENTITY_PROMPT = `Use the reference face exactly as provided. Preserve identity, facial structure, eyes, nose, mouth, jawline, skin tone, proportions, age and expression. Do not beautify. Do not change ethnicity. Do not generate a different person. The face must remain identical to the reference image.`;
 
 function buildPrompt(subject: string, style: ImageStyle): string {
   const stylePrompt = PROMPTS[style] ?? PROMPTS.gemini;
@@ -257,8 +259,10 @@ async function fromFalInstantId(prompt: string, style: ImageStyle, refBase64: st
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY não configurada");
 
-  const fullPrompt = `${prompt}. ${FACE_STYLE_HINT}. Portrait orientation 4:5 aspect ratio.`;
+  const fullPrompt = `${prompt}. ${FACE_IDENTITY_PROMPT} ${FACE_STYLE_HINT}. Portrait orientation 4:5 aspect ratio.`;
   const imageDataUrl = `data:${refMime};base64,${refBase64}`;
+
+  console.log(`[image] InstantID: ref=${refMime} ${Math.round(refBase64.length * 0.75 / 1024)}KB prompt="${prompt.slice(0, 60)}"`);
 
   const res = await fetch("https://fal.run/fal-ai/instant-id", {
     method: "POST",
@@ -266,7 +270,7 @@ async function fromFalInstantId(prompt: string, style: ImageStyle, refBase64: st
     body: JSON.stringify({
       face_image_url: imageDataUrl,
       prompt: fullPrompt,
-      negative_prompt: "nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, illustration, out of focus, grainy, overexposed, underexposed, sunglasses, hat, mask",
+      negative_prompt: "different person, changed identity, nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, illustration, out of focus, grainy, overexposed, underexposed, sunglasses, hat, mask",
       num_inference_steps: 50,
       guidance_scale: 5.0,
       ip_adapter_scale: 0.85,
@@ -294,21 +298,22 @@ async function fromFalInstantId(prompt: string, style: ImageStyle, refBase64: st
   return { imageUrl, source: "fal-instant-id" };
 }
 
-// ── fal.ai PuLID — identidade pura (rosto 100% fiel) ────────
+// ── fal.ai PuLID — identidade forte via injeção direta no FLUX ──────────
 async function fromFalPulid(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY não configurada");
 
-  // Prompt limpo sem specs de câmera: preserva melhor a identidade facial
-  const fullPrompt = `${prompt}. ${FACE_STYLE_HINT}. Portrait orientation 4:5.`;
+  const fullPrompt = `${prompt}. ${FACE_IDENTITY_PROMPT} ${FACE_STYLE_HINT}. Portrait orientation 4:5.`;
   const imageDataUrl = `data:${refMime};base64,${refBase64}`;
+
+  console.log(`[image] PuLID: ref=${refMime} ${Math.round(refBase64.length * 0.75 / 1024)}KB`);
 
   const res = await fetch("https://fal.run/fal-ai/pulid", {
     method: "POST",
     headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       prompt: fullPrompt,
-      negative_prompt: "nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, out of focus, grainy, overexposed, sunglasses, hat, mask",
+      negative_prompt: "different person, changed identity, nsfw, nude, violence, low quality, blurry, distorted face, disfigured, deformed, plastic skin, cartoon, anime, painting, out of focus, grainy, overexposed, sunglasses, hat, mask",
       id_image: imageDataUrl,
       num_inference_steps: 35,
       guidance_scale: 2.0,
@@ -333,20 +338,44 @@ async function fromFalPulid(prompt: string, style: ImageStyle, refBase64: string
   return { imageUrl, source: "fal-pulid" };
 }
 
-// ── fal.ai Face Swap — copia pixels reais do rosto ───────────
+// ── Garante URL pública — converte data: URI para Vercel Blob se necessário ──
+async function ensurePublicUrl(imageUrl: string, label = "img"): Promise<string> {
+  if (!imageUrl.startsWith("data:")) return imageUrl;
+  try {
+    const [header, b64] = imageUrl.split(",");
+    const mimeType = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
+    const ext = mimeType.split("/")[1]?.split("+")[0] ?? "jpg";
+    const buffer = Buffer.from(b64, "base64");
+    const blob = await put(
+      `faceswap/${label}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`,
+      buffer,
+      { access: "public" as any, contentType: mimeType }
+    );
+    console.log(`[image] ensurePublicUrl: data: URI → ${blob.url.slice(0, 60)}`);
+    return blob.url;
+  } catch (e: any) {
+    console.error("[image] ensurePublicUrl falhou:", e.message);
+    throw new Error("Não foi possível fazer upload da cena para face-swap");
+  }
+}
+
+// ── fal.ai Face Swap — copia pixels reais do rosto (método mais fiel) ───
 async function fromFalFaceSwap(sceneUrl: string, refBase64: string, refMime: string): Promise<string> {
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY não configurada");
 
-  // fal.ai aceita data URIs internamente — sem necessidade de upload externo
+  // base_image_url DEVE ser URL pública — nunca aceita data: URI
+  // swap_image_url aceita data: URI (rosto da referência)
   const refDataUrl = `data:${refMime};base64,${refBase64}`;
+
+  console.log(`[image] FaceSwap: cena=${sceneUrl.slice(0, 60)} ref=${refMime} ${Math.round(refBase64.length * 0.75 / 1024)}KB`);
 
   const res = await fetch("https://fal.run/fal-ai/face-swap", {
     method: "POST",
     headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      base_image_url: sceneUrl,   // cena gerada (corpo/fundo)
-      swap_image_url: refDataUrl, // rosto da referência
+      base_image_url: sceneUrl,
+      swap_image_url: refDataUrl,
       sync_mode: true,
     }),
     signal: AbortSignal.timeout(60000),
@@ -362,18 +391,33 @@ async function fromFalFaceSwap(sceneUrl: string, refBase64: string, refMime: str
   const imageUrl = data.image?.url ?? data.images?.[0]?.url;
   if (!imageUrl) throw new Error("fal.ai Face Swap: sem imagem na resposta");
 
-  console.log("[image] fal.ai Face Swap OK");
+  console.log("[image] fal.ai Face Swap OK →", imageUrl.slice(0, 60));
   return imageUrl;
 }
 
-// ── Cena + Face Swap — gera cena e troca rosto ───────────────
+// ── Cena + Face Swap — MÉTODO PRIMÁRIO de fidelidade facial ──────────────
+// Gera cena com corpo/ambiente, depois copia pixels exatos do rosto da referência
 async function fromSceneAndSwap(prompt: string, style: ImageStyle, refBase64: string, refMime: string) {
-  // Face must be in the UPPER THIRD of the frame — text overlay covers the bottom 40% of the slide
-  const scenePrompt = `${prompt}, portrait photo, person's FACE POSITIONED IN THE UPPER PORTION of the frame (face center between 20%-45% from the top), head and shoulders clearly visible, looking directly at camera, natural frontal lighting, clean background, lower portion of image has minimal important content`;
-  // 30 steps for better face quality (was 20 — too few caused poor face regions for the swap)
-  const scene = await fromFalSchnell(scenePrompt, style, 30);
-  if (scene.imageUrl.startsWith("data:")) throw new Error("Schnell retornou data: URI, face-swap não suportado");
-  const swapped = await fromFalFaceSwap(scene.imageUrl, refBase64, refMime);
+  // Cena: rosto frontal grande no quadrante superior, cabeça e ombros, iluminação frontal neutra
+  // Essencial para o face-swap ter uma região de rosto clara para substituir
+  const scenePrompt = [
+    prompt,
+    "PORTRAIT PHOTO",
+    "ONE PERSON facing directly toward camera",
+    "LARGE FACE in UPPER 40% of frame (face occupying at least 30% of image height)",
+    "head and shoulders composition",
+    "frontal face clearly visible — eyes, nose, mouth all facing forward",
+    "neutral front lighting, no side shadows obscuring face",
+    "photorealistic, natural lighting, 8K sharp",
+    "lower half of frame shows body/background only",
+  ].join(", ");
+
+  const scene = await fromFalSchnell(scenePrompt, style, 35);
+
+  // Converte data: URI para URL pública antes do face-swap (fal.ai exige URL real)
+  const sceneUrl = await ensurePublicUrl(scene.imageUrl, "scene");
+
+  const swapped = await fromFalFaceSwap(sceneUrl, refBase64, refMime);
   console.log("[image] Cena+FaceSwap pipeline OK");
   return { imageUrl: swapped, source: "fal-scene-swap" };
 }
@@ -431,7 +475,7 @@ async function fromFalKontext(prompt: string, style: ImageStyle, refBase64: stri
   if (!key) throw new Error("FAL_KEY não configurada");
 
   const styleHint = PROMPTS[style] ?? PROMPTS.gemini;
-  const fullPrompt = `${prompt}. Keep the same person's face, identity, skin tone and facial features exactly as in the reference image. ${styleHint}. Portrait orientation 4:5 aspect ratio.`;
+  const fullPrompt = `${prompt}. ${FACE_IDENTITY_PROMPT} ${styleHint}. Portrait orientation 4:5 aspect ratio.`;
 
   const imageDataUrl = `data:${refMime};base64,${refBase64}`;
 
@@ -747,28 +791,49 @@ export async function POST(req: NextRequest) {
   const errors: string[] = [];
 
   if (hasReference) {
-    // Pipeline ordenado por fidelidade facial:
-    // 1. InstantID — mais natural (sem costuras), boa fidelidade (~50-60s)
-    // 2. PuLID — identidade forte via injeção direta no FLUX (~50s)
-    // 3. Scene+FaceSwap — copia pixels reais do rosto, boa fidelidade mas pode ter costuras (~50s)
-    // 4. Kontext / OpenAI edits como safety nets
-    const faceTries: Array<() => Promise<ImageResult>> = [
-      () => fromFalInstantId(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-instantid"; return r; }),
-      () => fromFalPulid(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-pulid"; return r; }),
-      () => fromSceneAndSwap(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-faceswap"; return r; }),
-      () => fromFalKontext(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }),
-      () => fromOpenAIWithReference(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }),
-      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
-      () => fromFal(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }),
-      () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
-      () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
+    // ── Pipeline de fidelidade facial (SOMENTE métodos com referência real) ──
+    // NUNCA cair em geração textual pura — isso geraria pessoa aleatória.
+    //
+    // Ordem por fidelidade REAL (não por "qualidade visual"):
+    // 1. Scene+FaceSwap — ÚNICO método pixel-accurate: copia rosto exato da foto
+    //    → gera cena com corpo/ambiente, depois substitui pixels do rosto
+    // 2. PuLID — injeção de identidade direta no FLUX (boa mas não pixel-perfect)
+    // 3. InstantID — ControlNet + IP-Adapter (pode derivar ligeiramente)
+    // 4. Kontext — img2img editando a própria foto de referência
+    // 5. OpenAI edits com referência — última opção real com preservação
+    //
+    // Se TODOS falharem → erro explícito (não gera pessoa aleatória)
+    console.log(`[image] face-pipeline START: ref=${referenceImageMime} ${Math.round((referenceImageBase64?.length ?? 0) * 0.75 / 1024)}KB prompt="${facePrompt.slice(0, 80)}"`);
+
+    const faceTries: Array<{ label: string; fn: () => Promise<ImageResult> }> = [
+      { label: "faceswap", fn: () => fromSceneAndSwap(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-faceswap"; return r; }) },
+      { label: "pulid",    fn: () => fromFalPulid(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-pulid"; return r; }) },
+      { label: "instantid",fn: () => fromFalInstantId(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-instantid"; return r; }) },
+      { label: "kontext",  fn: () => fromFalKontext(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference-kontext"; return r; }) },
+      { label: "openai-ref",fn: () => fromOpenAIWithReference(facePrompt, style, referenceImageBase64!, referenceImageMime!).then(r => { plan = "reference"; return r; }) },
     ];
-    for (const fn of faceTries) {
+
+    for (const { label, fn } of faceTries) {
       if (result) break;
-      try { result = await fn(); } catch (e: any) { errors.push(e.message); }
+      try {
+        console.log(`[image] face-pipeline tentando: ${label}`);
+        result = await fn();
+        console.log(`[image] face-pipeline SUCCESS: ${label}`);
+      } catch (e: any) {
+        console.warn(`[image] face-pipeline FALHOU ${label}:`, e.message);
+        errors.push(`${label}: ${e.message}`);
+      }
     }
 
-    // Sem upscaling no modo com rosto — pipeline já usa ~60s, upscaling estouraria os 120s do Vercel
+    if (!result) {
+      console.error("[image] face-pipeline: TODOS os métodos falharam:", errors);
+      return NextResponse.json({
+        error: "Esta API não suporta fidelidade facial real para esta foto. Verifique: rosto frontal, boa iluminação, sem óculos escuros, somente uma pessoa. Erros: " + errors.slice(0, 2).join(" | "),
+        faceErrors: errors,
+      }, { status: 422 });
+    }
+
+    // Sem upscaling no modo com rosto — pipeline já usa ~60-90s, upscaling estouraria os 120s do Vercel
   } else if (!isPro) {
     // Schnell primeiro (3-8s) → Pro como fallback de qualidade → busca web
     const tries: Array<() => Promise<ImageResult>> = [

@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { v4 as uuid } from "uuid";
-import { X, Upload, Sparkles, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+import { X, Upload, Sparkles, Loader2, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
 import { Slide, GeneratedContent } from "@/types";
 
 export type FaceCarouselMode = "padrao" | "twitter" | "comrosto";
@@ -14,6 +14,13 @@ interface Props {
 }
 
 type GenStatus = "idle" | "searching" | "generating" | "images" | "error";
+type ValidationStatus = "idle" | "validating" | "ok" | "warning" | "invalid";
+
+interface FaceValidation {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+}
 
 function applyAccent(text: string, accentColor: string): string {
   return text.replace(/\[([^\]]+)\]/g, `<span style="color:${accentColor};font-style:normal">$1</span>`);
@@ -87,11 +94,6 @@ function buildFaceSlides(
       style: { fontSize: 25, fontWeight: "normal" as const, fontFamily: "sans-serif", color: "rgba(255,255,255,0.4)", textAlign: "right" as const, lineHeight: 1 },
     });
 
-    // Para face mode: usa o imagePrompt do Gemini direto — PuLID/InstantID
-    // injetam o rosto automaticamente. Prompt complexo conflita com face fidelity.
-    const rawPrompt = gs.imagePrompt || "";
-    const imagePrompt = rawPrompt;
-
     return {
       id: uuid(),
       backgroundColor: gs.colorScheme.background,
@@ -103,7 +105,7 @@ function buildFaceSlides(
       elements,
       width: W,
       height: H,
-      _imagePrompt: imagePrompt,
+      _imagePrompt: gs.imagePrompt || "",
       _faceBase64: faceBase64,
     };
   });
@@ -115,6 +117,8 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
   const [faceBase64, setFaceBase64] = useState<string | null>(null);
   const [faceMime, setFaceMime] = useState("image/jpeg");
   const [facePreview, setFacePreview] = useState<string | null>(null);
+  const [faceValidation, setFaceValidation] = useState<FaceValidation | null>(null);
+  const [validationStatus, setValidationStatus] = useState<ValidationStatus>("idle");
   const [genStatus, setGenStatus] = useState<GenStatus>("idle");
   const [error, setError] = useState("");
   const [imageProgress, setImageProgress] = useState(0);
@@ -126,6 +130,8 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
     setTopic("");
     setFaceBase64(null);
     setFacePreview(null);
+    setFaceValidation(null);
+    setValidationStatus("idle");
     setGenStatus("idle");
     setError("");
     setImageProgress(0);
@@ -138,15 +144,33 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
     setTimeout(reset, 200);
   };
 
+  const validateFace = async (base64: string, mime: string) => {
+    setValidationStatus("validating");
+    try {
+      const res = await fetch("/api/validate-face", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, imageMime: mime }),
+      });
+      if (!res.ok) { setValidationStatus("ok"); return; }
+      const data: FaceValidation = await res.json();
+      setFaceValidation(data);
+      if (!data.valid) setValidationStatus("invalid");
+      else if (data.warnings.length > 0) setValidationStatus("warning");
+      else setValidationStatus("ok");
+    } catch {
+      setValidationStatus("ok");
+    }
+  };
+
   const handleFaceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Redimensiona para max 768px — face ID não precisa de mais que isso,
-    // e foto de celular (3-5MB) em base64 estoura o timeout dos modelos
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
+      // Redimensiona para max 768px — face ID não precisa de mais resolução
       const MAX = 768;
       const scale = Math.min(MAX / img.width, MAX / img.height, 1);
       const w = Math.round(img.width * scale);
@@ -156,15 +180,20 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
       canvas.height = h;
       canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
       const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+      const b64 = dataUrl.split(",")[1];
       setFaceMime("image/jpeg");
       setFacePreview(dataUrl);
-      setFaceBase64(dataUrl.split(",")[1]);
+      setFaceBase64(b64);
+      setFaceValidation(null);
+      validateFace(b64, "image/jpeg");
     };
     img.src = objectUrl;
   };
 
   const handleGenerate = async () => {
-    if (!topic.trim() || isLoading) return;
+    if (!topic.trim() || isLoading || !faceBase64) return;
+    // Bloquear se foto inválida
+    if (validationStatus === "invalid") return;
     setError("");
 
     try {
@@ -187,7 +216,7 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
           slideCount,
           writingStyle: "viral",
           imageStyle: "gemini",
-          withFace: !!faceBase64,
+          withFace: true,
         }),
       });
       const genData: GeneratedContent = await genRes.json();
@@ -197,7 +226,6 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
       setImageProgress(0);
 
       const rawSlides = buildFaceSlides(genData, faceBase64);
-      // Preview immediately with loading state
       onGenerate(rawSlides, "comrosto");
 
       let done = 0;
@@ -205,18 +233,20 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
         rawSlides.map(async (slide) => {
           const { _imagePrompt, _faceBase64: fb, ...clean } = slide as any;
           try {
-            const finalPrompt = fb
-              ? `Create a realistic image of a person in the following scenario: ${_imagePrompt}.`
-              : _imagePrompt;
+            // Prompt construído para face pipeline — SEMPRE envia referência
+            // Nunca gera sem referência para manter fidelidade facial
+            const faceScenePrompt = `${_imagePrompt}`;
 
             const body: Record<string, unknown> = {
-              prompt: finalPrompt,
+              prompt: faceScenePrompt,
               imageStyle: "gemini",
+              // referência OBRIGATÓRIA — sem ela o pipeline usaria geração textual pura
+              referenceImageBase64: fb,
+              referenceImageMime: faceMime,
             };
-            if (fb) {
-              body.referenceImageBase64 = fb;
-              body.referenceImageMime = faceMime;
-            }
+
+            console.log(`[face-modal] gerando slide com referência ${faceMime} ${Math.round((fb?.length ?? 0) * 0.75 / 1024)}KB`);
+
             const res = await fetch("/api/image", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -226,9 +256,16 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
             done++;
             setImageProgress(done);
 
+            if (!res.ok) {
+              // Erro 422 = API não suporta fidelidade facial para essa foto
+              const errMsg = data.error ?? "Erro ao gerar imagem";
+              console.error(`[face-modal] slide ${done} FALHOU:`, errMsg);
+              return { ...clean, backgroundImageLoading: false };
+            }
+
             if (!data.imageUrl) return { ...clean, backgroundImageLoading: false };
 
-            // Detect subject position and adjust backgroundPosition.y to keep subject above text overlay
+            // Detecta posição do sujeito para manter rosto acima da área de texto
             let backgroundPositionY = 25;
             try {
               const posRes = await fetch("/api/detect-position", {
@@ -241,7 +278,7 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
                 const pos = await posRes.json();
                 if (typeof pos.backgroundPositionY === "number") backgroundPositionY = pos.backgroundPositionY;
               }
-            } catch { /* keep default */ }
+            } catch { /* mantém padrão */ }
 
             return {
               ...clean,
@@ -267,6 +304,8 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
   };
 
   if (!open) return null;
+
+  const canGenerate = !!topic.trim() && !!faceBase64 && validationStatus !== "invalid" && validationStatus !== "validating";
 
   return (
     <div
@@ -305,13 +344,17 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
               <p className="text-sm font-semibold text-[var(--text)]">
                 {genStatus === "searching" && "Pesquisando na web..."}
                 {genStatus === "generating" && "Gerando conteúdo com IA..."}
-                {genStatus === "images" && faceBase64 && "Gerando imagens com seu rosto..."}
-                {genStatus === "images" && !faceBase64 && "Gerando imagens com IA..."}
+                {genStatus === "images" && "Gerando imagens preservando seu rosto..."}
               </p>
               {genStatus === "images" && (
-                <p className="text-xs text-[var(--text-3)] mt-1.5">
-                  {imageProgress} / {slideCount} slides
-                </p>
+                <>
+                  <p className="text-xs text-[var(--text-3)] mt-1.5">
+                    {imageProgress} / {slideCount} slides — pode levar até 90s cada
+                  </p>
+                  <p className="text-[11px] text-purple-400/70 mt-1">
+                    Face Swap + IA de identidade facial em execução
+                  </p>
+                </>
               )}
             </div>
             {genStatus === "images" && (
@@ -328,11 +371,21 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
         {/* Form */}
         {!isLoading && (
           <div className="p-5 flex flex-col gap-4">
-            {/* Face upload */}
+            {/* Face upload — OBRIGATÓRIO */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider">
-                Foto de referência <span className="text-[var(--text-3)] normal-case font-normal">(opcional)</span>
+              <label className="text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider flex items-center gap-1.5">
+                Foto de referência
+                <span className="text-red-400 normal-case font-normal">(obrigatória)</span>
               </label>
+
+              {/* Dicas de qualidade */}
+              <div className="flex items-start gap-1.5 bg-purple-950/30 border border-purple-800/30 rounded-lg px-3 py-2">
+                <AlertTriangle size={11} className="text-purple-400 mt-0.5 shrink-0" />
+                <p className="text-[10px] text-purple-300/80 leading-relaxed">
+                  Use foto com <strong>rosto frontal</strong>, <strong>boa iluminação</strong>, sem óculos escuros e somente <strong>uma pessoa</strong>. Fotos de baixa qualidade reduzem a fidelidade.
+                </p>
+              </div>
+
               <input
                 ref={fileRef}
                 type="file"
@@ -340,24 +393,53 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
                 className="hidden"
                 onChange={handleFaceUpload}
               />
+
               {facePreview ? (
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg)] border border-[var(--border)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={facePreview}
                     alt="Rosto"
-                    className="w-14 h-14 object-cover rounded-lg border border-[var(--border)] shrink-0"
+                    className="w-16 h-16 object-cover rounded-lg border border-[var(--border)] shrink-0"
                   />
                   <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-                    <p className="text-xs text-green-400 font-medium flex items-center gap-1">
-                      <span>✓</span> Foto carregada
-                    </p>
-                    <p className="text-[11px] text-[var(--text-3)]">
-                      Seu rosto será preservado em todas as imagens
-                    </p>
+                    {/* Status de validação */}
+                    {validationStatus === "validating" && (
+                      <p className="text-xs text-[var(--text-3)] flex items-center gap-1.5">
+                        <Loader2 size={11} className="animate-spin" /> Validando foto...
+                      </p>
+                    )}
+                    {validationStatus === "ok" && (
+                      <p className="text-xs text-green-400 font-medium flex items-center gap-1">
+                        <CheckCircle size={11} /> Foto válida para geração
+                      </p>
+                    )}
+                    {validationStatus === "warning" && (
+                      <div>
+                        <p className="text-xs text-yellow-400 font-medium flex items-center gap-1">
+                          <AlertTriangle size={11} /> Qualidade reduzida
+                        </p>
+                        {faceValidation?.warnings.map((w, i) => (
+                          <p key={i} className="text-[10px] text-yellow-300/70 mt-0.5">{w}</p>
+                        ))}
+                      </div>
+                    )}
+                    {validationStatus === "invalid" && (
+                      <div>
+                        <p className="text-xs text-red-400 font-medium flex items-center gap-1">
+                          <AlertCircle size={11} /> Foto inválida
+                        </p>
+                        {faceValidation?.issues.map((issue, i) => (
+                          <p key={i} className="text-[10px] text-red-300/80 mt-0.5">{issue}</p>
+                        ))}
+                      </div>
+                    )}
                     <button
                       onClick={() => {
                         setFacePreview(null);
                         setFaceBase64(null);
+                        setFaceValidation(null);
+                        setValidationStatus("idle");
                         if (fileRef.current) fileRef.current.value = "";
                       }}
                       className="text-[11px] text-[var(--text-3)] hover:text-red-400 transition-colors w-fit"
@@ -386,7 +468,7 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && topic.trim() && !isLoading) handleGenerate();
+                  if (e.key === "Enter" && canGenerate) handleGenerate();
                 }}
                 placeholder="Ex: 10 dicas de marketing pessoal..."
                 autoFocus
@@ -416,6 +498,13 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
               </div>
             </div>
 
+            {/* Mensagem de bloqueio se sem rosto */}
+            {!faceBase64 && (
+              <p className="text-center text-[11px] text-[var(--text-3)]">
+                Envie uma foto de rosto para continuar
+              </p>
+            )}
+
             {error && (
               <div className="flex items-start gap-2 bg-red-900/20 border border-red-800/40 rounded-xl p-3 text-xs text-red-300">
                 <AlertCircle size={12} className="mt-0.5 shrink-0" />
@@ -425,21 +514,19 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
 
             <button
               onClick={handleGenerate}
-              disabled={!topic.trim()}
+              disabled={!canGenerate}
               className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-sm text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               style={{
                 background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
-                boxShadow: "0 4px 20px rgba(124,58,237,0.35)",
+                boxShadow: canGenerate ? "0 4px 20px rgba(124,58,237,0.35)" : "none",
               }}
             >
               <Sparkles size={15} />
-              {faceBase64 ? "Gerar com meu rosto" : "Gerar carrossel"}
+              Gerar com meu rosto
             </button>
 
             <p className="text-center text-[10px] text-[var(--text-3)]">
-              {faceBase64
-                ? "Seu rosto será inserido em cada imagem gerada"
-                : "Adicione uma foto para maior fidelidade facial"}
+              Seu rosto será preservado em todas as imagens via Face Swap + IA
             </p>
           </div>
         )}

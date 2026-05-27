@@ -25,14 +25,23 @@ async function callClaude(prompt: string, system: string | undefined, maxTokens:
   };
   if (system) body.system = system;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `Anthropic error ${res.status}`);
-  return (data.content?.[0]?.text ?? "").trim();
+  // Tenta 2x com backoff — Claude pode retornar 529 Overloaded
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (res.ok) return (data.content?.[0]?.text ?? "").trim();
+    const msg: string = data.error?.message ?? `Anthropic error ${res.status}`;
+    if (attempt < 2 && /overload|529/i.test(msg)) {
+      await new Promise(r => setTimeout(r, 3000));
+      continue;
+    }
+    throw new Error(msg);
+  }
+  throw new Error("Claude indisponível");
 }
 
 async function callGemini(contents: object[], opts: GeminiOpts): Promise<string> {

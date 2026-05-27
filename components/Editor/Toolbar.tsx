@@ -144,8 +144,13 @@ export default function Toolbar({
   const [showAdd, setShowAdd] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [accentColor, setAccentColor] = useState("#facc15");
+  const [showElKontext, setShowElKontext] = useState(false);
+  const [elKontextPrompt, setElKontextPrompt] = useState("");
+  const [elKontextLoading, setElKontextLoading] = useState(false);
+  const [elKontextError, setElKontextError] = useState("");
+  const [elKontextStyle, setElKontextStyle] = useState<string>("cinematico");
 
-  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); setShowXpostBank(false); setShowWebSearch(false); setShowMore(false); setShowAdd(false); setShowFundoPanel(false); setShowLibrary(false); };
+  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); setShowXpostBank(false); setShowWebSearch(false); setShowMore(false); setShowAdd(false); setShowFundoPanel(false); setShowLibrary(false); setShowElKontext(false); };
 
   const openXpostBank = () => {
     if (showXpostBank) { setShowXpostBank(false); return; }
@@ -725,6 +730,59 @@ export default function Toolbar({
       }
     } catch {}
     finally { setImgElGenerating(false); }
+  };
+
+  const editElementWithKontext = async () => {
+    if (!selectedElement || !elKontextPrompt.trim()) return;
+    const src = isFrame ? (selectedElement as any).frameImageUrl : (selectedElement as any).src;
+    if (!src) { setElKontextError("Nenhuma imagem no elemento."); return; }
+
+    setElKontextLoading(true);
+    setElKontextError("");
+    try {
+      let imageBase64 = "";
+      let imageMime = "image/jpeg";
+
+      if (src.startsWith("data:")) {
+        const [header, b64] = src.split(",");
+        imageBase64 = b64;
+        imageMime = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
+      } else {
+        const proxyRes = await fetch("/api/image-proxy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: src }),
+        });
+        const proxyData = await proxyRes.json();
+        if (!proxyRes.ok || !proxyData.base64) throw new Error(proxyData.error ?? "Não foi possível carregar a imagem");
+        imageBase64 = proxyData.base64;
+        imageMime = proxyData.mimeType ?? "image/jpeg";
+      }
+
+      const activationToken = localStorage.getItem("xpz_activation_token") ?? undefined;
+      const res = await fetch("/api/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: elKontextPrompt,
+          imageStyle: elKontextStyle,
+          referenceImageBase64: imageBase64,
+          referenceImageMime: imageMime,
+          activationToken,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.imageUrl) throw new Error(data.error ?? "Erro ao gerar");
+
+      if (isFrame) patchSelected({ frameImageUrl: data.imageUrl });
+      else patchSelected({ src: data.imageUrl });
+      setShowElKontext(false);
+      setElKontextPrompt("");
+    } catch (e: any) {
+      setElKontextError(e.message ?? "Erro desconhecido");
+    } finally {
+      setElKontextLoading(false);
+    }
   };
 
   const loadFont = (fontValue: string) => {
@@ -1325,6 +1383,12 @@ export default function Toolbar({
             {imgElGenerating ? <><Loader2 size={12} className="animate-spin" /> Gerando...</> : <><Sparkles size={12} /> Gerar com IA</>}
           </button>
           <button
+            onClick={() => setShowElKontext(!showElKontext)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium shrink-0 transition-colors ${showElKontext ? "bg-purple-600/30 border-purple-500/50 text-purple-300" : "bg-purple-600/10 hover:bg-purple-600/20 border-purple-600/25 text-purple-400"}`}
+          >
+            <UserCircle size={12} /> Preservar rosto
+          </button>
+          <button
             onClick={openElSearch}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium shrink-0 transition-colors ${showWebSearch && webSearchMode === "el" ? "bg-sky-600/30 border-sky-500/50 text-sky-300" : "bg-sky-600/10 hover:bg-sky-600/20 border-sky-600/25 text-sky-400"}`}
           >
@@ -1332,6 +1396,66 @@ export default function Toolbar({
           </button>
         </div>
       )}
+
+      {/* ── Painel Preservar Rosto (Kontext) ── */}
+      {showElKontext && (isImage || isFrame) && (() => {
+        const elSrc = isFrame ? (selectedElement as any)?.frameImageUrl : (selectedElement as any)?.src;
+        return (
+          <div className="flex flex-col gap-3 px-4 py-3 border-t border-[var(--border)] bg-purple-950/20">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-purple-300 flex items-center gap-1.5">
+                <UserCircle size={13} /> Editar imagem preservando o rosto
+              </span>
+              <button onClick={() => setShowElKontext(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={14} /></button>
+            </div>
+
+            {elSrc && (
+              <div className="flex gap-3 items-start">
+                <div className="w-16 h-20 rounded-lg overflow-hidden border border-purple-500/30 shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={elSrc} alt="Imagem atual" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 flex flex-col gap-2">
+                  <textarea
+                    value={elKontextPrompt}
+                    onChange={(e) => setElKontextPrompt(e.target.value)}
+                    placeholder="Descreva o que quer mudar na cena... ex: ele segurando a taça da copa do mundo"
+                    rows={2}
+                    className="w-full bg-[var(--bg-3)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-purple-500 resize-none placeholder:text-[var(--text-3)]"
+                  />
+                  <div className="flex gap-1.5 flex-wrap">
+                    {([
+                      { id: "cinematico", label: "Cinem." },
+                      { id: "editorial",  label: "Editorial" },
+                      { id: "foto_real",  label: "Foto Real" },
+                      { id: "vibrante",   label: "Vibrante" },
+                    ] as const).map((opt) => (
+                      <button key={opt.id} onClick={() => setElKontextStyle(opt.id)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${elKontextStyle === opt.id ? "bg-purple-600 text-white" : "bg-[var(--bg-3)] text-[var(--text-3)] hover:bg-[var(--bg-4)]"}`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!elSrc && (
+              <p className="text-xs text-[var(--text-3)]">Carregue uma imagem no elemento primeiro.</p>
+            )}
+
+            {elKontextError && <p className="text-xs text-red-400">{elKontextError}</p>}
+
+            <button
+              onClick={editElementWithKontext}
+              disabled={elKontextLoading || !elKontextPrompt.trim() || !elSrc}
+              className="flex items-center justify-center gap-2 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-xs font-semibold text-white transition-colors"
+            >
+              {elKontextLoading ? <><Loader2 size={12} className="animate-spin" /> Gerando (pode demorar ~60s)...</> : <><UserCircle size={12} /> Gerar preservando rosto</>}
+            </button>
+          </div>
+        );
+      })()}
 
       {/* ── Painel de tipografia ── */}
       {isProfile && (

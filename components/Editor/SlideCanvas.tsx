@@ -98,6 +98,17 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const [framePendingId, setFramePendingId] = useState<string | null>(null);
   const [framePanId, setFramePanId] = useState<string | null>(null);
   const [showLayoutPicker, setShowLayoutPicker] = useState(false);
+
+  // Limpa seleção ao sair do slide ativo — evita wasSelected=true ao voltar
+  useEffect(() => {
+    if (!isActive) {
+      setSelectedId(null);
+      setEditingId(null);
+      setCropId(null);
+      setFramePanId(null);
+    }
+  }, [isActive]);
+
   const dragRef = useRef<DragState>(null);
   const vGuideRef = useRef<HTMLDivElement>(null);
   const hGuideRef = useRef<HTMLDivElement>(null);
@@ -716,7 +727,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         transform: `scale(${scale})`,
         transformOrigin: "top left",
       }}
-      onClick={handleCanvasClick}
+      onMouseDown={handleCanvasClick}
       onContextMenu={handleBgContextMenu}
     >
       {/* Fundo gerado por IA */}

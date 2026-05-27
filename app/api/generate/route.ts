@@ -8,6 +8,21 @@ import { geminiText } from "@/lib/gemini-text";
 
 export const maxDuration = 60;
 
+// Extrai slides individuais completos de uma resposta JSON truncada
+function extractPartialSlides(str: string): any[] {
+  const slides: any[] = [];
+  // Regex para encontrar objetos de slide completos (com title pelo menos)
+  const slideRegex = /\{[^{}]*"title"\s*:\s*"[^"]*"[^{}]*(?:\{[^{}]*\}[^{}]*)?\}/g;
+  let match;
+  while ((match = slideRegex.exec(str)) !== null) {
+    try {
+      const obj = JSON.parse(match[0]);
+      if (obj.title) slides.push(obj);
+    } catch {}
+  }
+  return slides;
+}
+
 function repairJson(str: string): string {
   let inString = false;
   let escaped = false;
@@ -87,8 +102,9 @@ export async function POST(req: NextRequest) {
     }
 
     const sourcesText = searchResults
-      .map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}\nFonte: ${r.link}`)
-      .join("\n\n");
+      .map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet.slice(0, 300)}\nFonte: ${r.link}`)
+      .join("\n\n")
+      .slice(0, 4000);
 
     const prompt = `Você é um especialista em criação de conteúdo viral para Instagram.
 
@@ -170,7 +186,7 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
   ]
 }`;
 
-    const rawText = await geminiText(prompt, { maxTokens: 1800 });
+    const rawText = await geminiText(prompt, { maxTokens: 3000 });
 
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
@@ -183,7 +199,14 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
     } catch {
       // Repair common LLM JSON issues using a state machine
       const repaired = repairJson(jsonMatch[0]);
-      generated = JSON.parse(repaired);
+      try {
+        generated = JSON.parse(repaired);
+      } catch {
+        // Último recurso: extrai slides completos da resposta truncada
+        const partialSlides = extractPartialSlides(repaired);
+        if (partialSlides.length === 0) throw new Error("Não foi possível interpretar a resposta da IA. Tente novamente.");
+        generated = { topic, slides: partialSlides } as GeneratedContent;
+      }
     }
 
     // Remove numeração/bullets que o modelo às vezes adiciona mesmo sendo proibido
@@ -202,6 +225,12 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
   } catch (err: any) {
     console.error("[generate] catch:", err);
     const msg = err?.message ?? "Erro desconhecido";
+    if (/overload|overloaded|high demand|unavailable|503|529/i.test(msg)) {
+      return NextResponse.json(
+        { error: "A IA está sobrecarregada no momento. Aguarde alguns segundos e tente novamente." },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({ error: `Erro ao gerar: ${msg}` }, { status: 500 });
   }
 }
