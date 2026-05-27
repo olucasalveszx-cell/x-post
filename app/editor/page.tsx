@@ -377,7 +377,7 @@ export default function EditorPage() {
 
   const handleIGLogin = () => { window.location.href = "/api/instagram/auth"; };
 
-  const handleStyleSelect = useCallback((style: "layouts" | "twitter" | "comrosto") => {
+  const handleStyleSelect = useCallback((style: "layouts" | "twitter" | "comrosto" | "biblioteca") => {
     setShowStyleSelector(false);
     if (style === "comrosto") {
       setShowFaceCarousel(true);
@@ -387,7 +387,8 @@ export default function EditorPage() {
     const topic = pendingTopicRef.current;
     pendingTopicRef.current = null;
     const isTwitter = style === "twitter";
-    const dispatch = () => window.dispatchEvent(new CustomEvent("open-generator-wizard", { detail: { topic: topic ?? undefined, isTwitter } }));
+    const imageStyle = style === "biblioteca" ? "biblioteca" : undefined;
+    const dispatch = () => window.dispatchEvent(new CustomEvent("open-generator-wizard", { detail: { topic: topic ?? undefined, isTwitter, imageStyle } }));
     if (isMobile) {
       setMobilePanel("side");
       setTimeout(dispatch, 120);

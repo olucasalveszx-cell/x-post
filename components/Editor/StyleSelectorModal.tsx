@@ -1,11 +1,11 @@
 "use client";
 
-import { X, Sparkles, Twitter, UserRound } from "lucide-react";
+import { X, Sparkles, Twitter, UserRound, Images } from "lucide-react";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSelect: (style: "layouts" | "twitter" | "comrosto") => void;
+  onSelect: (style: "layouts" | "twitter" | "comrosto" | "biblioteca") => void;
 }
 
 export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
@@ -33,7 +33,7 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
 
           {/* ── Gerar Layouts ── */}
           <button
@@ -41,15 +41,11 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
             className="flex flex-col gap-3 p-4 rounded-xl border border-[var(--border-2)] hover:border-brand-500/50 hover:bg-brand-500/5 transition-all text-left group"
           >
             <div className="relative w-full rounded-lg overflow-hidden" style={{ aspectRatio: "4/5" }}>
-              {/* Slide stack */}
               <div className="absolute inset-0" style={{ background: "linear-gradient(145deg,#0f172a,#1e2fa0,#3b5bdb)" }} />
-              {/* Gradiente overlay */}
               <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.9) 0%,rgba(0,0,0,0.3) 60%,transparent 100%)" }} />
-              {/* Sparkles decorativos */}
               <div className="absolute top-[12%] right-[12%] w-2 h-2 rounded-full bg-purple-300/60" />
               <div className="absolute top-[22%] left-[18%] w-1.5 h-1.5 rounded-full bg-pink-300/50" />
               <div className="absolute top-[35%] right-[25%] w-1 h-1 rounded-full bg-white/40" />
-              {/* Conteúdo do slide */}
               <div className="absolute bottom-[28%] left-[8%] right-[8%] space-y-1.5">
                 <div className="h-[10%] rounded-md bg-white/90" style={{ height: 9 }} />
                 <div className="h-[7%] rounded-md bg-white/60" style={{ height: 6, width: "75%" }} />
@@ -61,7 +57,6 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
                   <div className="h-1 w-8 bg-purple-400/40 rounded" />
                 </div>
               </div>
-              {/* Badge IA */}
               <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold text-blue-200 bg-brand-500/25 border border-brand-400/20">
                 <Sparkles size={7} /> IA
               </div>
@@ -80,64 +75,42 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
             className="flex flex-col gap-3 p-4 rounded-xl border border-[var(--border-2)] hover:border-sky-500/50 hover:bg-sky-500/5 transition-all text-left group"
           >
             <div className="relative w-full rounded-lg overflow-hidden bg-[#f4f4f4]" style={{ aspectRatio: "4/5" }}>
-
-              {/* Wave grid SVG — igual ao gerado no canvas */}
               <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
                 <rect width="100" height="100" fill="#f7f7f7" />
-                {/* Linhas horizontais onduladas */}
                 {[0,1,2,3,4,5,6,7,8].map((i) => {
                   const y = (i / 8) * 100;
                   const wave = Math.sin(i * 0.8) * 3;
                   const wave2 = Math.sin(i * 0.4 + 1) * 2;
                   return (
-                    <path
-                      key={`h${i}`}
-                      d={`M0,${y + wave} Q25,${y + wave2} 50,${y - wave} T100,${y + wave * 0.5}`}
-                      stroke="rgba(0,0,0,0.07)" strokeWidth="0.8" fill="none"
-                    />
+                    <path key={`h${i}`} d={`M0,${y + wave} Q25,${y + wave2} 50,${y - wave} T100,${y + wave * 0.5}`}
+                      stroke="rgba(0,0,0,0.07)" strokeWidth="0.8" fill="none" />
                   );
                 })}
-                {/* Linhas verticais onduladas */}
                 {[0,1,2,3,4,5,6,7,8,9].map((i) => {
                   const x = (i / 9) * 100;
                   const wave = Math.sin(i * 0.7) * 2.5;
                   return (
-                    <path
-                      key={`v${i}`}
-                      d={`M${x + wave},0 Q${x - wave},50 ${x + wave * 0.5},100`}
-                      stroke="rgba(0,0,0,0.07)" strokeWidth="0.8" fill="none"
-                    />
+                    <path key={`v${i}`} d={`M${x + wave},0 Q${x - wave},50 ${x + wave * 0.5},100`}
+                      stroke="rgba(0,0,0,0.07)" strokeWidth="0.8" fill="none" />
                   );
                 })}
               </svg>
-
-              {/* Slide de capa — topo */}
-              <div
-                className="absolute top-[3%] left-[8%] right-[8%] rounded-lg overflow-hidden shadow-sm"
-                style={{ height: "28%", background: "linear-gradient(135deg,#1d9bf0,#0a5fa3)" }}
-              >
+              <div className="absolute top-[3%] left-[8%] right-[8%] rounded-lg overflow-hidden shadow-sm"
+                style={{ height: "28%", background: "linear-gradient(135deg,#1d9bf0,#0a5fa3)" }}>
                 <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.6),transparent)" }} />
                 <div className="absolute bottom-[15%] left-[8%] right-[30%] h-2 rounded bg-white/80" />
                 <div className="absolute bottom-[6%] left-[8%] right-[45%] h-1.5 rounded bg-white/50" />
                 <div className="absolute top-2 right-2 text-[7px] font-black text-white/70 bg-black/20 px-1 py-0.5 rounded">1</div>
               </div>
-
-              {/* Slides internos — conteúdo tipo post */}
               <div className="absolute left-[8%] right-[8%] space-y-1.5" style={{ top: "35%" }}>
-                {/* Linha título */}
                 <div className="h-2 rounded bg-[#111]/75 w-[85%]" />
                 <div className="h-2 rounded bg-[#111]/75 w-[70%]" />
-                {/* Corpo */}
                 <div className="h-1.5 rounded bg-[#444]/45 w-[90%] mt-1" />
                 <div className="h-1.5 rounded bg-[#444]/45 w-[75%]" />
                 <div className="h-1.5 rounded bg-[#444]/45 w-[60%]" />
               </div>
-
-              {/* Perfil fixo — rodapé */}
-              <div
-                className="absolute bottom-[5%] left-[8%] right-[8%] rounded-lg bg-white shadow-sm flex items-center gap-2 px-2.5"
-                style={{ height: "14%" }}
-              >
+              <div className="absolute bottom-[5%] left-[8%] right-[8%] rounded-lg bg-white shadow-sm flex items-center gap-2 px-2.5"
+                style={{ height: "14%" }}>
                 <div className="w-6 h-6 rounded-full bg-[#1d9bf0] shrink-0 flex items-center justify-center">
                   <Twitter size={10} color="white" />
                 </div>
@@ -145,14 +118,7 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
                   <div className="h-1.5 w-14 bg-[#111] rounded" />
                   <div className="h-1 w-10 bg-[#999] rounded" />
                 </div>
-                <div className="ml-auto">
-                  <div className="w-3 h-3 rounded-full bg-[#1d9bf0]/20 flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#1d9bf0]" />
-                  </div>
-                </div>
               </div>
-
-              {/* Badge */}
               <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold text-sky-600 bg-sky-100 border border-sky-200">
                 <Twitter size={7} /> X
               </div>
@@ -164,29 +130,24 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
               </p>
             </div>
           </button>
+
           {/* ── Com Rosto ── */}
           <button
             onClick={() => onSelect("comrosto")}
             className="flex flex-col gap-3 p-4 rounded-xl border border-[var(--border-2)] hover:border-purple-500/50 hover:bg-purple-500/5 transition-all text-left group"
           >
             <div className="relative w-full rounded-lg overflow-hidden bg-[#0d0014]" style={{ aspectRatio: "4/5" }}>
-              {/* Dark purple bg */}
               <div className="absolute inset-0" style={{ background: "linear-gradient(145deg,#1a0030,#3b0068,#6d28d9)" }} />
-              {/* Gradient overlay */}
               <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.2) 55%,transparent 100%)" }} />
-              {/* Face silhouette */}
               <div className="absolute top-[10%] left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5">
                 <div className="w-8 h-8 rounded-full bg-purple-300/40 border border-purple-400/40" />
                 <div className="w-12 h-5 rounded-full bg-purple-300/20 border border-purple-400/20" />
               </div>
-              {/* Glow */}
               <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-14 h-14 rounded-full bg-purple-500/15 blur-md" />
-              {/* Text lines */}
               <div className="absolute bottom-[28%] left-[8%] right-[8%] space-y-1.5">
                 <div className="h-2 rounded-md bg-white/85" style={{ height: 9 }} />
                 <div className="h-1.5 rounded-md bg-white/50" style={{ height: 6, width: "70%" }} />
               </div>
-              {/* Badge */}
               <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold text-purple-200 bg-purple-500/25 border border-purple-400/20">
                 <UserRound size={7} /> Rosto
               </div>
@@ -198,6 +159,46 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
               </p>
             </div>
           </button>
+
+          {/* ── Da Biblioteca ── */}
+          <button
+            onClick={() => onSelect("biblioteca")}
+            className="flex flex-col gap-3 p-4 rounded-xl border border-[var(--border-2)] hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-left group"
+          >
+            <div className="relative w-full rounded-lg overflow-hidden bg-[#070d1a]" style={{ aspectRatio: "4/5" }}>
+              <div className="absolute inset-0" style={{ background: "linear-gradient(145deg,#070d1a,#0f2044,#1a3a6e)" }} />
+              {/* Grid de thumbnails simulando a biblioteca */}
+              <div className="absolute inset-[8%] grid grid-cols-3 gap-1">
+                {[
+                  "linear-gradient(135deg,#1e3a5f,#2d6a9f)",
+                  "linear-gradient(135deg,#3b1f5e,#7c3aed)",
+                  "linear-gradient(135deg,#1f3b2d,#2d9a5f)",
+                  "linear-gradient(135deg,#5e2020,#c0392b)",
+                  "linear-gradient(135deg,#3d3520,#b8960c)",
+                  "linear-gradient(135deg,#1a2a4a,#2980b9)",
+                ].map((grad, i) => (
+                  <div key={i} className="rounded-sm aspect-square" style={{ background: grad, opacity: 0.85 }} />
+                ))}
+              </div>
+              {/* Overlay sutil */}
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 60%)" }} />
+              {/* Texto na base */}
+              <div className="absolute bottom-[10%] left-[8%] right-[8%] space-y-1">
+                <div className="h-2 rounded bg-white/80" style={{ height: 8 }} />
+                <div className="h-1.5 rounded bg-white/50" style={{ height: 5, width: "65%" }} />
+              </div>
+              <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold text-blue-200 bg-blue-500/25 border border-blue-400/20">
+                <Images size={7} /> Biblioteca
+              </div>
+            </div>
+            <div>
+              <p className="font-bold text-[var(--text)] text-sm group-hover:text-blue-400 transition-colors">Da Biblioteca</p>
+              <p className="text-[11px] text-[var(--text-3)] leading-snug mt-0.5">
+                Reutiliza imagens salvas — sem custo de geração
+              </p>
+            </div>
+          </button>
+
         </div>
 
         <p className="text-center text-[10px] text-[var(--text-3)] mt-4">

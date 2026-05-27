@@ -371,7 +371,11 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail ?? {};
-      if (detail.topic) setLastSettings((prev) => ({ ...(prev ?? defaultSettings()), topic: detail.topic, inputMode: "topic" }));
+      setLastSettings((prev) => ({
+        ...(prev ?? defaultSettings()),
+        ...(detail.topic     ? { topic: detail.topic, inputMode: "topic" as const } : {}),
+        ...(detail.imageStyle ? { imageStyle: detail.imageStyle as ImageStyle }      : {}),
+      }));
       setWizardTwitterMode(!!detail.isTwitter);
       setShowWizard(true);
     };
