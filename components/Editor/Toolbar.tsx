@@ -1,6 +1,7 @@
 "use client";
 
-import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon, Palette, FlipHorizontal, FlipVertical, Database, Search, RefreshCw, MoreHorizontal } from "lucide-react";
+import { Type, Image as ImageIcon, Plus, Trash2, ChevronLeft, ChevronRight, Bold, AlignLeft, AlignCenter, AlignRight, Undo2, Redo2, Wand2, UserCircle, X, BadgeCheck, Sparkles, Loader2, LayoutTemplate, FrameIcon, Palette, FlipHorizontal, FlipVertical, Database, Search, RefreshCw, MoreHorizontal, Images } from "lucide-react";
+import ImageLibraryModal from "@/components/ImageLibraryModal";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import { useRef, useState, useEffect } from "react";
@@ -141,9 +142,10 @@ export default function Toolbar({
 
   const [showMore, setShowMore] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   const [accentColor, setAccentColor] = useState("#facc15");
 
-  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); setShowXpostBank(false); setShowWebSearch(false); setShowMore(false); setShowAdd(false); setShowFundoPanel(false); };
+  const closeAll = () => { setShowLayouts(false); setShowProfile(false); setShowEditAI(false); setShowMolds(false); setShowTheme(false); setShowXpostBank(false); setShowWebSearch(false); setShowMore(false); setShowAdd(false); setShowFundoPanel(false); setShowLibrary(false); };
 
   const openXpostBank = () => {
     if (showXpostBank) { setShowXpostBank(false); return; }
@@ -800,6 +802,14 @@ export default function Toolbar({
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm shrink-0 disabled:opacity-40 transition-colors ${showFundoPanel ? "bg-brand-600 border-brand-500 text-white" : "bg-brand-600/40 hover:bg-brand-600/60 border-brand-500/60 text-brand-300"}`}>
           <Wand2 size={14} className={generating ? "animate-spin" : ""} />
           {generating ? "Gerando..." : "Fundo IA"}
+        </button>
+
+        {/* Biblioteca de imagens */}
+        <button
+          onClick={() => { closeAll(); setShowLibrary(true); }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm shrink-0 transition-colors ${showLibrary ? "bg-brand-600 border-brand-500 text-white" : "bg-[var(--bg-3)] border-[var(--border-2)] hover:border-brand-500/40 text-[var(--text-2)]"}`}
+        >
+          <Images size={14} /> Biblioteca
         </button>
 
         {/* Botão ··· — itens secundários */}
@@ -1594,6 +1604,19 @@ export default function Toolbar({
         </>,
         document.body
       )}
+
+      <ImageLibraryModal
+        open={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onSelect={(url) => {
+          if ((isImage || isFrame) && selectedElement) {
+            if (isFrame) patchSelected({ frameImageUrl: url });
+            else patchSelected({ src: url });
+          } else {
+            onUpdate({ ...slide, backgroundImageUrl: url });
+          }
+        }}
+      />
     </div>
   );
 }

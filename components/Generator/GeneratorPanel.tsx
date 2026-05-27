@@ -6,7 +6,7 @@ import { Sparkles, Search, Loader2, AlertCircle, Crown, Zap, LogIn, CheckCircle2
 import LoginModal from "@/components/LoginModal";
 import { GeneratedContent, SearchResult, Slide, WritingStyle } from "@/types";
 import { v4 as uuid } from "uuid";
-import GeneratorWizard, { WizardSettings, ImageLayout } from "./GeneratorWizard";
+import GeneratorWizard, { WizardSettings, ImageLayout, ImageStyle } from "./GeneratorWizard";
 
 interface Props {
   onGenerate: (slides: Slide[]) => void;
@@ -17,7 +17,7 @@ interface Props {
 const SLIDE_W = 1080;
 const SLIDE_H = 1350;
 
-type ImageStyle = "gemini" | "foto_real";
+// ImageStyle imported from GeneratorWizard
 
 function applyAccent(text: string, accentColor: string): string {
   return text.replace(/\[([^\]]+)\]/g, `<span style="color:${accentColor};font-style:normal">$1</span>`);
@@ -193,6 +193,32 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
   });
 }
 
+// Faz keyword match entre o prompt do slide e imagens da biblioteca
+function pickFromLibrary(
+  library: { id: string; public_url: string; prompt?: string }[],
+  slidePrompt: string,
+  usedUrls: Set<string>
+): string | null {
+  if (!library.length) return null;
+  const words = slidePrompt.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
+  // Tenta match por palavras-chave no prompt salvo
+  const scored = library
+    .filter((img) => !usedUrls.has(img.public_url))
+    .map((img) => {
+      const lp = (img.prompt ?? "").toLowerCase();
+      const score = words.filter((w) => lp.includes(w)).length;
+      return { img, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const best = scored[0];
+  if (best) { usedUrls.add(best.img.public_url); return best.img.public_url; }
+  // Fallback: pega qualquer uma não usada (ou repete se necessário)
+  const any = library.find((img) => !usedUrls.has(img.public_url)) ?? library[0];
+  usedUrls.add(any.public_url);
+  return any.public_url;
+}
+
 async function generateImages(
   slides: (Slide & { _imagePrompt?: string; _searchQuery?: string })[],
   ws: WizardSettings,
@@ -201,6 +227,59 @@ async function generateImages(
   onProgress: (done: number) => void
 ): Promise<Slide[]> {
   let done = 0;
+
+  // ── Modo Biblioteca: busca da library antes de iterar slides ──
+  if (ws.imageStyle === "biblioteca") {
+    let library: { id: string; public_url: string; prompt?: string }[] = [];
+    try {
+      const res = await fetch("/api/library/ai");
+      if (res.ok) library = await res.json();
+    } catch {}
+
+    const usedUrls = new Set<string>();
+    return Promise.all(
+      slides.map(async (slide) => {
+        const prompt = (slide as any)._imagePrompt ?? (slide as any)._searchQuery ?? ws.topic;
+        const { _imagePrompt, _searchQuery, _elementImageId, ...clean } = slide as any;
+
+        let imageUrl = pickFromLibrary(library, prompt, usedUrls);
+
+        // Se biblioteca vazia → gera com IA normalmente
+        if (!imageUrl) {
+          try {
+            const res = await fetch("/api/image", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ prompt, imageStyle: "gemini", customerId, activationToken }),
+            });
+            const data = await res.json();
+            imageUrl = data.imageUrl ?? null;
+            if (imageUrl) {
+              fetch("/api/library/ai", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ imageUrl, prompt, model: "gemini" }),
+              }).catch(() => {});
+            }
+          } catch {}
+        }
+
+        done++; onProgress(done);
+        if (!imageUrl) return { ...clean, backgroundImageLoading: false };
+        if (_elementImageId) {
+          return { ...clean, elements: clean.elements.map((el: any) =>
+            el.id === _elementImageId ? { ...el, src: imageUrl } : el
+          ), backgroundImageLoading: false };
+        }
+        return { ...clean, backgroundImageUrl: imageUrl, backgroundImageLoading: false };
+      })
+    );
+  }
+
+  // ── Modos normais: gemini / foto_real / cinematico ─────────────
+  // "cinematico" é repassado ao backend como imageStyle — já suportado
+  const backendStyle = ws.imageStyle === "cinematico" ? "cinematico" : ws.imageStyle;
+
   return Promise.all(
     slides.map(async (slide) => {
       const prompt = ws.imageStyle === "foto_real"
@@ -212,7 +291,7 @@ async function generateImages(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             prompt,
-            imageStyle: ws.imageStyle,
+            imageStyle: backendStyle,
             customerId,
             activationToken,
             ...(ws.refImageBase64 && ws.imageStyle !== "foto_real"
@@ -223,6 +302,16 @@ async function generateImages(
         const data = await res.json();
         done++; onProgress(done);
         const { _imagePrompt, _searchQuery, _elementImageId, ...clean } = slide as any;
+
+        // Auto-save na biblioteca AI (fire-and-forget)
+        if (data.imageUrl) {
+          fetch("/api/library/ai", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageUrl: data.imageUrl, prompt, model: backendStyle }),
+          }).catch(() => {});
+        }
+
         if (data.imageUrl && _elementImageId) {
           return { ...clean, elements: clean.elements.map((el: any) =>
             el.id === _elementImageId ? { ...el, src: data.imageUrl } : el

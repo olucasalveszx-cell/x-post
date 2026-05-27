@@ -2,10 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Search, Terminal, Crown, ChevronRight, ChevronLeft, Sparkles, Clipboard, Upload, LayoutTemplate } from "lucide-react";
+import { X, Search, Terminal, Crown, ChevronRight, ChevronLeft, Sparkles, Clipboard, Upload, LayoutTemplate, Images } from "lucide-react";
 import { WritingStyle } from "@/types";
 
-type ImageStyle = "gemini" | "foto_real";
+export type ImageStyle = "gemini" | "foto_real" | "cinematico" | "biblioteca";
 
 export type ImageLayout = "mixed" | "full" | "square" | "top" | "base";
 
@@ -370,16 +370,18 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
 
               {/* Image style */}
               <div>
-                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3">Estilo visual das imagens</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { value: "foto_real" as ImageStyle, label: "Foto Real",  desc: "Ultra-realista · Gemini",  badge: "FREE", badgeColor: "text-green-400 bg-green-500/10" },
-                    { value: "gemini"    as ImageStyle, label: "Gemini IA",  desc: "Cinemático · Imagen Pro",  badge: "PRO",  badgeColor: "text-yellow-400 bg-yellow-500/10" },
-                  ].map((is) => (
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3">Modo de imagem</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { value: "gemini",     label: "IA",           desc: "Gera do zero com IA",       icon: "✦", badge: "PRO",  badgeColor: "text-yellow-400 bg-yellow-500/10" },
+                    { value: "foto_real",  label: "Foto Real",    desc: "Ultra-realista · rápido",    icon: "📷", badge: "FREE", badgeColor: "text-green-400  bg-green-500/10"  },
+                    { value: "cinematico", label: "Cinemático",   desc: "Teal-orange · ARRI",         icon: "🎬", badge: "PRO",  badgeColor: "text-yellow-400 bg-yellow-500/10" },
+                    { value: "biblioteca", label: "Biblioteca",   desc: "Reusa imagens salvas",       icon: "🗂", badge: "GRÁTIS", badgeColor: "text-blue-400 bg-blue-500/10"  },
+                  ] as { value: ImageStyle; label: string; desc: string; icon: string; badge: string; badgeColor: string }[]).map((is) => (
                     <button
                       key={is.value}
                       onClick={() => setImageStyle(is.value)}
-                      className={`relative flex flex-col items-start gap-1.5 px-4 py-4 rounded-xl border transition-all ${
+                      className={`relative flex flex-col items-start gap-1 px-3 py-3 rounded-xl border transition-all ${
                         imageStyle === is.value
                           ? "border-brand-500 bg-brand-500/10"
                           : "border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/30"
@@ -388,11 +390,20 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                       <span className={`absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded ${is.badgeColor}`}>
                         {is.badge}
                       </span>
-                      <p className={`text-sm font-semibold ${imageStyle === is.value ? "text-[var(--text)]" : "text-[var(--text-2)]"}`}>{is.label}</p>
-                      <p className="text-[11px] text-[var(--text-3)] leading-snug">{is.desc}</p>
+                      <span className="text-base leading-none mb-0.5">{is.icon}</span>
+                      <p className={`text-xs font-semibold ${imageStyle === is.value ? "text-[var(--text)]" : "text-[var(--text-2)]"}`}>{is.label}</p>
+                      <p className="text-[10px] text-[var(--text-3)] leading-snug">{is.desc}</p>
                     </button>
                   ))}
                 </div>
+
+                {/* Aviso modo biblioteca */}
+                {imageStyle === "biblioteca" && (
+                  <div className="mt-2 flex items-start gap-2 bg-blue-500/8 border border-blue-500/20 rounded-xl px-3 py-2 text-[11px] text-blue-300">
+                    <Images size={12} className="shrink-0 mt-0.5" />
+                    Imagens da sua Biblioteca IA serão usadas. Se a biblioteca estiver vazia, a IA gera automaticamente.
+                  </div>
+                )}
               </div>
 
               {/* Image layout */}
