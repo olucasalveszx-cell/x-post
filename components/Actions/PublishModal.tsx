@@ -66,28 +66,12 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     return urls;
   };
 
-  // Compress to fit Redis's 1MB body limit (~850KB base64 = ~637KB binary is the safe max)
-  const compressForUpload = async (dataUrl: string): Promise<string> => {
-    const maxB64Bytes = 850 * 1024;
-    if (dataUrl.split(",")[1].length <= maxB64Bytes) return dataUrl;
-    const img = new Image();
-    await new Promise<void>((res) => { img.onload = () => res(); img.src = dataUrl; });
-    const cvs = document.createElement("canvas");
-    cvs.width = img.width; cvs.height = img.height;
-    cvs.getContext("2d")!.drawImage(img, 0, 0);
-    for (const q of [0.85, 0.75, 0.65, 0.55]) {
-      const result = cvs.toDataURL("image/jpeg", q);
-      if (result.split(",")[1].length <= maxB64Bytes) return result;
-    }
-    return cvs.toDataURL("image/jpeg", 0.55);
-  };
-
   const uploadImages = async (dataUrls: string[]): Promise<string[]> => {
-    setProgress(42);
-    // Compress + upload all slides in parallel
-    const publicUrls = await Promise.all(dataUrls.map(async (dataUrl, i) => {
-      const compressed = await compressForUpload(dataUrl);
-      const base64 = compressed.split(",")[1];
+    setProgress(30);
+    const publicUrls: string[] = [];
+    for (let i = 0; i < dataUrls.length; i++) {
+      setProgress(30 + Math.round((i / dataUrls.length) * 50));
+      const base64 = dataUrls[i].split(",")[1];
       const res = await fetch("/api/instagram/media", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -95,8 +79,8 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       });
       const data = await res.json();
       if (!res.ok || !data.url) throw new Error(data.error ?? "Falha ao hospedar imagem " + (i + 1));
-      return data.url as string;
-    }));
+      publicUrls.push(data.url);
+    }
     return publicUrls;
   };
 

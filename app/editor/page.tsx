@@ -339,45 +339,20 @@ export default function EditorPage() {
     return () => clearInterval(id);
   }, []);
 
-  // ── Instagram — renova token em background silenciosamente ─────
-  const tryRefreshIGToken = (account: IGAccount, owner: string | null) => {
-    fetch("/api/instagram/refresh-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: account.token }),
-    }).then((r) => r.json()).then((data) => {
-      if (data.token) {
-        const updated = { ...account, token: data.token, expiresAt: data.expiresAt };
-        setIgAccount(updated);
-        try { localStorage.setItem("ig_account", JSON.stringify({ ...updated, _owner: owner })); } catch {}
-      } else {
-        // Refresh falhou (token inválido) — limpa
-        setIgAccount(null);
-        localStorage.removeItem("ig_account");
-      }
-    }).catch(() => {
-      // Falha de rede — mantém o token atual
-      setIgAccount(account);
-    });
-  };
-
-  // ── Instagram — vinculado ao e-mail do usuário ───────────────
+  // ── Instagram ────────────────────────────────────────────────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const success = params.get("ig_success");
-    const error = params.get("ig_error");
+    const error   = params.get("ig_error");
     const currentEmail = session?.user?.email ?? null;
 
     if (success === "1") {
-      const expiresAtParam = params.get("ig_expires_at");
       const account: IGAccount = {
-        token: params.get("ig_token") ?? "",
-        accountId: params.get("ig_account") ?? "",
-        username: params.get("ig_username") ?? "",
-        expiresAt: expiresAtParam ? Number(expiresAtParam) : undefined,
+        token:     params.get("ig_token")    ?? "",
+        accountId: params.get("ig_account")  ?? "",
+        username:  params.get("ig_username") ?? "",
       };
       setIgAccount(account);
-      // Salva junto com o email do dono para não vazar entre sessões
       try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
       window.history.replaceState({}, "", "/editor");
     } else if (error) {
@@ -386,25 +361,14 @@ export default function EditorPage() {
         alert(`Conta Instagram Business não encontrada.\nPáginas do Facebook: ${pages}`);
       }
       window.history.replaceState({}, "", "/editor");
-    }
-
-    if (!success) {
+    } else {
       try {
         const raw = localStorage.getItem("ig_account");
         if (raw) {
           const saved = JSON.parse(raw);
           if (!saved._owner || saved._owner === currentEmail) {
             const { _owner, ...account } = saved;
-            if (account.expiresAt && account.expiresAt < Date.now()) {
-              // Já expirou — tenta renovar antes de descartar
-              tryRefreshIGToken(account, currentEmail);
-            } else {
-              setIgAccount(account);
-              // Renova em background se faltar menos de 7 dias ou não tiver expiresAt
-              const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-              const needsRefresh = !account.expiresAt || (account.expiresAt - Date.now()) < SEVEN_DAYS;
-              if (needsRefresh) tryRefreshIGToken(account, currentEmail);
-            }
+            setIgAccount(account);
           } else {
             localStorage.removeItem("ig_account");
           }
