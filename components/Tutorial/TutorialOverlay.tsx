@@ -51,7 +51,7 @@ const STEPS: Step[] = [
     bg: "rgba(6,182,212,0.12)",
     title: "Exportar e publicar",
     desc: "Clique em \"Exportar\" na barra superior para baixar todos os slides em alta resolução (JPG). Conecte sua conta do Instagram e publique o carrossel direto pelo app.",
-    tip: "Dica: o botão de Login Instagram fica no canto superior direito da tela.",
+    tip: "Dica: o botão Publicar fica no canto superior direito da tela.",
   },
   {
     icon: <MessageCircle size={30} />,
