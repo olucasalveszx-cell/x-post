@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin, assertSupabaseConfigured } from "@/lib/supabase";
 import { v4 as uuid } from "uuid";
 
 export const maxDuration = 30;
 
 export async function GET() {
+  try { assertSupabaseConfigured(); } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 503 }); }
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
