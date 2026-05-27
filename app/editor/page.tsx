@@ -924,16 +924,10 @@ export default function EditorPage() {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col items-end gap-0.5">
-                <button onClick={handleIGLogin}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium text-white">
-                  <LogIn size={14} /> Login Instagram
-                </button>
-                <button onClick={() => setShowIGTokenModal(true)}
-                  className="text-[10px] text-[var(--text-3)] hover:text-[var(--text-2)] underline transition-colors">
-                  configurar manualmente
-                </button>
-              </div>
+              <button onClick={handleIGLogin}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium text-white">
+                <LogIn size={14} /> Login Instagram
+              </button>
             )}
           </div>
         </div>
