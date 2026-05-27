@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 20;
 
-const HEADERS_LIST = [
+const HEADERS_LIST: Record<string, string>[] = [
   // Tentativa 1: Chrome desktop com Referer do Google
   {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
