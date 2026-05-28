@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message ?? "Erro ao criar container do story");
-      carouselContainerId = d.id;
+      carouselContainerId = d.id as string;
       await waitUntilReady(carouselContainerId, igToken);
     } else if (imageUrls.length === 1) {
       // Post simples
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message ?? "Erro ao criar container");
-      carouselContainerId = d.id;
+      carouselContainerId = d.id as string;
       await waitUntilReady(carouselContainerId, igToken);
     } else {
       // Carrossel: cria um container por imagem
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message ?? "Erro ao criar container do carrossel");
-      carouselContainerId = d.id;
+      carouselContainerId = d.id as string;
       await waitUntilReady(carouselContainerId, igToken);
     }
 
