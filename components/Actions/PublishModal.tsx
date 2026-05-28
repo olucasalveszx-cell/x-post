@@ -113,7 +113,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
         body: JSON.stringify({ imageBase64: base64, mimeType: "image/jpeg", filename: `carousel-${Date.now()}-${i}.jpg` }),
       });
       const data = await res.json();
-      if (!data.url) throw new Error("Falha ao hospedar imagem " + (i + 1));
+      if (!res.ok || !data.url) throw new Error(data.error ?? "Falha ao hospedar imagem " + (i + 1));
       urls.push(data.url);
     }
     return urls;
