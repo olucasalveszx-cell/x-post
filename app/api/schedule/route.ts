@@ -3,7 +3,26 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redisSet, redisListAdd, redisListAll, redisGet } from "@/lib/redis";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
+
+const GRAPH = "https://graph.facebook.com/v21.0";
+
+async function waitUntilReady(mediaId: string, token: string, maxWaitMs = 45000): Promise<void> {
+  const deadline = Date.now() + maxWaitMs;
+  let attempt = 0;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${GRAPH}/${mediaId}?fields=status_code&access_token=${token}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message ?? "Erro ao verificar status do container");
+    const status: string = data.status_code ?? "";
+    if (status === "FINISHED") return;
+    if (status === "ERROR")   throw new Error(`Container ${mediaId} falhou no processamento`);
+    if (status === "EXPIRED") throw new Error(`Container ${mediaId} expirou — URL da imagem pode estar inacessível`);
+    await new Promise((r) => setTimeout(r, attempt < 10 ? 3000 : 5000));
+    attempt++;
+  }
+  throw new Error("Instagram demorou demais para processar a mídia. Tente novamente.");
+}
 
 interface ScheduledPost {
   id: string;
@@ -75,7 +94,7 @@ export async function POST(req: NextRequest) {
   try {
     if (isStory) {
       // Story: apenas 1 imagem, media_type STORIES
-      const r = await fetch(`https://graph.facebook.com/v21.0/${igAccountId}/media`, {
+      const r = await fetch(`${GRAPH}/${igAccountId}/media`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -89,9 +108,10 @@ export async function POST(req: NextRequest) {
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message ?? "Erro ao criar container do story");
       carouselContainerId = d.id;
+      await waitUntilReady(carouselContainerId, igToken);
     } else if (imageUrls.length === 1) {
       // Post simples
-      const r = await fetch(`https://graph.facebook.com/v21.0/${igAccountId}/media`, {
+      const r = await fetch(`${GRAPH}/${igAccountId}/media`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -105,10 +125,11 @@ export async function POST(req: NextRequest) {
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message ?? "Erro ao criar container");
       carouselContainerId = d.id;
+      await waitUntilReady(carouselContainerId, igToken);
     } else {
       // Carrossel: cria um container por imagem
       for (const url of imageUrls) {
-        const r = await fetch(`https://graph.facebook.com/v21.0/${igAccountId}/media`, {
+        const r = await fetch(`${GRAPH}/${igAccountId}/media`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -122,8 +143,11 @@ export async function POST(req: NextRequest) {
         containerIds.push(d.id);
       }
 
+      // Aguarda todos os items estarem prontos antes de criar o carrossel
+      await Promise.all(containerIds.map((id) => waitUntilReady(id, igToken)));
+
       // Container do carrossel
-      const r = await fetch(`https://graph.facebook.com/v21.0/${igAccountId}/media`, {
+      const r = await fetch(`${GRAPH}/${igAccountId}/media`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -138,10 +162,11 @@ export async function POST(req: NextRequest) {
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message ?? "Erro ao criar container do carrossel");
       carouselContainerId = d.id;
+      await waitUntilReady(carouselContainerId, igToken);
     }
 
     // Publica (com agendamento)
-    const pubRes = await fetch(`https://graph.facebook.com/v21.0/${igAccountId}/media_publish`, {
+    const pubRes = await fetch(`${GRAPH}/${igAccountId}/media_publish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

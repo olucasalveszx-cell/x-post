@@ -238,7 +238,7 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
           body: JSON.stringify({ imageBase64: base64, mimeType: "image/jpeg", filename: `slide-${i + 1}-${Date.now()}.jpg` }),
         });
         const data = await res.json();
-        if (!data.url) throw new Error("Falha no upload da imagem " + (i + 1));
+        if (!res.ok || !data.url) throw new Error(data.error ?? `Falha no upload da imagem ${i + 1} (HTTP ${res.status})`);
         publicUrls.push(data.url);
       }
 
