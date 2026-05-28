@@ -6,11 +6,5 @@
       "destination": "https://xpostzone.online/$1",
       "permanent": true
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/publish",
-      "schedule": "* * * * *"
-    }
   ]
 }
