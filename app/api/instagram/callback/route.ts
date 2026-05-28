@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 
 function popupHtml(payload: Record<string, string>) {
   const json = JSON.stringify(payload).replace(/</g, "\\u003c");
+  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "*";
   return new NextResponse(
     `<!DOCTYPE html><html><body><script>
-      try { window.opener?.postMessage({ type:"ig_auth", ...${json} }, "${process.env.NEXT_PUBLIC_BASE_URL ?? "*"}"); }
-      catch(e) {}
-      window.close();
-    </script><p>Conectado! Pode fechar esta janela.</p></body></html>`,
+      var p = ${json};
+      /* 1. localStorage — funciona em PWA iOS e qualquer contexto */
+      try { localStorage.setItem("ig_auth_result", JSON.stringify(p)); } catch(e) {}
+      /* 2. postMessage — fallback para desktop */
+      try { window.opener?.postMessage({ type:"ig_auth", ...p }, "${base}"); } catch(e) {}
+      /* 3. BroadcastChannel — fallback moderno */
+      try { var bc = new BroadcastChannel("ig_auth"); bc.postMessage({ type:"ig_auth", ...p }); bc.close(); } catch(e) {}
+      setTimeout(function(){ window.close(); }, 300);
+    </script><p style="font-family:sans-serif;text-align:center;padding:2rem">Conectado! Esta janela vai fechar automaticamente.</p></body></html>`,
     { headers: { "Content-Type": "text/html" } }
   );
 }

@@ -379,6 +379,21 @@ export default function EditorPage() {
 
   const handleIGLogin = () => {
     const currentEmail = session?.user?.email ?? null;
+
+    function applyIGAuth(data: Record<string, string>) {
+      if (data.ig_success === "1") {
+        const account: IGAccount = {
+          token:     data.ig_token     ?? "",
+          accountId: data.ig_account   ?? "",
+          username:  data.ig_username  ?? "",
+        };
+        setIgAccount(account);
+        try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
+      } else if (data.ig_error) {
+        alert(`Erro ao conectar Instagram: ${data.ig_error}`);
+      }
+    }
+
     const w = 520, h = 640;
     const left = Math.max(0, (window.screen.width - w) / 2);
     const top  = Math.max(0, (window.screen.height - h) / 2);
@@ -388,26 +403,52 @@ export default function EditorPage() {
       `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`
     );
     if (!popup) {
-      // Bloqueador de popup ativo — fallback para redirect
       window.location.href = "/api/instagram/auth";
       return;
     }
+
+    let handled = false;
+    function handle(data: Record<string, string>) {
+      if (handled) return;
+      handled = true;
+      cleanup();
+      applyIGAuth(data);
+    }
+
+    // 1. postMessage (desktop)
     const onMsg = (e: MessageEvent) => {
-      if (e.data?.type !== "ig_auth") return;
-      window.removeEventListener("message", onMsg);
-      if (e.data.ig_success === "1") {
-        const account: IGAccount = {
-          token:     e.data.ig_token     ?? "",
-          accountId: e.data.ig_account   ?? "",
-          username:  e.data.ig_username  ?? "",
-        };
-        setIgAccount(account);
-        try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
-      } else if (e.data.ig_error) {
-        alert(`Erro ao conectar Instagram: ${e.data.ig_error}`);
-      }
+      if (e.data?.type === "ig_auth") handle(e.data);
     };
     window.addEventListener("message", onMsg);
+
+    // 2. BroadcastChannel (browsers modernos)
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("ig_auth");
+      bc.onmessage = (e) => { if (e.data?.type === "ig_auth") handle(e.data); };
+    } catch {}
+
+    // 3. localStorage polling — garante funcionamento em PWA iOS
+    localStorage.removeItem("ig_auth_result");
+    const poll = setInterval(() => {
+      const raw = localStorage.getItem("ig_auth_result");
+      if (raw) {
+        localStorage.removeItem("ig_auth_result");
+        try { handle(JSON.parse(raw)); } catch {}
+      }
+      // Para de fazer poll se o popup fechou
+      if (popup.closed && !handled) { cleanup(); }
+    }, 500);
+
+    // Timeout de segurança: 10 min
+    const timeout = setTimeout(() => cleanup(), 10 * 60 * 1000);
+
+    function cleanup() {
+      clearInterval(poll);
+      clearTimeout(timeout);
+      window.removeEventListener("message", onMsg);
+      try { bc?.close(); } catch {}
+    }
   };
 
   const handleStyleSelect = useCallback((style: "layouts" | "twitter" | "comrosto" | "biblioteca") => {
