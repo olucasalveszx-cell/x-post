@@ -40,3 +40,5 @@ export const redisListAll = (key: string): Promise<string[]> =>
 export const redisSetex = (key: string, seconds: number, value: string): Promise<void> => call(["SETEX", key, seconds, value]);
 export const redisDel  = (key: string): Promise<number> => call(["DEL", key]);
 export const redisLRem = (key: string, count: number, value: string): Promise<number> => call(["LREM", key, count, value]);
+export const redisZRangeByScore = (key: string, min: number | string, max: number | string): Promise<string[]> => call(["ZRANGEBYSCORE", key, min, max]);
+export const redisZRem = (key: string, member: string): Promise<number> => call(["ZREM", key, member]);
