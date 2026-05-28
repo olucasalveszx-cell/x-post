@@ -1,9 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { redisSet, redisGet, redisListAdd, redisListAll, redisLRem, redisZAdd } from "@/lib/redis";
+import { redisSet, redisGet, redisListAdd, redisListAll, redisLRem, redisZAdd, redisZRangeByScore, redisZRem } from "@/lib/redis";
 
-export const maxDuration = 30;
+export const maxDuration = 300;
+
+const GRAPH = "https://graph.facebook.com/v21.0";
+const QUEUE_KEY = "schedule:queue";
+
+async function waitUntilReady(mediaId: string, token: string, maxMs = 60000): Promise<void> {
+  const deadline = Date.now() + maxMs;
+  let attempt = 0;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${GRAPH}/${mediaId}?fields=status_code&access_token=${token}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message ?? "Erro no container");
+    const s = data.status_code ?? "";
+    if (s === "FINISHED") return;
+    if (s === "ERROR")    throw new Error(`Container ${mediaId} falhou`);
+    if (s === "EXPIRED")  throw new Error(`Container ${mediaId} expirou`);
+    await new Promise((r) => setTimeout(r, attempt < 10 ? 3000 : 5000));
+    attempt++;
+  }
+  throw new Error("Instagram demorou demais. Tente reagendar.");
+}
+
+async function publishNow(post: { igAccountId: string; igToken: string; imageUrls: string[]; caption: string; mediaType: string }): Promise<string> {
+  const { igAccountId, igToken, imageUrls, caption, mediaType } = post;
+
+  if (mediaType === "story") {
+    const r = await fetch(`${GRAPH}/${igAccountId}/media`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image_url: imageUrls[0], media_type: "STORIES", access_token: igToken }) });
+    const d = await r.json(); if (!d.id) throw new Error(d.error?.message ?? "Erro ao criar story");
+    await waitUntilReady(d.id, igToken);
+    const p = await fetch(`${GRAPH}/${igAccountId}/media_publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ creation_id: d.id, access_token: igToken }) });
+    const pd = await p.json(); if (!pd.id) throw new Error(pd.error?.message ?? "Erro ao publicar story");
+    return pd.id;
+  }
+  if (imageUrls.length === 1) {
+    const r = await fetch(`${GRAPH}/${igAccountId}/media`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image_url: imageUrls[0], caption, access_token: igToken }) });
+    const d = await r.json(); if (!d.id) throw new Error(d.error?.message ?? "Erro ao criar post");
+    await waitUntilReady(d.id, igToken);
+    const p = await fetch(`${GRAPH}/${igAccountId}/media_publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ creation_id: d.id, access_token: igToken }) });
+    const pd = await p.json(); if (!pd.id) throw new Error(pd.error?.message ?? "Erro ao publicar");
+    return pd.id;
+  }
+  const childIds: string[] = [];
+  for (const url of imageUrls) {
+    const r = await fetch(`${GRAPH}/${igAccountId}/media`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image_url: url, is_carousel_item: true, access_token: igToken }) });
+    const d = await r.json(); if (!d.id) throw new Error(d.error?.message ?? "Erro ao criar item"); childIds.push(d.id);
+  }
+  await Promise.all(childIds.map((id) => waitUntilReady(id, igToken)));
+  const r = await fetch(`${GRAPH}/${igAccountId}/media`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ media_type: "CAROUSEL", children: childIds.join(","), caption, access_token: igToken }) });
+  const d = await r.json(); if (!d.id) throw new Error(d.error?.message ?? "Erro ao criar carrossel");
+  await waitUntilReady(d.id, igToken);
+  const p = await fetch(`${GRAPH}/${igAccountId}/media_publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ creation_id: d.id, access_token: igToken }) });
+  const pd = await p.json(); if (!pd.id) throw new Error(pd.error?.message ?? "Erro ao publicar carrossel");
+  return pd.id;
+}
 
 interface ScheduledPost {
   id: string;
@@ -22,7 +75,6 @@ interface ScheduledPost {
 
 function postKey(id: string)        { return `schedule:post:${id}`; }
 function userPostsKey(email: string) { return `schedule:user:${email}`; }
-const QUEUE_KEY = "schedule:queue";
 
 // GET — lista posts agendados do usuário
 export async function GET(req: NextRequest) {
@@ -116,4 +168,36 @@ export async function DELETE(req: NextRequest) {
   await redisLRem(userPostsKey(session.user.email), 0, id);
 
   return NextResponse.json({ ok: true });
+}
+
+// PATCH — cron job: publica posts vencidos (chamado pelo cron-job.org a cada minuto)
+export async function PATCH(req: NextRequest) {
+  const authHeader = req.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const now = Date.now();
+  const dueIds: string[] = await redisZRangeByScore(QUEUE_KEY, 0, now);
+  if (!dueIds.length) return NextResponse.json({ ok: true, processed: 0 });
+
+  let published = 0, failed = 0;
+  for (const id of dueIds) {
+    await redisZRem(QUEUE_KEY, id);
+    const raw = await redisGet(postKey(id));
+    if (!raw) continue;
+    let post: ScheduledPost;
+    try { post = JSON.parse(raw); } catch { continue; }
+    if (post.status !== "scheduled") continue;
+    try {
+      const igPostId = await publishNow(post);
+      post.status = "published"; post.igPostId = igPostId; published++;
+    } catch (err: any) {
+      post.status = "failed"; post.errorMsg = err.message; failed++;
+      console.error(`[cron] ✗ ${id}:`, err.message);
+    }
+    await redisSet(postKey(id), JSON.stringify(post));
+  }
+
+  return NextResponse.json({ ok: true, processed: dueIds.length, published, failed });
 }
