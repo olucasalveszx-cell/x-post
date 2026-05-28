@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const appId = process.env.META_APP_ID;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3001";
 
@@ -8,6 +8,7 @@ export async function GET() {
     return NextResponse.json({ error: "META_APP_ID não configurado" }, { status: 500 });
   }
 
+  const popup = req.nextUrl.searchParams.get("popup") === "1";
   const redirectUri = `${baseUrl}/api/instagram/callback`;
   const scope = [
     "instagram_basic",
@@ -20,7 +21,8 @@ export async function GET() {
     `?client_id=${appId}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&scope=${scope}` +
-    `&response_type=code`;
+    `&response_type=code` +
+    `&state=${popup ? "popup" : "redirect"}`;
 
   return NextResponse.redirect(oauthUrl);
 }

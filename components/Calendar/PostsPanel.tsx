@@ -199,11 +199,6 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
 
   /* ── schedule ── */
   const schedulePost = async () => {
-    const igAccount = JSON.parse(localStorage.getItem("ig_account") ?? "null");
-    if (!igAccount) {
-      setSchedMsg("Conecte sua conta do Instagram primeiro (botão no topo do editor).");
-      setSchedStatus("error"); return;
-    }
     if (!schedAt) {
       setSchedMsg("Escolha a data e horário do agendamento.");
       setSchedStatus("error"); return;
@@ -219,53 +214,62 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
     const slidesToExport = postType === "story" ? currentSlides.slice(0, 1) : currentSlides;
 
     try {
-      /* 1. Export */
-      setSchedStatus("exporting"); setSchedMsg("Exportando slides...");
-      const dataUrls: string[] = [];
-      for (const slide of slidesToExport) {
-        const canvas = await renderSlide(slide);
-        dataUrls.push(canvas.toDataURL("image/jpeg", 0.92));
+      /* 1. Exporta slides como arquivos */
+      setSchedStatus("exporting"); setSchedMsg("Preparando imagens...");
+      const files: File[] = [];
+      for (let i = 0; i < slidesToExport.length; i++) {
+        const canvas = await renderSlide(slidesToExport[i]);
+        const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), "image/jpeg", 0.92));
+        files.push(new File([blob], `slide-${i + 1}.jpg`, { type: "image/jpeg" }));
       }
 
-      /* 2. Upload to Blob */
-      setSchedStatus("uploading"); setSchedMsg("Enviando imagens...");
-      const publicUrls: string[] = [];
-      for (let i = 0; i < dataUrls.length; i++) {
-        const base64 = dataUrls[i].split(",")[1];
-        const res = await fetch("/api/blob-upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: base64, mimeType: "image/jpeg", filename: `slide-${i + 1}-${Date.now()}.jpg` }),
-        });
-        const data = await res.json();
-        if (!res.ok || !data.url) throw new Error(data.error ?? `Falha no upload da imagem ${i + 1} (HTTP ${res.status})`);
-        publicUrls.push(data.url);
+      /* 2. Copia legenda para o clipboard */
+      if (fullCaption) {
+        try { await navigator.clipboard.writeText(fullCaption); } catch {}
       }
 
-      /* 3. Schedule */
-      setSchedStatus("scheduling"); setSchedMsg("Agendando post...");
-      const res = await fetch("/api/schedule", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageUrls: publicUrls,
-          caption: fullCaption,
-          scheduledAt: scheduledDate.toISOString(),
-          igToken: igAccount.token,
-          igAccountId: igAccount.accountId,
-          mediaType: postType,
-        }),
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error ?? "Erro ao agendar");
+      /* 3. Salva no calendário local */
+      const firstUrl = URL.createObjectURL(files[0]);
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setPosts(prev => [{
+        id, caption: fullCaption,
+        imageUrls: [firstUrl],
+        scheduledAt: scheduledDate.toISOString(),
+        status: "scheduled" as const,
+      }, ...prev]);
+
+      /* 4. Abre Instagram via Web Share ou baixa as imagens */
+      setSchedStatus("uploading"); setSchedMsg("Abrindo Instagram...");
+
+      const canShare = typeof navigator.share === "function" &&
+        typeof navigator.canShare === "function" &&
+        navigator.canShare({ files });
+
+      if (canShare) {
+        await navigator.share({ files, title: "Carrossel XPost" });
+      } else {
+        // Fallback desktop: baixa os arquivos
+        for (const file of files) {
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(file);
+          a.download = file.name;
+          a.click();
+        }
+      }
 
       setSchedStatus("done");
-      setSchedMsg("Post agendado com sucesso!");
+      setSchedMsg(
+        fullCaption
+          ? "Legenda copiada! Cole no Instagram e finalize o agendamento lá."
+          : "Imagens prontas! Finalize o agendamento no Instagram."
+      );
       setCaption(""); setHashtags(""); setSchedAt(""); setSelectedTrack(null);
-      await loadPosts();
     } catch (err: any) {
+      if ((err as DOMException).name === "AbortError") {
+        setSchedStatus("idle"); return;
+      }
       setSchedStatus("error");
-      setSchedMsg(err.message ?? "Erro desconhecido");
+      setSchedMsg(err.message ?? "Erro ao preparar post");
     }
   };
 
@@ -524,12 +528,12 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
               {/* Data e Hora */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-gray-400 font-medium flex items-center gap-1.5">
-                  <CalendarClock size={12} /> Data e horário do post
+                  <CalendarClock size={12} /> Horário de publicação
                 </label>
                 <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)}
                   min={minDateTime}
                   className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500 [color-scheme:dark]" />
-                <p className="text-[10px] text-gray-600">Mínimo: 11 minutos no futuro. Máximo: 75 dias.</p>
+                <p className="text-[10px] text-gray-600">Escolha o horário — você finalizará o agendamento dentro do Instagram.</p>
               </div>
 
               {/* Feedback */}
@@ -543,21 +547,20 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
                    schedStatus === "error" ? <XCircle size={14} /> :
                    <Loader2 size={14} className="animate-spin" />}
                   {schedMsg || {
-                    exporting: "Exportando slides...",
-                    uploading: "Enviando imagens...",
-                    scheduling: "Agendando post...",
+                    exporting: "Preparando imagens...",
+                    uploading: "Abrindo Instagram...",
                   }[schedStatus as string] || ""}
                 </div>
               )}
 
               {/* Botão agendar */}
               <button onClick={schedulePost}
-                disabled={["exporting","uploading","scheduling"].includes(schedStatus)}
+                disabled={["exporting","uploading"].includes(schedStatus)}
                 className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40"
                 style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "white", boxShadow: "0 0 20px rgba(168,85,247,0.3)" }}>
-                {["exporting","uploading","scheduling"].includes(schedStatus)
-                  ? <><Loader2 size={16} className="animate-spin" /> Agendando...</>
-                  : <><Send size={16} /> {postType === "story" ? "Agendar Story" : "Agendar post"}</>}
+                {["exporting","uploading"].includes(schedStatus)
+                  ? <><Loader2 size={16} className="animate-spin" /> Preparando...</>
+                  : <><Send size={16} /> {postType === "story" ? "Enviar Story ao Instagram" : "Abrir no Instagram"}</>}
               </button>
 
               {schedStatus === "done" && (

@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 
+function popupHtml(payload: Record<string, string>) {
+  const json = JSON.stringify(payload).replace(/</g, "\\u003c");
+  return new NextResponse(
+    `<!DOCTYPE html><html><body><script>
+      try { window.opener?.postMessage({ type:"ig_auth", ...${json} }, "${process.env.NEXT_PUBLIC_BASE_URL ?? "*"}"); }
+      catch(e) {}
+      window.close();
+    </script><p>Conectado! Pode fechar esta janela.</p></body></html>`,
+    { headers: { "Content-Type": "text/html" } }
+  );
+}
+
 export async function GET(req: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3001";
   const editorUrl = `${baseUrl}/editor`;
+  const isPopup = req.nextUrl.searchParams.get("state") === "popup";
 
   const code = req.nextUrl.searchParams.get("code");
   const error = req.nextUrl.searchParams.get("error");
@@ -105,19 +118,22 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // 5. Redireciona de volta ao editor com os dados no URL
-    const expiresAt = Date.now() + (longData.expires_in ?? 5184000) * 1000; // default 60 days
-    const params = new URLSearchParams({
+    // 5. Retorna dados ao editor (popup ou redirect)
+    const expiresAt = Date.now() + (longData.expires_in ?? 5184000) * 1000;
+    const payload = {
       ig_token: igToken,
       ig_account: igAccountId,
       ig_username: igUsername,
       ig_expires_at: String(expiresAt),
       ig_success: "1",
-    });
+    };
 
-    return NextResponse.redirect(`${editorUrl}?${params}`);
+    if (isPopup) return popupHtml(payload);
+
+    return NextResponse.redirect(`${editorUrl}?${new URLSearchParams(payload)}`);
   } catch (err: any) {
     console.error("[instagram/callback]", err.message);
+    if (isPopup) return popupHtml({ ig_error: err.message });
     return NextResponse.redirect(`${editorUrl}?ig_error=${encodeURIComponent(err.message)}`);
   }
 }

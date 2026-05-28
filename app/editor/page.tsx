@@ -377,7 +377,38 @@ export default function EditorPage() {
     }
   }, [session?.user?.email]);
 
-  const handleIGLogin = () => { window.location.href = "/api/instagram/auth"; };
+  const handleIGLogin = () => {
+    const currentEmail = session?.user?.email ?? null;
+    const w = 520, h = 640;
+    const left = Math.max(0, (window.screen.width - w) / 2);
+    const top  = Math.max(0, (window.screen.height - h) / 2);
+    const popup = window.open(
+      "/api/instagram/auth?popup=1",
+      "ig_auth",
+      `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`
+    );
+    if (!popup) {
+      // Bloqueador de popup ativo — fallback para redirect
+      window.location.href = "/api/instagram/auth";
+      return;
+    }
+    const onMsg = (e: MessageEvent) => {
+      if (e.data?.type !== "ig_auth") return;
+      window.removeEventListener("message", onMsg);
+      if (e.data.ig_success === "1") {
+        const account: IGAccount = {
+          token:     e.data.ig_token     ?? "",
+          accountId: e.data.ig_account   ?? "",
+          username:  e.data.ig_username  ?? "",
+        };
+        setIgAccount(account);
+        try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
+      } else if (e.data.ig_error) {
+        alert(`Erro ao conectar Instagram: ${e.data.ig_error}`);
+      }
+    };
+    window.addEventListener("message", onMsg);
+  };
 
   const handleStyleSelect = useCallback((style: "layouts" | "twitter" | "comrosto" | "biblioteca") => {
     setShowStyleSelector(false);
