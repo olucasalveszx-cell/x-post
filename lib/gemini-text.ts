@@ -14,18 +14,18 @@ interface GeminiOpts {
   temperature?: number;
 }
 
-async function callClaude(prompt: string, system: string | undefined, maxTokens: number): Promise<string> {
+async function callClaude(prompt: string, system: string | undefined, maxTokens: number, temperature = 0.9): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
 
   const body: any = {
-    model: "claude-haiku-4-5-20251001",
+    model: "claude-sonnet-4-6",
     max_tokens: maxTokens,
     messages: [{ role: "user", content: prompt }],
   };
   if (system) body.system = system;
+  if (temperature !== undefined) body.temperature = temperature;
 
-  // Tenta 2x com backoff — Claude pode retornar 529 Overloaded
   for (let attempt = 1; attempt <= 2; attempt++) {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -82,12 +82,24 @@ async function callGemini(contents: object[], opts: GeminiOpts): Promise<string>
     }
   }
 
-  // Fallback: Claude Haiku quando todos os modelos Gemini estão sobrecarregados
-  const textPrompt = (contents[0] as any)?.parts?.find((p: any) => p.text)?.text ?? "";
-  return callClaude(textPrompt, system, maxTokens);
+  throw new Error(lastError);
 }
 
 export async function geminiText(prompt: string, opts: GeminiOpts = {}): Promise<string> {
+  const { system, maxTokens = 4096, temperature = 0.9 } = opts;
+
+  // Tenta Claude Sonnet primeiro (melhor qualidade, sem truncamentos)
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      return await callClaude(prompt, system, maxTokens, temperature);
+    } catch (e: any) {
+      // Se for overload do Claude, tenta Gemini como fallback
+      if (!isRetryable(e.message ?? "")) throw e;
+      console.warn("[geminiText] Claude sobrecarregado, tentando Gemini...");
+    }
+  }
+
+  // Fallback: Gemini
   return callGemini([{ parts: [{ text: prompt }] }], opts);
 }
 
