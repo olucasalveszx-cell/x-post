@@ -140,6 +140,7 @@ export async function POST(req: NextRequest) {
   await redisSet(postKey(id), JSON.stringify(post));
   await redisListAdd(userPostsKey(session.user.email), id);
   await redisListAdd(PENDING_KEY, id);
+  await redisListAdd("schedule:users", session.user.email);
 
   return NextResponse.json({ ok: true, id });
 }
@@ -177,42 +178,37 @@ export async function PATCH(req: NextRequest) {
   }
 
   const now = Date.now();
-  const allPending = await redisListAll(PENDING_KEY);
-  const dueIds = allPending.filter(Boolean);
 
-  if (!dueIds.length) return NextResponse.json({ ok: true, processed: 0 });
+  // Coleta IDs de todas as fontes: fila pendente + todos os usuários conhecidos
+  const pendingIds = await redisListAll(PENDING_KEY);
+  const users = await redisListAll("schedule:users");
+  const userPostIds: string[] = [];
+  for (const email of [...new Set(users.filter(Boolean))]) {
+    const ids = await redisListAll(userPostsKey(email));
+    userPostIds.push(...ids);
+  }
+  const allIds = [...new Set([...pendingIds, ...userPostIds].filter(Boolean))];
 
-  let published = 0, failed = 0, skipped = 0;
+  let published = 0, failed = 0, skipped = 0, processed = 0;
 
-  for (const id of dueIds) {
+  for (const id of allIds) {
     const raw = await redisGet(postKey(id));
     if (!raw) { await redisLRem(PENDING_KEY, 0, id); continue; }
-
     let post: ScheduledPost;
     try { post = JSON.parse(raw); } catch { continue; }
-
-    // Ainda não chegou o horário
-    if (new Date(post.scheduledAt).getTime() > now) { skipped++; continue; }
-
-    // Já foi processado
     if (post.status !== "scheduled") { await redisLRem(PENDING_KEY, 0, id); continue; }
-
-    // Remove da fila antes de tentar publicar (evita dupla execução)
+    if (new Date(post.scheduledAt).getTime() > now) { skipped++; continue; }
+    processed++;
     await redisLRem(PENDING_KEY, 0, id);
-
     try {
       const igPostId = await publishNow(post);
-      post.status = "published";
-      post.igPostId = igPostId;
-      published++;
+      post.status = "published"; post.igPostId = igPostId; published++;
     } catch (err: any) {
-      post.status = "failed";
-      post.errorMsg = err.message;
-      failed++;
+      post.status = "failed"; post.errorMsg = err.message; failed++;
       console.error(`[cron] ✗ ${id}:`, err.message);
     }
     await redisSet(postKey(id), JSON.stringify(post));
   }
 
-  return NextResponse.json({ ok: true, processed: dueIds.length - skipped, published, failed, skipped, total: dueIds.length });
+  return NextResponse.json({ ok: true, processed, published, failed, skipped, total: allIds.length });
 }
