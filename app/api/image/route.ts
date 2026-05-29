@@ -635,6 +635,47 @@ async function fromGoogleImages(prompt: string) {
   throw new Error("Google Images: nenhuma imagem pôde ser baixada");
 }
 
+// ── Wikimedia Commons — imagens reais de eventos/pessoas públicas ──
+async function fromWikimediaCommons(prompt: string) {
+  const query = prompt.replace(/<[^>]+>/g, "").replace(/[^\w\sÀ-ÿ]/g, " ").trim()
+    .split(/\s+/).slice(0, 6).join(" ");
+  if (!query) throw new Error("Wikimedia: query vazia");
+
+  const params = new URLSearchParams({
+    action: "query",
+    generator: "search",
+    gsrsearch: query,
+    gsrnamespace: "6",
+    gsrlimit: "12",
+    prop: "imageinfo",
+    iiprop: "url|thumburl|size|mediatype",
+    iiurlwidth: "800",
+    format: "json",
+    origin: "*",
+  });
+
+  const res = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`, {
+    signal: AbortSignal.timeout(8000),
+    headers: { "User-Agent": "XPost/1.0 (carousel generator)" },
+  });
+  if (!res.ok) throw new Error(`Wikimedia HTTP ${res.status}`);
+
+  const data = await res.json();
+  const pages = Object.values(data.query?.pages ?? {}) as any[];
+  const valid = pages.filter((p: any) => {
+    const info = p.imageinfo?.[0];
+    return info?.url && !info.url.endsWith(".svg") && !info.url.endsWith(".ogv")
+      && (info.mediatype === "BITMAP" || !info.mediatype);
+  });
+
+  if (!valid.length) throw new Error("Wikimedia: sem resultados");
+
+  const pick = valid[Math.floor(Math.random() * Math.min(valid.length, 5))];
+  const imageUrl = pick.imageinfo[0].url;
+  console.log("[image] Wikimedia Commons OK →", imageUrl.slice(0, 80));
+  return { imageUrl, source: "wikimedia" };
+}
+
 // ── Pexels (fallback final) ───────────────────────────────────
 async function fromPexels(prompt: string) {
   const key = process.env.PEXELS_API_KEY;
@@ -834,28 +875,33 @@ export async function POST(req: NextRequest) {
     }
 
     // Sem upscaling no modo com rosto — pipeline já usa ~60-90s, upscaling estouraria os 120s do Vercel
-  } else if (!isPro) {
-    // Netlify limit ~26s: fal-schnell (18s) + Google Images (8s) = ~26s max
-    const tries: Array<() => Promise<ImageResult>> = [
-      () => fromFalSchnell(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
-      () => fromGoogleImages(prompt).then(r => { plan = "free_fallback"; return r; }),
-      () => fromPexels(prompt).then(r => { plan = "free_fallback"; return r; }),
-    ];
-    for (const fn of tries) {
-      if (result) break;
-      try { result = await fn(); } catch (e: any) { errors.push(e.message); }
-    }
   } else {
-    // Netlify limit ~26s: fal-schnell (18s) + Google Images (8s) = ~26s max
-    const tries: Array<() => Promise<ImageResult>> = [
-      () => fromFalSchnell(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
-      () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
-    ];
-    for (const fn of tries) {
-      if (result) break;
-      try { result = await fn(); } catch (e: any) { errors.push(e.message); }
-    }
+    // Time-budget: 22s total (4s margin before Netlify's 26s limit)
+    // Each attempt uses at most the remaining budget — if schnell fails fast,
+    // OpenAI gets the remaining time; if schnell is slow, OpenAI is skipped.
+    const BUDGET_MS = 22000;
+    const startMs = Date.now();
+    const remaining = () => Math.max(0, BUDGET_MS - (Date.now() - startMs));
+
+    const tryFn = async (fn: () => Promise<ImageResult>, minMs = 2000): Promise<ImageResult | null> => {
+      if (result || remaining() < minMs) return null;
+      const r = remaining() - 500;
+      try {
+        return await Promise.race([
+          fn(),
+          new Promise<never>((_, rej) => setTimeout(() => rej(new Error("time budget exceeded")), r)),
+        ]);
+      } catch (e: any) {
+        errors.push(e.message);
+        return null;
+      }
+    };
+
+    result = await tryFn(() => fromFalSchnell(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }), 3000)
+          ?? await tryFn(() => fromOpenAI(enhancedPrompt, style).then(r => { plan = isPro ? "pro" : "free"; return r; }), 8000)
+          ?? await tryFn(() => fromWikimediaCommons(prompt).then(r => { plan = "fallback"; return r; }), 2000)
+          ?? await tryFn(() => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }), 2000)
+          ?? await tryFn(() => fromPexels(prompt).then(r => { plan = "fallback"; return r; }), 2000);
   }
 
   if (!result) return NextResponse.json({ error: errors.join(" | ") }, { status: 500 });
