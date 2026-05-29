@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { redisSet, redisGet, redisListAdd, redisListAll, redisLRem } from "@/lib/redis";
+import { redisSet, redisGet, redisListAdd, redisListAll, redisLRem, redisSetNX } from "@/lib/redis";
 
 export const maxDuration = 60;
 
@@ -184,6 +184,10 @@ export async function PATCH(req: NextRequest) {
 
     if (post.status !== "scheduled") { await redisLRem(PENDING_KEY, 0, id); continue; }
     if (new Date(post.scheduledAt).getTime() > now) { skipped++; continue; }
+
+    // Lock distribuído: evita processamento duplo em chamadas sobrepostas
+    const lock = await redisSetNX(`schedule:lock:${id}`, "1", 120);
+    if (!lock) { skipped++; continue; }
 
     await redisLRem(PENDING_KEY, 0, id);
     try {

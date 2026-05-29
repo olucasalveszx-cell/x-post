@@ -42,3 +42,6 @@ export const redisDel  = (key: string): Promise<number> => call(["DEL", key]);
 export const redisLRem = (key: string, count: number, value: string): Promise<number> => call(["LREM", key, count, value]);
 export const redisZRangeByScore = (key: string, min: number | string, max: number | string): Promise<string[]> => call(["ZRANGEBYSCORE", key, min, max]);
 export const redisZRem = (key: string, member: string): Promise<number> => call(["ZREM", key, member]);
+// SET NX EX — retorna "OK" se travou, null se já estava travado
+export const redisSetNX = (key: string, value: string, exSeconds: number): Promise<string | null> =>
+  call(["SET", key, value, "NX", "EX", String(exSeconds)]);
