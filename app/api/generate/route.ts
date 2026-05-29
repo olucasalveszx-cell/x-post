@@ -213,6 +213,10 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
     const stripNumbering = (text: string) =>
       text.replace(/^(\d+[\.\)]\s*|[•\-\*]\s*|#\d+\s*|Slide\s*\d+:?\s*|Passo\s*\d+:?\s*)/gim, "").trim();
 
+    if (!generated.slides || !Array.isArray(generated.slides) || generated.slides.length === 0) {
+      throw new Error("A IA não retornou slides. Tente novamente em instantes.");
+    }
+
     generated.slides = generated.slides.map((s) => ({
       ...s,
       title: stripNumbering(s.title ?? ""),
