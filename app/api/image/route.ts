@@ -8,7 +8,7 @@ import { redisGet, redisSet, redisIncr, redisLPush, redisLTrim } from "@/lib/red
 import { put } from "@vercel/blob";
 import { geminiText, geminiVision } from "@/lib/gemini-text";
 
-export const maxDuration = 26;
+export const maxDuration = 60;
 
 async function enhancePrompt(raw: string): Promise<string> {
   try {
@@ -876,10 +876,10 @@ export async function POST(req: NextRequest) {
 
     // Sem upscaling no modo com rosto — pipeline já usa ~60-90s, upscaling estouraria os 120s do Vercel
   } else {
-    // Time-budget: 22s total (4s margin before Netlify's 26s limit)
+    // Time-budget: 55s total (5s margin before Vercel's 60s limit)
     // Each attempt uses at most the remaining budget — if schnell fails fast,
     // OpenAI gets the remaining time; if schnell is slow, OpenAI is skipped.
-    const BUDGET_MS = 22000;
+    const BUDGET_MS = 55000;
     const startMs = Date.now();
     const remaining = () => Math.max(0, BUDGET_MS - (Date.now() - startMs));
 
