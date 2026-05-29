@@ -834,36 +834,30 @@ export async function POST(req: NextRequest) {
     }
 
     // Sem upscaling no modo com rosto — pipeline já usa ~60-90s, upscaling estouraria os 120s do Vercel
-  } else {
-    // Tenta IA com budget de 8s total (seguro para Netlify 10s limit)
-    // Se não conseguir em tempo, cai direto no Google Images / Pexels
-    const aiDeadline = Date.now() + 8000;
-    const aiProviders: Array<[string, () => Promise<ImageResult>]> = [
-      ["falSchnell", () => fromFalSchnell(enhancedPrompt, style)],
-      ...(isPro ? [["falPro", () => fromFal(enhancedPrompt, style)] as [string, () => Promise<ImageResult>]] : []),
+  } else if (!isPro) {
+    const tries: Array<() => Promise<ImageResult>> = [
+      () => fromFalSchnell(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
+      () => fromFal(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
+      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
+      () => fromGoogleImages(prompt).then(r => { plan = "free_fallback"; return r; }),
+      () => fromPexels(prompt).then(r => { plan = "free_fallback"; return r; }),
     ];
-
-    for (const [label, fn] of aiProviders) {
-      if (result || Date.now() >= aiDeadline) break;
-      const remaining = aiDeadline - Date.now();
-      try {
-        result = await Promise.race([
-          fn(),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`${label} timeout`)), remaining)),
-        ]);
-        plan = isPro ? "pro" : "free";
-      } catch (e: any) { errors.push(e.message); }
+    for (const fn of tries) {
+      if (result) break;
+      try { result = await fn(); } catch (e: any) { errors.push(e.message); }
     }
-
-    // Fallback rápido: busca web (< 2s)
-    if (!result) {
-      for (const fn of [
-        () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
-        () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
-      ]) {
-        if (result) break;
-        try { result = await fn(); } catch (e: any) { errors.push(e.message); }
-      }
+  } else {
+    const tries: Array<() => Promise<ImageResult>> = [
+      () => fromFalSchnell(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
+      () => fromFal(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
+      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
+      () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
+      () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
+      () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
+    ];
+    for (const fn of tries) {
+      if (result) break;
+      try { result = await fn(); } catch (e: any) { errors.push(e.message); }
     }
   }
 
