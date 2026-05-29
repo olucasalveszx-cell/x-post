@@ -214,5 +214,5 @@ export async function PATCH(req: NextRequest) {
     await redisSet(postKey(id), JSON.stringify(post));
   }
 
-  return NextResponse.json({ ok: true, processed: dueIds.length - skipped, published, failed, skipped });
+  return NextResponse.json({ ok: true, processed: dueIds.length - skipped, published, failed, skipped, total: dueIds.length });
 }

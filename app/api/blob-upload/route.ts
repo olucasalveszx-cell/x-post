@@ -14,6 +14,8 @@ async function ensureBucket() {
   const { data } = await supabase.storage.getBucket(BUCKET);
   if (!data) {
     await supabase.storage.createBucket(BUCKET, { public: true });
+  } else if (!data.public) {
+    await supabase.storage.updateBucket(BUCKET, { public: true });
   }
 }
 
