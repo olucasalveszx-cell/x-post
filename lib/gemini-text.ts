@@ -98,8 +98,30 @@ export async function geminiText(prompt: string, opts: GeminiOpts = {}): Promise
     }
   }
 
-  // Fallback: Gemini
-  return callGemini([{ parts: [{ text: prompt }] }], opts);
+  // Fallback 1: Gemini
+  try {
+    return await callGemini([{ parts: [{ text: prompt }] }], opts);
+  } catch (e: any) {
+    if (!isRetryable(e.message ?? "")) throw e;
+    console.warn("[geminiText] Gemini sobrecarregado, tentando OpenAI...");
+  }
+
+  // Fallback 2: OpenAI GPT-4o-mini
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) throw new Error("Todos os serviços de IA indisponíveis no momento.");
+
+  const messages: any[] = [];
+  if (system) messages.push({ role: "system", content: system });
+  messages.push({ role: "user", content: prompt });
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "gpt-4o-mini", messages, max_tokens: maxTokens, temperature }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message ?? `OpenAI error ${res.status}`);
+  return (data.choices?.[0]?.message?.content ?? "").trim();
 }
 
 export async function geminiVision(
