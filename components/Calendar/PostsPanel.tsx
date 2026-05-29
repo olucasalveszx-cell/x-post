@@ -209,8 +209,8 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
       setSchedStatus("error"); return;
     }
     const scheduledDate = new Date(schedAt);
-    if (scheduledDate < new Date(Date.now() + 11 * 60 * 1000)) {
-      setSchedMsg("O horário deve ser pelo menos 11 minutos no futuro.");
+    if (scheduledDate < new Date(Date.now() + 6 * 60 * 1000)) {
+      setSchedMsg("O horário deve ser pelo menos 5 minutos no futuro.");
       setSchedStatus("error"); return;
     }
 
@@ -302,7 +302,7 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
   const hasContent = currentSlides.some(s => s.elements.length > 0 || s.backgroundImageUrl);
 
   /* ── min datetime (11 min from now) ── */
-  const minDateTime = new Date(Date.now() + 11 * 60 * 1000).toISOString().slice(0, 16);
+  const minDateTime = new Date(Date.now() + 6 * 60 * 1000).toISOString().slice(0, 16);
 
   if (!session?.user) {
     return (
@@ -528,7 +528,7 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
                 <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)}
                   min={minDateTime}
                   className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500 [color-scheme:dark]" />
-                <p className="text-[10px] text-gray-600">O xpost publica automaticamente no horário escolhido.</p>
+                <p className="text-[10px] text-gray-600">Mínimo 5 minutos no futuro. O xpost publica automaticamente.</p>
               </div>
 
               {/* Feedback */}

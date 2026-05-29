@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redisSet, redisGet, redisListAdd, redisListAll, redisLRem, redisZAdd, redisZRangeByScore, redisZRem } from "@/lib/redis";
 
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 const QUEUE_KEY = "schedule:queue";
@@ -113,11 +113,11 @@ export async function POST(req: NextRequest) {
 
   const scheduledDate = new Date(scheduledAt);
   const now = new Date();
-  const minTime = new Date(now.getTime() + 10 * 60 * 1000);
+  const minTime = new Date(now.getTime() + 5 * 60 * 1000);
   const maxTime = new Date(now.getTime() + 75 * 24 * 60 * 60 * 1000);
 
   if (scheduledDate < minTime)
-    return NextResponse.json({ error: "Agendamento deve ser pelo menos 10 minutos no futuro" }, { status: 400 });
+    return NextResponse.json({ error: "Agendamento deve ser pelo menos 5 minutos no futuro" }, { status: 400 });
   if (scheduledDate > maxTime)
     return NextResponse.json({ error: "Agendamento máximo: 75 dias no futuro" }, { status: 400 });
 
