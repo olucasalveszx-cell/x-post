@@ -88,14 +88,13 @@ async function callGemini(contents: object[], opts: GeminiOpts): Promise<string>
 export async function geminiText(prompt: string, opts: GeminiOpts = {}): Promise<string> {
   const { system, maxTokens = 4096, temperature = 0.9 } = opts;
 
-  // Tenta Claude Sonnet primeiro (melhor qualidade, sem truncamentos)
+  // Tenta Claude Sonnet primeiro (apenas se a chave existir e for válida)
   if (process.env.ANTHROPIC_API_KEY) {
     try {
       return await callClaude(prompt, system, maxTokens, temperature);
     } catch (e: any) {
-      // Se for overload do Claude, tenta Gemini como fallback
-      if (!isRetryable(e.message ?? "")) throw e;
-      console.warn("[geminiText] Claude sobrecarregado, tentando Gemini...");
+      // Qualquer falha do Claude → tenta Gemini como fallback
+      console.warn("[geminiText] Claude falhou, usando Gemini:", (e as any).message);
     }
   }
 
