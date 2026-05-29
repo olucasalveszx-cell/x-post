@@ -94,6 +94,7 @@ interface Props {
   format?: FormatLabel;
   onFormatChange?: (f: FormatLabel) => void;
   onApplyThemeToAll?: (bg: string, textColor: string) => void;
+  onApplyThemeToSlide?: (bg: string, textColor: string) => void;
   onApplyProfileColorToAll?: (nameColor: string, handleColor: string) => void;
 }
 
@@ -101,7 +102,7 @@ export default function Toolbar({
   slide, onUpdate, onAddSlide, onDeleteSlide, onDeleteElement,
   slideIndex, totalSlides, onPrev, onNext,
   selectedElement, onUndo, onRedo, canUndo, canRedo,
-  format = "4:5", onFormatChange, onApplyThemeToAll, onApplyProfileColorToAll,
+  format = "4:5", onFormatChange, onApplyThemeToAll, onApplyThemeToSlide, onApplyProfileColorToAll,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -128,6 +129,7 @@ export default function Toolbar({
   const [showLayouts, setShowLayouts] = useState(false);
   const [showMolds, setShowMolds] = useState(false);
   const [showTheme, setShowTheme] = useState(false);
+  const [themeScope, setThemeScope] = useState<"slide" | "all">("all");
   const [profileColorScope, setProfileColorScope] = useState<"this" | "all">("this");
   const [showXpostBank, setShowXpostBank] = useState(false);
   const [xpostBankImages, setXpostBankImages] = useState<{ id: string; url: string; name: string }[]>([]);
@@ -942,12 +944,31 @@ export default function Toolbar({
             </span>
             <button onClick={() => setShowTheme(false)} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
           </div>
-          <p className="text-[11px] text-[var(--text-3)] mb-3">Aplica fundo e cor do texto em todos os slides.</p>
+          {/* Escopo de aplicação */}
+          <div className="flex gap-1.5 mb-3">
+            {(["slide", "all"] as const).map((scope) => (
+              <button
+                key={scope}
+                onClick={() => setThemeScope(scope)}
+                className={`flex-1 text-[11px] py-1.5 rounded-lg border transition-all ${
+                  themeScope === scope
+                    ? "bg-brand-600 text-white border-brand-600"
+                    : "border-[var(--border-2)] text-[var(--text-2)] hover:border-brand-500"
+                }`}
+              >
+                {scope === "slide" ? "Só este slide" : "Todos os slides"}
+              </button>
+            ))}
+          </div>
           <div className="grid grid-cols-2 gap-2">
             {SLIDE_THEMES.map((t) => (
               <button
                 key={t.id}
-                onClick={() => { onApplyThemeToAll?.(t.bg, t.textColor); setShowTheme(false); }}
+                onClick={() => {
+                  if (themeScope === "slide") onApplyThemeToSlide?.(t.bg, t.textColor);
+                  else onApplyThemeToAll?.(t.bg, t.textColor);
+                  setShowTheme(false);
+                }}
                 className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[var(--border-2)] hover:border-brand-500/60 hover:bg-brand-500/5 transition-all"
               >
                 <div className="w-full h-10 rounded-lg border border-[var(--border-2)] relative overflow-hidden" style={{ background: t.preview.bg }}>

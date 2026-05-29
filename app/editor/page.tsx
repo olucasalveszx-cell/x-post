@@ -762,6 +762,31 @@ export default function EditorPage() {
     }));
   }, [setProjects, pushHistory]);
 
+  const applyThemeToSlide = useCallback((bg: string, textColor: string) => {
+    const pid = activeProjectIdRef.current;
+    const hexToLuminance = (hex: string) => { const r = parseInt(hex.slice(1,3),16),g = parseInt(hex.slice(3,5),16),b = parseInt(hex.slice(5,7),16); return r*0.299+g*0.587+b*0.114; };
+    const isDark = hexToLuminance(bg) < 128;
+    const profileHandleColor = isDark ? "rgba(255,255,255,0.50)" : "rgba(0,0,0,0.45)";
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== pid) return p;
+      const idx = currentIndex;
+      const newSlides = p.slides.map((s, i) => {
+        if (i !== idx) return s;
+        return {
+          ...s, backgroundColor: bg, backgroundImageUrl: undefined, backgroundGradient: undefined,
+          ...(s.backgroundPattern ? { backgroundPattern: (isDark ? "grid-dark" : "grid-light") as "grid-light" | "grid-dark" } : {}),
+          elements: s.elements.map((el) => {
+            if (el.type === "text") return { ...el, style: { ...(el.style as any), color: textColor } };
+            if (el.type === "profile") return { ...el, profileNameColor: textColor, profileHandleColor };
+            return el;
+          }),
+        };
+      });
+      pushHistory(newSlides);
+      return { ...p, slides: newSlides };
+    }));
+  }, [setProjects, pushHistory, currentIndex]);
+
   const applyProfileColorToAll = useCallback((nameColor: string, handleColor: string) => {
     const pid = activeProjectIdRef.current;
     setProjects((prev) => prev.map((p) => {
@@ -1093,6 +1118,7 @@ export default function EditorPage() {
                 if (f) handleFormatChange(f);
               }}
               onApplyThemeToAll={applyThemeToAll}
+              onApplyThemeToSlide={applyThemeToSlide}
               onApplyProfileColorToAll={applyProfileColorToAll}
             />
           )}
