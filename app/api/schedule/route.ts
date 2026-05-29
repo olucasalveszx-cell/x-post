@@ -8,56 +8,6 @@ export const maxDuration = 60;
 const GRAPH = "https://graph.facebook.com/v21.0";
 const PENDING_KEY = "schedule:pending";
 
-async function waitUntilReady(mediaId: string, token: string, maxMs = 60000): Promise<void> {
-  const deadline = Date.now() + maxMs;
-  let attempt = 0;
-  while (Date.now() < deadline) {
-    const res = await fetch(`${GRAPH}/${mediaId}?fields=status_code&access_token=${token}`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message ?? "Erro no container");
-    const s = data.status_code ?? "";
-    if (s === "FINISHED") return;
-    if (s === "ERROR")    throw new Error(`Container ${mediaId} falhou`);
-    if (s === "EXPIRED")  throw new Error(`Container ${mediaId} expirou`);
-    await new Promise((r) => setTimeout(r, attempt < 10 ? 3000 : 5000));
-    attempt++;
-  }
-  throw new Error("Instagram demorou demais. Tente reagendar.");
-}
-
-async function publishNow(post: { igAccountId: string; igToken: string; imageUrls: string[]; caption: string; mediaType: string }): Promise<string> {
-  const { igAccountId, igToken, imageUrls, caption, mediaType } = post;
-
-  if (mediaType === "story") {
-    const r = await fetch(`${GRAPH}/${igAccountId}/media`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image_url: imageUrls[0], media_type: "STORIES", access_token: igToken }) });
-    const d = await r.json(); if (!d.id) throw new Error(d.error?.message ?? "Erro ao criar story");
-    await waitUntilReady(d.id, igToken);
-    const p = await fetch(`${GRAPH}/${igAccountId}/media_publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ creation_id: d.id, access_token: igToken }) });
-    const pd = await p.json(); if (!pd.id) throw new Error(pd.error?.message ?? "Erro ao publicar story");
-    return pd.id;
-  }
-  if (imageUrls.length === 1) {
-    const r = await fetch(`${GRAPH}/${igAccountId}/media`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image_url: imageUrls[0], caption, access_token: igToken }) });
-    const d = await r.json(); if (!d.id) throw new Error(d.error?.message ?? "Erro ao criar post");
-    await waitUntilReady(d.id, igToken);
-    const p = await fetch(`${GRAPH}/${igAccountId}/media_publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ creation_id: d.id, access_token: igToken }) });
-    const pd = await p.json(); if (!pd.id) throw new Error(pd.error?.message ?? "Erro ao publicar");
-    return pd.id;
-  }
-  const childIds: string[] = [];
-  for (const url of imageUrls) {
-    const r = await fetch(`${GRAPH}/${igAccountId}/media`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image_url: url, is_carousel_item: true, access_token: igToken }) });
-    const d = await r.json(); if (!d.id) throw new Error(d.error?.message ?? "Erro ao criar item"); childIds.push(d.id);
-  }
-  await Promise.all(childIds.map((id) => waitUntilReady(id, igToken)));
-  const r = await fetch(`${GRAPH}/${igAccountId}/media`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ media_type: "CAROUSEL", children: childIds.join(","), caption, access_token: igToken }) });
-  const d = await r.json(); if (!d.id) throw new Error(d.error?.message ?? "Erro ao criar carrossel");
-  await waitUntilReady(d.id, igToken);
-  const p = await fetch(`${GRAPH}/${igAccountId}/media_publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ creation_id: d.id, access_token: igToken }) });
-  const pd = await p.json(); if (!pd.id) throw new Error(pd.error?.message ?? "Erro ao publicar carrossel");
-  return pd.id;
-}
-
 interface ScheduledPost {
   id: string;
   userId: string;
@@ -71,10 +21,68 @@ interface ScheduledPost {
   createdAt: string;
   errorMsg?: string;
   igPostId?: string;
+  retries?: number;
 }
 
-function postKey(id: string)        { return `schedule:post:${id}`; }
+function postKey(id: string)         { return `schedule:post:${id}`; }
 function userPostsKey(email: string) { return `schedule:user:${email}`; }
+
+// Publica sem polling longo — cabe no timeout de 10s do Netlify
+async function igPost(url: string, body: object, token: string): Promise<any> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, access_token: token }),
+  });
+  const d = await res.json();
+  if (d.error) throw new Error(d.error.message ?? JSON.stringify(d.error));
+  return d;
+}
+
+// Aguarda container ficar pronto — máx 7s (safe para timeout de 10s)
+async function waitReady(id: string, token: string): Promise<void> {
+  const deadline = Date.now() + 7000;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${GRAPH}/${id}?fields=status_code&access_token=${token}`);
+    const d = await res.json();
+    if (d.error) throw new Error(d.error.message ?? "Erro no container");
+    if (d.status_code === "FINISHED") return;
+    if (d.status_code === "ERROR")    throw new Error("Container falhou no processamento");
+    if (d.status_code === "EXPIRED")  throw new Error("Container expirou");
+    await new Promise(r => setTimeout(r, 1500));
+  }
+  // Não lança erro — tenta publicar mesmo assim (muitas vezes funciona)
+}
+
+async function publishPost(post: ScheduledPost): Promise<string> {
+  const { igAccountId, igToken, imageUrls, caption, mediaType } = post;
+
+  if (mediaType === "story") {
+    const c = await igPost(`${GRAPH}/${igAccountId}/media`, { image_url: imageUrls[0], media_type: "STORIES" }, igToken);
+    await waitReady(c.id, igToken);
+    const p = await igPost(`${GRAPH}/${igAccountId}/media_publish`, { creation_id: c.id }, igToken);
+    return p.id;
+  }
+
+  if (imageUrls.length === 1) {
+    const c = await igPost(`${GRAPH}/${igAccountId}/media`, { image_url: imageUrls[0], caption }, igToken);
+    await waitReady(c.id, igToken);
+    const p = await igPost(`${GRAPH}/${igAccountId}/media_publish`, { creation_id: c.id }, igToken);
+    return p.id;
+  }
+
+  // Carrossel — cria items em paralelo
+  const childIds = await Promise.all(
+    imageUrls.map(url =>
+      igPost(`${GRAPH}/${igAccountId}/media`, { image_url: url, is_carousel_item: true }, igToken).then(d => d.id)
+    )
+  );
+  await Promise.all(childIds.map(id => waitReady(id, igToken)));
+  const carousel = await igPost(`${GRAPH}/${igAccountId}/media`, { media_type: "CAROUSEL", children: childIds.join(","), caption }, igToken);
+  await waitReady(carousel.id, igToken);
+  const p = await igPost(`${GRAPH}/${igAccountId}/media_publish`, { creation_id: carousel.id }, igToken);
+  return p.id;
+}
 
 // GET — lista posts agendados do usuário
 export async function GET(req: NextRequest) {
@@ -83,55 +91,37 @@ export async function GET(req: NextRequest) {
 
   const ids = await redisListAll(userPostsKey(session.user.email));
   const posts: ScheduledPost[] = [];
-
   for (const id of ids.slice(-50).reverse()) {
     const raw = await redisGet(postKey(id));
     if (raw) {
-      try {
-        const p = JSON.parse(raw) as ScheduledPost;
-        posts.push({ ...p, igToken: "" }); // nunca expor o token
-      } catch {}
+      try { posts.push({ ...JSON.parse(raw), igToken: "" }); } catch {}
     }
   }
-
   return NextResponse.json({ posts });
 }
 
-// POST — cria agendamento (salva no Redis, publica pelo cron)
+// POST — cria agendamento
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   const { caption, imageUrls, scheduledAt, igAccountId, igToken, mediaType } = await req.json();
-
-  if (!imageUrls?.length || !scheduledAt || !igAccountId || !igToken) {
-    return NextResponse.json(
-      { error: "Campos obrigatórios: imageUrls, scheduledAt, igAccountId, igToken" },
-      { status: 400 }
-    );
-  }
+  if (!imageUrls?.length || !scheduledAt || !igAccountId || !igToken)
+    return NextResponse.json({ error: "Campos obrigatórios: imageUrls, scheduledAt, igAccountId, igToken" }, { status: 400 });
 
   const scheduledDate = new Date(scheduledAt);
   const now = new Date();
-  const minTime = new Date(now.getTime() + 5 * 60 * 1000);
-  const maxTime = new Date(now.getTime() + 75 * 24 * 60 * 60 * 1000);
-
-  if (scheduledDate < minTime)
+  if (scheduledDate < new Date(now.getTime() + 5 * 60 * 1000))
     return NextResponse.json({ error: "Agendamento deve ser pelo menos 5 minutos no futuro" }, { status: 400 });
-  if (scheduledDate > maxTime)
+  if (scheduledDate > new Date(now.getTime() + 75 * 24 * 60 * 60 * 1000))
     return NextResponse.json({ error: "Agendamento máximo: 75 dias no futuro" }, { status: 400 });
 
   const isStory = mediaType === "story";
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
   const post: ScheduledPost = {
-    id,
-    userId: session.user.email,
-    caption,
+    id, userId: session.user.email, caption,
     imageUrls: isStory ? [imageUrls[0]] : imageUrls,
-    scheduledAt,
-    igAccountId,
-    igToken, // necessário para o cron publicar
+    scheduledAt, igAccountId, igToken,
     status: "scheduled",
     mediaType: isStory ? "story" : "carousel",
     createdAt: new Date().toISOString(),
@@ -157,29 +147,24 @@ export async function DELETE(req: NextRequest) {
   if (raw) {
     try {
       const post: ScheduledPost = JSON.parse(raw);
-      if (post.userId !== session.user.email)
-        return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
-      post.status = "failed";
-      post.errorMsg = "Cancelado pelo usuário";
+      if (post.userId !== session.user.email) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+      post.status = "failed"; post.errorMsg = "Cancelado pelo usuário";
       await redisSet(postKey(id), JSON.stringify(post));
     } catch {}
   }
-
   await redisLRem(userPostsKey(session.user.email), 0, id);
-
   return NextResponse.json({ ok: true });
 }
 
-// PATCH — cron job: publica posts vencidos (chamado pelo cron-job.org a cada minuto)
+// PATCH — cron: publica posts vencidos
 export async function PATCH(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   const now = Date.now();
 
-  // Coleta IDs de todas as fontes: fila pendente + todos os usuários conhecidos
+  // Coleta IDs de todas as fontes
   const pendingIds = await redisListAll(PENDING_KEY);
   const users = await redisListAll("schedule:users");
   const userPostIds: string[] = [];
@@ -189,26 +174,26 @@ export async function PATCH(req: NextRequest) {
   }
   const allIds = [...new Set([...pendingIds, ...userPostIds].filter(Boolean))];
 
-  let published = 0, failed = 0, skipped = 0, processed = 0;
+  let published = 0, failed = 0, skipped = 0;
 
   for (const id of allIds) {
     const raw = await redisGet(postKey(id));
     if (!raw) { await redisLRem(PENDING_KEY, 0, id); continue; }
     let post: ScheduledPost;
     try { post = JSON.parse(raw); } catch { continue; }
+
     if (post.status !== "scheduled") { await redisLRem(PENDING_KEY, 0, id); continue; }
     if (new Date(post.scheduledAt).getTime() > now) { skipped++; continue; }
-    processed++;
+
     await redisLRem(PENDING_KEY, 0, id);
     try {
-      const igPostId = await publishNow(post);
+      const igPostId = await publishPost(post);
       post.status = "published"; post.igPostId = igPostId; published++;
     } catch (err: any) {
       post.status = "failed"; post.errorMsg = err.message; failed++;
-      console.error(`[cron] ✗ ${id}:`, err.message);
     }
     await redisSet(postKey(id), JSON.stringify(post));
   }
 
-  return NextResponse.json({ ok: true, processed, published, failed, skipped, total: allIds.length });
+  return NextResponse.json({ ok: true, published, failed, skipped, total: allIds.length });
 }
