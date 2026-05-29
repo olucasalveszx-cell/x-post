@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { redisSet, redisGet, redisListAdd, redisListAll, redisLRem, redisZAdd, redisZRangeByScore, redisZRem } from "@/lib/redis";
+import { redisSet, redisGet, redisListAdd, redisListAll, redisLRem } from "@/lib/redis";
 
 export const maxDuration = 60;
 
 const GRAPH = "https://graph.facebook.com/v21.0";
-const QUEUE_KEY = "schedule:queue";
+const PENDING_KEY = "schedule:pending";
 
 async function waitUntilReady(mediaId: string, token: string, maxMs = 60000): Promise<void> {
   const deadline = Date.now() + maxMs;
@@ -139,8 +139,7 @@ export async function POST(req: NextRequest) {
 
   await redisSet(postKey(id), JSON.stringify(post));
   await redisListAdd(userPostsKey(session.user.email), id);
-  // Adiciona na fila ordenada por horário (score = Unix timestamp em ms)
-  await redisZAdd(QUEUE_KEY, scheduledDate.getTime(), id);
+  await redisListAdd(PENDING_KEY, id);
 
   return NextResponse.json({ ok: true, id });
 }
@@ -178,26 +177,42 @@ export async function PATCH(req: NextRequest) {
   }
 
   const now = Date.now();
-  const dueIds: string[] = await redisZRangeByScore(QUEUE_KEY, 0, now);
+  const allPending = await redisListAll(PENDING_KEY);
+  const dueIds = allPending.filter(Boolean);
+
   if (!dueIds.length) return NextResponse.json({ ok: true, processed: 0 });
 
-  let published = 0, failed = 0;
+  let published = 0, failed = 0, skipped = 0;
+
   for (const id of dueIds) {
-    await redisZRem(QUEUE_KEY, id);
     const raw = await redisGet(postKey(id));
-    if (!raw) continue;
+    if (!raw) { await redisLRem(PENDING_KEY, 0, id); continue; }
+
     let post: ScheduledPost;
     try { post = JSON.parse(raw); } catch { continue; }
-    if (post.status !== "scheduled") continue;
+
+    // Ainda não chegou o horário
+    if (new Date(post.scheduledAt).getTime() > now) { skipped++; continue; }
+
+    // Já foi processado
+    if (post.status !== "scheduled") { await redisLRem(PENDING_KEY, 0, id); continue; }
+
+    // Remove da fila antes de tentar publicar (evita dupla execução)
+    await redisLRem(PENDING_KEY, 0, id);
+
     try {
       const igPostId = await publishNow(post);
-      post.status = "published"; post.igPostId = igPostId; published++;
+      post.status = "published";
+      post.igPostId = igPostId;
+      published++;
     } catch (err: any) {
-      post.status = "failed"; post.errorMsg = err.message; failed++;
+      post.status = "failed";
+      post.errorMsg = err.message;
+      failed++;
       console.error(`[cron] ✗ ${id}:`, err.message);
     }
     await redisSet(postKey(id), JSON.stringify(post));
   }
 
-  return NextResponse.json({ ok: true, processed: dueIds.length, published, failed });
+  return NextResponse.json({ ok: true, processed: dueIds.length - skipped, published, failed, skipped });
 }

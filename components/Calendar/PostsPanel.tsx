@@ -79,6 +79,8 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
   const [viewMonth, setViewMonth]   = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const prevPostsRef = useRef<ScheduledPost[]>([]);
 
   /* ── load drafts ── */
   const loadDrafts = useCallback(async () => {
@@ -106,6 +108,40 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
 
   useEffect(() => { loadDrafts(); }, [loadDrafts]);
   useEffect(() => { loadPosts(); }, [loadPosts]);
+
+  /* ── polling: verifica status a cada 30s e notifica mudanças ── */
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch("/api/schedule");
+        const data = await res.json();
+        const updated: ScheduledPost[] = data.posts ?? [];
+        const prev = prevPostsRef.current;
+
+        for (const p of updated) {
+          const old = prev.find(x => x.id === p.id);
+          if (!old || old.status === p.status) continue;
+          if (p.status === "published") {
+            setNotification({ msg: "Post publicado com sucesso no Instagram!", type: "success" });
+          } else if (p.status === "failed") {
+            setNotification({ msg: `Falha ao publicar: ${(p as any).errorMsg ?? "erro desconhecido"}`, type: "error" });
+          }
+        }
+
+        prevPostsRef.current = updated;
+        setPosts(updated);
+      } catch {}
+    }, 30_000);
+    return () => clearInterval(poll);
+  }, [session?.user?.email]);
+
+  /* ── auto-dismiss notificação após 6s ── */
+  useEffect(() => {
+    if (!notification) return;
+    const t = setTimeout(() => setNotification(null), 6000);
+    return () => clearTimeout(t);
+  }, [notification]);
 
   /* ── music search (debounce 400ms) ── */
   useEffect(() => {
@@ -315,6 +351,18 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
 
   return (
     <div className="flex flex-col gap-0">
+      {/* Notificação de status */}
+      {notification && (
+        <div className={`mb-3 rounded-xl px-3 py-2.5 text-xs font-medium flex items-center gap-2 ${
+          notification.type === "success"
+            ? "bg-green-500/10 border border-green-500/20 text-green-400"
+            : "bg-red-500/10 border border-red-500/20 text-red-400"
+        }`}>
+          {notification.type === "success" ? <CheckCircle size={14} /> : <XCircle size={14} />}
+          {notification.msg}
+          <button onClick={() => setNotification(null)} className="ml-auto opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
       {/* ── Section tabs ── */}
       <div className="flex border-b border-[#1e1e1e] mb-4">
         {(["drafts", "schedule", "calendar", "storytelling"] as Section[]).map((s) => {
