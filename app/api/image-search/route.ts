@@ -31,7 +31,31 @@ export async function POST(req: NextRequest) {
     } catch {}
   }
 
-  // Fallback: Unsplash
+  // Fallback 1: Pixabay (ampla cobertura de conteúdo real)
+  const pixabayKey = process.env.PIXABAY_API_KEY;
+  if (pixabayKey) {
+    try {
+      const q = encodeURIComponent(query.trim());
+      const res = await fetch(
+        `https://pixabay.com/api/?key=${pixabayKey}&q=${q}&image_type=photo&orientation=vertical&per_page=9&page=${page}&safesearch=true`,
+        { signal: AbortSignal.timeout(10000) }
+      );
+      const data = await res.json();
+      if (res.ok && data.hits?.length) {
+        const images = data.hits.slice(0, 6).map((img: any) => ({
+          url: img.webformatURL,
+          thumb: img.previewURL,
+          width: img.webformatWidth ?? 0,
+          height: img.webformatHeight ?? 0,
+          title: img.tags ?? "",
+          source: img.user ?? "Pixabay",
+        })).filter((img: any) => img.url);
+        if (images.length > 0) return NextResponse.json({ images });
+      }
+    } catch {}
+  }
+
+  // Fallback 2: Unsplash
   const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
   if (!unsplashKey) return NextResponse.json({ error: "Nenhuma chave de busca configurada" }, { status: 500 });
 

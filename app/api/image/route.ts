@@ -8,7 +8,7 @@ import { redisGet, redisSet, redisIncr, redisLPush, redisLTrim } from "@/lib/red
 import { put } from "@vercel/blob";
 import { geminiText, geminiVision } from "@/lib/gemini-text";
 
-export const maxDuration = 120;
+export const maxDuration = 26;
 
 async function enhancePrompt(raw: string): Promise<string> {
   try {
@@ -198,7 +198,7 @@ async function fromFalSchnell(prompt: string, style: ImageStyle, inferenceSteps 
       enable_safety_checker: false,
       sync_mode: true,
     }),
-    signal: AbortSignal.timeout(35000),
+    signal: AbortSignal.timeout(18000),
   });
 
   const data = await res.json();
@@ -835,10 +835,9 @@ export async function POST(req: NextRequest) {
 
     // Sem upscaling no modo com rosto — pipeline já usa ~60-90s, upscaling estouraria os 120s do Vercel
   } else if (!isPro) {
+    // Netlify limit ~26s: fal-schnell (18s) + Google Images (8s) = ~26s max
     const tries: Array<() => Promise<ImageResult>> = [
       () => fromFalSchnell(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
-      () => fromFal(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
-      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
       () => fromGoogleImages(prompt).then(r => { plan = "free_fallback"; return r; }),
       () => fromPexels(prompt).then(r => { plan = "free_fallback"; return r; }),
     ];
@@ -847,11 +846,9 @@ export async function POST(req: NextRequest) {
       try { result = await fn(); } catch (e: any) { errors.push(e.message); }
     }
   } else {
+    // Netlify limit ~26s: fal-schnell (18s) + Google Images (8s) = ~26s max
     const tries: Array<() => Promise<ImageResult>> = [
       () => fromFalSchnell(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      () => fromFal(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
       () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
       () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
     ];
