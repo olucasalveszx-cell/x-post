@@ -88,40 +88,43 @@ async function callGemini(contents: object[], opts: GeminiOpts): Promise<string>
 export async function geminiText(prompt: string, opts: GeminiOpts = {}): Promise<string> {
   const { system, maxTokens = 4096, temperature = 0.9 } = opts;
 
-  // Tenta Claude Sonnet primeiro (apenas se a chave existir e for válida)
+  // 1. OpenAI GPT-4o (principal)
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (openaiKey) {
+    try {
+      const messages: any[] = [];
+      if (system) messages.push({ role: "system", content: system });
+      messages.push({ role: "user", content: prompt });
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "gpt-4o", messages, max_tokens: maxTokens, temperature }),
+      });
+      const data = await res.json();
+      if (res.ok) return (data.choices?.[0]?.message?.content ?? "").trim();
+      console.warn("[geminiText] OpenAI falhou:", data.error?.message);
+    } catch (e: any) {
+      console.warn("[geminiText] OpenAI erro:", e.message);
+    }
+  }
+
+  // 2. Gemini (fallback)
+  try {
+    return await callGemini([{ parts: [{ text: prompt }] }], opts);
+  } catch (e: any) {
+    console.warn("[geminiText] Gemini falhou, tentando Claude...", e.message);
+  }
+
+  // 3. Claude (último recurso)
   if (process.env.ANTHROPIC_API_KEY) {
     try {
       return await callClaude(prompt, system, maxTokens, temperature);
     } catch (e: any) {
-      // Qualquer falha do Claude → tenta Gemini como fallback
-      console.warn("[geminiText] Claude falhou, usando Gemini:", (e as any).message);
+      console.warn("[geminiText] Claude falhou:", e.message);
     }
   }
 
-  // Fallback 1: Gemini
-  try {
-    return await callGemini([{ parts: [{ text: prompt }] }], opts);
-  } catch (e: any) {
-    if (!isRetryable(e.message ?? "")) throw e;
-    console.warn("[geminiText] Gemini sobrecarregado, tentando OpenAI...");
-  }
-
-  // Fallback 2: OpenAI GPT-4o-mini
-  const openaiKey = process.env.OPENAI_API_KEY;
-  if (!openaiKey) throw new Error("Todos os serviços de IA indisponíveis no momento.");
-
-  const messages: any[] = [];
-  if (system) messages.push({ role: "system", content: system });
-  messages.push({ role: "user", content: prompt });
-
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "gpt-4o-mini", messages, max_tokens: maxTokens, temperature }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `OpenAI error ${res.status}`);
-  return (data.choices?.[0]?.message?.content ?? "").trim();
+  throw new Error("Todos os serviços de IA indisponíveis. Tente novamente.");
 }
 
 export async function geminiVision(
