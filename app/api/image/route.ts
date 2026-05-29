@@ -834,39 +834,43 @@ export async function POST(req: NextRequest) {
     }
 
     // Sem upscaling no modo com rosto — pipeline já usa ~60-90s, upscaling estouraria os 120s do Vercel
-  } else if (!isPro) {
-    // Schnell primeiro (3-8s) → Pro como fallback de qualidade → busca web
-    const tries: Array<() => Promise<ImageResult>> = [
-      () => fromFalSchnell(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
-      () => fromFal(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
-      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "free"; return r; }),
-      () => fromGoogleImages(prompt).then(r => { plan = "free_fallback"; return r; }),
-      () => fromPexels(prompt).then(r => { plan = "free_fallback"; return r; }),
-    ];
-    for (const fn of tries) {
-      if (result) break;
-      try { result = await fn(); } catch (e: any) { errors.push(e.message); }
-    }
   } else {
-    // Pro: Schnell rápido → Pro alta qualidade → OpenAI → OpenRouter → busca web
-    const tries: Array<() => Promise<ImageResult>> = [
-      () => fromFalSchnell(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      () => fromFal(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      () => fromOpenAI(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      () => fromOpenRouter(enhancedPrompt, style).then(r => { plan = "pro"; return r; }),
-      () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
-      () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
+    // Tenta IA com budget de 8s total (seguro para Netlify 10s limit)
+    // Se não conseguir em tempo, cai direto no Google Images / Pexels
+    const aiDeadline = Date.now() + 8000;
+    const aiProviders: Array<[string, () => Promise<ImageResult>]> = [
+      ["falSchnell", () => fromFalSchnell(enhancedPrompt, style)],
+      ...(isPro ? [["falPro", () => fromFal(enhancedPrompt, style)] as [string, () => Promise<ImageResult>]] : []),
     ];
-    for (const fn of tries) {
-      if (result) break;
-      try { result = await fn(); } catch (e: any) { errors.push(e.message); }
+
+    for (const [label, fn] of aiProviders) {
+      if (result || Date.now() >= aiDeadline) break;
+      const remaining = aiDeadline - Date.now();
+      try {
+        result = await Promise.race([
+          fn(),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`${label} timeout`)), remaining)),
+        ]);
+        plan = isPro ? "pro" : "free";
+      } catch (e: any) { errors.push(e.message); }
+    }
+
+    // Fallback rápido: busca web (< 2s)
+    if (!result) {
+      for (const fn of [
+        () => fromGoogleImages(prompt).then(r => { plan = "fallback"; return r; }),
+        () => fromPexels(prompt).then(r => { plan = "fallback"; return r; }),
+      ]) {
+        if (result) break;
+        try { result = await fn(); } catch (e: any) { errors.push(e.message); }
+      }
     }
   }
 
   if (!result) return NextResponse.json({ error: errors.join(" | ") }, { status: 500 });
 
-  // waitUntil garante que o Vercel mantém a função viva até o salvamento completar
-  waitUntil(saveToGallery(result.imageUrl, email, enhancedPrompt, style, result.source));
+  // Salva na galeria em background (fire-and-forget, compatível com Netlify)
+  saveToGallery(result.imageUrl, email, enhancedPrompt, style, result.source).catch(() => {});
 
   return NextResponse.json({ ...result, plan, ...(errors.length ? { fallbackErrors: errors } : {}) });
 }
