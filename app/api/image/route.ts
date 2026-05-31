@@ -8,7 +8,7 @@ import { redisGet, redisSet, redisIncr, redisLPush, redisLTrim } from "@/lib/red
 import { put } from "@vercel/blob";
 import { geminiText, geminiVision } from "@/lib/gemini-text";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 async function enhancePrompt(raw: string): Promise<string> {
   try {
@@ -198,7 +198,7 @@ async function fromFalSchnell(prompt: string, style: ImageStyle, inferenceSteps 
       enable_safety_checker: false,
       sync_mode: true,
     }),
-    signal: AbortSignal.timeout(18000),
+    signal: AbortSignal.timeout(35000),
   });
 
   const data = await res.json();
@@ -879,7 +879,7 @@ export async function POST(req: NextRequest) {
     // Time-budget: 55s total (5s margin before Vercel's 60s limit)
     // Each attempt uses at most the remaining budget — if schnell fails fast,
     // OpenAI gets the remaining time; if schnell is slow, OpenAI is skipped.
-    const BUDGET_MS = 55000;
+    const BUDGET_MS = 280000;
     const startMs = Date.now();
     const remaining = () => Math.max(0, BUDGET_MS - (Date.now() - startMs));
 
