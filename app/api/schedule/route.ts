@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redisSet, redisGet, redisListAdd, redisListAll, redisLRem, redisSetNX } from "@/lib/redis";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 const PENDING_KEY = "schedule:pending";
@@ -39,9 +39,9 @@ async function igPost(url: string, body: object, token: string): Promise<any> {
   return d;
 }
 
-// Aguarda container ficar pronto — máx 7s (safe para timeout de 10s)
+// Aguarda container ficar pronto — máx 25s (Vercel Pro tem 300s)
 async function waitReady(id: string, token: string): Promise<void> {
-  const deadline = Date.now() + 7000;
+  const deadline = Date.now() + 25000;
   while (Date.now() < deadline) {
     const res = await fetch(`${GRAPH}/${id}?fields=status_code&access_token=${token}`);
     const d = await res.json();
