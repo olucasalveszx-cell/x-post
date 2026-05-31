@@ -43,7 +43,7 @@ function buildFaceSlides(
     "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.97) 28%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.1) 72%, rgba(0,0,0,0) 100%)";
 
   return generated.slides.map((gs, i) => {
-    const accent = gs.colorScheme.accent;
+    const accent = gs.colorScheme?.accent ?? "#6366f1";
     const isLast = i === N - 1;
     const elements: any[] = [];
     const titleY = H - 510;

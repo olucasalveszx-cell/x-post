@@ -260,8 +260,8 @@ export default function PromoPanel({ onGenerate }: Props) {
   ────────────────────────────────────────── */
   const buildSlides = (generated: GeneratedContent): Slide[] => {
     return generated.slides.map((gs, i) => {
-      const bg = gs.colorScheme.background;
-      const accent = gs.colorScheme.accent;
+      const bg = gs.colorScheme?.background ?? "#0a0a0a";
+      const accent = gs.colorScheme?.accent ?? "#6366f1";
       const isLast = i === generated.slides.length - 1;
       const elements: SlideElement[] = [];
 

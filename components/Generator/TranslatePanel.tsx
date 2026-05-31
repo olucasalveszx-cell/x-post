@@ -35,8 +35,8 @@ export default function TranslatePanel({ onGenerate }: Props) {
 
   const buildSlides = (generated: GeneratedContent): Slide[] => {
     return generated.slides.map((gs, i) => {
-      const accent = gs.colorScheme.accent;
-      const bg = gs.colorScheme.background;
+      const accent = gs.colorScheme?.accent ?? "#6366f1";
+      const bg = gs.colorScheme?.background ?? "#0a0a0a";
       const elements = [];
 
       // Título com palavra colorida

@@ -48,7 +48,7 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
   const ctitle = ws.carouselTitle || "";
 
   return generated.slides.map((gs, i) => {
-    const accent = gs.colorScheme.accent;
+    const accent = gs.colorScheme?.accent ?? "#6366f1";
     const isLast = i === N - 1;
 
     // Determina variante com base no imageLayout escolhido pelo usuário
