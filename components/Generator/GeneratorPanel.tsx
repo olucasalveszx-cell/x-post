@@ -53,8 +53,20 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
 
     // Determina variante com base no imageLayout escolhido pelo usuário
     const layout: ImageLayout = ws.imageLayout ?? "mixed";
+
+    // Viral: 6 templates rotativos que imitam carrosséis que mais viralizam
+    // 0=HookBold  1=Cinematic  2=Statement  3=Magazine  4=MinimalTech  5=NewsFlash
+    // Capa sempre HookBold (mais impactante), última sempre Statement (CTA limpo)
+    // Demais ciclam pelos outros 4 templates
+    const VIRAL_SEQUENCE = [0, 1, 3, 4, 2, 5, 1, 3, 4]; // ciclo dos slides do meio
+    const viralVariant: number = layout === "viral"
+      ? (i === 0 ? 0 : isLast ? 2 : VIRAL_SEQUENCE[((i - 1) % (VIRAL_SEQUENCE.length - 2)) + 1])
+      : 0;
+
     let variant: 0 | 1 | 2 | 3 | 4 | 5;
-    if (layout === "full") {
+    if (layout === "viral") {
+      variant = viralVariant as 0 | 1 | 2 | 3 | 4 | 5;
+    } else if (layout === "full") {
       variant = i % 2 === 0 ? 0 : 1;
     } else if (layout === "square") {
       variant = 4;
@@ -66,7 +78,7 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
       // mixed: capa e última = 0, demais ciclam 1,2,3
       variant = (i === 0 || isLast) ? 0 : (((i - 1) % 3) + 1) as 1 | 2 | 3;
     }
-    const useBgImage = variant <= 1;
+    const useBgImage = layout === "viral" ? (variant === 0 || variant === 1 || variant === 5) : variant <= 1;
     const elementImageId = !useBgImage ? uuid() : undefined;
 
     const elements: any[] = [];
@@ -96,7 +108,92 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
     let bodyY: number, bodyH = 110, bodySize = 28;
     let bodyAlign: "left" | "center" | "right" = "center";
 
-    if (variant === 1) {
+    if (layout === "viral") {
+      if (variant === 0) {
+        // 🔥 Hook Bold — fundo imagem, gradiente forte, título gigante centralizado na base
+        // (Alex Hormozi / guru de finanças style — para no scroll imediatamente)
+        gradient = "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.98) 30%, rgba(0,0,0,0.55) 58%, rgba(0,0,0,0) 100%)";
+        titleY = H - 540; titleAlign = "center"; titleSize = 96; titleH = 320;
+        bodyY = H - 195; bodyAlign = "center"; bodySize = 30;
+        // Linha accent acima do título
+        elements.push({ id: uuid(), type: "shape" as const,
+          x: Math.round(W / 2) - 32, y: titleY - 32, width: 64, height: 7, content: "",
+          style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 4 } });
+
+      } else if (variant === 1) {
+        // 🎬 Cinematic — imagem full, gradiente lateral, título esquerda grande + barra vertical
+        // (Documentary / editorial style)
+        gradient = "linear-gradient(105deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 45%, rgba(0,0,0,0.1) 100%)";
+        titleY = Math.round(H * 0.32); titleAlign = "left"; titleSize = 86; titleH = 320;
+        bodyY = Math.min(titleY + 330, H - 220); bodyAlign = "left"; bodySize = 29;
+        // Barra vertical accent à esquerda
+        elements.push({ id: uuid(), type: "shape" as const,
+          x: 48, y: titleY - 10, width: 7, height: 200, content: "",
+          style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 4 } });
+        // Recua o título para dar espaço à barra
+        elements.push({ id: uuid(), type: "shape" as const,
+          x: 60, y: H - 130, width: 180, height: 4, content: "",
+          style: { fill: "rgba(255,255,255,0.15)", stroke: "transparent", strokeWidth: 0, borderRadius: 2 } });
+
+      } else if (variant === 2) {
+        // 💬 Statement Card — fundo sólido, título enorme centralizado, divisor accent, corpo
+        // (Motivacional / guru style — citações impactantes)
+        gradient = "";
+        titleY = 160; titleAlign = "center"; titleSize = 92; titleH = 360;
+        bodyY = 560; bodyAlign = "center"; bodySize = 32;
+        // Divisor horizontal accent entre título e corpo
+        elements.push({ id: uuid(), type: "shape" as const,
+          x: Math.round(W / 2) - 48, y: 538, width: 96, height: 6, content: "",
+          style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 3 } });
+        // Aspas decorativas no topo
+        elements.push({ id: uuid(), type: "text" as const,
+          x: 60, y: 90, width: 120, height: 100, content: `<span style="color:${accent};font-style:normal;opacity:0.6">"</span>`,
+          style: { fontSize: 130, fontWeight: "bold" as const, fontFamily: "serif", color: accent, textAlign: "left" as const, lineHeight: 0.6 } });
+
+      } else if (variant === 3) {
+        // 📰 Magazine Split — imagem ocupa top 48%, fundo sólido embaixo com texto
+        // (Revista / Vogue editorial style)
+        const imgH = Math.round(H * 0.48);
+        titleY = imgH + 55; titleAlign = "left"; titleSize = 78; titleH = 260;
+        bodyY = titleY + 270; bodyAlign = "left"; bodySize = 28;
+        elements.push({ id: elementImageId, type: "image" as const,
+          x: 0, y: 0, width: W, height: imgH, imageObjectPositionY: 35 });
+        // Tag accent no canto da imagem
+        elements.push({ id: uuid(), type: "shape" as const,
+          x: 0, y: imgH - 6, width: W, height: 6, content: "",
+          style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 0 } });
+
+      } else if (variant === 4) {
+        // 📱 Minimal Tech — fundo sólido escuro, imagem quadrada rounded, texto limpo
+        // (Apple / startup / tech aesthetic)
+        const sqSize = Math.round(W * 0.68);
+        const sqX = Math.round((W - sqSize) / 2);
+        const sqY = Math.round(H * 0.32);
+        titleY = 80; titleAlign = "center"; titleSize = 68; titleH = 210;
+        bodyY = sqY + sqSize + 48; bodyAlign = "center"; bodySize = 27;
+        elements.push({ id: elementImageId, type: "image" as const,
+          x: sqX, y: sqY, width: sqSize, height: sqSize, imageObjectPositionY: 50 });
+        // Dot accent acima do título
+        elements.push({ id: uuid(), type: "shape" as const,
+          x: Math.round(W / 2) - 5, y: 52, width: 10, height: 10, content: "",
+          style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 50 } });
+
+      } else {
+        // 📢 News Flash — imagem full, faixa de tag colorida no topo, título bold esquerda
+        // (Breaking news / jornalismo style)
+        gradient = "linear-gradient(180deg, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.0) 18%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0.98) 100%)";
+        titleY = Math.round(H * 0.52); titleAlign = "left"; titleSize = 80; titleH = 300;
+        bodyY = Math.min(titleY + 310, H - 210); bodyAlign = "left"; bodySize = 28;
+        // Faixa colorida no topo estilo breaking news
+        elements.push({ id: uuid(), type: "shape" as const,
+          x: 0, y: 0, width: W, height: 58, content: "",
+          style: { fill: accent, stroke: "transparent", strokeWidth: 0, borderRadius: 0 } });
+        elements.push({ id: uuid(), type: "text" as const,
+          x: 60, y: 8, width: 500, height: 46, content: "● AGORA",
+          style: { fontSize: 24, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: "left" as const, lineHeight: 1 } });
+      }
+
+    } else if (variant === 1) {
       // Cinemático: imagem de fundo, faixas escuras, título esquerda no 1/3 superior
       gradient = "linear-gradient(180deg, rgba(0,0,0,0.86) 0%, rgba(0,0,0,0.14) 30%, rgba(0,0,0,0.14) 55%, rgba(0,0,0,0.93) 100%)";
       titleY = Math.round(H * 0.28); titleAlign = "left"; titleSize = 82; titleH = 300;
@@ -108,7 +205,6 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
       // Content: fundo sólido, título grande esquerda, corpo, imagem contida na base
       titleY = 110; titleAlign = "left"; titleSize = 76; titleH = 230;
       bodyY = 360; bodyH = 130; bodySize = 30; bodyAlign = "left";
-      // Imagem como elemento (landscape, base do slide)
       elements.push({ id: elementImageId, type: "image" as const,
         x: 60, y: 510, width: W - 120, height: 660, imageObjectPositionY: 25 });
 
@@ -177,12 +273,12 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
 
     return {
       id: uuid(),
-      backgroundColor: useBgImage ? "#0a0a0a" : "#0d0d0d",
+      backgroundColor: useBgImage ? (gs.colorScheme?.background ?? "#0a0a0a") : "#0d0d0d",
       backgroundImageUrl: undefined,
       backgroundImageLoading: useBgImage,
       backgroundGradient: useBgImage && gradient ? gradient : undefined,
-      backgroundPosition: useBgImage ? LAYOUT_BG_POSITIONS[variant] : undefined,
-      backgroundZoom: useBgImage ? LAYOUT_BG_ZOOMS[variant] : undefined,
+      backgroundPosition: useBgImage ? (LAYOUT_BG_POSITIONS[variant] ?? { x: 50, y: 50 }) : undefined,
+      backgroundZoom: useBgImage ? (LAYOUT_BG_ZOOMS[variant] ?? 110) : undefined,
       elements,
       width: W,
       height: H,
