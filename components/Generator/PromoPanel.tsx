@@ -524,23 +524,6 @@ export default function PromoPanel({ onGenerate }: Props) {
   return (
     <div className="flex flex-col gap-4">
 
-      {/* Badge Pro/Free */}
-      {!session?.user ? (
-        <button onClick={() => setLoginOpen(true)}
-          className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border border-[var(--border-2)] bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-sm text-[var(--text-2)] transition-colors">
-          <LogIn size={14} /> Entrar para gerar
-        </button>
-      ) : isPro ? (
-        <div className="flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
-          <Crown size={12} className="text-yellow-400" />
-          <span className="text-xs text-yellow-400 font-medium">Pro · {session.user.name?.split(" ")[0]}</span>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2">
-          <span className="text-xs text-[var(--text-3)]">Grátis · {session.user.name?.split(" ")[0]}</span>
-          <button onClick={goToCheckout} className="text-[11px] text-brand-400 hover:text-brand-300 underline">Upgrade Pro</button>
-        </div>
-      )}
 
       <div>
         <h2 className="text-lg font-bold mb-0.5 flex items-center gap-2">

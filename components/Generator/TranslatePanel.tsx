@@ -322,29 +322,6 @@ export default function TranslatePanel({ onGenerate }: Props) {
         </div>
       </div>
 
-      {/* Fonte de imagem */}
-      <div>
-        <label className="text-sm text-[var(--text-2)] mb-2 block">Imagens</label>
-        <div className="grid grid-cols-2 gap-1.5">
-          {([
-            { value: "gemini",  label: "Gemini",   sub: "IA Google · padrão",  color: "text-blue-400" },
-            { value: "imagen3", label: "Imagen 3", sub: "IA Google · premium", color: "text-brand-500" },
-          ] as const).map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setImageSource(opt.value)}
-              className={`flex flex-col items-center py-2 rounded-lg border text-center transition-colors ${
-                imageSource === opt.value
-                  ? "border-brand-500 bg-brand-500/10"
-                  : "border-[var(--border)] bg-[var(--bg)] hover:border-[var(--border-2)]"
-              }`}
-            >
-              <span className={`text-xs font-bold ${imageSource === opt.value ? "text-[var(--text)]" : "text-[var(--text-2)]"}`}>{opt.label}</span>
-              <span className={`text-[10px] mt-0.5 ${opt.color}`}>{opt.sub}</span>
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Botão */}
       <button
