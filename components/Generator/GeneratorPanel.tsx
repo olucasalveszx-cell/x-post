@@ -284,6 +284,7 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
       height: H,
       _imagePrompt: gs.imagePrompt || gs.imageContext || ws.topic,
       _searchQuery: gs.searchQuery || gs.imageContext || ws.topic,
+      _imageSource: gs.imageSource ?? "ai",
       _elementImageId: elementImageId,
     };
   });
@@ -316,7 +317,7 @@ function pickFromLibrary(
 }
 
 async function generateImages(
-  slides: (Slide & { _imagePrompt?: string; _searchQuery?: string })[],
+  slides: (Slide & { _imagePrompt?: string; _searchQuery?: string; _imageSource?: string })[],
   ws: WizardSettings,
   customerId: string | null,
   activationToken: string | null,
@@ -373,14 +374,54 @@ async function generateImages(
   }
 
   // ── Modos normais: gemini / foto_real / cinematico ─────────────
-  // "cinematico" é repassado ao backend como imageStyle — já suportado
   const backendStyle = ws.imageStyle === "cinematico" ? "cinematico" : ws.imageStyle;
 
   return Promise.all(
     slides.map(async (slide) => {
+      const imageSource = (slide as any)._imageSource ?? "ai";
+      const { _imagePrompt, _searchQuery, _imageSource, _elementImageId, ...clean } = slide as any;
+
+      const applyImage = (url: string) => {
+        if (_elementImageId) {
+          return { ...clean, elements: clean.elements.map((el: any) =>
+            el.id === _elementImageId ? { ...el, src: url } : el
+          ), backgroundImageLoading: false };
+        }
+        return { ...clean, backgroundImageUrl: url, backgroundImageLoading: false };
+      };
+
+      // ── Web search: slide sobre pessoa/evento real ───────────────
+      if (imageSource === "web") {
+        try {
+          const searchRes = await fetch("/api/image-search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: _searchQuery ?? ws.topic }),
+          });
+          const searchData = await searchRes.json();
+          const firstImg = searchData.images?.[0];
+
+          if (firstImg?.url) {
+            const proxyRes = await fetch("/api/image-proxy", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url: firstImg.url }),
+            });
+            const proxyData = await proxyRes.json();
+            if (proxyData.base64 && !proxyData.error) {
+              const dataUrl = `data:${proxyData.mimeType ?? "image/jpeg"};base64,${proxyData.base64}`;
+              done++; onProgress(done);
+              return applyImage(dataUrl);
+            }
+          }
+        } catch {}
+        // Fallthrough: web search falhou → usa IA como fallback
+      }
+
+      // ── IA: slide genérico ou fallback do web search ──────────────
       const prompt = ws.imageStyle === "foto_real"
-        ? ((slide as any)._searchQuery ?? ws.topic)
-        : ((slide as any)._imagePrompt ?? ws.topic);
+        ? (_searchQuery ?? ws.topic)
+        : (_imagePrompt ?? ws.topic);
       try {
         const res = await fetch("/api/image", {
           method: "POST",
@@ -397,28 +438,18 @@ async function generateImages(
         });
         const data = await res.json();
         done++; onProgress(done);
-        const { _imagePrompt, _searchQuery, _elementImageId, ...clean } = slide as any;
 
-        // Auto-save na biblioteca AI (fire-and-forget)
         if (data.imageUrl) {
           fetch("/api/library/ai", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ imageUrl: data.imageUrl, prompt, model: backendStyle }),
           }).catch(() => {});
+          return applyImage(data.imageUrl);
         }
-
-        if (data.imageUrl && _elementImageId) {
-          return { ...clean, elements: clean.elements.map((el: any) =>
-            el.id === _elementImageId ? { ...el, src: data.imageUrl } : el
-          ), backgroundImageLoading: false };
-        }
-        return data.imageUrl
-          ? { ...clean, backgroundImageUrl: data.imageUrl, backgroundImageLoading: false }
-          : { ...clean, backgroundImageLoading: false };
+        return { ...clean, backgroundImageLoading: false };
       } catch {
         done++; onProgress(done);
-        const { _imagePrompt, _searchQuery, _elementImageId, ...clean } = slide as any;
         return { ...clean, backgroundImageLoading: false };
       }
     })

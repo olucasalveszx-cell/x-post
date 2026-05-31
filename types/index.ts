@@ -101,6 +101,7 @@ export interface GeneratedSlide {
   imageContext?: string;
   imagePrompt: string;
   searchQuery?: string;
+  imageSource?: "web" | "ai"; // "web" = pessoa/evento real; "ai" = cena genérica
   colorScheme: {
     background: string;
     text: string;

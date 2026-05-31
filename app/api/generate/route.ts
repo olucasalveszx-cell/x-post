@@ -166,6 +166,14 @@ PASSO 3 — searchQuery (derivado do imageContext):
 - NUNCA use termos genéricos: "palco", "estádio", "pessoa", "profissional", "apresentação"
 - NUNCA inclua: cinematic, dark, moody, photorealistic, 8k, dramatic, lighting
 
+PASSO 4 — imageSource:
+Decida se a imagem ideal deste slide é uma FOTO REAL da web ou uma IMAGEM GERADA POR IA:
+- Use "web" quando: o slide é sobre pessoa famosa real, evento específico datado, notícia, atleta, político, artista, lugar icônico reconhecível — qualquer coisa que EXISTE e pode ser fotografada
+  Exemplos "web": "Neymar lesão joelho", "Taylor Swift Grammy", "Copa do Mundo 2026", "iPhone 17 lançamento"
+- Use "ai" quando: o slide é conceitual, genérico, ilustrativo — pessoa anônima, ação abstrata, ideia, metáfora, cenário que não precisa ser real
+  Exemplos "ai": "pessoa investindo dinheiro", "atleta correndo", "empresário em reunião", "gráfico crescendo"
+- REGRA: se o imageContext menciona nome próprio de pessoa famosa ou evento específico → "web". Se é descrição genérica → "ai"
+
 Responda APENAS com JSON válido (sem markdown, sem comentários):
 {
   "topic": "${topic}",
@@ -177,6 +185,7 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
       "imageContext": "1 frase: quem/o quê está acontecendo neste slide especificamente, derivado do texto acima",
       "imagePrompt": "prompt detalhado em inglês derivado do imageContext, elementos icônicos, cinematic lighting, dark moody background, high contrast, photorealistic",
       "searchQuery": "sujeito + momento específico do slide para Google Images, 2-5 palavras",
+      "imageSource": "web",
       "colorScheme": {
         "background": "#0a0a0a",
         "text": "#ffffff",
