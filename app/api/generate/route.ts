@@ -187,7 +187,7 @@ Responda APENAS com JSON válido (sem markdown, sem comentários):
       "searchQuery": "sujeito + momento específico do slide para Google Images, 2-5 palavras",
       "imageSource": "web",
       "colorScheme": {
-        "background": "#0a0a0a",
+        "background": "#000000",
         "text": "#ffffff",
         "accent": "#ff6b35"
       }

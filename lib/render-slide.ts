@@ -116,7 +116,7 @@ export async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
 
   if (slide.backgroundPattern === "grid-light" || slide.backgroundPattern === "grid-dark") {
     const isDark = slide.backgroundPattern === "grid-dark";
-    ctx.fillStyle = slide.backgroundColor ?? (isDark ? "#0a0a0a" : "#ffffff");
+    ctx.fillStyle = slide.backgroundColor ?? (isDark ? "#000000" : "#ffffff");
     ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)";
     ctx.lineWidth = 1;

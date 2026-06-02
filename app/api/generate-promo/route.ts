@@ -75,7 +75,7 @@ Responda APENAS com JSON válido (sem markdown):
       "imagePrompt": "product photography prompt specific to this slide context, cinematic lighting, high contrast",
       "searchQuery": "busca curta do produto em português",
       "colorScheme": {
-        "background": "#0a0a0a",
+        "background": "#000000",
         "text": "#ffffff",
         "accent": "#ff6b35"
       }

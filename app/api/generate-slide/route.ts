@@ -40,7 +40,7 @@ Regras:
     if (!match) throw new Error("Resposta inválida");
 
     const data = JSON.parse(match[0]);
-    data.backgroundColor = "#0a0a0a";
+    data.backgroundColor = "#000000";
     return NextResponse.json(data);
   } catch (err: any) {
     return NextResponse.json({ error: err.message ?? "Erro ao gerar" }, { status: 500 });

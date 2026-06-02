@@ -80,7 +80,7 @@ export default function EditorPage() {
     return {
       projects: [{
         id: pid, name: "Projeto 1",
-        slides: [{ id: uuid(), backgroundColor: "#0a0a0a", elements: [], width: 1080, height: 1350 }],
+        slides: [{ id: uuid(), backgroundColor: "#000000", elements: [], width: 1080, height: 1350 }],
       }] as Project[],
       activeProjectId: pid,
     };
@@ -520,7 +520,7 @@ export default function EditorPage() {
 
   const addSlide = useCallback(() => {
     const pid = activeProjectIdRef.current;
-    const newSlide: Slide = { id: uuid(), backgroundColor: "#0a0a0a", elements: [], width: SLIDE_W, height: SLIDE_H };
+    const newSlide: Slide = { id: uuid(), backgroundColor: "#000000", elements: [], width: SLIDE_W, height: SLIDE_H };
     setProjects((prev) => {
       const next = prev.map((p) => p.id !== pid ? p : { ...p, slides: [...p.slides, newSlide] });
       const newLen = next.find((p) => p.id === pid)?.slides.length ?? 1;

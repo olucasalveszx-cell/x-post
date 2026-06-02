@@ -122,7 +122,7 @@ Responda APENAS com JSON válido:
       "body": "1-2 frases curtas com dados reais",
       "imagePrompt": "visual description in English, cinematic, 8k",
       "searchQuery": "busca curta em português",
-      "colorScheme": { "background": "#0a0a0a", "text": "#ffffff", "accent": "#ff6b35" }
+      "colorScheme": { "background": "#000000", "text": "#ffffff", "accent": "#ff6b35" }
     }
   ]
 }`;

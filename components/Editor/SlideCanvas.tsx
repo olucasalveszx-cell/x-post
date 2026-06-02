@@ -1438,7 +1438,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
                 </button>
                 <button onClick={() => onUpdate({
                   ...slide,
-                  backgroundColor: "#0a0a0a",
+                  backgroundColor: "#000000",
                   backgroundPattern: "grid-dark" as const,
                   elements: slide.elements.map((el) => {
                     if (el.type === "text") return { ...el, style: { ...(el.style as any), color: "#ffffff" } };

@@ -221,13 +221,13 @@ function NotesPanel() {
 }
 
 // ── Template Estilo Choquei/News ──────────────────────────────
-function createChoqueiSlide(W = 1080, H = 1350): Slide {
+function createChoqueiSlide(name: string, handle: string, W = 1080, H = 1350): Slide {
   const elements: SlideElement[] = [
-    // Perfil (topo esquerda)
+    // Perfil (topo esquerda) — usa conta conectada do usuário
     {
       id: uuid(), type: "profile",
       x: 28, y: 22, width: 640, height: 90,
-      profileName: "CHOQUEI", profileHandle: "@choquei",
+      profileName: name, profileHandle: handle,
       profileVerified: true,
       profileNameColor: "#ffffff", profileHandleColor: "rgba(255,255,255,0.55)",
       zIndex: 10,
@@ -297,6 +297,15 @@ function createChoqueiSlide(W = 1080, H = 1350): Slide {
 export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = [] }: Props) {
   const [tab, setTab] = useState<Tab>("generate");
 
+  const handleChoqueiTemplate = () => {
+    const igAccount = typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("ig_account") ?? "null")
+      : null;
+    const name   = igAccount?.username ?? igAccount?.name ?? "Meu Perfil";
+    const handle = igAccount?.username ? `@${igAccount.username}` : "@meuperfil";
+    onGenerate([createChoqueiSlide(name, handle)]);
+  };
+
   return (
     <div className="w-80 bg-[var(--bg-2)] border-r border-[var(--border)] flex flex-col overflow-hidden">
 
@@ -347,7 +356,7 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
                 <Newspaper size={10} /> Templates Especiais
               </p>
               <button
-                onClick={() => onGenerate([createChoqueiSlide()])}
+                onClick={handleChoqueiTemplate}
                 className="w-full flex items-center gap-3 p-3 rounded-xl border border-[var(--border-2)] hover:border-brand-500/40 bg-[var(--bg)] hover:bg-brand-500/5 transition-all text-left group"
               >
                 {/* Preview miniatura */}

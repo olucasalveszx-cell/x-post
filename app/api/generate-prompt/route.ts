@@ -35,7 +35,7 @@ FORMATO DE RESPOSTA:
       "imagePrompt": "visual description in english for AI image generator",
       "searchQuery": "busca curta em português",
       "colorScheme": {
-        "background": "#0a0a0a",
+        "background": "#000000",
         "text": "#ffffff",
         "accent": "#ff6b35"
       }

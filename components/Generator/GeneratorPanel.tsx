@@ -273,7 +273,7 @@ function buildSlides(generated: GeneratedContent, ws: WizardSettings): (Slide & 
 
     return {
       id: uuid(),
-      backgroundColor: useBgImage ? (gs.colorScheme?.background ?? "#0a0a0a") : "#0d0d0d",
+      backgroundColor: useBgImage ? (gs.colorScheme?.background ?? "#000000") : "#000000",
       backgroundImageUrl: undefined,
       backgroundImageLoading: useBgImage,
       backgroundGradient: useBgImage && gradient ? gradient : undefined,

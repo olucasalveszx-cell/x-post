@@ -36,7 +36,7 @@ Responda APENAS com JSON válido (sem markdown):
       "callToAction": "apenas no último slide",
       "imagePrompt": "dramatic portrait or scene related to the topic, cinematic lighting, dark moody atmosphere, editorial photography",
       "colorScheme": {
-        "background": "#0a0a0a",
+        "background": "#000000",
         "text": "#ffffff",
         "accent": "#cor_hex_vibrante"
       }
