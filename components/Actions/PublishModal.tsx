@@ -190,7 +190,11 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       const res = await fetch("/api/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caption, imageUrls: blobUrls, scheduledAt, igAccountId: account.accountId, igToken: account.token }),
+        body: JSON.stringify({
+          caption, imageUrls: blobUrls, scheduledAt,
+          igAccountId: account.accountId, igToken: account.token,
+          mediaType: postType === "stories" ? "story" : "carousel",
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
