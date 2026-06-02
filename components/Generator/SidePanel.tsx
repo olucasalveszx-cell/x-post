@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Sparkles, Languages, ShoppingBag, CalendarClock, StickyNote, Save, Loader2 } from "lucide-react";
+import { Sparkles, Languages, CalendarClock, StickyNote, Save, Loader2 } from "lucide-react";
 import { Slide } from "@/types";
 import GeneratorPanel from "./GeneratorPanel";
 import TranslatePanel from "./TranslatePanel";
-import PromoPanel from "./PromoPanel";
 import PostsPanel from "@/components/Calendar/PostsPanel";
 
 interface Props {
@@ -14,7 +13,7 @@ interface Props {
   currentSlides?: Slide[];
 }
 
-type Tab = "generate" | "promo" | "posts" | "translate" | "notes";
+type Tab = "generate" | "posts" | "translate" | "notes";
 
 function NotesPanel() {
   const [note, setNote] = useState("");
@@ -99,7 +98,6 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
       <div className="flex border-b border-[var(--border)] shrink-0">
         {([
           { id: "generate",  label: "Gerar",    icon: <Sparkles size={11} /> },
-          { id: "promo",     label: "Produto",  icon: <ShoppingBag size={11} /> },
           { id: "translate", label: "Traduzir", icon: <Languages size={11} /> },
           { id: "notes",     label: "Notas",    icon: <StickyNote size={11} /> },
         ] as { id: Tab; label: string; icon: React.ReactNode }[]).map((t) => (
@@ -121,7 +119,6 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
       {/* Conteúdo */}
       <div className="flex-1 overflow-y-auto p-4">
         {tab === "generate"  && <GeneratorPanel onGenerate={onGenerate} onLayoutChange={onLayoutChange} currentSlides={currentSlides} />}
-        {tab === "promo"     && <PromoPanel onGenerate={onGenerate} />}
         {tab === "posts"     && <PostsPanel currentSlides={currentSlides} onLoad={onGenerate} />}
         {tab === "translate" && <TranslatePanel onGenerate={onGenerate} />}
         {tab === "notes"     && <NotesPanel />}

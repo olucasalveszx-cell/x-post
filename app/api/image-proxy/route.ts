@@ -53,6 +53,8 @@ async function fetchImage(url: string): Promise<{ base64: string; mimeType: stri
       "User-Agent": "Googlebot-Image/1.0",
       "Accept": "image/*",
     },
+    // 6 — Requisição vazia (alguns CDNs públicos aceitam sem headers)
+    {},
   ];
 
   for (const headers of strategies) {

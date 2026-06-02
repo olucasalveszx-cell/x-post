@@ -42,7 +42,8 @@ function ContentEditableDiv({
 }
 import { createPortal } from "react-dom";
 import { Slide, SlideElement } from "@/types";
-import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square, MoreVertical, LayoutTemplate, Video as VideoIcon, Upload } from "lucide-react";
+import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square, MoreVertical, LayoutTemplate, Video as VideoIcon, Upload, Search, Unlink } from "lucide-react";
+import ImageSearchModal from "@/components/ImageSearchModal";
 import { v4 as uuid } from "uuid";
 
 interface Props {
@@ -98,6 +99,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const [framePendingId, setFramePendingId] = useState<string | null>(null);
   const [framePanId, setFramePanId] = useState<string | null>(null);
   const [showLayoutPicker, setShowLayoutPicker] = useState(false);
+  const [showBgImageSearch, setShowBgImageSearch] = useState(false);
 
   // Limpa seleção ao sair do slide ativo — evita wasSelected=true ao voltar
   useEffect(() => {
@@ -1371,6 +1373,29 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             <Wand2 size={15} /> {slide.backgroundImageUrl ? "Gerar nova imagem IA" : "Gerar imagem de fundo com IA"}
           </button>
 
+          {/* Buscar imagem na web */}
+          <button onClick={() => { closeBgCtx(); setShowBgImageSearch(true); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
+            <Search size={15} className="text-cyan-400" /> Buscar imagem na web
+          </button>
+
+          {/* Desprender imagem (converte background em elemento) */}
+          {slide.backgroundImageUrl && (
+            <button onClick={() => {
+              const newEl: SlideElement = {
+                id: uuid(), type: "image" as const,
+                x: 0, y: 0, width: slide.width, height: slide.height,
+                src: slide.backgroundImageUrl!,
+                zIndex: 0,
+              };
+              onUpdate({ ...slide, backgroundImageUrl: undefined, backgroundGradient: undefined, backgroundCrop: undefined, elements: [newEl, ...slide.elements] });
+              closeBgCtx();
+            }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-orange-400 hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
+              <Unlink size={15} /> Desprender imagem
+            </button>
+          )}
+
           {/* Adicionar / Trocar imagem */}
           <button onClick={() => bgFileInputRef.current?.click()}
             className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
@@ -1656,6 +1681,17 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       </div>,
       document.body
     )}
+
+    {/* Modal de busca de imagem na web para fundo */}
+    <ImageSearchModal
+      open={showBgImageSearch}
+      onClose={() => setShowBgImageSearch(false)}
+      onSelect={(base64, mimeType) => {
+        onUpdate({ ...slide, backgroundImageUrl: `data:${mimeType};base64,${base64}` });
+        setShowBgImageSearch(false);
+      }}
+      defaultQuery={slideTexts.slice(0, 60)}
+    />
     </>
   );
 }

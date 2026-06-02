@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
 
   const ids = await redisListAll(userPostsKey(session.user.email));
   const posts: ScheduledPost[] = [];
-  for (const id of ids.slice(-50).reverse()) {
+  for (const id of ids.slice(-200).reverse()) {
     const raw = await redisGet(postKey(id));
     if (raw) {
       try { posts.push({ ...JSON.parse(raw), igToken: "" }); } catch {}

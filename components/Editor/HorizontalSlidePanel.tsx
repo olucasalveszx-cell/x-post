@@ -33,7 +33,7 @@ function buildAISlide(
   const bodyY  = h - 192;
   return {
     id: uuid(),
-    backgroundColor: data.backgroundColor ?? "#0a0a0a",
+    backgroundColor: "#0a0a0a",
     backgroundImageUrl: imageUrl ?? undefined,
     backgroundGradient: gradient,
     elements: [
@@ -105,7 +105,7 @@ export default function HorizontalSlidePanel({
     const newProject: Project = {
       id: uuid(),
       name: `Projeto ${projects.length + 1}`,
-      slides: [{ id: uuid(), backgroundColor: "#080e40", elements: [], width: slideWidth, height: slideHeight }],
+      slides: [{ id: uuid(), backgroundColor: "#0a0a0a", elements: [], width: slideWidth, height: slideHeight }],
     };
     onProjectsChange([...projects, newProject]);
     onSelectSlide(newProject.id, 0);
@@ -132,7 +132,7 @@ export default function HorizontalSlidePanel({
   const addBlankSlide = (projectId: string) => {
     const project = projects.find((p) => p.id === projectId);
     if (!project) return;
-    const newSlide: Slide = { id: uuid(), backgroundColor: "#080e40", elements: [], width: slideWidth, height: slideHeight };
+    const newSlide: Slide = { id: uuid(), backgroundColor: "#0a0a0a", elements: [], width: slideWidth, height: slideHeight };
     const newSlides = [...project.slides, newSlide];
     onProjectsChange(projects.map((p) => p.id === projectId ? { ...p, slides: newSlides } : p));
     onSelectSlide(projectId, newSlides.length - 1);
@@ -267,7 +267,7 @@ export default function HorizontalSlidePanel({
                       className="relative shrink-0 rounded-lg overflow-hidden transition-all group"
                       style={{
                         width: THUMB_W, height: THUMB_H,
-                        backgroundColor: slide.backgroundColor ?? "#080e40",
+                        backgroundColor: slide.backgroundColor ?? "#0a0a0a",
                         border: isActiveSlide ? "2px solid #4c6ef5" : "2px solid transparent",
                         outline: isActiveSlide ? "1px solid rgba(76,110,245,0.3)" : "none",
                         outlineOffset: 1,
