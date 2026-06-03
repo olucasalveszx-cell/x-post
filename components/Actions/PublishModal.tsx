@@ -102,11 +102,12 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     return publicUrls;
   };
 
-  const uploadToBlob = async (dataUrls: string[]): Promise<string[]> => {
+  const uploadToBlob = async (dataUrls: string[], startProg = 40): Promise<string[]> => {
     const urls: string[] = [];
     for (let i = 0; i < dataUrls.length; i++) {
-      setProgress(40 + Math.round((i / dataUrls.length) * 40));
-      const base64 = dataUrls[i].split(",")[1];
+      setProgress(startProg + Math.round((i / dataUrls.length) * (80 - startProg)));
+      const compressed = await compressSlide(dataUrls[i]);
+      const base64 = compressed.split(",")[1];
       const res = await fetch("/api/blob-upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -126,8 +127,8 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       const dataUrls = await exportSlides();
       if (postType === "carousel" && dataUrls.length < 2) throw new Error("O carrossel precisa ter pelo menos 2 slides");
       setStatus("uploading");
-      // Use Redis-backed media endpoint (shared across all Vercel instances)
-      const publicUrls = await uploadImages(dataUrls);
+      // Usa Supabase (URL pública externa) — mais confiável para a API do Instagram buscar
+      const publicUrls = await uploadToBlob(dataUrls, 30);
       setProgress(80);
       setStatus("publishing");
       const res = await fetch("/api/instagram/publish", {
