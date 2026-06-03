@@ -473,7 +473,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                         type="datetime-local"
                         value={scheduledAt}
                         onChange={(e) => setScheduledAt(e.target.value)}
-                        min={new Date(Date.now() + 10 * 60 * 1000).toISOString().slice(0, 16)}
+                        min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
                         className="w-full bg-[var(--bg-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-brand-500"
                       />
                       <div className="flex gap-2">
