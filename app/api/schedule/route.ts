@@ -158,9 +158,13 @@ export async function DELETE(req: NextRequest) {
 
 // PATCH — cron: publica posts vencidos
 export async function PATCH(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Valida CRON_SECRET só se estiver configurado
+  const secret = process.env.CRON_SECRET;
+  if (secret) {
+    const authHeader = req.headers.get("authorization");
+    if (authHeader !== `Bearer ${secret}`)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const now = Date.now();
 
