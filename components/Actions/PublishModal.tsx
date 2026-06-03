@@ -187,11 +187,13 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       setStatus("uploading");
       const blobUrls = await uploadToBlob(dataUrls);
       setProgress(80); setStatus("scheduling");
+      // Converte para ISO UTC para evitar erro de fuso horário no servidor
+      const scheduledAtISO = new Date(scheduledAt).toISOString();
       const res = await fetch("/api/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          caption, imageUrls: blobUrls, scheduledAt,
+          caption, imageUrls: blobUrls, scheduledAt: scheduledAtISO,
           igAccountId: account.accountId, igToken: account.token,
           mediaType: postType === "stories" ? "story" : "carousel",
         }),
@@ -471,7 +473,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                         type="datetime-local"
                         value={scheduledAt}
                         onChange={(e) => setScheduledAt(e.target.value)}
-                        min={new Date(Date.now() + 11 * 60 * 1000).toISOString().slice(0, 16)}
+                        min={new Date(Date.now() + 10 * 60 * 1000).toISOString().slice(0, 16)}
                         className="w-full bg-[var(--bg-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-brand-500"
                       />
                       <div className="flex gap-2">

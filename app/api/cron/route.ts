@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 // Vercel Cron chama GET com Authorization: Bearer <CRON_SECRET>
 // Internamente repassa para o PATCH do /api/schedule que processa os posts vencidos
