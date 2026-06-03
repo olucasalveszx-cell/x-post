@@ -181,6 +181,40 @@ export async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
       const s = el.style as any;
       ctx.fillStyle = s?.fill ?? "#4c6ef5";
       ctx.fillRect(el.x, el.y, el.width, el.height);
+    } else if (el.type === "frame") {
+      // Renderiza imagem dentro do frame (vídeos aparecem como placeholder)
+      if (el.frameImageUrl && el.frameMediaType !== "video") {
+        try {
+          const img = await loadImg(el.frameImageUrl);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(el.x, el.y, el.width, el.height);
+          ctx.clip();
+          const zoom = (el.frameImageZoom ?? 100) / 100;
+          const offX = ((el.frameImageOffset?.x ?? 50) / 100);
+          const offY = ((el.frameImageOffset?.y ?? 50) / 100);
+          const scale = Math.max(el.width / img.width, el.height / img.height) * zoom;
+          const sw = img.width * scale;
+          const sh = img.height * scale;
+          const sx = el.x + (el.width - sw) * offX;
+          const sy = el.y + (el.height - sh) * offY;
+          ctx.drawImage(img, sx, sy, sw, sh);
+          ctx.restore();
+        } catch {}
+      } else if (el.frameMediaType === "video") {
+        // Placeholder para vídeo
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(el.x, el.y, el.width, el.height);
+        ctx.fillStyle = "rgba(255,255,255,0.4)";
+        ctx.font = `bold ${Math.min(el.width, el.height) * 0.12}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("▶ Vídeo", el.x + el.width / 2, el.y + el.height / 2);
+      } else {
+        // Frame vazio
+        ctx.fillStyle = "rgba(255,255,255,0.06)";
+        ctx.fillRect(el.x, el.y, el.width, el.height);
+      }
     } else if (el.type === "profile") {
       const avatarD = el.height * 0.72;
       const avatarR = avatarD / 2;

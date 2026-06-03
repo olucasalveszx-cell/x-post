@@ -117,14 +117,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Nenhuma imagem para publicar" }, { status: 400 });
     }
 
-    // Verify all image URLs are accessible before sending to Instagram
-    console.log(`[publish] Verificando ${imageUrls.length} URLs de imagem...`);
-    await Promise.all((imageUrls as string[]).map(async (url: string, i: number) => {
-      const check = await fetch(url, { method: "HEAD" }).catch(() => null);
-      if (!check || !check.ok) {
-        throw new Error(`Imagem ${i + 1} não está acessível (${check?.status ?? "sem resposta"}). Tente publicar novamente.`);
-      }
-    }));
+    console.log(`[publish] Iniciando publicação — ${imageUrls.length} imagem(ns), tipo: ${postType}`);
 
     // ── Stories ──────────────────────────────────────────────
     if (postType === "stories") {

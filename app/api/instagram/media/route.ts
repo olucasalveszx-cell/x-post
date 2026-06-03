@@ -4,7 +4,7 @@ import { v4 as uuid } from "uuid";
 
 export const maxDuration = 20;
 
-const TTL = 900; // 15 min
+const TTL = 3600; // 60 min
 
 export async function POST(req: NextRequest) {
   const { base64, mimeType = "image/jpeg" } = await req.json();
