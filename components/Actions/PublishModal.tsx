@@ -474,7 +474,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                         type="datetime-local"
                         value={scheduledAt}
                         onChange={(e) => setScheduledAt(e.target.value)}
-                        min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
+                        min={(() => { const d = new Date(Date.now() + 5 * 60 * 1000); const p = (n: number) => String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; })()}
                         className="w-full bg-[var(--bg-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-brand-500"
                       />
                       <div className="flex gap-2">
