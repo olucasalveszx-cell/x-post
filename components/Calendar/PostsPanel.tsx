@@ -337,8 +337,19 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
 
   const hasContent = currentSlides.some(s => s.elements.length > 0 || s.backgroundImageUrl);
 
-  /* ── min datetime (11 min from now) ── */
-  const minDateTime = new Date(Date.now() + 6 * 60 * 1000).toISOString().slice(0, 16);
+  /* ── min datetime em hora LOCAL (não UTC) ── */
+  const minDateTime = (() => {
+    const d = new Date(Date.now() + 6 * 60 * 1000);
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  })();
+
+  /* ── botão de teste: preenche +6 min em hora local ── */
+  const fillTestTime = () => {
+    const d = new Date(Date.now() + 6 * 60 * 1000);
+    const p = (n: number) => String(n).padStart(2, "0");
+    setSchedAt(`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`);
+  };
 
   if (!session?.user) {
     return (
@@ -570,9 +581,15 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
 
               {/* Data e Hora */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-gray-400 font-medium flex items-center gap-1.5">
-                  <CalendarClock size={12} /> Data e horário do post
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-gray-400 font-medium flex items-center gap-1.5">
+                    <CalendarClock size={12} /> Data e horário do post
+                  </label>
+                  <button onClick={fillTestTime}
+                    className="text-[10px] px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 transition-colors">
+                    ⚡ Teste (+6 min)
+                  </button>
+                </div>
                 <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)}
                   min={minDateTime}
                   className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500 [color-scheme:dark]" />
@@ -695,6 +712,11 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
                           )}
                         </div>
                         <p className="text-[10px] text-gray-400 truncate">{post.caption || "Sem legenda"}</p>
+                        {post.status === "failed" && (post as any).errorMsg && (
+                          <p className="text-[9px] text-red-400 mt-0.5 truncate" title={(post as any).errorMsg}>
+                            ⚠ {(post as any).errorMsg}
+                          </p>
+                        )}
                       </div>
                       {post.status === "scheduled" && (
                         <button onClick={() => deletePost(post)} disabled={deletingPostId === post.id}
@@ -715,14 +737,14 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
               <p className="text-xs text-gray-500 font-medium">Próximos agendamentos</p>
               {calLoading ? (
                 <div className="flex items-center justify-center py-6"><Loader2 size={16} className="animate-spin text-gray-500" /></div>
-              ) : posts.filter(p => p.status === "scheduled" && new Date(p.scheduledAt) > new Date()).length === 0 ? (
+              ) : posts.filter(p => p.status === "scheduled").length === 0 ? (
                 <div className="text-center py-6 text-xs text-gray-600">
                   Nenhum post agendado.<br />
                   Use a aba <span className="text-brand-400">Agendar</span> para programar posts.
                 </div>
               ) : (
                 posts
-                  .filter(p => p.status === "scheduled" && new Date(p.scheduledAt) > new Date())
+                  .filter(p => p.status === "scheduled")
                   .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
                   .slice(0, 6)
                   .map(post => {
