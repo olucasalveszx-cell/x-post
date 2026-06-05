@@ -467,9 +467,21 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                     </button>
                   ) : (
                     <div className="flex flex-col gap-2 p-3 rounded-xl border border-brand-500/30 bg-brand-500/5">
-                      <p className="text-xs text-[var(--text-2)] flex items-center gap-1.5">
-                        <Clock size={12} className="text-brand-400" /> Escolha data e hora:
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-[var(--text-2)] flex items-center gap-1.5">
+                          <Clock size={12} className="text-brand-400" /> Escolha data e hora:
+                        </p>
+                        <button
+                          onClick={() => {
+                            const d = new Date(Date.now() + 2 * 60 * 1000);
+                            const p = (n: number) => String(n).padStart(2,"0");
+                            setScheduledAt(`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`);
+                          }}
+                          className="text-[10px] px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 transition-colors"
+                        >
+                          ⚡ Teste (+2 min)
+                        </button>
+                      </div>
                       <input
                         type="datetime-local"
                         value={scheduledAt}
