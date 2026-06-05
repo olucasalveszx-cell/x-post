@@ -451,10 +451,35 @@ export default function EditorPage() {
     }
   };
 
-  const handleStyleSelect = useCallback((style: "layouts" | "twitter" | "comrosto" | "biblioteca") => {
+  const handleStyleSelect = useCallback((style: "layouts" | "twitter" | "comrosto" | "biblioteca" | "choquei") => {
     setShowStyleSelector(false);
     if (style === "comrosto") {
       setShowFaceCarousel(true);
+      return;
+    }
+    if (style === "choquei") {
+      const igAccount = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("ig_account") ?? "null") : null;
+      const name   = igAccount?.username ?? igAccount?.name ?? "Meu Perfil";
+      const handle = igAccount?.username ?? "meuperfil";
+      const W = 1080, H = 1350;
+      const { v4: uid } = require("uuid");
+      const choqueiSlide: Slide = {
+        id: uid(), backgroundColor: "#111111",
+        elements: [
+          { id: uid(), type: "profile", x: 28, y: 22, width: 640, height: 90, profileName: name, profileHandle: handle, profileVerified: true, profileNameColor: "#ffffff", profileHandleColor: "rgba(255,255,255,0.55)", zIndex: 10 },
+          { id: uid(), type: "text", x: W - 120, y: 28, width: 92, height: 80, content: "𝕏", style: { fontSize: 52, fontWeight: "bold", fontFamily: "sans-serif", color: "#ffffff", textAlign: "center", lineHeight: 1 }, zIndex: 10 },
+          { id: uid(), type: "shape", x: 0, y: 122, width: W, height: 2, style: { fill: "rgba(255,255,255,0.12)", stroke: "none", strokeWidth: 0, borderRadius: 0 }, zIndex: 5 },
+          { id: uid(), type: "text", x: 28, y: 138, width: W - 56, height: 220, content: "📰 NOTÍCIAS: Escreva o [título] aqui", style: { fontSize: 38, fontWeight: "bold", fontFamily: "sans-serif", color: "#ffffff", textAlign: "left", lineHeight: 1.35 }, zIndex: 10 },
+          { id: uid(), type: "shape", x: 0, y: 370, width: W, height: 2, style: { fill: "rgba(255,255,255,0.12)", stroke: "none", strokeWidth: 0, borderRadius: 0 }, zIndex: 5 },
+          { id: uid(), type: "frame", x: 2, y: 374, width: 534, height: 970, frameShape: "rect", frameMediaType: "image", zIndex: 8 },
+          { id: uid(), type: "shape", x: 538, y: 374, width: 4, height: 970, style: { fill: "rgba(0,0,0,1)", stroke: "none", strokeWidth: 0, borderRadius: 0 }, zIndex: 9 },
+          { id: uid(), type: "frame", x: 544, y: 374, width: 534, height: 970, frameShape: "rect", frameMediaType: "video", zIndex: 8 },
+        ] as any,
+        width: W, height: H,
+      };
+      const pid = activeProjectIdRef.current;
+      setProjects((prev) => prev.map((p) => p.id !== pid ? p : { ...p, slides: [choqueiSlide] }));
+      setCurrentIndex(0);
       return;
     }
     twitterStyleRef.current = style === "twitter";
@@ -469,7 +494,7 @@ export default function EditorPage() {
     } else {
       dispatch();
     }
-  }, [isMobile]);
+  }, [isMobile, setProjects, setCurrentIndex]);
 
   // ── Operações de slide ────────────────────────────────────────
   const updateSlide = useCallback((updated: Slide) => {

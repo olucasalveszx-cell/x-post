@@ -1,11 +1,11 @@
 "use client";
 
-import { X, Sparkles, Twitter, UserRound, Images } from "lucide-react";
+import { X, Sparkles, Twitter, UserRound, Images, Newspaper } from "lucide-react";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSelect: (style: "layouts" | "twitter" | "comrosto" | "biblioteca") => void;
+  onSelect: (style: "layouts" | "twitter" | "comrosto" | "biblioteca" | "choquei") => void;
 }
 
 export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
@@ -156,6 +156,47 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
               <p className="font-bold text-[var(--text)] text-sm group-hover:text-purple-400 transition-colors">Com Rosto</p>
               <p className="text-[11px] text-[var(--text-3)] leading-snug mt-0.5">
                 Seu rosto preservado em cada imagem
+              </p>
+            </div>
+          </button>
+
+          {/* ── Estilo Choquei / News ── */}
+          <button
+            onClick={() => onSelect("choquei")}
+            className="flex flex-col gap-3 p-4 rounded-xl border border-[var(--border-2)] hover:border-white/30 hover:bg-white/5 transition-all text-left group"
+          >
+            <div className="relative w-full rounded-lg overflow-hidden bg-[#111]" style={{ aspectRatio: "4/5" }}>
+              {/* Header perfil */}
+              <div className="absolute top-[4%] left-[6%] right-[6%] flex items-center gap-1.5">
+                <div className="w-5 h-5 rounded-full bg-white/20 shrink-0" />
+                <div className="flex flex-col gap-0.5 flex-1">
+                  <div className="h-1.5 w-12 bg-white/70 rounded" />
+                  <div className="h-1 w-8 bg-white/30 rounded" />
+                </div>
+                <div className="text-[8px] font-black text-white/50">𝕏</div>
+              </div>
+              {/* Linha separadora */}
+              <div className="absolute bg-white/10" style={{ top: "20%", left: 0, right: 0, height: 1 }} />
+              {/* Texto */}
+              <div className="absolute left-[6%] right-[6%] space-y-1" style={{ top: "24%" }}>
+                <div className="h-2 rounded bg-white/80 w-full" />
+                <div className="h-2 rounded bg-white/60 w-[80%]" />
+              </div>
+              {/* Linha separadora */}
+              <div className="absolute bg-white/10" style={{ top: "42%", left: 0, right: 0, height: 1 }} />
+              {/* Dois frames lado a lado */}
+              <div className="absolute left-[2%] right-[2%] flex gap-[2%]" style={{ top: "44%", bottom: "4%" }}>
+                <div className="flex-1 rounded-sm bg-white/20" />
+                <div className="flex-1 rounded-sm bg-white/10" />
+              </div>
+              <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold text-gray-300 bg-white/10 border border-white/15">
+                <Newspaper size={7} /> News
+              </div>
+            </div>
+            <div>
+              <p className="font-bold text-[var(--text)] text-sm group-hover:text-white transition-colors">📰 Estilo Choquei</p>
+              <p className="text-[11px] text-[var(--text-3)] leading-snug mt-0.5">
+                Perfil + título + imagem e vídeo lado a lado
               </p>
             </div>
           </button>
