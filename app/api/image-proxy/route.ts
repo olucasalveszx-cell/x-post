@@ -64,6 +64,23 @@ async function fetchImage(url: string): Promise<{ base64: string; mimeType: stri
   return null;
 }
 
+// GET /api/image-proxy?url=... — serve thumbnail diretamente como imagem (evita hotlink no browser)
+export async function GET(req: NextRequest) {
+  const url = req.nextUrl.searchParams.get("url");
+  if (!url?.startsWith("http")) return new NextResponse("URL inválida", { status: 400 });
+
+  const result = await fetchImage(url);
+  if (!result) return new NextResponse("Imagem indisponível", { status: 502 });
+
+  const buffer = Buffer.from(result.base64, "base64");
+  return new NextResponse(buffer, {
+    headers: {
+      "Content-Type": result.mimeType,
+      "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+    },
+  });
+}
+
 export async function POST(req: NextRequest) {
   const { url, thumbUrl, preferQuality } = await req.json();
   if (!url?.startsWith("http")) return NextResponse.json({ error: "URL inválida" }, { status: 400 });

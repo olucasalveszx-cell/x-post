@@ -190,8 +190,7 @@ export default function Toolbar({
       const res = await fetch("/api/image-proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // No thumbUrl fallback — thumbnail is low-res, better to fail and let user pick another
-        body: JSON.stringify({ url: img.url }),
+        body: JSON.stringify({ url: img.url, thumbUrl: img.thumb }),
       });
       const data = await res.json();
       if (!res.ok || !data.base64) throw new Error(data.error ?? "imagem bloqueada pelo site de origem. Tente outra.");
@@ -1321,7 +1320,7 @@ export default function Toolbar({
                     className="aspect-[3/4] rounded-lg overflow-hidden border border-[var(--border-2)] hover:border-sky-500/60 transition-colors relative group disabled:opacity-60"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img.thumb} alt={img.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                    <img src={`/api/image-proxy?url=${encodeURIComponent(img.thumb)}`} alt={img.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
                     {webSearchSelectingIdx === i && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                         <svg className="animate-spin w-5 h-5 text-white" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" /></svg>

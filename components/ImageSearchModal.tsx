@@ -153,7 +153,7 @@ export default function ImageSearchModal({ open, onClose, onSelect, defaultQuery
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={img.thumb}
+                    src={`/api/image-proxy?url=${encodeURIComponent(img.thumb)}`}
                     alt={img.title}
                     className="w-full h-full object-cover"
                     loading="lazy"
