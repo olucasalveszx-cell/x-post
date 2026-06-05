@@ -1,4 +1,4 @@
-import { redisGet, redisSet, redisListAll, redisLRem, redisSetNX } from "@/lib/redis";
+import { redisGet, redisSet, redisListAll, redisLRem, redisSetNX, redisLPush } from "@/lib/redis";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 export const PENDING_KEY = "schedule:pending";
@@ -22,33 +22,38 @@ export interface ScheduledPost {
 export function postKey(id: string)         { return `schedule:post:${id}`; }
 export function userPostsKey(email: string) { return `schedule:user:${email}`; }
 
-async function igPost(url: string, body: object, token: string): Promise<any> {
-  const res = await fetch(url, {
+// Envia POST ao Graph API com access_token na query string (mais confiável para media_publish)
+async function igPost(url: string, body: Record<string, unknown>, token: string): Promise<any> {
+  const urlWithToken = `${url}${url.includes("?") ? "&" : "?"}access_token=${encodeURIComponent(token)}`;
+  const res = await fetch(urlWithToken, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...body, access_token: token }),
+    body: JSON.stringify(body),
   });
   const d = await res.json();
   if (d.error) throw new Error(d.error.message ?? JSON.stringify(d.error));
   return d;
 }
 
-async function waitReady(id: string, token: string): Promise<void> {
-  const deadline = Date.now() + 30000;
+// Aguarda container ficar FINISHED — lança erro em qualquer falha ou timeout
+async function waitReady(id: string, token: string, timeoutMs = 60000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const res = await fetch(`${GRAPH}/${id}?fields=status_code&access_token=${token}`);
+    const res = await fetch(`${GRAPH}/${id}?fields=status_code&access_token=${encodeURIComponent(token)}`);
     const d = await res.json();
     if (d.error) throw new Error(d.error.message ?? "Erro no container");
     if (d.status_code === "FINISHED") return;
-    if (d.status_code === "ERROR")   throw new Error("Container falhou no processamento");
-    if (d.status_code === "EXPIRED") throw new Error("Container expirou");
-    await new Promise(r => setTimeout(r, 2000));
+    if (d.status_code === "ERROR")    throw new Error("Instagram rejeitou o container (ERROR)");
+    if (d.status_code === "EXPIRED")  throw new Error("Container expirou antes de ficar pronto");
+    await new Promise(r => setTimeout(r, 3000));
   }
+  throw new Error(`Container não ficou pronto em ${timeoutMs / 1000}s`);
 }
 
 async function publishPost(post: ScheduledPost): Promise<string> {
   const { igAccountId, igToken, imageUrls, caption, mediaType } = post;
 
+  // Story
   if (mediaType === "story") {
     const c = await igPost(`${GRAPH}/${igAccountId}/media`, { image_url: imageUrls[0], media_type: "STORIES" }, igToken);
     await waitReady(c.id, igToken);
@@ -56,6 +61,7 @@ async function publishPost(post: ScheduledPost): Promise<string> {
     return p.id;
   }
 
+  // Post único
   if (imageUrls.length === 1) {
     const c = await igPost(`${GRAPH}/${igAccountId}/media`, { image_url: imageUrls[0], caption }, igToken);
     await waitReady(c.id, igToken);
@@ -63,31 +69,40 @@ async function publishPost(post: ScheduledPost): Promise<string> {
     return p.id;
   }
 
+  // Carousel — children deve ser array, não string separada por vírgula
   const childIds = await Promise.all(
     imageUrls.map(url =>
       igPost(`${GRAPH}/${igAccountId}/media`, { image_url: url, is_carousel_item: true }, igToken).then(d => d.id)
     )
   );
   await Promise.all(childIds.map(id => waitReady(id, igToken)));
-  const carousel = await igPost(`${GRAPH}/${igAccountId}/media`, { media_type: "CAROUSEL", children: childIds.join(","), caption }, igToken);
+  const carousel = await igPost(`${GRAPH}/${igAccountId}/media`, {
+    media_type: "CAROUSEL",
+    children: childIds,   // array, NÃO join(",")
+    caption,
+  }, igToken);
   await waitReady(carousel.id, igToken);
   const p = await igPost(`${GRAPH}/${igAccountId}/media_publish`, { creation_id: carousel.id }, igToken);
   return p.id;
 }
 
+const MAX_RETRIES = 3;
+
 export async function processPendingPosts(): Promise<{ published: number; failed: number; skipped: number; total: number }> {
   const now = Date.now();
 
-  // Rastreia última execução do cron para diagnóstico
   await redisSet("cron:lastRun", new Date().toISOString()).catch(() => {});
 
-  const pendingIds = await redisListAll(PENDING_KEY);
-  const users = await redisListAll("schedule:users");
+  // Coleta todos os IDs pendentes (global + por usuário)
+  const [pendingIds, users] = await Promise.all([
+    redisListAll(PENDING_KEY),
+    redisListAll("schedule:users"),
+  ]);
   const userPostIds: string[] = [];
-  for (const email of [...new Set(users.filter(Boolean))]) {
-    const ids = await redisListAll(userPostsKey(email));
-    userPostIds.push(...ids);
-  }
+  const uniqueUsers = [...new Set(users.filter(Boolean))];
+  const userLists = await Promise.all(uniqueUsers.map(email => redisListAll(userPostsKey(email))));
+  userLists.forEach(ids => userPostIds.push(...ids));
+
   const allIds = [...new Set([...pendingIds, ...userPostIds].filter(Boolean))];
 
   let published = 0, failed = 0, skipped = 0;
@@ -106,19 +121,35 @@ export async function processPendingPosts(): Promise<{ published: number; failed
     if (!lock) { skipped++; continue; }
 
     await redisLRem(PENDING_KEY, 0, id);
+
     try {
       const igPostId = await publishPost(post);
       post.status = "published";
       post.igPostId = igPostId;
       published++;
     } catch (err: any) {
-      post.status = "failed";
-      post.errorMsg = err.message;
-      failed++;
-      console.error(`[schedule] falhou post ${id}:`, err.message);
+      const retries = (post.retries ?? 0) + 1;
+      post.retries = retries;
+
+      if (retries < MAX_RETRIES) {
+        // Recoloca na fila para retry
+        post.errorMsg = `Tentativa ${retries}/${MAX_RETRIES}: ${err.message}`;
+        post.status = "scheduled"; // mantém agendado para retry
+        await redisListAdd_safe(PENDING_KEY, id);
+      } else {
+        post.status = "failed";
+        post.errorMsg = err.message;
+        failed++;
+      }
+      console.error(`[schedule] post ${id} tentativa ${retries}:`, err.message);
     }
     await redisSet(postKey(id), JSON.stringify(post));
   }
 
   return { published, failed, skipped, total: allIds.length };
+}
+
+async function redisListAdd_safe(key: string, value: string): Promise<void> {
+  await redisLRem(key, 0, value);
+  await redisLPush(key, value);
 }

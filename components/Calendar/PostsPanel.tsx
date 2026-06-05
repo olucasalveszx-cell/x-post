@@ -25,6 +25,11 @@ interface Track {
 interface ScheduledPost {
   id: string; caption: string; imageUrls: string[];
   scheduledAt: string; status: "scheduled" | "published" | "failed";
+  mediaType?: "carousel" | "story";
+  errorMsg?: string;
+  igPostId?: string;
+  retries?: number;
+  createdAt?: string;
   igMediaId?: string;
 }
 interface Props {
@@ -799,14 +804,14 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
                             {post.status === "published" ? "Publicado" : post.status === "failed" ? "Falhou" : "Agendado"}
                           </span>
                           <span className="text-[9px] text-gray-500">{time}</span>
-                          {(post as any).mediaType === "story" && (
+                          {post.mediaType === "story" && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded border text-purple-400 border-purple-400/20 bg-purple-400/10">Story</span>
                           )}
                         </div>
                         <p className="text-[10px] text-gray-400 truncate">{post.caption || "Sem legenda"}</p>
-                        {post.status === "failed" && (post as any).errorMsg && (
-                          <p className="text-[9px] text-red-400 mt-0.5 truncate" title={(post as any).errorMsg}>
-                            ⚠ {(post as any).errorMsg}
+                        {post.status === "failed" && post.errorMsg && (
+                          <p className="text-[9px] text-red-400 mt-0.5 truncate" title={post.errorMsg}>
+                            ⚠ {post.errorMsg}
                           </p>
                         )}
                       </div>

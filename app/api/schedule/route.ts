@@ -12,13 +12,11 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.email) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   const ids = await redisListAll(userPostsKey(session.user.email));
-  const posts: ScheduledPost[] = [];
-  for (const id of ids.slice(-200).reverse()) {
-    const raw = await redisGet(postKey(id));
-    if (raw) {
-      try { posts.push({ ...JSON.parse(raw), igToken: "" }); } catch {}
-    }
-  }
+  const recent = ids.slice(-100).reverse();
+  const raws = await Promise.all(recent.map(id => redisGet(postKey(id)).catch(() => null)));
+  const posts: ScheduledPost[] = raws
+    .map((raw, i) => { try { return raw ? { ...JSON.parse(raw), igToken: "" } : null; } catch { return null; } })
+    .filter(Boolean) as ScheduledPost[];
   return NextResponse.json({ posts });
 }
 
