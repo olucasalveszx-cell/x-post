@@ -448,10 +448,19 @@ export default function Toolbar({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleAvatarUpload = (file: File) => {
+  const handleAvatarUpload = async (file: File) => {
+    // Preview imediato enquanto faz upload
     const reader = new FileReader();
     reader.onload = (e) => setProfileAvatarSrc(e.target?.result as string);
     reader.readAsDataURL(file);
+    // Upload para Supabase e troca pelo URL HTTPS (base64 é descartado ao salvar)
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/profile/avatar", { method: "POST", body: form });
+      const data = await res.json();
+      if (data.url) setProfileAvatarSrc(data.url);
+    } catch {}
   };
 
   const openNewProfileForm = () => {
