@@ -268,15 +268,25 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                   onClick={async () => { setShowMusicConfirm(false); await handleSchedule(); }}
                   className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text)] hover:bg-[var(--bg-4)] transition-colors"
                 >
-                  Não, agendar
+                  {scheduledAt ? "Agendar sem música" : "Não, agendar"}
                 </button>
-                <button
-                  onClick={handleShareWithMusic}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)" }}
-                >
-                  Sim, abrir IG
-                </button>
+                {scheduledAt ? (
+                  <button
+                    onClick={async () => { setShowMusicConfirm(false); await handleSchedule(); }}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)" }}
+                  >
+                    🎵 Agendar com música
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleShareWithMusic}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)" }}
+                  >
+                    Sim, abrir IG
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -495,7 +505,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                           Cancelar
                         </button>
                         <button
-                          onClick={handleSchedule}
+                          onClick={() => setShowMusicConfirm(true)}
                           disabled={!scheduledAt || isLoading}
                           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium disabled:opacity-40 transition-colors">
                           {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Calendar size={12} />}
