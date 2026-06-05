@@ -23,6 +23,7 @@ import { autosaveWrite, autosaveRead, autosaveClear } from "@/lib/autosave-db";
 import ProfileModal from "@/components/ProfileModal";
 import StyleSelectorModal from "@/components/Editor/StyleSelectorModal";
 import CarouselFaceModal, { FaceCarouselMode } from "@/components/Editor/CarouselFaceModal";
+import ChoqueiModal from "@/components/Editor/ChoqueiModal";
 import AppLogo from "@/components/AppLogo";
 import LoginAnimation from "@/components/LoginAnimation";
 import TutorialPromptModal, { NEVER_KEY, SESSION_KEY as TUTORIAL_SESSION_KEY } from "@/components/Tutorial/TutorialPromptModal";
@@ -132,6 +133,7 @@ export default function EditorPage() {
   const [profileInitialTab, setProfileInitialTab] = useState<"history" | "images" | "instagram" | "tutorial" | undefined>(undefined);
   const [showStyleSelector, setShowStyleSelector] = useState(false);
   const [showFaceCarousel, setShowFaceCarousel] = useState(false);
+  const [showChoqueiModal, setShowChoqueiModal] = useState(false);
   const [tutorialNotif, setTutorialNotif] = useState<{ title: string } | null>(null);
   const [showTutorialPrompt, setShowTutorialPrompt] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -460,8 +462,7 @@ export default function EditorPage() {
       return;
     }
     if (style === "choquei") {
-      const dispatch = () => window.dispatchEvent(new CustomEvent("open-generator-wizard", { detail: { imageLayout: "choquei" } }));
-      if (isMobile) { setMobilePanel("side"); setTimeout(dispatch, 120); } else { dispatch(); }
+      setShowChoqueiModal(true);
       return;
     }
     twitterStyleRef.current = style === "twitter";
@@ -1235,6 +1236,11 @@ export default function EditorPage() {
         open={showFaceCarousel}
         onClose={() => setShowFaceCarousel(false)}
         onGenerate={handleFaceCarouselGenerate}
+      />
+      <ChoqueiModal
+        open={showChoqueiModal}
+        onClose={() => setShowChoqueiModal(false)}
+        onCreate={handleGenerate}
       />
       <OnboardingModal
         onConfirm={(topic) => {
