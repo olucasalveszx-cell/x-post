@@ -69,8 +69,14 @@ export default function CalendarPanel() {
     try {
       const res = await fetch("/api/cron/test", { method: "POST" });
       const d = await res.json();
-      if (d.error) setTriggerMsg({ ok: false, text: d.error });
-      else setTriggerMsg({ ok: true, text: `Publicados: ${d.published} | Falhou: ${d.failed} | Pendentes: ${d.skipped}` });
+      if (d.error) {
+        setTriggerMsg({ ok: false, text: `Erro: ${d.error}` });
+      } else {
+        let text = `✅ Publicados: ${d.published} | ❌ Falhou: ${d.failed} | ⏳ Aguardando: ${d.skipped}`;
+        if (d.errors?.length > 0) text += `\n⚠ ${d.errors[0]}`;
+        else if (d.total === 0) text += "\nNenhum post encontrado no agendamento.";
+        setTriggerMsg({ ok: d.failed === 0, text });
+      }
       load();
     } catch (e: any) {
       setTriggerMsg({ ok: false, text: e.message });
@@ -212,8 +218,9 @@ export default function CalendarPanel() {
             <button onClick={() => setShowDiag(false)} className="text-gray-600 hover:text-gray-400">✕</button>
           </div>
           <div>Redis: <span className={diagData.redis === "ok" ? "text-green-400" : "text-red-400"}>{diagData.redis}</span></div>
-          <div>Agora (UTC): {diagData.now}</div>
-          <div>Posts pendentes global: {diagData.pendingCount}</div>
+          <div>Agora: {diagData.now}</div>
+          <div>Cron último disparo: <span className={diagData.cronLastRun ? "text-green-400" : "text-red-400"}>{diagData.cronLastRun ? new Date(diagData.cronLastRun).toLocaleString("pt-BR") : "NUNCA RODOU ❌"}</span></div>
+          <div>Posts pendentes global: {diagData.pendingGlobal ?? diagData.pendingCount}</div>
           <div>Posts do usuário: {diagData.userPostCount}</div>
           {diagData.posts?.map((p: any, i: number) => (
             <div key={i} className="border-t border-[#1a1a1a] pt-1 mt-1">

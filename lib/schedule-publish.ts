@@ -78,6 +78,9 @@ async function publishPost(post: ScheduledPost): Promise<string> {
 export async function processPendingPosts(): Promise<{ published: number; failed: number; skipped: number; total: number }> {
   const now = Date.now();
 
+  // Rastreia última execução do cron para diagnóstico
+  await redisSet("cron:lastRun", new Date().toISOString()).catch(() => {});
+
   const pendingIds = await redisListAll(PENDING_KEY);
   const users = await redisListAll("schedule:users");
   const userPostIds: string[] = [];
