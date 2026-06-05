@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Sparkles, Languages, CalendarClock, StickyNote, Loader2, Plus, Trash2, ChevronDown, ChevronRight, Check, Newspaper } from "lucide-react";
+import { Sparkles, Languages, CalendarClock, StickyNote, Loader2, Plus, Trash2, ChevronDown, ChevronRight, Check } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import GeneratorPanel from "./GeneratorPanel";
@@ -347,38 +347,7 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
       {/* Conteúdo */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
         {tab === "generate" && (
-          <>
-            <GeneratorPanel onGenerate={onGenerate} onLayoutChange={onLayoutChange} currentSlides={currentSlides} />
-
-            {/* Template Estilo Choquei */}
-            <div className="border-t border-[var(--border)] pt-4">
-              <p className="text-[10px] text-[var(--text-3)] uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                <Newspaper size={10} /> Templates Especiais
-              </p>
-              <button
-                onClick={handleChoqueiTemplate}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-[var(--border-2)] hover:border-brand-500/40 bg-[var(--bg)] hover:bg-brand-500/5 transition-all text-left group"
-              >
-                {/* Preview miniatura */}
-                <div className="w-10 h-14 rounded-lg overflow-hidden shrink-0 bg-[#111] border border-white/10 relative flex flex-col">
-                  {/* header */}
-                  <div className="h-2.5 bg-white/10 mx-0.5 mt-0.5 rounded-sm" />
-                  <div className="h-px bg-white/10 mx-0 mt-0.5" />
-                  <div className="h-4 bg-white/5 mx-0.5 mt-0.5 rounded-sm" />
-                  <div className="h-px bg-white/10 mx-0 mt-0.5" />
-                  {/* media 2 col */}
-                  <div className="flex-1 flex gap-px mx-0.5 mb-0.5 mt-0.5">
-                    <div className="flex-1 bg-white/15 rounded-sm" />
-                    <div className="flex-1 bg-white/10 rounded-sm" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text)] group-hover:text-brand-400 transition-colors">Estilo Choquei / News</p>
-                  <p className="text-[10px] text-[var(--text-3)] mt-0.5">Perfil + título + imagem e vídeo lado a lado</p>
-                </div>
-              </button>
-            </div>
-          </>
+          <GeneratorPanel onGenerate={onGenerate} onLayoutChange={onLayoutChange} currentSlides={currentSlides} />
         )}
         {tab === "posts"     && <PostsPanel currentSlides={currentSlides} onLoad={onGenerate} />}
         {tab === "translate" && <TranslatePanel onGenerate={onGenerate} />}

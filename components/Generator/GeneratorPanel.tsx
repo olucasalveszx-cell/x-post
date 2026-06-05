@@ -500,8 +500,9 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
       const detail = (e as CustomEvent).detail ?? {};
       setLastSettings((prev) => ({
         ...(prev ?? defaultSettings()),
-        ...(detail.topic     ? { topic: detail.topic, inputMode: "topic" as const } : {}),
-        ...(detail.imageStyle ? { imageStyle: detail.imageStyle as ImageStyle }      : {}),
+        ...(detail.topic       ? { topic: detail.topic, inputMode: "topic" as const }   : {}),
+        ...(detail.imageStyle  ? { imageStyle: detail.imageStyle as ImageStyle }         : {}),
+        ...(detail.imageLayout ? { imageLayout: detail.imageLayout as ImageLayout }      : {}),
       }));
       setWizardTwitterMode(!!detail.isTwitter);
       setShowWizard(true);
