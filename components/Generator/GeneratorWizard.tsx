@@ -7,7 +7,7 @@ import { WritingStyle } from "@/types";
 
 export type ImageStyle = "gemini" | "foto_real" | "cinematico" | "biblioteca";
 
-export type ImageLayout = "mixed" | "full" | "square" | "top" | "base" | "viral";
+export type ImageLayout = "mixed" | "full" | "square" | "top" | "base" | "viral" | "choquei";
 
 export interface WizardSettings {
   topic: string;
@@ -411,11 +411,11 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                 <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3 flex items-center gap-1.5">
                   <LayoutTemplate size={11} /> Layout da imagem
                 </p>
-                <div className="grid grid-cols-3 gap-2 mb-2">
+                <div className="grid grid-cols-2 gap-2 mb-2">
                   {/* Viral — destaque especial */}
                   <button
                     onClick={() => setImageLayout("viral")}
-                    className={`col-span-3 flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
                       imageLayout === "viral"
                         ? "border-orange-500 bg-orange-500/10"
                         : "border-[var(--border-2)] bg-[var(--bg)] hover:border-orange-500/40"
@@ -425,14 +425,40 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
                       <div className="absolute inset-0" style={{ background: "linear-gradient(135deg,#ff6b3520 0%,transparent 60%)" }} />
                       <div className="absolute top-1 left-1 right-1 h-1 rounded bg-orange-500/70" />
                       <div className="absolute top-3 left-1 right-2 h-1.5 rounded-sm bg-white/80" />
-                      <div className="absolute top-5.5 left-1 right-3 h-1 rounded-sm bg-white/30" />
                       <div className="absolute bottom-1 left-1 w-3 h-0.5 rounded bg-orange-500/60" />
                     </div>
                     <div className="flex flex-col items-start gap-0.5">
                       <span className={`text-[11px] font-bold ${imageLayout === "viral" ? "text-orange-400" : "text-[var(--text-2)]"}`}>
                         🔥 Viral Aleatório
                       </span>
-                      <span className="text-[9px] text-[var(--text-3)] leading-tight">6 templates dos carrosséis que mais viralizam</span>
+                      <span className="text-[9px] text-[var(--text-3)] leading-tight">6 templates virais</span>
+                    </div>
+                  </button>
+
+                  {/* Choquei / News */}
+                  <button
+                    onClick={() => setImageLayout("choquei")}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
+                      imageLayout === "choquei"
+                        ? "border-white/50 bg-white/5"
+                        : "border-[var(--border-2)] bg-[var(--bg)] hover:border-white/20"
+                    }`}
+                  >
+                    <div className="w-8 h-10 rounded-md overflow-hidden bg-[#111] border border-white/20 relative shrink-0 flex flex-col">
+                      <div className="h-2 bg-white/15 mx-0.5 mt-0.5 rounded-sm" />
+                      <div className="h-px bg-white/10 mx-0 mt-0.5" />
+                      <div className="h-2 bg-white/8 mx-0.5 mt-0.5 rounded-sm" />
+                      <div className="h-px bg-white/10 mx-0 mt-0.5" />
+                      <div className="flex-1 flex gap-px mx-0.5 mb-0.5 mt-0.5">
+                        <div className="flex-1 bg-white/20 rounded-sm" />
+                        <div className="flex-1 bg-white/10 rounded-sm" />
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-start gap-0.5">
+                      <span className={`text-[11px] font-bold ${imageLayout === "choquei" ? "text-white" : "text-[var(--text-2)]"}`}>
+                        📰 Estilo Choquei
+                      </span>
+                      <span className="text-[9px] text-[var(--text-3)] leading-tight">Post notícia c/ imagem e vídeo</span>
                     </div>
                   </button>
                 </div>
