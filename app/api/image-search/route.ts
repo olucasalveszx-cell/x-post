@@ -17,35 +17,39 @@ async function searchGoogle(query: string, page: number): Promise<ImageResult[]>
   const res = await fetch("https://google.serper.dev/images", {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ q: query, num: 20, page, gl: "br", hl: "pt" }),
-    signal: AbortSignal.timeout(10000),
+    body: JSON.stringify({ q: query, num: 30, page, gl: "br", hl: "pt" }),
+    signal: AbortSignal.timeout(12000),
   });
   if (!res.ok) return [];
   const data = await res.json();
   if (!data.images?.length) return [];
-  const DIRECT_IMAGE = /\.(jpe?g|png|webp|gif|avif)(\?|$)/i;
+  const DIRECT_IMAGE = /\.(jpe?g|png|webp|avif)(\?|$)/i;
   const BLOCKED_HOSTS = /instagram\.com|facebook\.com|pinterest\.com|tiktok\.com|twitter\.com|x\.com/i;
 
   return (data.images as any[])
     .filter((img: any) => img.thumbnailUrl)
-    .slice(0, 16)
     .map((img: any) => {
       const rawUrl: string = img.imageUrl ?? "";
-      // Prefere URL direta de imagem; se for crawler/social, cai direto no thumbnail do Google
       const useDirectUrl = rawUrl &&
         !BLOCKED_HOSTS.test(rawUrl) &&
         (DIRECT_IMAGE.test(rawUrl) || (!rawUrl.includes("crawler") && !rawUrl.includes("widget")));
+      const w = img.imageWidth ?? 0;
+      const h = img.imageHeight ?? 0;
       return {
         url: useDirectUrl ? rawUrl : img.thumbnailUrl,
         thumb: img.thumbnailUrl,
-        width: img.imageWidth ?? 0,
-        height: img.imageHeight ?? 0,
+        width: w,
+        height: h,
         title: img.title ?? "",
         source: img.source ?? (rawUrl ? (() => { try { return new URL(rawUrl).hostname; } catch { return "Web"; } })() : "Web"),
+        // score: prioriza imagens de alta resolução
+        _score: (useDirectUrl ? 2 : 0) + (w >= 1920 ? 3 : w >= 1000 ? 2 : w >= 600 ? 1 : 0),
       };
     })
     .filter((img) => img.url)
-    .slice(0, 12);
+    .sort((a, b) => b._score - a._score)
+    .slice(0, 20)
+    .map(({ _score, ...img }) => img);
 }
 
 // Wikimedia Commons — fallback gratuito com fotos reais de eventos/pessoas públicas
