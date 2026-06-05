@@ -389,6 +389,7 @@ export default function Toolbar({
   const [profileHandle, setProfileHandle] = useState("");
   const [profileAvatarSrc, setProfileAvatarSrc] = useState("");
   const [profileVerified, setProfileVerified] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => {
     // Purge oversized profile keys before any read/write to prevent QuotaExceededError
@@ -453,7 +454,8 @@ export default function Toolbar({
     const reader = new FileReader();
     reader.onload = (e) => setProfileAvatarSrc(e.target?.result as string);
     reader.readAsDataURL(file);
-    // Upload para Supabase e troca pelo URL HTTPS (base64 é descartado ao salvar)
+    // Upload para Supabase — Save fica bloqueado até ter a URL HTTPS
+    setAvatarUploading(true);
     try {
       const form = new FormData();
       form.append("file", file);
@@ -461,6 +463,7 @@ export default function Toolbar({
       const data = await res.json();
       if (data.url) setProfileAvatarSrc(data.url);
     } catch {}
+    finally { setAvatarUploading(false); }
   };
 
   const openNewProfileForm = () => {
@@ -494,9 +497,12 @@ export default function Toolbar({
       : [profile, ...savedProfiles];
     setSavedProfiles(updated);
     persistProfiles(updated);
-    // novo perfil vira o ativo
     if (!editingProfile) {
+      // novo perfil vira o ativo
       setActiveProfileId(profile.id);
+      setActiveProfileLS(profile);
+    } else if (editingProfile.id === activeProfileId) {
+      // perfil ativo editado — atualiza localStorage do perfil ativo
       setActiveProfileLS(profile);
     }
     setShowProfileForm(false);
@@ -1115,9 +1121,9 @@ export default function Toolbar({
                   className="flex-1 py-2 rounded-lg border border-[var(--border-2)] text-sm text-[var(--text-2)] hover:bg-[var(--bg-3)] transition-colors">
                   Cancelar
                 </button>
-                <button onClick={saveProfileForm} disabled={!profileName && !profileHandle}
-                  className="flex-1 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-sm font-medium text-white transition-colors">
-                  Salvar
+                <button onClick={saveProfileForm} disabled={(!profileName && !profileHandle) || avatarUploading}
+                  className="flex-1 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-sm font-medium text-white transition-colors flex items-center justify-center gap-1.5">
+                  {avatarUploading ? <><Loader2 size={13} className="animate-spin" /> Enviando foto...</> : "Salvar"}
                 </button>
               </div>
             </>
