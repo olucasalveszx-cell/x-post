@@ -107,6 +107,7 @@ export default function Toolbar({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const refPhotoInputRef = useRef<HTMLInputElement>(null);
+  const bgUploadRef = useRef<HTMLInputElement>(null);
   const addBtnRef = useRef<HTMLButtonElement>(null);
   const moreBtnRef = useRef<HTMLButtonElement>(null);
   const fundoBtnRef = useRef<HTMLButtonElement>(null);
@@ -134,6 +135,7 @@ export default function Toolbar({
   const [showXpostBank, setShowXpostBank] = useState(false);
   const [xpostBankImages, setXpostBankImages] = useState<{ id: string; url: string; name: string }[]>([]);
   const [xpostBankLoading, setXpostBankLoading] = useState(false);
+  const [lowResWarn, setLowResWarn] = useState<string | null>(null);
   const [showWebSearch, setShowWebSearch] = useState(false);
   const [webSearchMode, setWebSearchMode] = useState<"bg" | "el">("bg");
   const [webSearchQuery, setWebSearchQuery] = useState("");
@@ -199,7 +201,7 @@ export default function Toolbar({
         if (isFrame) patchSelected({ frameImageUrl: dataUrl });
         else patchSelected({ src: dataUrl });
       } else {
-        onUpdate({ ...slide, backgroundImageUrl: dataUrl });
+        applyBackground(dataUrl);
       }
       setShowWebSearch(false);
     } catch (e: any) {
@@ -623,6 +625,30 @@ export default function Toolbar({
       style: { fontSize: 40, fontWeight: "bold", fontFamily: "sans-serif", color: "#ffffff", textAlign: "left", lineHeight: 1.3 },
     };
     onUpdate({ ...slide, elements: [...slide.elements, el] });
+  };
+
+  // Aplica imagem de fundo com verificação de resolução mínima
+  const applyBackground = (src: string, skipCheck = false) => {
+    if (skipCheck) { onUpdate({ ...slide, backgroundImageUrl: src }); return; }
+    const img = new Image();
+    img.onload = () => {
+      if (img.naturalWidth < 700 || img.naturalHeight < 700) {
+        setLowResWarn(src);
+      } else {
+        onUpdate({ ...slide, backgroundImageUrl: src });
+      }
+    };
+    img.onerror = () => onUpdate({ ...slide, backgroundImageUrl: src });
+    img.src = src;
+  };
+
+  const handleBgUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const src = e.target?.result as string;
+      onUpdate({ ...slide, backgroundImageUrl: src });
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleImageUpload = (file: File) => {
@@ -1254,7 +1280,7 @@ export default function Toolbar({
                 {xpostBankImages.map((img) => (
                   <button
                     key={img.id}
-                    onClick={() => { onUpdate({ ...slide, backgroundImageUrl: img.url }); setShowXpostBank(false); }}
+                    onClick={() => { applyBackground(img.url); setShowXpostBank(false); }}
                     className="aspect-[3/4] rounded-lg overflow-hidden border border-[var(--border-2)] hover:border-violet-500/60 transition-colors relative group"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1757,10 +1783,72 @@ export default function Toolbar({
             if (isFrame) patchSelected({ frameImageUrl: url });
             else patchSelected({ src: url });
           } else {
-            onUpdate({ ...slide, backgroundImageUrl: url });
+            applyBackground(url);
           }
         }}
       />
+
+      {/* ── Input oculto para upload manual de fundo ── */}
+      <input
+        ref={bgUploadRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBgUpload(f); e.target.value = ""; }}
+      />
+
+      {/* ── Modal: resolução baixa ── */}
+      {lowResWarn && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.80)" }}>
+          <div className="w-full max-w-sm rounded-2xl border border-[#2a2a2a] bg-[#0d0d0d] overflow-hidden shadow-2xl">
+            {/* Preview da imagem */}
+            <div className="relative w-full h-36 bg-[#111] overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={lowResWarn} alt="preview" className="w-full h-full object-cover opacity-60" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                <span className="text-3xl">⚠️</span>
+                <span className="text-xs font-semibold text-white bg-black/60 px-2 py-0.5 rounded">Resolução baixa</span>
+              </div>
+            </div>
+
+            <div className="px-5 py-4">
+              <p className="text-sm font-semibold text-white mb-1">Imagem com resolução baixa</p>
+              <p className="text-xs text-gray-400 mb-4">
+                Essa imagem pode ficar pixelada no slide. Recomendamos fazer upload de uma foto de alta qualidade ou gerar com IA.
+              </p>
+
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => { bgUploadRef.current?.click(); setLowResWarn(null); }}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Fazer upload manual
+                </button>
+                <button
+                  onClick={() => {
+                    setLowResWarn(null);
+                    const rect = fundoBtnRef.current?.getBoundingClientRect();
+                    if (rect) setFundoPos({ x: rect.left, y: rect.bottom + 4 });
+                    closeAll();
+                    setShowFundoPanel(true);
+                  }}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#1a1a1a] hover:bg-[#222] border border-[#333] text-white text-sm font-medium transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M22 2 12 12"/><path d="m18 2 4 4-4 4"/></svg>
+                  Gerar com IA
+                </button>
+                <button
+                  onClick={() => { onUpdate({ ...slide, backgroundImageUrl: lowResWarn }); setLowResWarn(null); }}
+                  className="text-xs text-gray-500 hover:text-gray-400 text-center py-1 transition-colors"
+                >
+                  Usar mesmo assim
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
