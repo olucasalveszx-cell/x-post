@@ -6,7 +6,7 @@ import {
   FileText, Calendar, Send, Loader2, Trash2, FolderOpen, Clock,
   Save, ChevronLeft, ChevronRight, CheckCircle, XCircle, Music,
   Search, Play, Pause, Hash, Image as ImageIcon, X, CalendarClock,
-  Layers, BookOpen,
+  Layers, BookOpen, AlertTriangle,
 } from "lucide-react";
 import StorytellingAssistant from "@/components/Calendar/StorytellingAssistant";
 import { Slide } from "@/types";
@@ -80,6 +80,10 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [triggering, setTriggering] = useState(false);
+  const [triggerMsg, setTriggerMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [diagData, setDiagData] = useState<any>(null);
+  const [showDiag, setShowDiag] = useState(false);
   const prevPostsRef = useRef<ScheduledPost[]>([]);
 
   /* ── load drafts ── */
@@ -338,6 +342,31 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
   const hasContent = currentSlides.some(s => s.elements.length > 0 || s.backgroundImageUrl);
 
   /* ── min datetime em hora LOCAL (não UTC) ── */
+  const triggerNow = async () => {
+    setTriggering(true); setTriggerMsg(null);
+    try {
+      const res = await fetch("/api/cron/test", { method: "POST" });
+      const d = await res.json();
+      if (d.error) { setTriggerMsg({ ok: false, text: `Erro: ${d.error}` }); }
+      else {
+        let text = `✅ Publicados: ${d.published} | ❌ Falhou: ${d.failed} | ⏳ Aguardando: ${d.skipped}`;
+        if (d.errors?.length > 0) text += `\n⚠ ${d.errors[0]}`;
+        else if (d.total === 0) text += "\nNenhum post encontrado no agendamento.";
+        setTriggerMsg({ ok: d.failed === 0, text });
+      }
+      await loadPosts();
+    } catch (e: any) { setTriggerMsg({ ok: false, text: e.message }); }
+    setTriggering(false);
+  };
+
+  const loadDiag = async () => {
+    try {
+      const res = await fetch("/api/cron/test");
+      setDiagData(await res.json());
+      setShowDiag(true);
+    } catch {}
+  };
+
   const minDateTime = (() => {
     const d = new Date(Date.now() + 6 * 60 * 1000);
     const p = (n: number) => String(n).padStart(2, "0");
@@ -640,6 +669,45 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
       ══════════════════════════════ */}
       {section === "calendar" && (
         <div className="flex flex-col gap-4">
+
+          {/* Trigger + Diagnóstico */}
+          <div className="flex gap-2">
+            <button onClick={triggerNow} disabled={triggering}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-brand-600/20 hover:bg-brand-600/30 border border-brand-500/30 text-brand-400 text-xs font-medium transition-colors disabled:opacity-50">
+              {triggering ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
+              Publicar pendentes agora
+            </button>
+            <button onClick={loadDiag} title="Diagnóstico"
+              className="px-3 py-2 rounded-xl bg-[var(--bg-3)] border border-[var(--border)] text-gray-500 hover:text-yellow-400 text-xs transition-colors">
+              <AlertTriangle size={13} />
+            </button>
+          </div>
+
+          {triggerMsg && (
+            <div className={`text-xs px-3 py-2 rounded-lg border whitespace-pre-wrap ${triggerMsg.ok ? "bg-green-900/20 border-green-800/40 text-green-300" : "bg-red-900/20 border-red-800/40 text-red-300"}`}>
+              {triggerMsg.text}
+            </div>
+          )}
+
+          {showDiag && diagData && (
+            <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 text-[10px] text-gray-400 font-mono space-y-1 max-h-64 overflow-y-auto">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-300 font-bold">Diagnóstico do Cron</span>
+                <button onClick={() => setShowDiag(false)} className="text-gray-600 hover:text-gray-400">✕</button>
+              </div>
+              <div>Redis: <span className={diagData.redis === "ok" ? "text-green-400" : "text-red-400"}>{diagData.redis}</span></div>
+              <div>Cron último disparo: <span className={diagData.cronLastRun ? "text-green-400" : "text-red-400"}>{diagData.cronLastRun ? new Date(diagData.cronLastRun).toLocaleString("pt-BR") : "NUNCA RODOU ❌"}</span></div>
+              <div>Posts pendentes: {diagData.pendingGlobal ?? 0} | Posts seus: {diagData.userPostCount ?? 0}</div>
+              {diagData.posts?.map((p: any, i: number) => (
+                <div key={i} className="border-t border-[#1a1a1a] pt-1 mt-1">
+                  <div>Status: <span className={p.status === "published" ? "text-green-400" : p.status === "failed" ? "text-red-400" : "text-blue-400"}>{p.status}</span> | Tipo: {p.mediaType}</div>
+                  <div>Agendado: {p.scheduledLocal} | Vencido: <span className={p.overdue ? "text-yellow-400" : "text-gray-500"}>{p.overdue ? "SIM" : "não"}</span></div>
+                  {p.errorMsg && <div className="text-red-400">⚠ {p.errorMsg}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Navegação */}
           <div className="flex items-center justify-between">
             <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-[var(--bg-4)] text-gray-400 hover:text-[var(--text)] transition-colors">
