@@ -410,6 +410,15 @@ export default function EditorPage() {
   const handleIGLogin = () => {
     const currentEmail = session?.user?.email ?? null;
 
+    // PWA (standalone): popup abre no Safari externo e o resultado nunca volta
+    // para o PWA. Usa redirect direto — callback envia de volta via URL params.
+    const isPWA = window.matchMedia("(display-mode: standalone)").matches ||
+                  !!(window.navigator as any).standalone;
+    if (isPWA) {
+      window.location.href = "/api/instagram/auth";
+      return;
+    }
+
     function applyIGAuth(data: Record<string, string>) {
       if (data.ig_success === "1") {
         const account: IGAccount = {
