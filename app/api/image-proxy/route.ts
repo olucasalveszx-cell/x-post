@@ -68,10 +68,10 @@ export async function POST(req: NextRequest) {
   const { url, thumbUrl, preferQuality } = await req.json();
   if (!url?.startsWith("http")) return NextResponse.json({ error: "URL inválida" }, { status: 400 });
 
-  // preferQuality=true: não usa thumbnail como fallback (melhor qualidade, sem degradação)
   const result = await fetchImage(url);
   if (result) return NextResponse.json(result);
 
+  // Fallback para thumbnail (desabilitado com preferQuality=true)
   if (!preferQuality && thumbUrl) {
     const thumb = await fetchImage(thumbUrl);
     if (thumb) return NextResponse.json(thumb);

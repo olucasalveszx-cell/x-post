@@ -48,7 +48,7 @@ async function searchWikimediaCommons(query: string, page: number): Promise<Imag
     .map((p: any) => {
       const info = p.imageinfo[0];
       return {
-        url: info.url,
+        url: info.thumburl ?? info.url,  // 1200px thumb (diretamente acessível)
         thumb: info.thumburl ?? info.url,
         width: info.thumbwidth ?? info.width ?? 0,
         height: info.thumbheight ?? info.height ?? 0,
@@ -58,11 +58,37 @@ async function searchWikimediaCommons(query: string, page: number): Promise<Imag
     });
 }
 
+// Pexels — CDN próprio, sem hotlink protection, alta qualidade
+async function searchPexels(query: string, page: number): Promise<ImageResult[]> {
+  const pexelsKey = process.env.PEXELS_API_KEY;
+  if (!pexelsKey) return [];
+  try {
+    const res = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=9&page=${page}&orientation=portrait`,
+      { headers: { Authorization: pexelsKey }, signal: AbortSignal.timeout(10000) }
+    );
+    const data = await res.json();
+    if (!res.ok || !data.photos?.length) return [];
+    return data.photos.slice(0, 6).map((p: any) => ({
+      url: p.src?.large2x ?? p.src?.large ?? p.src?.medium,
+      thumb: p.src?.medium ?? p.src?.small,
+      width: p.width ?? 0,
+      height: p.height ?? 0,
+      title: p.alt ?? p.photographer ?? "Pexels",
+      source: p.photographer ?? "Pexels",
+    })).filter((img: ImageResult) => img.url);
+  } catch { return []; }
+}
+
 export async function POST(req: NextRequest) {
   const { query, page = 1 } = await req.json();
   if (!query?.trim()) return NextResponse.json({ error: "query obrigatória" }, { status: 400 });
 
-  // 1. Serper (Google Images — melhor resultado)
+  // 1. Pexels — CDN direto, sem hotlink, alta qualidade
+  const pexelsImages = await searchPexels(query.trim(), page);
+  if (pexelsImages.length > 0) return NextResponse.json({ images: pexelsImages });
+
+  // 2. Serper (Google Images — URLs de terceiros, pode ter hotlink)
   const serperKey = process.env.SERPER_API_KEY;
   if (serperKey) {
     try {
@@ -74,7 +100,7 @@ export async function POST(req: NextRequest) {
       });
       const data = await res.json();
       if (res.ok && data.images?.length) {
-        const images: ImageResult[] = data.images.slice(0, 6).map((img: any) => ({
+        const images: ImageResult[] = data.images.slice(0, 9).map((img: any) => ({
           url: img.imageUrl,
           thumb: img.thumbnailUrl ?? img.imageUrl,
           width: img.imageWidth ?? 0,
@@ -87,13 +113,13 @@ export async function POST(req: NextRequest) {
     } catch {}
   }
 
-  // 2. Wikimedia Commons (grátis, sem chave, fotos reais de eventos/pessoas)
+  // 3. Wikimedia Commons (grátis, sem chave, fotos reais de eventos/pessoas)
   try {
     const images = await searchWikimediaCommons(query.trim(), page);
     if (images.length > 0) return NextResponse.json({ images });
   } catch {}
 
-  // 3. Pixabay
+  // 4. Pixabay
   const pixabayKey = process.env.PIXABAY_API_KEY;
   if (pixabayKey) {
     try {
@@ -105,8 +131,8 @@ export async function POST(req: NextRequest) {
       const data = await res.json();
       if (res.ok && data.hits?.length) {
         const images: ImageResult[] = data.hits.slice(0, 6).map((img: any) => ({
-          url: img.largeImageURL ?? img.webformatURL,  // largeImageURL = alta resolução
-          thumb: img.webformatURL ?? img.previewURL,  // webformat como thumb (640px)
+          url: img.largeImageURL ?? img.webformatURL,
+          thumb: img.webformatURL ?? img.previewURL,
           width: img.imageWidth ?? img.webformatWidth ?? 0,
           height: img.imageHeight ?? img.webformatHeight ?? 0,
           title: img.tags ?? "",
@@ -117,7 +143,7 @@ export async function POST(req: NextRequest) {
     } catch {}
   }
 
-  // 4. Unsplash
+  // 5. Unsplash
   const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
   if (!unsplashKey) return NextResponse.json({ error: "Nenhuma fonte de imagem configurada" }, { status: 500 });
 
@@ -130,8 +156,8 @@ export async function POST(req: NextRequest) {
   if (!res.ok) return NextResponse.json({ error: data.errors?.[0] ?? "Erro na busca" }, { status: 500 });
 
   const images: ImageResult[] = (data.results ?? []).map((img: any) => ({
-    url: img.urls?.regular ?? img.urls?.full,
-    thumb: img.urls?.small ?? img.urls?.thumb,
+    url: img.urls?.full ?? img.urls?.regular,
+    thumb: img.urls?.regular ?? img.urls?.small,
     width: img.width,
     height: img.height,
     title: img.alt_description ?? img.description ?? "",

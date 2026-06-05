@@ -68,7 +68,7 @@ export default function ImageSearchModal({ open, onClose, onSelect, defaultQuery
       const res = await fetch("/api/image-proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: img.url, thumbUrl: img.thumb, preferQuality: true }),
+        body: JSON.stringify({ url: img.url, thumbUrl: img.thumb }),
       });
       const data = await res.json();
       if (!res.ok || !data.base64) throw new Error(data.error ?? "Falha ao carregar imagem");
