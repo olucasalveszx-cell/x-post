@@ -473,13 +473,13 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                         </p>
                         <button
                           onClick={() => {
-                            const d = new Date(Date.now() + 2 * 60 * 1000);
+                            const d = new Date(Date.now() + 6 * 60 * 1000);
                             const p = (n: number) => String(n).padStart(2,"0");
                             setScheduledAt(`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`);
                           }}
                           className="text-[10px] px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 transition-colors"
                         >
-                          ⚡ Teste (+2 min)
+                          ⚡ Teste (+6 min)
                         </button>
                       </div>
                       <input
