@@ -102,7 +102,7 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
   const [activeVideo, setActiveVideo] = useState<MemberVideo | null>(null);
 
   /* ── Instagram ── */
-  const [igAccount, setIgAccount] = useState<{ username: string; accountId: string; token: string } | null>(null);
+  const [igAccount, setIgAccount] = useState<{ username: string; accountId: string; token: string; picture?: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -366,9 +366,14 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
                 <>
                   {/* Conectado */}
                   <div className="flex flex-col items-center gap-3 w-full">
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                    <div className="relative w-16 h-16 rounded-full overflow-hidden flex items-center justify-center"
                       style={{ background: "linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" }}>
-                      <Instagram size={28} color="white" />
+                      {igAccount.picture ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={igAccount.picture} alt={igAccount.username} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <Instagram size={28} color="white" />
+                      )}
                     </div>
                     <div className="text-center">
                       <p className="font-bold text-[var(--text)] text-sm">@{igAccount.username}</p>

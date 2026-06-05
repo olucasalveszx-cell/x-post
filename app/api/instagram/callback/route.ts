@@ -111,10 +111,11 @@ export async function GET(req: NextRequest) {
       if (meData.instagram_business_account?.id) {
         igAccountId = meData.instagram_business_account.id;
         const userRes = await fetch(
-          `https://graph.facebook.com/v20.0/${igAccountId}?fields=username&access_token=${longToken}`
+          `https://graph.facebook.com/v20.0/${igAccountId}?fields=username,profile_picture_url&access_token=${longToken}`
         );
         const userData = await userRes.json();
         igUsername = userData.username ?? "";
+        igPicture  = userData.profile_picture_url ?? "";
       }
     }
 
