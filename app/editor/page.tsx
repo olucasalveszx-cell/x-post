@@ -28,7 +28,7 @@ import LoginAnimation from "@/components/LoginAnimation";
 import TutorialPromptModal, { NEVER_KEY, SESSION_KEY as TUTORIAL_SESSION_KEY } from "@/components/Tutorial/TutorialPromptModal";
 import TutorialOverlay from "@/components/Tutorial/TutorialOverlay";
 
-interface IGAccount { token: string; accountId: string; username: string; expiresAt?: number; }
+interface IGAccount { token: string; accountId: string; username: string; picture?: string; expiresAt?: number; }
 
 // Synchronous cleanup — runs at module-load time before ANY React component mounts.
 // Always sanitizes avatarSrc: only keeps short http(s) URLs, strips everything else.
@@ -349,6 +349,7 @@ export default function EditorPage() {
         token:     params.get("ig_token")    ?? "",
         accountId: params.get("ig_account")  ?? "",
         username:  params.get("ig_username") ?? "",
+        picture:   params.get("ig_picture")  ?? "",
       };
       setIgAccount(account);
       try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
@@ -386,6 +387,7 @@ export default function EditorPage() {
           token:     data.ig_token     ?? "",
           accountId: data.ig_account   ?? "",
           username:  data.ig_username  ?? "",
+          picture:   data.ig_picture   ?? "",
         };
         setIgAccount(account);
         try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}

@@ -221,7 +221,7 @@ function NotesPanel() {
 }
 
 // ── Template Estilo Choquei/News ──────────────────────────────
-function createChoqueiSlide(name: string, handle: string, W = 1080, H = 1350): Slide {
+function createChoqueiSlide(name: string, handle: string, picture = "", W = 1080, H = 1350): Slide {
   const elements: SlideElement[] = [
     // Perfil (topo esquerda) — usa conta conectada do usuário
     {
@@ -231,6 +231,7 @@ function createChoqueiSlide(name: string, handle: string, W = 1080, H = 1350): S
       profileVerified: true,
       profileNameColor: "#ffffff", profileHandleColor: "rgba(255,255,255,0.55)",
       zIndex: 10,
+      ...(picture ? { src: picture } : {}),
     },
     // Ícone X (topo direita) — texto estilizado
     {
@@ -301,9 +302,10 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
     const igAccount = typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("ig_account") ?? "null")
       : null;
-    const name   = igAccount?.username ?? igAccount?.name ?? "Meu Perfil";
-    const handle = igAccount?.username ?? "meuperfil";
-    onGenerate([createChoqueiSlide(name, handle)]);
+    const name    = igAccount?.username ?? igAccount?.name ?? "Meu Perfil";
+    const handle  = igAccount?.username ?? "meuperfil";
+    const picture = igAccount?.picture ?? "";
+    onGenerate([createChoqueiSlide(name, handle, picture)]);
   };
 
   return (

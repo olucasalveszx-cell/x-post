@@ -73,6 +73,7 @@ export async function GET(req: NextRequest) {
     let igAccountId: string | null = null;
     let igToken: string = longToken;
     let igUsername: string = "";
+    let igPicture:  string = "";
 
     for (const page of pages) {
       const igRes = await fetch(
@@ -94,6 +95,7 @@ export async function GET(req: NextRequest) {
         );
         const userData = await userRes.json();
         igUsername = userData.username ?? "";
+        igPicture  = userData.profile_picture_url ?? "";
         break;
       }
     }
@@ -130,6 +132,7 @@ export async function GET(req: NextRequest) {
       ig_token: igToken,
       ig_account: igAccountId,
       ig_username: igUsername,
+      ig_picture: igPicture,
       ig_expires_at: String(expiresAt),
       ig_success: "1",
     };

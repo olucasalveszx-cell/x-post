@@ -583,11 +583,12 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
       const igAccount = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("ig_account") ?? "null") : null;
       const name   = igAccount?.username ?? igAccount?.name ?? "Meu Perfil";
       const handle = igAccount?.username ?? "meuperfil";
+      const pic    = igAccount?.picture ?? "";
       const W = 1080, H = 1350;
       const slide = {
         id: uuidv4(), backgroundColor: "#111111",
         elements: [
-          { id: uuidv4(), type: "profile" as const, x: 28, y: 22, width: 640, height: 90, profileName: name, profileHandle: handle, profileVerified: true, profileNameColor: "#ffffff", profileHandleColor: "rgba(255,255,255,0.55)", zIndex: 10 },
+          { id: uuidv4(), type: "profile" as const, x: 28, y: 22, width: 640, height: 90, profileName: name, profileHandle: handle, profileVerified: true, profileNameColor: "#ffffff", profileHandleColor: "rgba(255,255,255,0.55)", zIndex: 10, ...(pic ? { src: pic } : {}) },
           { id: uuidv4(), type: "text" as const, x: W - 120, y: 28, width: 92, height: 80, content: "𝕏", style: { fontSize: 52, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: "center" as const, lineHeight: 1 }, zIndex: 10 },
           { id: uuidv4(), type: "shape" as const, x: 0, y: 122, width: W, height: 2, style: { fill: "rgba(255,255,255,0.12)", stroke: "none", strokeWidth: 0, borderRadius: 0 }, zIndex: 5 },
           { id: uuidv4(), type: "text" as const, x: 28, y: 138, width: W - 56, height: 220, content: wsRaw.topic ? `📰 ${wsRaw.topic}` : "📰 NOTÍCIAS: Escreva o [título da notícia] aqui", style: { fontSize: 38, fontWeight: "bold" as const, fontFamily: "sans-serif", color: "#ffffff", textAlign: "left" as const, lineHeight: 1.35 }, zIndex: 10 },
