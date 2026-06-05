@@ -302,7 +302,7 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
       ? JSON.parse(localStorage.getItem("ig_account") ?? "null")
       : null;
     const name   = igAccount?.username ?? igAccount?.name ?? "Meu Perfil";
-    const handle = igAccount?.username ? `@${igAccount.username}` : "@meuperfil";
+    const handle = igAccount?.username ?? "meuperfil";
     onGenerate([createChoqueiSlide(name, handle)]);
   };
 

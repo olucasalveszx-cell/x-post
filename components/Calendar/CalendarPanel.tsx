@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import {
   Calendar, ChevronLeft, ChevronRight, Clock, Trash2,
   Loader2, Plus, CheckCircle, XCircle, Image as ImageIcon,
-  History, Filter,
+  History, Filter, Play, AlertTriangle,
 } from "lucide-react";
 
 interface ScheduledPost {
@@ -46,6 +46,10 @@ export default function CalendarPanel() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [profileFilter, setProfileFilter] = useState<string>("all");
   const [view, setView] = useState<"calendar" | "history">("calendar");
+  const [triggering, setTriggering] = useState(false);
+  const [triggerMsg, setTriggerMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [diagData, setDiagData] = useState<any>(null);
+  const [showDiag, setShowDiag] = useState(false);
 
   const load = useCallback(async () => {
     if (!session?.user?.email) { setLoading(false); return; }
@@ -59,6 +63,29 @@ export default function CalendarPanel() {
   }, [session]);
 
   useEffect(() => { load(); }, [load]);
+
+  const triggerNow = async () => {
+    setTriggering(true); setTriggerMsg(null);
+    try {
+      const res = await fetch("/api/cron/test", { method: "POST" });
+      const d = await res.json();
+      if (d.error) setTriggerMsg({ ok: false, text: d.error });
+      else setTriggerMsg({ ok: true, text: `Publicados: ${d.published} | Falhou: ${d.failed} | Pendentes: ${d.skipped}` });
+      load();
+    } catch (e: any) {
+      setTriggerMsg({ ok: false, text: e.message });
+    }
+    setTriggering(false);
+  };
+
+  const loadDiag = async () => {
+    try {
+      const res = await fetch("/api/cron/test");
+      const d = await res.json();
+      setDiagData(d);
+      setShowDiag(true);
+    } catch {}
+  };
 
   const prevMonth = () => {
     if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
@@ -152,6 +179,55 @@ export default function CalendarPanel() {
           {loading ? <Loader2 size={14} className="animate-spin" /> : <History size={14} />}
         </button>
       </div>
+
+      {/* Trigger manual + diagnóstico */}
+      <div className="flex gap-2">
+        <button
+          onClick={triggerNow}
+          disabled={triggering}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-brand-600/20 hover:bg-brand-600/30 border border-brand-500/30 text-brand-400 text-xs font-medium transition-colors disabled:opacity-50"
+        >
+          {triggering ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
+          Publicar pendentes agora
+        </button>
+        <button
+          onClick={loadDiag}
+          className="px-3 py-2 rounded-xl bg-[var(--bg-3)] hover:bg-[var(--bg-4)] border border-[var(--border)] text-gray-500 hover:text-gray-300 text-xs transition-colors"
+          title="Diagnóstico"
+        >
+          <AlertTriangle size={12} />
+        </button>
+      </div>
+
+      {triggerMsg && (
+        <div className={`text-xs px-3 py-2 rounded-lg border ${triggerMsg.ok ? "bg-green-900/20 border-green-800/40 text-green-300" : "bg-red-900/20 border-red-800/40 text-red-300"}`}>
+          {triggerMsg.text}
+        </div>
+      )}
+
+      {showDiag && diagData && (
+        <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 text-[10px] text-gray-400 font-mono space-y-1 max-h-64 overflow-y-auto">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-gray-300 font-bold">Diagnóstico</span>
+            <button onClick={() => setShowDiag(false)} className="text-gray-600 hover:text-gray-400">✕</button>
+          </div>
+          <div>Redis: <span className={diagData.redis === "ok" ? "text-green-400" : "text-red-400"}>{diagData.redis}</span></div>
+          <div>Agora (UTC): {diagData.now}</div>
+          <div>Posts pendentes global: {diagData.pendingCount}</div>
+          <div>Posts do usuário: {diagData.userPostCount}</div>
+          {diagData.posts?.map((p: any, i: number) => (
+            <div key={i} className="border-t border-[#1a1a1a] pt-1 mt-1">
+              <div>ID: {p.id?.slice(0,16)}</div>
+              <div>Status: <span className={p.status === "published" ? "text-green-400" : p.status === "failed" ? "text-red-400" : "text-blue-400"}>{p.status}</span></div>
+              <div>Tipo: {p.mediaType} | Imagens: {p.imageCount}</div>
+              <div>Agendado: {p.scheduledLocal}</div>
+              <div>Vencido: <span className={p.overdue ? "text-yellow-400" : "text-gray-500"}>{p.overdue ? "SIM" : "não"}</span></div>
+              <div>Token: {p.hasToken ? "✓" : "✗"} | Account: {p.hasAccount ? "✓" : "✗"}</div>
+              {p.errorMsg && <div className="text-red-400">Erro: {p.errorMsg}</div>}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Filtro por perfil */}
       {profiles.length > 1 && (
