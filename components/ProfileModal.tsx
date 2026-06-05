@@ -384,6 +384,7 @@ export default function ProfileModal({ open, onClose, initialTab, onOpenTutorial
                       localStorage.removeItem("ig_account");
                       setIgAccount(null);
                       window.dispatchEvent(new CustomEvent("ig-disconnected"));
+                      fetch("/api/instagram/account", { method: "DELETE" }).catch(() => {});
                     }}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-colors"
                   >

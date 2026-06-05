@@ -355,6 +355,12 @@ export default function EditorPage() {
       };
       setIgAccount(account);
       try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
+      // Salva no servidor para sincronizar entre dispositivos
+      fetch("/api/instagram/account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(account),
+      }).catch(() => {});
       window.history.replaceState({}, "", "/editor");
     } else if (error) {
       if (error === "no_business_account") {
@@ -365,6 +371,8 @@ export default function EditorPage() {
       }
       window.history.replaceState({}, "", "/editor");
     } else {
+      // Tenta carregar do localStorage primeiro
+      let loaded = false;
       try {
         const raw = localStorage.getItem("ig_account");
         if (raw) {
@@ -372,11 +380,30 @@ export default function EditorPage() {
           if (!saved._owner || saved._owner === currentEmail) {
             const { _owner, ...account } = saved;
             setIgAccount(account);
+            loaded = true;
           } else {
             localStorage.removeItem("ig_account");
           }
         }
       } catch {}
+      // Se não tinha no localStorage (outro dispositivo), busca do servidor
+      if (!loaded && currentEmail) {
+        fetch("/api/instagram/account")
+          .then(r => r.json())
+          .then(data => {
+            if (data.connected && data.token) {
+              const account: IGAccount = {
+                token: data.token,
+                accountId: data.accountId,
+                username: data.username ?? "",
+                picture: data.picture ?? "",
+              };
+              setIgAccount(account);
+              try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
+            }
+          })
+          .catch(() => {});
+      }
     }
   }, [session?.user?.email]);
 
@@ -393,6 +420,12 @@ export default function EditorPage() {
         };
         setIgAccount(account);
         try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
+        // Salva no servidor para sincronizar entre dispositivos
+        fetch("/api/instagram/account", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(account),
+        }).catch(() => {});
       } else if (data.ig_error) {
         alert(`Erro ao conectar Instagram: ${data.ig_error}`);
       }
