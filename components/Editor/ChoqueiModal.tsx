@@ -110,12 +110,12 @@ function buildDetailSlide(
   };
 }
 
-async function proxyImage(url: string, thumb?: string): Promise<string | null> {
+async function proxyImage(url: string): Promise<string | null> {
   try {
     const res = await fetch("/api/image-proxy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, thumbUrl: thumb }),
+      body: JSON.stringify({ url, preferQuality: true }), // sem fallback para thumbnail
     });
     const d = await res.json();
     if (!d.base64) return null;
@@ -209,8 +209,8 @@ export default function ChoqueiModal({ open, onClose, onCreate }: Props) {
       // 3. Faz proxy das imagens em paralelo
       setStep("Carregando imagens...");
       const [leftImg, rightImg] = await Promise.all([
-        imgs[0] ? proxyImage(imgs[0].url, imgs[0].thumb) : Promise.resolve(null),
-        imgs[1] ? proxyImage(imgs[1].url, imgs[1].thumb) : Promise.resolve(null),
+        imgs[0] ? proxyImage(imgs[0].url) : Promise.resolve(null),
+        imgs[1] ? proxyImage(imgs[1].url) : Promise.resolve(null),
       ]);
 
       // 4. Gera imagem de fundo para o slide 2

@@ -23,7 +23,7 @@ async function searchWikimediaCommons(query: string, page: number): Promise<Imag
     gsroffset: String(offset),
     prop: "imageinfo",
     iiprop: "url|thumburl|size|mediatype",
-    iiurlwidth: "500",
+    iiurlwidth: "1200",
     format: "json",
     origin: "*",
   });
@@ -105,10 +105,10 @@ export async function POST(req: NextRequest) {
       const data = await res.json();
       if (res.ok && data.hits?.length) {
         const images: ImageResult[] = data.hits.slice(0, 6).map((img: any) => ({
-          url: img.webformatURL,
-          thumb: img.previewURL,
-          width: img.webformatWidth ?? 0,
-          height: img.webformatHeight ?? 0,
+          url: img.largeImageURL ?? img.webformatURL,  // largeImageURL = alta resolução
+          thumb: img.webformatURL ?? img.previewURL,  // webformat como thumb (640px)
+          width: img.imageWidth ?? img.webformatWidth ?? 0,
+          height: img.imageHeight ?? img.webformatHeight ?? 0,
           title: img.tags ?? "",
           source: img.user ?? "Pixabay",
         })).filter((img: ImageResult) => img.url);

@@ -65,14 +65,17 @@ async function fetchImage(url: string): Promise<{ base64: string; mimeType: stri
 }
 
 export async function POST(req: NextRequest) {
-  const { url, thumbUrl } = await req.json();
+  const { url, thumbUrl, preferQuality } = await req.json();
   if (!url?.startsWith("http")) return NextResponse.json({ error: "URL inválida" }, { status: 400 });
 
-  const result = (await fetchImage(url)) ?? (thumbUrl ? await fetchImage(thumbUrl) : null);
+  // preferQuality=true: não usa thumbnail como fallback (melhor qualidade, sem degradação)
+  const result = await fetchImage(url);
+  if (result) return NextResponse.json(result);
 
-  if (!result) {
-    return NextResponse.json({ error: "Imagem bloqueada pelo site de origem. Tente outra." }, { status: 400 });
+  if (!preferQuality && thumbUrl) {
+    const thumb = await fetchImage(thumbUrl);
+    if (thumb) return NextResponse.json(thumb);
   }
 
-  return NextResponse.json(result);
+  return NextResponse.json({ error: "Imagem bloqueada pelo site de origem. Tente outra." }, { status: 400 });
 }
