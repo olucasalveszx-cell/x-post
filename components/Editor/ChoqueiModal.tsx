@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Newspaper } from "lucide-react";
+import { X, Newspaper, Camera } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 
@@ -11,11 +11,11 @@ interface Props {
   onCreate: (slides: Slide[]) => void;
 }
 
-function buildChoqueiSlide(title: string, igAccount: any): Slide {
+function buildChoqueiSlide(title: string, igAccount: any, customPicture?: string): Slide {
   const W = 1080, H = 1350;
   const name    = igAccount?.username ?? "Meu Perfil";
   const handle  = igAccount?.username ?? "meuperfil";
-  const picture = igAccount?.picture  ?? "";
+  const picture = customPicture || igAccount?.picture || "";
 
   const elements: SlideElement[] = [
     {
@@ -79,23 +79,56 @@ function buildChoqueiSlide(title: string, igAccount: any): Slide {
 
 export default function ChoqueiModal({ open, onClose, onCreate }: Props) {
   const [title, setTitle] = useState("");
+  const [customPicture, setCustomPicture] = useState<string>("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
+
+  const igAccount = typeof window !== "undefined"
+    ? JSON.parse(localStorage.getItem("ig_account") ?? "null")
+    : null;
+
+  // Usa foto personalizada > foto do IG > vazio
+  const displayPicture = customPicture || igAccount?.picture || "";
 
   useEffect(() => {
     if (open) {
       setTitle("");
+      setCustomPicture("");
       setTimeout(() => inputRef.current?.focus(), 80);
     }
   }, [open]);
 
   if (!open) return null;
 
-  const igAccount = typeof window !== "undefined"
-    ? JSON.parse(localStorage.getItem("ig_account") ?? "null")
-    : null;
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      // Redimensiona para 200x200
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 200; canvas.height = 200;
+        const ctx = canvas.getContext("2d")!;
+        ctx.beginPath();
+        ctx.arc(100, 100, 100, 0, Math.PI * 2);
+        ctx.clip();
+        const size = Math.min(img.width, img.height);
+        const sx = (img.width - size) / 2;
+        const sy = (img.height - size) / 2;
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200);
+        setCustomPicture(canvas.toDataURL("image/jpeg", 0.9));
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
 
   const handleCreate = () => {
-    const slide = buildChoqueiSlide(title.trim(), igAccount);
+    const slide = buildChoqueiSlide(title.trim(), igAccount, customPicture);
     onCreate([slide]);
     onClose();
   };
@@ -120,19 +153,38 @@ export default function ChoqueiModal({ open, onClose, onCreate }: Props) {
           </button>
         </div>
 
-        {/* Perfil preview */}
+        {/* Perfil preview com upload de foto */}
         <div className="flex items-center gap-3 mb-5 p-3 rounded-xl bg-[var(--bg-3)] border border-[var(--border)]">
-          <div className="w-10 h-10 rounded-full bg-[var(--bg-4)] overflow-hidden shrink-0 flex items-center justify-center">
-            {igAccount?.picture
-              ? <img src={igAccount.picture} alt="" className="w-full h-full object-cover" />
+          {/* Avatar clicável para trocar foto */}
+          <button
+            onClick={() => photoRef.current?.click()}
+            className="relative w-10 h-10 rounded-full bg-[var(--bg-4)] overflow-hidden shrink-0 flex items-center justify-center group"
+            title="Trocar foto de perfil"
+          >
+            {displayPicture
+              ? <img src={displayPicture} alt="" className="w-full h-full object-cover" />
               : <span className="text-lg text-[var(--text-3)]">👤</span>
             }
-          </div>
-          <div>
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
+              <Camera size={12} className="text-white" />
+            </div>
+          </button>
+
+          <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+
+          <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-[var(--text)]">{igAccount?.username ?? "Meu Perfil"} ✓</p>
             <p className="text-xs text-[var(--text-3)]">@{igAccount?.username ?? "meuperfil"}</p>
           </div>
-          <div className="ml-auto text-lg font-black text-[var(--text-3)]">𝕏</div>
+
+          <button
+            onClick={() => photoRef.current?.click()}
+            className="text-[10px] text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors px-2 py-1 rounded-lg hover:bg-[var(--bg-4)] border border-[var(--border)] flex items-center gap-1"
+          >
+            <Camera size={10} /> Foto
+          </button>
+
+          <div className="ml-1 text-lg font-black text-[var(--text-3)]">𝕏</div>
         </div>
 
         {/* Input título */}
@@ -149,7 +201,7 @@ export default function ChoqueiModal({ open, onClose, onCreate }: Props) {
             rows={3}
             className="w-full bg-[var(--bg)] border border-[var(--border-2)] rounded-xl px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-white/30 resize-none leading-relaxed"
           />
-          <p className="text-[10px] text-[var(--text-3)]">Ctrl+Enter para criar · Você vai adicionar imagem e vídeo no editor</p>
+          <p className="text-[10px] text-[var(--text-3)]">Ctrl+Enter para criar · Imagem e vídeo você adiciona no editor</p>
         </div>
 
         {/* Botões */}
