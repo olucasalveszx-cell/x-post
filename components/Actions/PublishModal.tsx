@@ -495,7 +495,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                           Cancelar
                         </button>
                         <button
-                          onClick={() => setShowMusicConfirm(true)}
+                          onClick={handleSchedule}
                           disabled={!scheduledAt || isLoading}
                           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium disabled:opacity-40 transition-colors">
                           {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Calendar size={12} />}
