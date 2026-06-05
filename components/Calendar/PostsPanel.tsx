@@ -346,13 +346,19 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
     setTriggering(true); setTriggerMsg(null);
     try {
       const res = await fetch("/api/cron/test", { method: "POST" });
-      const d = await res.json();
-      if (d.error) { setTriggerMsg({ ok: false, text: `Erro: ${d.error}` }); }
-      else {
-        let text = `✅ Publicados: ${d.published} | ❌ Falhou: ${d.failed} | ⏳ Aguardando: ${d.skipped}`;
-        if (d.errors?.length > 0) text += `\n⚠ ${d.errors[0]}`;
-        else if (d.total === 0) text += "\nNenhum post encontrado no agendamento.";
-        setTriggerMsg({ ok: d.failed === 0, text });
+      const text = await res.text();
+      try {
+        const d = JSON.parse(text);
+        if (d.error) { setTriggerMsg({ ok: false, text: `Erro: ${d.error}` }); }
+        else {
+          let msg = d.message ?? "";
+          if (d.errors?.length > 0) msg += `\n⚠ Erro: ${d.errors[0]}`;
+          if (d.failed > 0) msg += `\n❌ ${d.failed} post(s) com erro (veja o calendário)`;
+          if (d.scheduled > 0) msg += `\n⏳ ${d.scheduled} aguardando o horário`;
+          setTriggerMsg({ ok: d.failed === 0 && !d.error, text: msg || "OK" });
+        }
+      } catch {
+        setTriggerMsg({ ok: false, text: `Erro do servidor: ${text.slice(0, 200)}` });
       }
       await loadPosts();
     } catch (e: any) { setTriggerMsg({ ok: false, text: e.message }); }
@@ -362,9 +368,10 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
   const loadDiag = async () => {
     try {
       const res = await fetch("/api/cron/test");
-      setDiagData(await res.json());
-      setShowDiag(true);
-    } catch {}
+      const text = await res.text();
+      try { setDiagData(JSON.parse(text)); setShowDiag(true); }
+      catch { setDiagData({ redis: "Erro: resposta inválida — " + text.slice(0, 100), posts: [] }); setShowDiag(true); }
+    } catch (e: any) { setDiagData({ redis: "Erro: " + e.message, posts: [] }); setShowDiag(true); }
   };
 
   const minDateTime = (() => {
