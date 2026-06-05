@@ -85,6 +85,7 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
   const [diagData, setDiagData] = useState<any>(null);
   const [showDiag, setShowDiag] = useState(false);
   const prevPostsRef = useRef<ScheduledPost[]>([]);
+  const lastCronTriggerRef = useRef(0);
 
   /* ── load drafts ── */
   const loadDrafts = useCallback(async () => {
@@ -105,7 +106,15 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
     try {
       const res = await fetch("/api/schedule");
       const data = await res.json();
-      setPosts(data.posts ?? []);
+      const loaded: ScheduledPost[] = data.posts ?? [];
+      setPosts(loaded);
+      // Auto-dispara o cron se há posts vencidos (não depende do cron do Vercel)
+      const now = Date.now();
+      const hasOverdue = loaded.some(p => p.status === "scheduled" && new Date(p.scheduledAt).getTime() <= now);
+      if (hasOverdue && now - lastCronTriggerRef.current > 60_000) {
+        lastCronTriggerRef.current = now;
+        fetch("/api/cron/test", { method: "POST" }).catch(() => {});
+      }
     } catch {}
     setCalLoading(false);
   }, [session]);
@@ -135,6 +144,14 @@ export default function PostsPanel({ currentSlides, onLoad }: Props) {
 
         prevPostsRef.current = updated;
         setPosts(updated);
+
+        // Auto-dispara o cron se há posts vencidos (max 1x por minuto)
+        const now2 = Date.now();
+        const hasOverdue = updated.some(p => p.status === "scheduled" && new Date(p.scheduledAt).getTime() <= now2);
+        if (hasOverdue && now2 - lastCronTriggerRef.current > 60_000) {
+          lastCronTriggerRef.current = now2;
+          fetch("/api/cron").catch(() => {});
+        }
       } catch {}
     }, 30_000);
     return () => clearInterval(poll);
