@@ -218,6 +218,9 @@ export default function AdminDashboard() {
   const [usersLoading, setUsersLoading] = useState(false);
   const [creditInputs, setCreditInputs] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", plan: "free" });
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createMsg, setCreateMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   /* ── Feedbacks ── */
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
@@ -407,6 +410,27 @@ export default function AdminDashboard() {
       await fetchUsers();
     } catch {}
     finally { setActionLoading(null); }
+  };
+
+  const createUser = async () => {
+    setCreateLoading(true);
+    setCreateMsg(null);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUser),
+      });
+      const data = await res.json();
+      if (!res.ok) { setCreateMsg({ ok: false, text: data.error ?? "Erro ao criar usuário." }); return; }
+      setCreateMsg({ ok: true, text: `Usuário ${newUser.email} criado com sucesso!` });
+      setNewUser({ name: "", email: "", password: "", plan: "free" });
+      await fetchUsers();
+    } catch {
+      setCreateMsg({ ok: false, text: "Erro de conexão." });
+    } finally {
+      setCreateLoading(false);
+    }
   };
 
   const fetchFeedbacks = useCallback(async () => {
@@ -808,6 +832,59 @@ export default function AdminDashboard() {
               <button onClick={fetchUsers} disabled={usersLoading}
                 className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-40">
                 <RefreshCw size={12} className={usersLoading ? "animate-spin" : ""} /> Atualizar
+              </button>
+            </div>
+
+            {/* ── Criar novo usuário ── */}
+            <div className="rounded-2xl border border-[#1e1e1e] p-5 space-y-4" style={{ background: "#0d0d0d" }}>
+              <p className="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                <Plus size={14} className="text-brand-400" /> Criar novo usuário
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  placeholder="Nome"
+                  value={newUser.name}
+                  onChange={e => setNewUser(p => ({ ...p, name: e.target.value }))}
+                  className="bg-[#111] border border-[#252525] rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500 placeholder:text-gray-600"
+                />
+                <input
+                  placeholder="E-mail"
+                  type="email"
+                  value={newUser.email}
+                  onChange={e => setNewUser(p => ({ ...p, email: e.target.value }))}
+                  className="bg-[#111] border border-[#252525] rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500 placeholder:text-gray-600"
+                />
+                <input
+                  placeholder="Senha (mín. 6 chars)"
+                  type="password"
+                  value={newUser.password}
+                  onChange={e => setNewUser(p => ({ ...p, password: e.target.value }))}
+                  className="bg-[#111] border border-[#252525] rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500 placeholder:text-gray-600"
+                />
+                <select
+                  value={newUser.plan}
+                  onChange={e => setNewUser(p => ({ ...p, plan: e.target.value }))}
+                  className="bg-[#111] border border-[#252525] rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500"
+                >
+                  <option value="free">Grátis</option>
+                  <option value="basic">Básico</option>
+                  <option value="pro">Pro</option>
+                  <option value="business">Business</option>
+                  <option value="god">God</option>
+                </select>
+              </div>
+              {createMsg && (
+                <p className={`text-xs px-3 py-2 rounded-lg ${createMsg.ok ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
+                  {createMsg.text}
+                </p>
+              )}
+              <button
+                onClick={createUser}
+                disabled={createLoading || !newUser.name || !newUser.email || !newUser.password}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-700 text-white transition-colors disabled:opacity-40"
+              >
+                {createLoading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                Criar usuário
               </button>
             </div>
 
