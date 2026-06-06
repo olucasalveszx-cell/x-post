@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Sparkles, Languages, CalendarClock, StickyNote, Loader2, Plus, Trash2, ChevronDown, ChevronRight, Check } from "lucide-react";
+import { Sparkles, Languages, CalendarClock, StickyNote, Loader2, Plus, Trash2, ChevronDown, ChevronRight, Check, Mic2 } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import GeneratorPanel from "./GeneratorPanel";
@@ -323,6 +323,15 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
         <CalendarClock size={13} />
         📅 Agendar & Posts
       </button>
+
+      {/* Transcrição Inteligente */}
+      <a
+        href="/transcricao"
+        className="flex items-center justify-center gap-2 py-2 text-xs font-semibold border-b border-[var(--border)] transition-colors shrink-0 bg-violet-500/5 hover:bg-violet-500/10 text-violet-400 hover:text-violet-300"
+      >
+        <Mic2 size={13} />
+        🎙️ Transcrição Inteligente
+      </a>
 
       {/* Abas secundárias */}
       <div className="flex border-b border-[var(--border)] shrink-0">
