@@ -31,65 +31,120 @@ export interface TranscriptionRecord {
 export function transcriptionKey(id: string) { return `transcription:${id}`; }
 export function transcriptionsListKey(email: string) { return `transcriptions:${email}`; }
 
-async function transcribeWithWhisper(buffer: Buffer, filename: string, mimeType: string): Promise<{ text: string; language: string; duration: number }> {
-  const openaiKey = process.env.OPENAI_API_KEY;
+// Normaliza MIME types para o que Gemini aceita
+function toGeminiMime(mime: string): string {
+  const map: Record<string, string> = {
+    "audio/x-wav": "audio/wav",
+    "audio/x-m4a": "audio/m4a",
+    "audio/mp3": "audio/mpeg",
+    "video/quicktime": "video/mp4",
+    "video/x-msvideo": "video/mp4",
+  };
+  return map[mime] ?? mime;
+}
 
-  // 1. Tenta OpenAI Whisper
+// Faz upload do áudio para Gemini Files API e retorna a URI
+async function uploadToGeminiFileApi(buffer: Buffer, mimeType: string, apiKey: string): Promise<string> {
+  const gMime = toGeminiMime(mimeType);
+  const boundary = `gup${Date.now()}`;
+  const meta = `{"file":{"displayName":"audio"}}`;
+  const body = Buffer.concat([
+    Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${gMime}\r\n\r\n`),
+    buffer,
+    Buffer.from(`\r\n--${boundary}--`),
+  ]);
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
+    { method: "POST", headers: { "Content-Type": `multipart/related; boundary=${boundary}`, "X-Goog-Upload-Protocol": "multipart" }, body }
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message ?? "Gemini file upload falhou");
+  const uri: string = data.file?.uri;
+  if (!uri) throw new Error("Gemini não retornou URI do arquivo");
+  // Aguarda arquivo ficar ACTIVE (máx 8s)
+  for (let i = 0; i < 4; i++) {
+    const check = await fetch(`${uri.replace("https://generativelanguage.googleapis.com", `https://generativelanguage.googleapis.com`)}?key=${apiKey}`).then(r => r.json()).catch(() => ({}));
+    if (!check.file || check.file.state === "ACTIVE") break;
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  return uri;
+}
+
+async function transcribeWithWhisper(buffer: Buffer, filename: string, mimeType: string): Promise<{ text: string; language: string; duration: number }> {
+  const ab = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+
+  // Helper: chama Whisper-compatible endpoint
+  async function callWhisperEndpoint(baseUrl: string, apiKey: string, model: string): Promise<{ text: string; language: string; duration: number } | null> {
+    const form = new FormData();
+    form.append("file", new File([ab], filename, { type: mimeType }));
+    form.append("model", model);
+    form.append("response_format", "verbose_json");
+    const res = await fetch(`${baseUrl}/audio/transcriptions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: form,
+    });
+    const data = await res.json();
+    if (res.ok) return { text: data.text ?? "", language: data.language ?? "pt", duration: data.duration ?? 0 };
+    const msg: string = data.error?.message ?? `error ${res.status}`;
+    if (/quota|rate.?limit|exceeded|billing|insufficient/i.test(msg)) return null; // cota esgotada → tenta próximo
+    throw new Error(msg);
+  }
+
+  // 1. OpenAI Whisper
+  const openaiKey = process.env.OPENAI_API_KEY;
   if (openaiKey) {
     try {
-      const form = new FormData();
-      const ab = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
-      form.append("file", new File([ab], filename, { type: mimeType }));
-      form.append("model", "whisper-1");
-      form.append("response_format", "verbose_json");
-
-      const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${openaiKey}` },
-        body: form,
-      });
-      const data = await res.json();
-      if (res.ok) return { text: data.text ?? "", language: data.language ?? "pt", duration: data.duration ?? 0 };
-      const msg: string = data.error?.message ?? `Whisper error ${res.status}`;
-      // quota esgotada → cai no Gemini; outros erros fatais → lança
-      if (!/quota|rate.?limit|exceeded|billing/i.test(msg)) throw new Error(msg);
-      console.warn("[whisper] OpenAI quota esgotada, usando Gemini...");
-    } catch (e: any) {
-      if (!/quota|rate.?limit|exceeded|billing/i.test(e.message ?? "")) throw e;
-      console.warn("[whisper] OpenAI quota esgotada, usando Gemini...");
-    }
+      const r = await callWhisperEndpoint("https://api.openai.com/v1", openaiKey, "whisper-1");
+      if (r) return r;
+      console.warn("[transcribe] OpenAI cota esgotada → tentando Groq");
+    } catch (e: any) { console.warn("[transcribe] OpenAI erro:", e.message); }
   }
 
-  // 2. Fallback: Gemini com áudio inline
+  // 2. Groq Whisper (gratuito, API idêntica à OpenAI)
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    try {
+      const r = await callWhisperEndpoint("https://api.groq.com/openai/v1", groqKey, "whisper-large-v3-turbo");
+      if (r) { console.log("[transcribe] Groq OK"); return r; }
+      console.warn("[transcribe] Groq cota esgotada → tentando Gemini");
+    } catch (e: any) { console.warn("[transcribe] Groq erro:", e.message); }
+  }
+
+  // 3. Gemini File API + generateContent
   const geminiKeys = [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean) as string[];
-  if (!geminiKeys.length) throw new Error("OpenAI sem cota e GEMINI_API_KEY não configurada. Verifique suas chaves de API.");
-
-  const base64 = buffer.toString("base64");
-  // Gemini suporta até ~20MB inline; para arquivos maiores tenta mesmo assim
-  const geminiBody = {
-    contents: [{ parts: [
-      { inlineData: { mimeType, data: base64 } },
-      { text: "Transcreva este áudio na íntegra. Retorne SOMENTE o texto falado, exatamente como foi dito, sem timestamps, sem marcadores, sem explicações." },
-    ]}],
-    generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
-  };
-
-  for (const model of ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"]) {
+  if (geminiKeys.length) {
     for (const key of geminiKeys) {
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(geminiBody) }
-        );
-        const data = await res.json();
-        if (!res.ok) { console.warn(`[gemini-transcribe] ${model} falhou:`, data.error?.message); continue; }
-        const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-        if (text.trim()) return { text: text.trim(), language: "pt", duration: 0 };
-      } catch (e: any) { console.warn(`[gemini-transcribe] ${model} erro:`, e.message); }
+      for (const model of ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"]) {
+        try {
+          const fileUri = await uploadToGeminiFileApi(buffer, mimeType, key);
+          const gMime = toGeminiMime(mimeType);
+          const body = {
+            contents: [{ parts: [
+              { fileData: { mimeType: gMime, fileUri } },
+              { text: "Transcreva este áudio na íntegra. Retorne SOMENTE o texto falado, sem timestamps, marcadores ou explicações." },
+            ]}],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
+          };
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+            { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+          );
+          const data = await res.json();
+          if (!res.ok) { console.warn(`[transcribe] Gemini ${model} falhou:`, data.error?.message); continue; }
+          const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+          if (text.trim()) { console.log(`[transcribe] Gemini ${model} OK`); return { text: text.trim(), language: "pt", duration: 0 }; }
+        } catch (e: any) { console.warn(`[transcribe] Gemini ${model} erro:`, e.message); }
+      }
     }
   }
 
-  throw new Error("Não foi possível transcrever o áudio. OpenAI sem cota e Gemini indisponível.");
+  const missing = [!openaiKey && "OPENAI_API_KEY", !groqKey && "GROQ_API_KEY", !geminiKeys.length && "GEMINI_API_KEY"].filter(Boolean).join(", ");
+  throw new Error(
+    groqKey || geminiKeys.length
+      ? "Serviços de transcrição indisponíveis no momento. Tente novamente em alguns minutos."
+      : `Configure ao menos uma chave de API: ${missing}. Recomendado: crie uma conta gratuita em groq.com e adicione GROQ_API_KEY no Vercel.`
+  );
 }
 
 async function analyzeWithAI(transcript: string, title: string): Promise<TranscriptionRecord["summary"] & { topics: TranscriptionRecord["topics"] }> {
