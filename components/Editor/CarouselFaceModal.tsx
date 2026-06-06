@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { v4 as uuid } from "uuid";
-import { X, Upload, Sparkles, Loader2, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
+import { X, Upload, Sparkles, Loader2, AlertCircle, CheckCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 import { Slide, GeneratedContent } from "@/types";
 
 export type FaceCarouselMode = "padrao" | "twitter" | "comrosto";
@@ -11,6 +11,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onGenerate: (slides: Slide[], mode: FaceCarouselMode) => void;
+  onBack?: () => void;
 }
 
 type GenStatus = "idle" | "searching" | "generating" | "images" | "error";
@@ -111,7 +112,7 @@ function buildFaceSlides(
   });
 }
 
-export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) {
+export default function CarouselFaceModal({ open, onClose, onGenerate, onBack }: Props) {
   const [topic, setTopic] = useState("");
   const [slideCount, setSlideCount] = useState(7);
   const [faceBase64, setFaceBase64] = useState<string | null>(null);
@@ -319,6 +320,11 @@ export default function CarouselFaceModal({ open, onClose, onGenerate }: Props) 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
           <h2 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
+            {onBack && !isLoading && (
+              <button onClick={onBack} className="p-1 rounded-lg hover:bg-[var(--bg-3)] text-[var(--text-3)] hover:text-[var(--text)] transition-colors mr-0.5" title="Voltar">
+                <ArrowLeft size={15} />
+              </button>
+            )}
             <span className="text-base">🧑‍🤳</span>
             Gerar Carrossel com Rosto
           </h2>

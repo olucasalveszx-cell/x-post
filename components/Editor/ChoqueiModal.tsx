@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Newspaper, Camera, Wand2, Loader2 } from "lucide-react";
+import { X, Newspaper, Camera, Wand2, Loader2, ArrowLeft } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 
@@ -9,6 +9,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onCreate: (slides: Slide[]) => void;
+  onBack?: () => void;
 }
 
 function buildChoqueiSlide(
@@ -123,7 +124,7 @@ async function proxyImage(url: string): Promise<string | null> {
   } catch { return null; }
 }
 
-export default function ChoqueiModal({ open, onClose, onCreate }: Props) {
+export default function ChoqueiModal({ open, onClose, onCreate, onBack }: Props) {
   const [title, setTitle] = useState("");
   const [customPicture, setCustomPicture] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -247,6 +248,11 @@ export default function ChoqueiModal({ open, onClose, onCreate }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
+            {onBack && !generating && (
+              <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-[var(--bg-3)] text-[var(--text-3)] hover:text-[var(--text)] transition-colors" title="Voltar">
+                <ArrowLeft size={16} />
+              </button>
+            )}
             <Newspaper size={18} className="text-gray-400" />
             <h2 className="text-base font-bold text-[var(--text)]">Estilo Choquei</h2>
           </div>

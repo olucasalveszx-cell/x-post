@@ -1004,6 +1004,7 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
         isPro={isPro}
         initial={lastSettings ?? undefined}
         isTwitterMode={wizardTwitterMode}
+        onBack={() => { setShowWizard(false); window.dispatchEvent(new CustomEvent("open-style-selector")); }}
       />
     </div>
   );

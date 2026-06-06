@@ -1296,11 +1296,13 @@ export default function EditorPage() {
         open={showFaceCarousel}
         onClose={() => setShowFaceCarousel(false)}
         onGenerate={handleFaceCarouselGenerate}
+        onBack={() => { setShowFaceCarousel(false); setShowStyleSelector(true); }}
       />
       <ChoqueiModal
         open={showChoqueiModal}
         onClose={() => setShowChoqueiModal(false)}
         onCreate={handleGenerate}
+        onBack={() => { setShowChoqueiModal(false); setShowStyleSelector(true); }}
       />
       <OnboardingModal
         onConfirm={(topic) => {

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Search, Terminal, Crown, ChevronRight, ChevronLeft, Sparkles, Clipboard, Upload, LayoutTemplate, Images } from "lucide-react";
+import { X, Search, Terminal, Crown, ChevronRight, ChevronLeft, Sparkles, Clipboard, Upload, LayoutTemplate, Images, ArrowLeft } from "lucide-react";
 import { WritingStyle } from "@/types";
 
 export type ImageStyle = "gemini" | "foto_real" | "cinematico" | "biblioteca";
@@ -32,6 +32,7 @@ interface Props {
   onConfirm: (settings: WizardSettings) => void;
   isPro: boolean;
   initial?: Partial<WizardSettings>;
+  onBack?: () => void;
   isTwitterMode?: boolean;
 }
 
@@ -45,7 +46,7 @@ const WRITING_STYLES: { value: WritingStyle; emoji: string; label: string; desc:
 
 const SLIDE_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initial, isTwitterMode }: Props) {
+export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initial, isTwitterMode, onBack }: Props) {
   const [step, setStep] = useState(0);
   const [inputMode, setInputMode] = useState<"topic" | "prompt">(initial?.inputMode ?? "topic");
   const [topic, setTopic] = useState(initial?.topic ?? "");
@@ -138,6 +139,17 @@ export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initi
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="relative w-full sm:max-w-md bg-[var(--bg-2)] sm:border border-t border-[var(--border-2)] rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col" style={{ maxHeight: "95vh" }}>
+
+        {/* Back */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="absolute top-4 left-4 p-1.5 rounded-full bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors z-10"
+            title="Voltar"
+          >
+            <ArrowLeft size={16} />
+          </button>
+        )}
 
         {/* Close */}
         <button
