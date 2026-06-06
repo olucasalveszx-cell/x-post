@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { X, Sparkles, Twitter, UserRound, Images, Newspaper, ChevronLeft, ChevronRight, Mic2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Mic2, Sparkles, Twitter } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -14,26 +14,38 @@ const STYLES = [
     id: "layouts" as const,
     label: "Gerar Layouts",
     desc: "Imagens por IA em cada slide com gradientes",
-    borderActive: "border-brand-500/60",
-    bgActive: "bg-brand-500/8",
-    btnCls: "bg-brand-600 hover:bg-brand-500",
-    tag: { color: "text-blue-200 bg-brand-500/25 border-brand-400/20", icon: <Sparkles size={7} />, text: "IA" },
+    borderActive: "border-indigo-500/60",
+    bgActive: "bg-indigo-500/8",
+    btnCls: "bg-indigo-600 hover:bg-indigo-500",
+    tag: { color: "text-indigo-200 bg-indigo-500/25 border-indigo-400/20", icon: <Sparkles size={7} />, text: "IA" },
     preview: (
-      <div className="absolute inset-0" style={{ background: "linear-gradient(145deg,#0f172a,#1e2fa0,#3b5bdb)" }}>
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.9) 0%,rgba(0,0,0,0.3) 60%,transparent 100%)" }} />
-        <div className="absolute top-[12%] right-[12%] w-2 h-2 rounded-full bg-purple-300/60" />
-        <div className="absolute top-[22%] left-[18%] w-1.5 h-1.5 rounded-full bg-pink-300/50" />
-        <div className="absolute bottom-[28%] left-[8%] right-[8%] space-y-1.5">
-          <div className="rounded-md bg-white/90" style={{ height: 9 }} />
-          <div className="rounded-md bg-white/60" style={{ height: 6, width: "75%" }} />
-        </div>
-        <div className="absolute bottom-[10%] left-[8%] right-[8%] rounded-lg border border-purple-400/30 bg-purple-500/20 flex items-center gap-1.5 px-2 py-1">
-          <Sparkles size={10} className="text-brand-400 shrink-0" />
-          <div className="flex flex-col gap-0.5">
-            <div className="h-1.5 w-10 bg-purple-300/70 rounded" />
-            <div className="h-1 w-7 bg-purple-400/40 rounded" />
+      <div className="absolute inset-0" style={{ background: "#07091f" }}>
+        <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)", backgroundSize: "9px 9px" }} />
+        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 130% 50% at 50% 0%, rgba(99,102,241,0.3) 0%, transparent 70%)" }} />
+        {/* Slide mockup */}
+        <div className="absolute" style={{ left:"8%", right:"8%", top:"5%", height:"64%", borderRadius:10, overflow:"hidden", boxShadow:"0 14px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05)" }}>
+          <div className="absolute inset-0" style={{ background:"linear-gradient(150deg, #0d1b4b 0%, #1e3a8a 45%, #312e81 100%)" }}>
+            <div className="absolute inset-0" style={{ background:"radial-gradient(ellipse at 68% 40%, rgba(139,92,246,0.5) 0%, transparent 55%)" }} />
+            <div className="absolute inset-0" style={{ background:"linear-gradient(to top, rgba(7,9,31,0.92) 0%, transparent 52%)" }} />
+          </div>
+          {/* Floating orb */}
+          <div className="absolute" style={{ top:"-8%", right:"-8%", width:55, height:55, borderRadius:"50%", background:"radial-gradient(circle, rgba(139,92,246,0.4), transparent 65%)" }} />
+          {/* Text */}
+          <div className="absolute" style={{ bottom:"24%", left:"10%", right:"10%" }}>
+            <div style={{ height:2, width:20, borderRadius:1, background:"#818cf8", marginBottom:8 }} />
+            <div style={{ height:11, borderRadius:6, background:"rgba(255,255,255,0.92)", marginBottom:6 }} />
+            <div style={{ height:7, width:"68%", borderRadius:4, background:"rgba(255,255,255,0.38)" }} />
+          </div>
+          {/* IA badge */}
+          <div className="absolute" style={{ top:8, left:8, padding:"2px 7px", borderRadius:20, background:"rgba(99,102,241,0.4)", border:"1px solid rgba(165,180,252,0.32)", fontSize:7, fontWeight:700, color:"rgba(199,210,254,0.9)", display:"flex", alignItems:"center", gap:3 }}>
+            <Sparkles size={5} style={{ color:"#a5b4fc" }} /> IA
           </div>
         </div>
+        {/* Dots */}
+        <div className="absolute" style={{ bottom:"7%", left:"50%", transform:"translateX(-50%)", display:"flex", gap:5, alignItems:"center" }}>
+          {[1,0,0,0].map((a,i)=><div key={i} style={{ width:a?16:5, height:4, borderRadius:2, background:a?"#6366f1":"rgba(255,255,255,0.1)" }} />)}
+        </div>
+        <div className="absolute" style={{ bottom:"6%", right:"10%", fontSize:8, color:"rgba(255,255,255,0.2)", fontWeight:600 }}>1/5</div>
       </div>
     ),
   },
@@ -46,27 +58,47 @@ const STYLES = [
     btnCls: "bg-sky-600 hover:bg-sky-500",
     tag: { color: "text-sky-600 bg-sky-100 border-sky-200", icon: <Twitter size={7} />, text: "X" },
     preview: (
-      <div className="absolute inset-0 bg-[#f7f7f7]">
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-          {[0,1,2,3,4,5,6].map((i) => { const y=(i/6)*100; return <path key={`h${i}`} d={`M0,${y} L100,${y}`} stroke="rgba(0,0,0,0.06)" strokeWidth="0.8" fill="none" />; })}
-          {[0,1,2,3,4,5,6,7].map((i) => { const x=(i/7)*100; return <path key={`v${i}`} d={`M${x},0 L${x},100`} stroke="rgba(0,0,0,0.06)" strokeWidth="0.8" fill="none" />; })}
+      <div className="absolute inset-0" style={{ background:"#f4f4f4" }}>
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          {[16.6,33.3,50,66.6,83.3].map(y=><line key={y} x1="0" y1={y} x2="100" y2={y} stroke="rgba(0,0,0,0.045)" strokeWidth="0.5"/>)}
+          {[14.3,28.6,42.9,57.1,71.4,85.7].map(x=><line key={x} x1={x} y1="0" x2={x} y2="100" stroke="rgba(0,0,0,0.045)" strokeWidth="0.5"/>)}
         </svg>
-        <div className="absolute top-[3%] left-[8%] right-[8%] rounded-lg overflow-hidden shadow-sm" style={{ height:"30%", background:"linear-gradient(135deg,#1d9bf0,#0a5fa3)" }}>
-          <div className="absolute inset-0" style={{ background:"linear-gradient(to top,rgba(0,0,0,0.6),transparent)" }} />
-          <div className="absolute bottom-[15%] left-[8%] right-[30%] h-2 rounded bg-white/80" />
-          <div className="absolute bottom-[6%] left-[8%] right-[45%] h-1.5 rounded bg-white/50" />
-        </div>
-        <div className="absolute left-[8%] right-[8%] space-y-1.5" style={{ top:"38%" }}>
-          <div className="h-2 rounded bg-[#111]/75 w-[85%]" />
-          <div className="h-2 rounded bg-[#111]/75 w-[70%]" />
-          <div className="h-1.5 rounded bg-[#444]/45 w-[90%] mt-1" />
-        </div>
-        <div className="absolute bottom-[5%] left-[8%] right-[8%] rounded-lg bg-white shadow-sm flex items-center gap-2 px-2" style={{ height:"14%" }}>
-          <div className="w-5 h-5 rounded-full bg-[#1d9bf0] shrink-0 flex items-center justify-center"><Twitter size={9} color="white" /></div>
-          <div className="flex flex-col gap-0.5">
-            <div className="h-1.5 w-12 bg-[#111] rounded" />
-            <div className="h-1 w-8 bg-[#999] rounded" />
+        {/* Cover */}
+        <div className="absolute" style={{ left:"6%", right:"6%", top:"3%", height:"29%", borderRadius:8, overflow:"hidden", boxShadow:"0 2px 14px rgba(0,0,0,0.14)" }}>
+          <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,#1d9bf0 0%,#0a5fa3 100%)" }}>
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top,rgba(0,0,0,0.55),transparent 50%)" }} />
+            <div style={{ position:"absolute", bottom:"20%", left:"8%", right:"22%", height:9, borderRadius:5, background:"rgba(255,255,255,0.92)" }} />
+            <div style={{ position:"absolute", bottom:"7%", left:"8%", right:"38%", height:6.5, borderRadius:4, background:"rgba(255,255,255,0.5)" }} />
           </div>
+        </div>
+        {/* Profile */}
+        <div className="absolute" style={{ left:"6%", right:"6%", top:"35.5%", display:"flex", alignItems:"center", gap:6 }}>
+          <div style={{ width:20, height:20, borderRadius:"50%", background:"linear-gradient(135deg,#1d9bf0,#0a5fa3)", flexShrink:0 }} />
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:3 }}>
+              <div style={{ width:38, height:6.5, borderRadius:3, background:"#1a1a1a" }} />
+              <div style={{ width:9, height:9, borderRadius:"50%", background:"#1d9bf0", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <div style={{ width:5, height:4, borderRadius:1, background:"white" }} />
+              </div>
+            </div>
+            <div style={{ width:26, height:5, borderRadius:3, background:"#aaa", marginTop:2.5 }} />
+          </div>
+          <div style={{ fontSize:12, fontWeight:900, color:"#222", fontFamily:"Georgia,serif" }}>𝕏</div>
+        </div>
+        {/* Tweet text */}
+        <div className="absolute" style={{ left:"6%", right:"6%", top:"53%" }}>
+          {[{w:"92%",op:0.75,h:6.5},{w:"80%",op:0.72,h:6.5},{w:"86%",op:0.38,h:5.5}].map((l,i)=>(
+            <div key={i} style={{ height:l.h, width:l.w, borderRadius:3, background:`rgba(20,20,20,${l.op})`, marginBottom:i<2?4:0 }} />
+          ))}
+        </div>
+        {/* Stats */}
+        <div className="absolute" style={{ left:"6%", right:"6%", bottom:"5%", display:"flex", gap:10 }}>
+          {[{w:12},{w:18},{w:22}].map((s,i)=>(
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:3 }}>
+              <div style={{ width:9, height:9, borderRadius:2, background:"rgba(0,0,0,0.1)" }} />
+              <div style={{ width:s.w, height:5, borderRadius:3, background:"rgba(0,0,0,0.1)" }} />
+            </div>
+          ))}
         </div>
       </div>
     ),
@@ -75,21 +107,34 @@ const STYLES = [
     id: "comrosto" as const,
     label: "Com Rosto",
     desc: "Seu rosto preservado em cada imagem",
-    borderActive: "border-purple-500/60",
-    bgActive: "bg-purple-500/8",
-    btnCls: "bg-purple-600 hover:bg-purple-500",
-    tag: { color: "text-purple-200 bg-purple-500/25 border-purple-400/20", icon: <UserRound size={7} />, text: "Rosto" },
+    borderActive: "border-amber-500/60",
+    bgActive: "bg-amber-500/8",
+    btnCls: "bg-amber-600 hover:bg-amber-500",
+    tag: { color: "text-amber-200 bg-amber-500/25 border-amber-400/20", icon: <span style={{fontSize:7}}>●</span>, text: "Rosto" },
     preview: (
-      <div className="absolute inset-0" style={{ background:"linear-gradient(145deg,#1a0030,#3b0068,#6d28d9)" }}>
-        <div className="absolute inset-0" style={{ background:"linear-gradient(to top,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.2) 55%,transparent 100%)" }} />
-        <div className="absolute top-[10%] left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5">
-          <div className="w-8 h-8 rounded-full bg-purple-300/40 border border-purple-400/40" />
-          <div className="w-12 h-4 rounded-full bg-purple-300/20 border border-purple-400/20" />
+      <div className="absolute inset-0" style={{ background:"linear-gradient(165deg,#130a02 0%,#2d1206 45%,#3d1a08 100%)" }}>
+        <div className="absolute inset-0" style={{ background:"radial-gradient(ellipse at 50% 30%, rgba(251,146,60,0.18), transparent 62%)" }} />
+        <div className="absolute inset-0" style={{ background:"linear-gradient(to top,rgba(0,0,0,0.82) 0%,transparent 58%)" }} />
+        {/* Portrait outer ring */}
+        <div className="absolute" style={{ top:"8%", left:"50%", transform:"translateX(-50%)", width:54, height:54, borderRadius:"50%", border:"1.5px solid rgba(251,146,60,0.4)", boxShadow:"0 0 22px rgba(251,146,60,0.18)" }}>
+          {/* Inner portrait */}
+          <div style={{ position:"absolute", inset:3, borderRadius:"50%", background:"linear-gradient(145deg,#5c2d0a,#8b4513,#cd853f,#d2691e)", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:"18%", left:"20%", right:"20%", height:1.5, borderRadius:1, background:"rgba(255,220,180,0.45)" }} />
+            <div style={{ position:"absolute", top:"38%", left:"24%", right:"24%", height:1.5, borderRadius:1, background:"rgba(255,220,180,0.38)" }} />
+            <div style={{ position:"absolute", top:"56%", left:"18%", right:"18%", height:1.5, borderRadius:1, background:"rgba(255,220,180,0.32)" }} />
+            <div style={{ position:"absolute", inset:0, background:"radial-gradient(circle at 35% 35%, rgba(255,200,120,0.25), transparent 60%)" }} />
+          </div>
         </div>
-        <div className="absolute bottom-[28%] left-[8%] right-[8%] space-y-1.5">
-          <div className="rounded-md bg-white/85" style={{ height:9 }} />
-          <div className="rounded-md bg-white/50" style={{ height:6, width:"70%" }} />
+        {/* Handle badge */}
+        <div className="absolute" style={{ top:"52%", left:"50%", transform:"translateX(-50%)", padding:"2.5px 10px", borderRadius:20, background:"rgba(251,146,60,0.12)", border:"1px solid rgba(251,146,60,0.28)" }}>
+          <div style={{ width:44, height:5, borderRadius:3, background:"rgba(251,146,60,0.5)" }} />
         </div>
+        {/* Content */}
+        <div className="absolute" style={{ bottom:"22%", left:"10%", right:"10%" }}>
+          <div style={{ height:11, borderRadius:6, background:"rgba(255,255,255,0.9)", marginBottom:6 }} />
+          <div style={{ height:7, width:"60%", margin:"0 auto", borderRadius:4, background:"rgba(255,255,255,0.38)" }} />
+        </div>
+        <div className="absolute" style={{ bottom:"16%", left:"34%", right:"34%", height:2.5, borderRadius:1, background:"rgba(251,146,60,0.55)" }} />
       </div>
     ),
   },
@@ -100,26 +145,38 @@ const STYLES = [
     borderActive: "border-white/30",
     bgActive: "bg-white/6",
     btnCls: "bg-white/15 hover:bg-white/25",
-    tag: { color: "text-gray-300 bg-white/10 border-white/15", icon: <Newspaper size={7} />, text: "News" },
+    tag: { color: "text-gray-300 bg-white/10 border-white/15", icon: <span style={{fontSize:7}}>📰</span>, text: "News" },
     preview: (
-      <div className="absolute inset-0 bg-[#111]">
-        <div className="absolute top-[4%] left-[6%] right-[6%] flex items-center gap-1.5">
-          <div className="w-5 h-5 rounded-full bg-white/20 shrink-0" />
-          <div className="flex flex-col gap-0.5 flex-1">
-            <div className="h-1.5 w-10 bg-white/70 rounded" />
-            <div className="h-1 w-7 bg-white/30 rounded" />
+      <div className="absolute inset-0" style={{ background:"#080808" }}>
+        {/* Header */}
+        <div className="absolute" style={{ top:"4%", left:"5%", right:"5%", display:"flex", alignItems:"center", gap:6 }}>
+          <div style={{ width:17, height:17, borderRadius:"50%", background:"linear-gradient(135deg,#383838,#1a1a1a)", border:"1px solid rgba(255,255,255,0.1)", flexShrink:0 }} />
+          <div style={{ flex:1 }}>
+            <div style={{ width:34, height:6, borderRadius:3, background:"rgba(255,255,255,0.78)" }} />
+            <div style={{ width:22, height:4.5, borderRadius:3, background:"rgba(255,255,255,0.24)", marginTop:2.5 }} />
           </div>
-          <div className="text-[7px] font-black text-white/40">𝕏</div>
+          <div style={{ fontSize:13, fontWeight:900, color:"rgba(255,255,255,0.45)", fontFamily:"Georgia,serif" }}>𝕏</div>
         </div>
-        <div className="absolute bg-white/10" style={{ top:"20%", left:0, right:0, height:1 }} />
-        <div className="absolute left-[6%] right-[6%] space-y-1" style={{ top:"24%" }}>
-          <div className="h-2 rounded bg-white/80 w-full" />
-          <div className="h-2 rounded bg-white/60 w-[80%]" />
+        <div className="absolute" style={{ top:"19%", left:0, right:0, height:1, background:"rgba(255,255,255,0.06)" }} />
+        {/* Headline */}
+        <div className="absolute" style={{ top:"23%", left:"5%", right:"5%" }}>
+          <div style={{ height:8.5, borderRadius:4, background:"rgba(255,255,255,0.9)", marginBottom:5 }} />
+          <div style={{ height:8.5, borderRadius:4, background:"rgba(255,255,255,0.72)", marginBottom:4, width:"80%" }} />
+          <div style={{ height:6, borderRadius:3, background:"rgba(255,255,255,0.28)", width:"58%" }} />
         </div>
-        <div className="absolute bg-white/10" style={{ top:"42%", left:0, right:0, height:1 }} />
-        <div className="absolute left-[2%] right-[2%] flex gap-[2%]" style={{ top:"44%", bottom:"4%" }}>
-          <div className="flex-1 rounded-sm bg-white/20" />
-          <div className="flex-1 rounded-sm bg-white/10" />
+        <div className="absolute" style={{ top:"47%", left:0, right:0, height:1, background:"rgba(255,255,255,0.06)" }} />
+        {/* Media panels */}
+        <div className="absolute" style={{ top:"49%", bottom:"3%", left:"2%", right:"2%", display:"flex", gap:"2%" }}>
+          <div style={{ flex:1, borderRadius:6, overflow:"hidden", position:"relative", background:"linear-gradient(145deg,#1a1f3a,#0f1628)" }}>
+            <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 40% 60%, rgba(99,102,241,0.22), transparent 60%)" }} />
+            <div style={{ position:"absolute", bottom:4, left:4, fontSize:6, color:"rgba(255,255,255,0.3)", fontWeight:700, letterSpacing:1 }}>IMG</div>
+          </div>
+          <div style={{ flex:1, borderRadius:6, overflow:"hidden", position:"relative", background:"#111" }}>
+            <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:15, height:15, borderRadius:"50%", border:"1px solid rgba(255,255,255,0.22)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <div style={{ width:0, height:0, borderTop:"4.5px solid transparent", borderBottom:"4.5px solid transparent", borderLeft:"7px solid rgba(255,255,255,0.38)", marginLeft:1.5 }} />
+            </div>
+            <div style={{ position:"absolute", bottom:4, left:4, fontSize:6, color:"rgba(255,255,255,0.2)", fontWeight:700, letterSpacing:1 }}>VID</div>
+          </div>
         </div>
       </div>
     ),
@@ -131,18 +188,36 @@ const STYLES = [
     borderActive: "border-blue-500/60",
     bgActive: "bg-blue-500/8",
     btnCls: "bg-blue-600 hover:bg-blue-500",
-    tag: { color: "text-blue-200 bg-blue-500/25 border-blue-400/20", icon: <Images size={7} />, text: "Biblioteca" },
+    tag: { color: "text-blue-200 bg-blue-500/25 border-blue-400/20", icon: <span style={{fontSize:7}}>◫</span>, text: "Lib" },
     preview: (
-      <div className="absolute inset-0" style={{ background:"linear-gradient(145deg,#070d1a,#0f2044,#1a3a6e)" }}>
-        <div className="absolute inset-[8%] grid grid-cols-3 gap-1">
-          {["linear-gradient(135deg,#1e3a5f,#2d6a9f)","linear-gradient(135deg,#3b1f5e,#7c3aed)","linear-gradient(135deg,#1f3b2d,#2d9a5f)","linear-gradient(135deg,#5e2020,#c0392b)","linear-gradient(135deg,#3d3520,#b8960c)","linear-gradient(135deg,#1a2a4a,#2980b9)"].map((grad,i) => (
-            <div key={i} className="rounded-sm aspect-square" style={{ background:grad, opacity:0.85 }} />
+      <div className="absolute inset-0" style={{ background:"linear-gradient(160deg,#060c1a 0%,#0a1528 100%)" }}>
+        <div className="absolute inset-0" style={{ background:"radial-gradient(ellipse at 28% 28%, rgba(59,130,246,0.12), transparent 58%)" }} />
+        {/* Search bar */}
+        <div className="absolute" style={{ top:"4%", left:"7%", right:"7%", height:13, borderRadius:6, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", display:"flex", alignItems:"center", paddingLeft:7, gap:5 }}>
+          <div style={{ width:6, height:6, borderRadius:"50%", border:"1.5px solid rgba(255,255,255,0.2)" }} />
+          <div style={{ width:28, height:4, borderRadius:2, background:"rgba(255,255,255,0.1)" }} />
+        </div>
+        {/* Photo grid */}
+        <div className="absolute" style={{ top:"19%", left:"6%", right:"6%", bottom:"14%", display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:4 }}>
+          {[
+            "linear-gradient(to bottom,#fb923c 0%,#f59e0b 50%,#b45309 100%)",
+            "linear-gradient(165deg,#bfdbfe 0%,#3b82f6 55%,#1e40af 100%)",
+            "linear-gradient(to bottom,#bbf7d0 0%,#16a34a 55%,#14532d 100%)",
+            "radial-gradient(ellipse at 30% 20%,#4338ca 0%,#1e1b4b 55%,#0a0818 100%)",
+            "linear-gradient(145deg,#fde68a 0%,#f59e0b 50%,#92400e 100%)",
+            "linear-gradient(135deg,#7c3aed 0%,#db2777 52%,#f97316 100%)",
+          ].map((bg,i)=>(
+            <div key={i} style={{ borderRadius:5, background:bg, aspectRatio:"1/1", position:"relative",
+              border: i===0?"1.5px solid rgba(59,130,246,0.55)":"none",
+              boxShadow: i===0?"0 0 9px rgba(59,130,246,0.32)":"none" }}>
+              {i===0 && <div style={{ position:"absolute", top:3, right:3, width:6, height:6, borderRadius:"50%", background:"#3b82f6", boxShadow:"0 0 7px rgba(59,130,246,0.9)" }} />}
+            </div>
           ))}
         </div>
-        <div className="absolute inset-0" style={{ background:"linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 60%)" }} />
-        <div className="absolute bottom-[10%] left-[8%] right-[8%] space-y-1">
-          <div className="rounded bg-white/80" style={{ height:8 }} />
-          <div className="rounded bg-white/50" style={{ height:5, width:"65%" }} />
+        {/* Footer bar */}
+        <div className="absolute" style={{ bottom:"4%", left:"6%", right:"6%", height:9, borderRadius:4, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.05)", display:"flex", alignItems:"center", paddingLeft:8, gap:6 }}>
+          <div style={{ width:5, height:5, borderRadius:"50%", background:"rgba(59,130,246,0.55)" }} />
+          <div style={{ width:28, height:4, borderRadius:2, background:"rgba(255,255,255,0.18)" }} />
         </div>
       </div>
     ),
@@ -156,22 +231,32 @@ const STYLES = [
     btnCls: "bg-violet-600 hover:bg-violet-500",
     tag: { color: "text-violet-200 bg-violet-500/25 border-violet-400/20", icon: <Mic2 size={7} />, text: "Áudio" },
     preview: (
-      <div className="absolute inset-0" style={{ background:"linear-gradient(145deg,#0d0020,#1e0050,#3b0090)" }}>
-        <div className="absolute inset-0" style={{ background:"linear-gradient(to top,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0.1) 60%,transparent 100%)" }} />
-        {/* Waveform bars */}
-        <div className="absolute flex items-center justify-center gap-[3px]" style={{ top:"28%", left:"10%", right:"10%", height:"30%" }}>
-          {[0.3,0.6,0.9,1,0.75,0.5,0.85,1,0.6,0.4,0.7,0.95,0.5,0.8,0.35].map((h,i) => (
-            <div key={i} className="flex-1 rounded-full" style={{ height:`${h*100}%`, background:`rgba(167,139,250,${0.4+h*0.5})` }} />
+      <div className="absolute inset-0" style={{ background:"linear-gradient(160deg,#090012 0%,#110020 50%,#180032 100%)" }}>
+        <div className="absolute inset-0" style={{ background:"radial-gradient(ellipse at 50% 15%, rgba(139,92,246,0.24), transparent 60%)" }} />
+        {/* Mic icon */}
+        <div className="absolute" style={{ top:"6%", left:"50%", transform:"translateX(-50%)", width:30, height:30, borderRadius:"50%", background:"rgba(139,92,246,0.18)", border:"1px solid rgba(167,139,250,0.32)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 18px rgba(139,92,246,0.2)" }}>
+          <Mic2 size={13} style={{ color:"rgba(196,181,253,0.9)" }} />
+        </div>
+        {/* Waveform */}
+        <div className="absolute" style={{ top:"30%", left:"7%", right:"7%", height:"24%", display:"flex", alignItems:"center", justifyContent:"center", gap:"1.8%" }}>
+          {[0.25,0.55,0.82,1,0.62,0.38,0.88,0.75,0.48,0.72,0.95,0.58,0.33,0.68,0.86,0.42,0.72,0.52,0.28].map((h,i)=>(
+            <div key={i} style={{ flex:1, height:`${h*100}%`, borderRadius:99, background:`rgba(${(i>=9&&i<=11)?'216,180,254':'167,139,250'},${0.32+h*0.5})` }} />
           ))}
         </div>
-        <div className="absolute top-[18%] left-1/2 -translate-x-1/2">
-          <div className="w-10 h-10 rounded-full bg-violet-500/30 border border-violet-400/40 flex items-center justify-center">
-            <Mic2 size={18} className="text-violet-300" />
-          </div>
+        {/* Progress */}
+        <div className="absolute" style={{ top:"58%", left:"10%", right:"10%", height:3, borderRadius:99, background:"rgba(255,255,255,0.06)" }}>
+          <div style={{ position:"absolute", left:0, top:0, bottom:0, width:"44%", borderRadius:99, background:"linear-gradient(90deg,#7c3aed,#a855f7)" }} />
+          <div style={{ position:"absolute", top:"50%", transform:"translateY(-50%)", left:"44%", marginLeft:-4, width:7, height:7, borderRadius:"50%", background:"#c084fc", boxShadow:"0 0 7px rgba(192,132,252,0.65)" }} />
         </div>
-        <div className="absolute bottom-[22%] left-[8%] right-[8%] space-y-1.5">
-          <div className="rounded-md bg-white/85" style={{ height:9 }} />
-          <div className="rounded-md bg-white/50" style={{ height:6, width:"80%" }} />
+        {/* Transcript lines */}
+        <div className="absolute" style={{ top:"67%", left:"8%", right:"8%", display:"flex", flexDirection:"column", gap:4.5 }}>
+          {[{w:"100%",op:0.62},{w:"83%",op:0.44},{w:"68%",op:0.28}].map((l,i)=>(
+            <div key={i} style={{ height:5.5, width:l.w, borderRadius:3, background:`rgba(255,255,255,${l.op})` }} />
+          ))}
+        </div>
+        {/* Chip */}
+        <div className="absolute" style={{ bottom:"3.5%", left:"50%", transform:"translateX(-50%)", padding:"2.5px 9px", borderRadius:20, background:"rgba(124,58,237,0.28)", border:"1px solid rgba(167,139,250,0.28)", fontSize:6.5, fontWeight:700, color:"rgba(216,180,254,0.9)", whiteSpace:"nowrap" }}>
+          Whisper IA
         </div>
       </div>
     ),
@@ -214,21 +299,17 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
         className="bg-[var(--bg-2)] border border-[var(--border-2)] rounded-2xl p-5 w-full max-w-[92vw] md:max-w-[520px] shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-base font-bold text-[var(--text)]">Como quer criar?</h2>
             <p className="text-xs text-[var(--text-3)] mt-0.5">Use ← → ou deslize para navegar</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-[var(--bg-3)] text-[var(--text-3)] hover:text-[var(--text)] transition-colors"
-          >
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--bg-3)] text-[var(--text-3)] hover:text-[var(--text)] transition-colors">
             <X size={18} />
           </button>
         </div>
 
-        {/* FIFA 3D Carousel */}
+        {/* 3D Carousel */}
         <div
           className="relative select-none"
           style={{ height: 230, overflow: "hidden" }}
@@ -246,13 +327,11 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
               const dist = i - active;
               const absDist = Math.abs(dist);
               if (absDist > 2) return null;
-
               const scale   = [1, 0.72, 0.52][absDist];
-              const opacity = [1, 0.60, 0.25][absDist];
+              const opacity = [1, 0.58, 0.22][absDist];
               const ry      = -dist * [0, 42, 60][absDist];
               const tx      = dist * SLOT;
               const isActive = dist === 0;
-
               return (
                 <div
                   key={s.id}
@@ -268,13 +347,12 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
                     cursor: "pointer",
                   }}
                 >
-                  {/* bare image — no box */}
                   <div
                     className="relative w-full rounded-2xl overflow-hidden"
                     style={{
                       aspectRatio: "4/5",
                       boxShadow: isActive
-                        ? "0 20px 60px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.08)"
+                        ? "0 20px 60px rgba(0,0,0,0.75), 0 0 0 1.5px rgba(255,255,255,0.07)"
                         : "0 8px 24px rgba(0,0,0,0.4)",
                     }}
                   >
@@ -290,45 +368,30 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
         </div>
 
         {/* Active card info */}
-        <div className="text-center mt-3 min-h-[38px] transition-all duration-300">
+        <div className="text-center mt-3 min-h-[38px]">
           <p className="font-bold text-[var(--text)] text-sm leading-tight">{current.label}</p>
           <p className="text-[11px] text-[var(--text-3)] mt-0.5">{current.desc}</p>
         </div>
 
         {/* Navigation */}
         <div className="flex items-center justify-between mt-3 gap-3">
-          <button
-            onClick={prev}
-            disabled={active === 0}
-            className="p-2 rounded-xl border border-[var(--border-2)] text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-          >
+          <button onClick={prev} disabled={active === 0}
+            className="p-2 rounded-xl border border-[var(--border-2)] text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
             <ChevronLeft size={16} />
           </button>
-
           <div className="flex items-center gap-1.5">
             {STYLES.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setActive(i)}
-                className={`rounded-full transition-all duration-300 ${
-                  i === active
-                    ? "w-5 h-1.5 bg-brand-500"
-                    : "w-1.5 h-1.5 bg-[var(--border-2)] hover:bg-[var(--text-3)]"
-                }`}
+              <button key={i} onClick={() => setActive(i)}
+                className={`rounded-full transition-all duration-300 ${i === active ? "w-5 h-1.5 bg-brand-500" : "w-1.5 h-1.5 bg-[var(--border-2)] hover:bg-[var(--text-3)]"}`}
               />
             ))}
           </div>
-
-          <button
-            onClick={next}
-            disabled={active === STYLES.length - 1}
-            className="p-2 rounded-xl border border-[var(--border-2)] text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-          >
+          <button onClick={next} disabled={active === STYLES.length - 1}
+            className="p-2 rounded-xl border border-[var(--border-2)] text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-3)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
             <ChevronRight size={16} />
           </button>
         </div>
 
-        {/* Select button */}
         <button
           onClick={() => onSelect(current.id)}
           className={`w-full mt-3 py-3 rounded-xl font-semibold text-sm text-white transition-all shadow-lg ${current.btnCls}`}
