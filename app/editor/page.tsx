@@ -158,6 +158,12 @@ export default function EditorPage() {
     return () => window.removeEventListener("generator-loading", handler);
   }, []);
 
+  useEffect(() => {
+    const handler = () => setShowStyleSelector(true);
+    window.addEventListener("open-style-selector", handler);
+    return () => window.removeEventListener("open-style-selector", handler);
+  }, []);
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
 

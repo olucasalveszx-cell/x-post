@@ -795,7 +795,10 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
           /* Idle / done / error */
           <div className="w-full flex flex-col gap-3">
             <button
-              onClick={() => session?.user ? setShowWizard(true) : setLoginOpen(true)}
+              onClick={() => {
+                if (!session?.user) { setLoginOpen(true); return; }
+                window.dispatchEvent(new CustomEvent("open-style-selector"));
+              }}
               disabled={credits !== null && !credits.unlimited && credits.remaining <= 0}
               className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-brand-500/20 hover:shadow-brand-500/30"
             >
