@@ -33,28 +33,63 @@ export function transcriptionsListKey(email: string) { return `transcriptions:${
 
 async function transcribeWithWhisper(buffer: Buffer, filename: string, mimeType: string): Promise<{ text: string; language: string; duration: number }> {
   const openaiKey = process.env.OPENAI_API_KEY;
-  if (!openaiKey) throw new Error("OPENAI_API_KEY não configurada");
 
-  const form = new FormData();
-  const ab = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
-  form.append("file", new File([ab], filename, { type: mimeType }));
-  form.append("model", "whisper-1");
-  form.append("response_format", "verbose_json");
+  // 1. Tenta OpenAI Whisper
+  if (openaiKey) {
+    try {
+      const form = new FormData();
+      const ab = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+      form.append("file", new File([ab], filename, { type: mimeType }));
+      form.append("model", "whisper-1");
+      form.append("response_format", "verbose_json");
 
-  const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${openaiKey}` },
-    body: form,
-  });
+      const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${openaiKey}` },
+        body: form,
+      });
+      const data = await res.json();
+      if (res.ok) return { text: data.text ?? "", language: data.language ?? "pt", duration: data.duration ?? 0 };
+      const msg: string = data.error?.message ?? `Whisper error ${res.status}`;
+      // quota esgotada → cai no Gemini; outros erros fatais → lança
+      if (!/quota|rate.?limit|exceeded|billing/i.test(msg)) throw new Error(msg);
+      console.warn("[whisper] OpenAI quota esgotada, usando Gemini...");
+    } catch (e: any) {
+      if (!/quota|rate.?limit|exceeded|billing/i.test(e.message ?? "")) throw e;
+      console.warn("[whisper] OpenAI quota esgotada, usando Gemini...");
+    }
+  }
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message ?? `Whisper error ${res.status}`);
+  // 2. Fallback: Gemini com áudio inline
+  const geminiKeys = [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean) as string[];
+  if (!geminiKeys.length) throw new Error("OpenAI sem cota e GEMINI_API_KEY não configurada. Verifique suas chaves de API.");
 
-  return {
-    text: data.text ?? "",
-    language: data.language ?? "pt",
-    duration: data.duration ?? 0,
+  const base64 = buffer.toString("base64");
+  // Gemini suporta até ~20MB inline; para arquivos maiores tenta mesmo assim
+  const geminiBody = {
+    contents: [{ parts: [
+      { inlineData: { mimeType, data: base64 } },
+      { text: "Transcreva este áudio na íntegra. Retorne SOMENTE o texto falado, exatamente como foi dito, sem timestamps, sem marcadores, sem explicações." },
+    ]}],
+    generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
   };
+
+  for (const model of ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"]) {
+    for (const key of geminiKeys) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(geminiBody) }
+        );
+        const data = await res.json();
+        if (!res.ok) { console.warn(`[gemini-transcribe] ${model} falhou:`, data.error?.message); continue; }
+        const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        if (text.trim()) return { text: text.trim(), language: "pt", duration: 0 };
+      } catch (e: any) { console.warn(`[gemini-transcribe] ${model} erro:`, e.message); }
+    }
+  }
+
+  throw new Error("Não foi possível transcrever o áudio. OpenAI sem cota e Gemini indisponível.");
 }
 
 async function analyzeWithAI(transcript: string, title: string): Promise<TranscriptionRecord["summary"] & { topics: TranscriptionRecord["topics"] }> {
