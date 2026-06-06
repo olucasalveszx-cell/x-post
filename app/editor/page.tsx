@@ -338,6 +338,27 @@ export default function EditorPage() {
     setShowRestoreBanner(false);
   };
 
+  // ── Abrir rascunho via ?draft=<id> ──────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const draftId = params.get("draft");
+    if (!draftId) return;
+    window.history.replaceState({}, "", "/editor");
+    fetch(`/api/drafts/${draftId}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data?.slides?.length) return;
+        const pid = uuid();
+        setCore((prev) => ({
+          projects: [{ id: pid, name: "Rascunho", slides: data.slides }, ...prev.projects],
+          activeProjectId: pid,
+        }));
+        setCurrentIndex(0);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Heartbeat (presença em tempo real) ───────────────────────
   useEffect(() => {
     const ping = () => fetch("/api/heartbeat", { method: "POST" }).catch(() => {});

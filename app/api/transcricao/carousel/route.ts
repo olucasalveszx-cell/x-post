@@ -45,50 +45,59 @@ const FORMAT_PALETTES: Record<CarouselFormat, { bg: string; text: string; accent
 function makeSlide(raw: RawSlide, index: number, total: number, profile: ProfileData | null): Slide {
   const isCover = index === 0;
   const isCTA = index === total - 1;
+  const isEven = index % 2 === 0;
   const W = 1080, H = 1350;
   const hasProfile = !!(profile && (profile.name || profile.handle));
   const elements: SlideElement[] = [];
 
-  // ── Background decorations ──────────────────────────────────────────────
-  // Large blurred circle (top-right on cover, top-right on inner slides)
+  // ── Background decorations ───────────────────────────────────────────────
+  // Main large circle — alternates side for visual rhythm on inner slides
+  const circleSize = isCover ? 760 : 560;
+  const circleX = isCover ? W * 0.28 : (isEven ? W * 0.42 : -circleSize * 0.15);
   elements.push({
     id: uuid(), type: "shape",
-    x: isCover ? W * 0.3 : W * 0.45,
-    y: isCover ? -180 : -200,
-    width: isCover ? 720 : 580,
-    height: isCover ? 720 : 580,
-    opacity: 0.13,
-    style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: 360 },
+    x: circleX, y: isCover ? -200 : -180,
+    width: circleSize, height: circleSize,
+    opacity: 0.12,
+    style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: circleSize / 2 },
     zIndex: 0,
   } as SlideElement);
 
-  // Secondary smaller circle (bottom-left)
+  // Secondary circle — bottom opposite side
+  const sec = 340;
   elements.push({
     id: uuid(), type: "shape",
-    x: -120, y: H - 380,
-    width: 380, height: 380,
+    x: isEven ? -sec * 0.35 : W - sec * 0.65, y: H - sec * 0.85,
+    width: sec, height: sec,
     opacity: 0.07,
-    style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: 190 },
+    style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: sec / 2 },
     zIndex: 0,
   } as SlideElement);
 
-  // Small decorative dot cluster (top-right corner)
+  // ── Slide counter pill (all slides except cover) ─────────────────────────
   if (!isCover) {
-    for (let i = 0; i < 3; i++) {
-      elements.push({
-        id: uuid(), type: "shape",
-        x: W - 80 - i * 22, y: 80,
-        width: 10, height: 10,
-        opacity: 0.35,
-        style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: 5 },
-        zIndex: 1,
-      } as SlideElement);
-    }
+    const counterW = 110;
+    elements.push({
+      id: uuid(), type: "shape",
+      x: W - 80 - counterW, y: H - 80,
+      width: counterW, height: 40,
+      opacity: 0.55,
+      style: { fill: raw.accent + "33", stroke: raw.accent + "66", strokeWidth: 1, borderRadius: 20 },
+      zIndex: 8,
+    } as SlideElement);
+    elements.push({
+      id: uuid(), type: "text",
+      x: W - 80 - counterW, y: H - 80,
+      width: counterW, height: 40,
+      content: `<p style="text-align:center">${String(index).padStart(2,"0")} / ${String(total - 1).padStart(2,"0")}</p>`,
+      style: { fontSize: 18, fontWeight: "bold", fontFamily: "'Montserrat', sans-serif", color: raw.accent, textAlign: "center", lineHeight: 1 },
+      zIndex: 9,
+    } as SlideElement);
   }
 
   // ── Profile element ──────────────────────────────────────────────────────
   if (hasProfile) {
-    const profileY = isCover ? H - 210 : 55;
+    const profileY = isCover ? H - 215 : 50;
     elements.push({
       id: uuid(), type: "profile",
       x: 80, y: profileY, width: W - 160, height: 90,
@@ -102,124 +111,171 @@ function makeSlide(raw: RawSlide, index: number, total: number, profile: Profile
     } as SlideElement);
   }
 
-  // ── Cover slide layout ───────────────────────────────────────────────────
+  // ── Cover slide ──────────────────────────────────────────────────────────
   if (isCover) {
-    // Decorative tag chip at top
+    // Tag chip
     elements.push({
       id: uuid(), type: "shape",
-      x: 80, y: 120, width: 160, height: 44,
-      style: { fill: raw.accent + "22", stroke: raw.accent + "55", strokeWidth: 1, borderRadius: 22 },
+      x: 80, y: 115, width: 170, height: 46,
+      style: { fill: raw.accent + "20", stroke: raw.accent + "55", strokeWidth: 1, borderRadius: 23 },
       zIndex: 3,
     } as SlideElement);
     elements.push({
       id: uuid(), type: "text",
-      x: 80, y: 120, width: 160, height: 44,
+      x: 80, y: 115, width: 170, height: 46,
       content: `<p style="text-align:center"><strong>● CARROSSEL</strong></p>`,
       style: { fontSize: 16, fontWeight: "bold", fontFamily: "'Montserrat', sans-serif", color: raw.accent, textAlign: "center", lineHeight: 1 },
       zIndex: 4,
     } as SlideElement);
 
+    // Ghost large number "1" in background
+    elements.push({
+      id: uuid(), type: "text",
+      x: W - 380, y: 150,
+      width: 380, height: 520,
+      content: `<p style="text-align:right"><strong>1</strong></p>`,
+      opacity: 0.04,
+      style: { fontSize: 480, fontWeight: "bold", fontFamily: "'Montserrat', sans-serif", color: raw.textColor, textAlign: "right", lineHeight: 1 },
+      zIndex: 1,
+    } as SlideElement);
+
     // Main title
     elements.push({
       id: uuid(), type: "text",
-      x: 80, y: 210, width: W - 160, height: 380,
+      x: 80, y: 205, width: W - 160, height: 400,
       content: `<p><strong>${raw.title}</strong></p>`,
-      style: { fontSize: 76, fontWeight: "bold", fontFamily: "'Montserrat', sans-serif", color: raw.textColor, textAlign: "left", lineHeight: 1.1 },
+      style: { fontSize: 78, fontWeight: "bold", fontFamily: "'Montserrat', sans-serif", color: raw.textColor, textAlign: "left", lineHeight: 1.08 },
       zIndex: 5,
     } as SlideElement);
 
-    // Accent line separator
+    // Double accent line
     elements.push({
       id: uuid(), type: "shape",
-      x: 80, y: 620, width: 120, height: 5,
+      x: 80, y: 630, width: 130, height: 5,
       style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: 2.5 },
       zIndex: 4,
     } as SlideElement);
     elements.push({
       id: uuid(), type: "shape",
-      x: 212, y: 620, width: 50, height: 5,
-      opacity: 0.4,
+      x: 224, y: 630, width: 50, height: 5,
+      opacity: 0.38,
       style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: 2.5 },
       zIndex: 4,
     } as SlideElement);
 
-    // Subtitle / body
+    // Subtitle
     if (raw.body) {
       elements.push({
         id: uuid(), type: "text",
-        x: 80, y: 660, width: W - 160, height: 280,
+        x: 80, y: 668, width: W - 160, height: 290,
         content: `<p>${raw.body}</p>`,
-        style: { fontSize: 32, fontWeight: "normal", fontFamily: "'Inter', sans-serif", color: raw.textColor + "bb", textAlign: "left", lineHeight: 1.55 },
+        style: { fontSize: 31, fontWeight: "normal", fontFamily: "'Inter', sans-serif", color: raw.textColor + "bb", textAlign: "left", lineHeight: 1.55 },
         zIndex: 5,
       } as SlideElement);
     }
 
-    // "Deslize →" indicator at bottom
+    // "Deslize →"
     elements.push({
       id: uuid(), type: "text",
-      x: 80, y: hasProfile ? H - 270 : H - 160,
-      width: 220, height: 50,
+      x: 80, y: hasProfile ? H - 272 : H - 160,
+      width: 230, height: 50,
       content: `<p><strong>Deslize →</strong></p>`,
-      style: { fontSize: 20, fontWeight: "bold", fontFamily: "'Inter', sans-serif", color: raw.accent + "99", textAlign: "left", lineHeight: 1 },
+      style: { fontSize: 20, fontWeight: "bold", fontFamily: "'Inter', sans-serif", color: raw.accent + "88", textAlign: "left", lineHeight: 1 },
       zIndex: 5,
     } as SlideElement);
 
     return { id: uuid(), backgroundColor: raw.bgColor, elements, width: W, height: H };
   }
 
-  // ── CTA slide layout ─────────────────────────────────────────────────────
+  // ── CTA slide ────────────────────────────────────────────────────────────
   if (isCTA) {
-    const baseY = hasProfile ? 200 : 120;
+    const baseY = hasProfile ? 195 : 110;
 
-    // Accent top bar
+    // Ghost "✓" or star accent in background
+    elements.push({
+      id: uuid(), type: "text",
+      x: W - 340, y: baseY - 40,
+      width: 320, height: 400,
+      content: `<p style="text-align:right"><strong>★</strong></p>`,
+      opacity: 0.04,
+      style: { fontSize: 380, fontWeight: "bold", fontFamily: "'Montserrat', sans-serif", color: raw.accent, textAlign: "right", lineHeight: 1 },
+      zIndex: 1,
+    } as SlideElement);
+
+    // Accent bar
     elements.push({
       id: uuid(), type: "shape",
-      x: 80, y: baseY, width: 80, height: 5,
+      x: 80, y: baseY, width: 90, height: 5,
+      style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: 2.5 },
+      zIndex: 3,
+    } as SlideElement);
+    elements.push({
+      id: uuid(), type: "shape",
+      x: 184, y: baseY, width: 36, height: 5,
+      opacity: 0.38,
       style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: 2.5 },
       zIndex: 3,
     } as SlideElement);
 
-    // Big CTA title
+    // CTA title
     elements.push({
       id: uuid(), type: "text",
-      x: 80, y: baseY + 40, width: W - 160, height: 360,
+      x: 80, y: baseY + 38, width: W - 160, height: 380,
       content: `<p><strong>${raw.title}</strong></p>`,
-      style: { fontSize: 68, fontWeight: "bold", fontFamily: "'Montserrat', sans-serif", color: raw.textColor, textAlign: "left", lineHeight: 1.15 },
+      style: { fontSize: 70, fontWeight: "bold", fontFamily: "'Montserrat', sans-serif", color: raw.textColor, textAlign: "left", lineHeight: 1.12 },
       zIndex: 5,
     } as SlideElement);
 
     if (raw.body) {
+      // Left accent bar on body (pull quote style)
+      elements.push({
+        id: uuid(), type: "shape",
+        x: 80, y: baseY + 438, width: 4, height: 160,
+        style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: 2 },
+        zIndex: 4,
+      } as SlideElement);
       elements.push({
         id: uuid(), type: "text",
-        x: 80, y: baseY + 420, width: W - 160, height: 260,
+        x: 104, y: baseY + 438, width: W - 184, height: 240,
         content: `<p>${raw.body}</p>`,
-        style: { fontSize: 30, fontWeight: "normal", fontFamily: "'Inter', sans-serif", color: raw.textColor + "aa", textAlign: "left", lineHeight: 1.6 },
+        style: { fontSize: 29, fontWeight: "normal", fontFamily: "'Inter', sans-serif", color: raw.textColor + "aa", textAlign: "left", lineHeight: 1.6 },
         zIndex: 5,
       } as SlideElement);
     }
 
-    // CTA pill button shape
+    // CTA pill button
     elements.push({
       id: uuid(), type: "shape",
-      x: 80, y: baseY + 720, width: 380, height: 80,
-      style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: 40 },
+      x: 80, y: baseY + 730, width: 400, height: 82,
+      style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: 41 },
       zIndex: 4,
     } as SlideElement);
     elements.push({
       id: uuid(), type: "text",
-      x: 80, y: baseY + 720, width: 380, height: 80,
+      x: 80, y: baseY + 730, width: 400, height: 82,
       content: `<p style="text-align:center"><strong>Seguir agora ↗</strong></p>`,
-      style: { fontSize: 26, fontWeight: "bold", fontFamily: "'Montserrat', sans-serif", color: "#ffffff", textAlign: "center", lineHeight: 1 },
+      style: { fontSize: 27, fontWeight: "bold", fontFamily: "'Montserrat', sans-serif", color: "#ffffff", textAlign: "center", lineHeight: 1 },
       zIndex: 5,
     } as SlideElement);
 
     return { id: uuid(), backgroundColor: raw.bgColor, elements, width: W, height: H };
   }
 
-  // ── Inner slide layout ───────────────────────────────────────────────────
-  const baseY = hasProfile ? 185 : 80;
+  // ── Inner slides ─────────────────────────────────────────────────────────
+  const baseY = hasProfile ? 182 : 78;
 
-  // Number badge
+  // Ghost number in background (large, very low opacity)
+  elements.push({
+    id: uuid(), type: "text",
+    x: isEven ? W - 420 : -60, y: baseY - 20,
+    width: 420, height: 520,
+    content: `<p style="text-align:${isEven ? "right" : "left"}"><strong>${index}</strong></p>`,
+    opacity: 0.045,
+    style: { fontSize: 460, fontWeight: "bold", fontFamily: "'Montserrat', sans-serif", color: raw.textColor, textAlign: isEven ? "right" : "left", lineHeight: 1 },
+    zIndex: 1,
+  } as SlideElement);
+
+  // Number badge (small, on top of ghost number)
   elements.push({
     id: uuid(), type: "shape",
     x: 80, y: baseY, width: 64, height: 64,
@@ -234,7 +290,7 @@ function makeSlide(raw: RawSlide, index: number, total: number, profile: Profile
     zIndex: 4,
   } as SlideElement);
 
-  // Accent line after badge
+  // Short accent line under badge
   elements.push({
     id: uuid(), type: "shape",
     x: 80, y: baseY + 82, width: 64, height: 4,
@@ -245,28 +301,34 @@ function makeSlide(raw: RawSlide, index: number, total: number, profile: Profile
   // Title
   elements.push({
     id: uuid(), type: "text",
-    x: 80, y: baseY + 110, width: W - 160, height: 280,
+    x: 80, y: baseY + 108, width: W - 160, height: 295,
     content: `<p><strong>${raw.title}</strong></p>`,
     style: { fontSize: 58, fontWeight: "bold", fontFamily: "'Montserrat', sans-serif", color: raw.textColor, textAlign: "left", lineHeight: 1.15 },
     zIndex: 5,
   } as SlideElement);
 
-  // Body
+  // Body with left accent bar (pull quote style)
   if (raw.body) {
     elements.push({
+      id: uuid(), type: "shape",
+      x: 80, y: baseY + 425, width: 4, height: 170,
+      style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: 2 },
+      zIndex: 4,
+    } as SlideElement);
+    elements.push({
       id: uuid(), type: "text",
-      x: 80, y: baseY + 410, width: W - 160, height: 320,
+      x: 104, y: baseY + 420, width: W - 184, height: 320,
       content: `<p>${raw.body}</p>`,
       style: { fontSize: 30, fontWeight: "normal", fontFamily: "'Inter', sans-serif", color: raw.textColor + "cc", textAlign: "left", lineHeight: 1.6 },
       zIndex: 5,
     } as SlideElement);
   }
 
-  // Bottom thin accent bar
+  // Bottom accent bar full width
   elements.push({
     id: uuid(), type: "shape",
-    x: 80, y: H - 80, width: W - 160, height: 3,
-    opacity: 0.2,
+    x: 80, y: H - 100, width: W - 160, height: 3,
+    opacity: 0.18,
     style: { fill: raw.accent, stroke: "transparent", strokeWidth: 0, borderRadius: 1.5 },
     zIndex: 3,
   } as SlideElement);

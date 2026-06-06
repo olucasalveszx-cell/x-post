@@ -614,8 +614,8 @@ export default function TranscricaoPage() {
                           <p className="text-sm font-bold text-emerald-300">Carrossel gerado!</p>
                           <p className="text-xs text-emerald-300/45 mt-0.5">Salvo nos rascunhos</p>
                         </div>
-                        <a href="/editor" className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white" style={{ background:"rgba(16,185,129,0.6)", border:"1px solid rgba(16,185,129,0.35)" }}>
-                          <ExternalLink size={11} /> Abrir
+                        <a href={`/editor?draft=${carouselDraftId}`} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white" style={{ background:"rgba(16,185,129,0.6)", border:"1px solid rgba(16,185,129,0.35)" }}>
+                          <ExternalLink size={11} /> Abrir projeto
                         </a>
                       </div>
                     ) : (
