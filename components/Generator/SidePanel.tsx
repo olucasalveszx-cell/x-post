@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Sparkles, Languages, CalendarClock, StickyNote, Loader2, Plus, Trash2, ChevronDown, ChevronRight, Check } from "lucide-react";
+import { Sparkles, Languages, CalendarClock, StickyNote, Loader2, Plus, Trash2, ChevronDown, ChevronRight, Check, Brain } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import GeneratorPanel from "./GeneratorPanel";
@@ -312,18 +312,25 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
   return (
     <div className="w-80 bg-[var(--bg-2)] border-r border-[var(--border)] flex flex-col overflow-hidden">
 
-      {/* Aba Posts em destaque no topo */}
-      <button
-        onClick={() => setTab("posts")}
-        className={`flex items-center justify-center gap-2 py-2.5 text-xs font-semibold border-b transition-colors shrink-0 ${
-          tab === "posts"
-            ? "bg-brand-600/20 border-brand-500/40 text-brand-400"
-            : "bg-[var(--bg-3)] border-[var(--border)] text-[var(--text-2)] hover:text-brand-400 hover:bg-brand-600/10"
-        }`}
-      >
-        <CalendarClock size={13} />
-        📅 Agendar & Posts
-      </button>
+      {/* Quick-access top buttons */}
+      <div className="flex border-b border-[var(--border)] shrink-0">
+        <button
+          onClick={() => setTab("posts")}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
+            tab === "posts"
+              ? "bg-brand-600/20 text-brand-400"
+              : "bg-[var(--bg-3)] text-[var(--text-2)] hover:text-brand-400 hover:bg-brand-600/10"
+          }`}
+        >
+          <CalendarClock size={13} /> Agendar & Posts
+        </button>
+        <a
+          href="/treinar"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors text-[var(--text-2)] hover:text-violet-400 hover:bg-violet-600/10 border-l border-[var(--border)]"
+        >
+          <Brain size={13} /> Treinar IA
+        </a>
+      </div>
 
       {/* Abas secundárias */}
       <div className="flex border-b border-[var(--border)] shrink-0">

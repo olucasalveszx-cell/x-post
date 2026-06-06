@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { consumeCredits } from "@/lib/credits";
 import { redisIncr } from "@/lib/redis";
 import { geminiText } from "@/lib/gemini-text";
+import { searchSimilarChunks, getUserAIProfile, buildRAGContext } from "@/lib/rag";
 
 export const maxDuration = 60;
 
@@ -84,8 +85,8 @@ const styleInstructions: Record<WritingStyle, string> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const body: GenerateRequest & { imageStyle?: string; withFace?: boolean } = await req.json();
-    const { topic, searchResults, slideCount, writingStyle = "viral", imageStyle, withFace = false } = body;
+    const body: GenerateRequest & { imageStyle?: string; withFace?: boolean; useTraining?: boolean } = await req.json();
+    const { topic, searchResults, slideCount, writingStyle = "viral", imageStyle, withFace = false, useTraining = false } = body;
 
     const session = await getServerSession(authOptions);
     const email = session?.user?.email;
@@ -106,9 +107,24 @@ export async function POST(req: NextRequest) {
       .join("\n\n")
       .slice(0, 4000);
 
+    // RAG: inject user's trained knowledge when useTraining is active
+    let ragContext = "";
+    if (useTraining && email) {
+      try {
+        const [chunks, profile] = await Promise.all([
+          searchSimilarChunks(email, topic, 6, 0.35),
+          getUserAIProfile(email),
+        ]);
+        ragContext = buildRAGContext(chunks, profile);
+      } catch (e: any) {
+        console.warn("[generate] RAG failed (non-fatal):", e.message);
+      }
+    }
+
     const prompt = `Você é um especialista em criação de conteúdo viral para Instagram.
 
-Com base nas informações reais abaixo sobre "${topic}", crie um carrossel de ${slideCount} slides.
+Com base nas informações abaixo sobre "${topic}", crie um carrossel de ${slideCount} slides.
+${ragContext}
 
 INFORMAÇÕES REAIS DA WEB:
 ${sourcesText}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Sparkles, Search, Loader2, AlertCircle, Crown, Zap, LogIn, CheckCircle2, Clock, X, Lightbulb, TrendingUp, Dumbbell, Briefcase, Star, BookOpen } from "lucide-react";
+import { Sparkles, Search, Loader2, AlertCircle, Crown, Zap, LogIn, CheckCircle2, Clock, X, Lightbulb, TrendingUp, Dumbbell, Briefcase, Star, BookOpen, Brain } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
 import { GeneratedContent, SearchResult, Slide, WritingStyle } from "@/types";
 import { v4 as uuid } from "uuid";
@@ -474,6 +474,9 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
   const [lastSettings, setLastSettings] = useState<WizardSettings | null>(null);
   const [lastGenContent, setLastGenContent] = useState<GeneratedContent | null>(null);
   const [slideImages, setSlideImages] = useState<Array<string | null>>([]);
+  const [useTraining, setUseTraining] = useState(() => {
+    try { return localStorage.getItem("xpz_use_training") === "true"; } catch { return false; }
+  });
 
   const { data: session } = useSession();
   const [isPro, setIsPro] = useState(false);
@@ -648,7 +651,7 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
       setStatus("generating");
       const genRes = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: ws.topic, searchResults: searchData.results, slideCount: ws.slideCount, writingStyle: ws.writingStyle, imageStyle: ws.imageStyle }),
+        body: JSON.stringify({ topic: ws.topic, searchResults: searchData.results, slideCount: ws.slideCount, writingStyle: ws.writingStyle, imageStyle: ws.imageStyle, useTraining }),
       });
       const genData: GeneratedContent = await genRes.json();
       if (genRes.status === 402) throw new Error((genData as any).error);
@@ -798,6 +801,37 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
             >
               <Sparkles size={16} />
               {status === "done" ? "Gerar Novo Carrossel" : "Gerar Carrossel"}
+            </button>
+
+            {/* IA Treinada toggle */}
+            <button
+              onClick={() => {
+                const next = !useTraining;
+                setUseTraining(next);
+                try { localStorage.setItem("xpz_use_training", String(next)); } catch {}
+              }}
+              className="flex items-center justify-between w-full px-3 py-2 rounded-xl transition-all"
+              style={{
+                background: useTraining ? "rgba(139,92,246,0.1)" : "rgba(255,255,255,0.025)",
+                border: `1px solid ${useTraining ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.07)"}`,
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <Brain size={13} style={{ color: useTraining ? "rgba(196,181,253,0.9)" : "rgba(255,255,255,0.25)" }} />
+                <span className="text-xs font-medium" style={{ color: useTraining ? "rgba(196,181,253,0.9)" : "rgba(255,255,255,0.3)" }}>
+                  Usar IA Treinada
+                </span>
+                {useTraining && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide" style={{ background: "rgba(139,92,246,0.2)", color: "rgba(167,139,250,0.8)" }}>
+                    Ativo
+                  </span>
+                )}
+              </div>
+              <div className="w-7 h-4 rounded-full relative transition-colors flex-shrink-0"
+                style={{ background: useTraining ? "rgba(139,92,246,0.7)" : "rgba(255,255,255,0.1)" }}>
+                <div className="w-3 h-3 rounded-full bg-white absolute top-0.5 transition-all"
+                  style={{ left: useTraining ? "calc(100% - 14px)" : "2px", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+              </div>
             </button>
 
 
