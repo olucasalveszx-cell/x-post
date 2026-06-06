@@ -286,6 +286,15 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
 
   useEffect(() => { if (open) setActive(0); }, [open]);
 
+  // Prevent ghost clicks / touch-to-click delays from immediately closing after open
+  const canCloseRef = useRef(false);
+  useEffect(() => {
+    if (!open) return;
+    canCloseRef.current = false;
+    const t = setTimeout(() => { canCloseRef.current = true; }, 350);
+    return () => clearTimeout(t);
+  }, [open]);
+
   if (!open) return null;
 
   const current = STYLES[active];
@@ -293,7 +302,7 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
-      onClick={onClose}
+      onClick={() => { if (canCloseRef.current) onClose(); }}
     >
       <div
         className="bg-[var(--bg-2)] border border-[var(--border-2)] rounded-2xl p-5 w-full max-w-[92vw] md:max-w-[520px] shadow-2xl"
