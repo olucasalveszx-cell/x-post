@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Sparkles, Languages, CalendarClock, StickyNote, Loader2, Plus, Trash2, ChevronDown, ChevronRight, Check, Mic2 } from "lucide-react";
+import { Sparkles, Languages, CalendarClock, StickyNote, Loader2, Plus, Trash2, ChevronDown, ChevronRight, Check } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import GeneratorPanel from "./GeneratorPanel";
@@ -12,6 +12,7 @@ interface Props {
   onGenerate: (slides: Slide[]) => void;
   onLayoutChange?: (slides: Slide[]) => void;
   currentSlides?: Slide[];
+  defaultTab?: Tab;
 }
 
 type Tab = "generate" | "posts" | "translate" | "notes";
@@ -295,8 +296,8 @@ function createChoqueiSlide(name: string, handle: string, picture = "", W = 1080
   };
 }
 
-export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = [] }: Props) {
-  const [tab, setTab] = useState<Tab>("generate");
+export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = [], defaultTab = "generate" }: Props) {
+  const [tab, setTab] = useState<Tab>(defaultTab);
 
   const handleChoqueiTemplate = () => {
     const igAccount = typeof window !== "undefined"
@@ -323,15 +324,6 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
         <CalendarClock size={13} />
         📅 Agendar & Posts
       </button>
-
-      {/* Transcrição Inteligente */}
-      <a
-        href="/transcricao"
-        className="flex items-center justify-center gap-2 py-2 text-xs font-semibold border-b border-[var(--border)] transition-colors shrink-0 bg-violet-500/5 hover:bg-violet-500/10 text-violet-400 hover:text-violet-300"
-      >
-        <Mic2 size={13} />
-        🎙️ Transcrição Inteligente
-      </a>
 
       {/* Abas secundárias */}
       <div className="flex border-b border-[var(--border)] shrink-0">

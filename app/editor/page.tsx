@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuid } from "uuid";
-import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle, Instagram, Check, Trash2, Loader2 } from "lucide-react";
+import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle, Instagram, Check, Trash2, Loader2, CalendarClock, Mic2 } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
@@ -123,6 +123,7 @@ export default function EditorPage() {
   const [showRestoreBanner, setShowRestoreBanner] = useState(false);
   const [credits, setCredits] = useState<{ remaining: number; limit: number; unlimited: boolean } | null>(null);
   const [mobilePanel, setMobilePanel] = useState<"side" | null>(null);
+  const [mobilePanelTab, setMobilePanelTab] = useState<"generate" | "posts" | "translate" | "notes">("generate");
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
@@ -497,8 +498,12 @@ export default function EditorPage() {
     }
   };
 
-  const handleStyleSelect = useCallback((style: "layouts" | "twitter" | "comrosto" | "biblioteca" | "choquei") => {
+  const handleStyleSelect = useCallback((style: "layouts" | "twitter" | "comrosto" | "biblioteca" | "choquei" | "transcricao") => {
     setShowStyleSelector(false);
+    if (style === "transcricao") {
+      window.location.href = "/transcricao";
+      return;
+    }
     if (style === "comrosto") {
       setShowFaceCarousel(true);
       return;
@@ -1123,7 +1128,7 @@ export default function EditorPage() {
                 <button onClick={() => setMobilePanel(null)} className="p-1.5 rounded-lg bg-[var(--bg-3)] text-[var(--text-2)]"><X size={16} /></button>
               </div>
               <div className="flex-1 overflow-y-auto">
-                <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} onLayoutChange={handleGenerate} currentSlides={slides} />
+                <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} onLayoutChange={handleGenerate} currentSlides={slides} defaultTab={mobilePanelTab} />
               </div>
             </div>
           )
@@ -1218,29 +1223,36 @@ export default function EditorPage() {
       {/* ── Barra inferior mobile ─────────────────────────────── */}
       {isMobile && (
         <div className="shrink-0 bg-[var(--bg-2)] border-t border-[var(--border)]"
-          style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", zIndex: 20 }}>
+          style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", zIndex: 20 }}>
           {[
             {
               id: "side",
-              icon: <Sparkles size={20} />,
-              label: "IA",
-              action: () => setMobilePanel(mobilePanel === "side" ? null : "side"),
-              active: mobilePanel === "side",
+              icon: <Sparkles size={19} />,
+              label: "Gerar",
+              action: () => { setMobilePanelTab("generate"); setMobilePanel(mobilePanel === "side" ? null : "side"); },
+              active: mobilePanel === "side" && mobilePanelTab === "generate",
             },
             {
-              id: "nexa",
-              icon: <MessageCircle size={20} />,
-              label: "Nexa",
-              action: () => setShowAI(true),
+              id: "posts",
+              icon: <CalendarClock size={19} />,
+              label: "Posts",
+              action: () => { setMobilePanelTab("posts"); setMobilePanel(mobilePanel === "side" ? null : "side"); },
+              active: mobilePanel === "side" && mobilePanelTab === "posts",
+            },
+            {
+              id: "transcricao",
+              icon: <Mic2 size={19} />,
+              label: "Transcrição",
+              action: () => { window.location.href = "/transcricao"; },
               active: false,
             },
             {
               id: "pub",
               icon: (
                 <div className="relative">
-                  <Instagram size={20} />
-                  <div className="absolute -bottom-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-blue-500 flex items-center justify-center border border-[var(--bg-2)]">
-                    <Check size={7} strokeWidth={3} className="text-white" />
+                  <Instagram size={19} />
+                  <div className="absolute -bottom-1 -right-1.5 w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center border border-[var(--bg-2)]">
+                    <Check size={6} strokeWidth={3} className="text-white" />
                   </div>
                 </div>
               ),
@@ -1250,15 +1262,15 @@ export default function EditorPage() {
             },
             {
               id: "profile",
-              icon: <UserCircle size={20} />,
+              icon: <UserCircle size={19} />,
               label: "Perfil",
               action: () => setShowProfile(true),
               active: false,
             },
           ].map((tab) => (
             <button key={tab.id} onClick={tab.action}
-              className="flex flex-col items-center justify-center gap-1 py-3.5 transition-colors"
-              style={{ color: tab.active ? "#4c6ef5" : "#6b7280", background: tab.active ? "rgba(76,110,245,0.08)" : "transparent", fontSize: 11, touchAction: "manipulation" }}>
+              className="flex flex-col items-center justify-center gap-1 py-3 transition-colors"
+              style={{ color: tab.active ? "#4c6ef5" : "#6b7280", background: tab.active ? "rgba(76,110,245,0.08)" : "transparent", fontSize: 10, touchAction: "manipulation" }}>
               {tab.icon}
               <span>{tab.label}</span>
             </button>
