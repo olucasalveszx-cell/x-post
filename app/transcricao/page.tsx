@@ -77,6 +77,7 @@ export default function TranscricaoPage() {
   const [generatingCarousel, setGeneratingCarousel] = useState(false);
   const [carouselDone, setCarouselDone] = useState(false);
   const [carouselDraftId, setCarouselDraftId] = useState<string | null>(null);
+  const [carouselError, setCarouselError] = useState("");
 
   const [library, setLibrary] = useState<LibraryItem[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(true);
@@ -181,6 +182,7 @@ export default function TranscricaoPage() {
   const generateCarousel = async () => {
     if (!result) return;
     setGeneratingCarousel(true);
+    setCarouselError("");
     try {
       const res = await fetch("/api/transcricao/carousel", {
         method: "POST",
@@ -188,11 +190,12 @@ export default function TranscricaoPage() {
         body: JSON.stringify({ transcriptionId: result.id, format: selectedFormat }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error ?? `Erro ${res.status}`);
+      if (!data.draftId) throw new Error("Servidor não retornou o rascunho. Tente novamente.");
       setCarouselDraftId(data.draftId);
       setCarouselDone(true);
     } catch (e: any) {
-      setErrorMsg(e.message);
+      setCarouselError(e.message ?? "Erro desconhecido");
     } finally {
       setGeneratingCarousel(false);
     }
@@ -616,12 +619,19 @@ export default function TranscricaoPage() {
                         </a>
                       </div>
                     ) : (
+                      <>
+                      {carouselError && (
+                        <div className="p-3 rounded-xl text-sm text-red-400 mb-3" style={{ background:"rgba(239,68,68,0.07)", border:"1px solid rgba(239,68,68,0.2)" }}>
+                          ⚠ {carouselError}
+                        </div>
+                      )}
                       <button onClick={generateCarousel} disabled={generatingCarousel}
                         className="w-full py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-35 relative overflow-hidden group"
                         style={{ background:"linear-gradient(135deg,#5b21b6,#7c3aed,#9333ea)", boxShadow:"0 8px 32px rgba(109,40,217,0.35)" }}>
                         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background:"rgba(255,255,255,0.08)" }} />
                         {generatingCarousel ? <><Loader2 size={14} className="animate-spin" /> Gerando...</> : <><Sparkles size={14} /> Gerar Carrossel com IA</>}
                       </button>
+                      </>
                     )}
                   </div>
                 )}
