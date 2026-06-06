@@ -123,9 +123,25 @@ export async function POST(req: NextRequest) {
 
   try {
     if (sourceUrl && !path) {
-      // Download from URL
-      const response = await fetch(sourceUrl, { signal: AbortSignal.timeout(20000) });
-      if (!response.ok) throw new Error(`Não foi possível baixar o arquivo: ${response.statusText}`);
+      // Download from URL — with browser-like headers + 2 retries on 429/503
+      const BROWSER_HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "audio/*,video/*,*/*;q=0.9",
+        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+      };
+      let response: Response | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 3000 * attempt));
+        response = await fetch(sourceUrl, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(25000) });
+        if (response.status !== 429 && response.status !== 503) break;
+      }
+      if (!response || !response.ok) {
+        const status = response?.status ?? 0;
+        if (status === 429) throw new Error("O serviço da URL está bloqueando o download (rate limit). Baixe o arquivo manualmente e envie por upload.");
+        if (status === 403) throw new Error("Acesso negado pela URL informada. Use um link público ou envie o arquivo por upload.");
+        if (status === 404) throw new Error("Arquivo não encontrado na URL informada.");
+        throw new Error(`Não foi possível baixar o arquivo: ${response?.statusText ?? "erro de rede"}`);
+      }
       const contentType = response.headers.get("content-type") ?? "audio/mpeg";
       mimeType = contentType.split(";")[0].trim();
       buffer = Buffer.from(await response.arrayBuffer());
