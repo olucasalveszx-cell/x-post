@@ -228,10 +228,10 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
           </button>
         </div>
 
-        {/* FIFA Carousel */}
+        {/* FIFA 3D Carousel */}
         <div
           className="relative select-none"
-          style={{ height: 290, overflow: "hidden" }}
+          style={{ height: 230, overflow: "hidden" }}
           onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
           onTouchEnd={e => {
             if (touchStartX.current === null) return;
@@ -247,9 +247,10 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
               const absDist = Math.abs(dist);
               if (absDist > 2) return null;
 
-              const scale = [1, 0.73, 0.54][absDist];
-              const opacity = [1, 0.35, 0.12][absDist];
-              const tx = dist * SLOT;
+              const scale   = [1, 0.72, 0.52][absDist];
+              const opacity = [1, 0.60, 0.25][absDist];
+              const ry      = -dist * [0, 42, 60][absDist];
+              const tx      = dist * SLOT;
               const isActive = dist === 0;
 
               return (
@@ -258,29 +259,28 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
                   onClick={() => isActive ? onSelect(s.id) : setActive(i)}
                   style={{
                     position: "absolute",
-                    width: 150,
-                    transform: `translateX(${tx}px) scale(${scale})`,
+                    width: 148,
+                    transform: `perspective(600px) translateX(${tx}px) rotateY(${ry}deg) scale(${scale})`,
                     opacity,
                     zIndex: 10 - absDist,
-                    transition: "transform 0.36s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.36s ease",
+                    transition: "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.38s ease",
                     transformOrigin: "center center",
                     cursor: "pointer",
                   }}
                 >
-                  <div className={`flex flex-col gap-2.5 p-3 rounded-xl border transition-colors ${
-                    isActive
-                      ? `${s.borderActive} ${s.bgActive} shadow-xl`
-                      : "border-[var(--border-2)]"
-                  }`}>
-                    <div className="relative w-full rounded-lg overflow-hidden" style={{ aspectRatio: "4/5" }}>
-                      {s.preview}
-                      <div className={`absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-bold border ${s.tag.color}`}>
-                        {s.tag.icon} {s.tag.text}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="font-bold text-[var(--text)] text-xs leading-tight">{s.label}</p>
-                      <p className="text-[10px] text-[var(--text-3)] leading-snug mt-0.5">{s.desc}</p>
+                  {/* bare image — no box */}
+                  <div
+                    className="relative w-full rounded-2xl overflow-hidden"
+                    style={{
+                      aspectRatio: "4/5",
+                      boxShadow: isActive
+                        ? "0 20px 60px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.08)"
+                        : "0 8px 24px rgba(0,0,0,0.4)",
+                    }}
+                  >
+                    {s.preview}
+                    <div className={`absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-bold border ${s.tag.color}`}>
+                      {s.tag.icon} {s.tag.text}
                     </div>
                   </div>
                 </div>
@@ -289,8 +289,14 @@ export default function StyleSelectorModal({ open, onClose, onSelect }: Props) {
           </div>
         </div>
 
+        {/* Active card info */}
+        <div className="text-center mt-3 min-h-[38px] transition-all duration-300">
+          <p className="font-bold text-[var(--text)] text-sm leading-tight">{current.label}</p>
+          <p className="text-[11px] text-[var(--text-3)] mt-0.5">{current.desc}</p>
+        </div>
+
         {/* Navigation */}
-        <div className="flex items-center justify-between mt-4 gap-3">
+        <div className="flex items-center justify-between mt-3 gap-3">
           <button
             onClick={prev}
             disabled={active === 0}
