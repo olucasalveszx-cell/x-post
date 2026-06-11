@@ -1,0 +1,550 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { X, Search, Terminal, Crown, ChevronRight, ChevronLeft, Sparkles, Clipboard, Upload, LayoutTemplate, Images, ArrowLeft } from "lucide-react";
+import { WritingStyle } from "@/types";
+
+export type ImageStyle = "gemini" | "foto_real" | "cinematico" | "biblioteca";
+
+export type ImageLayout = "mixed" | "full" | "square" | "top" | "base" | "viral" | "choquei";
+
+export interface WizardSettings {
+  topic: string;
+  inputMode: "topic" | "prompt";
+  customPrompt: string;
+  slideCount: number;
+  writingStyle: WritingStyle;
+  imageStyle: ImageStyle;
+  imageLayout: ImageLayout;
+  refImageBase64: string | null;
+  refImageMime: string;
+  refImagePreview: string | null;
+  // Branding
+  handle: string;
+  brandName: string;
+  carouselTitle: string;
+}
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (settings: WizardSettings) => void;
+  isPro: boolean;
+  initial?: Partial<WizardSettings>;
+  onBack?: () => void;
+  isTwitterMode?: boolean;
+}
+
+const WRITING_STYLES: { value: WritingStyle; emoji: string; label: string; desc: string }[] = [
+  { value: "viral",        emoji: "⚡", label: "Viral",        desc: "Para o scroll, chocante" },
+  { value: "noticias",     emoji: "📰", label: "Notícia",      desc: "Breaking news, urgente" },
+  { value: "informativo",  emoji: "📊", label: "Informativo",  desc: "Dados e fatos objetivos" },
+  { value: "educativo",    emoji: "🎓", label: "Educativo",    desc: "Didático, passo a passo" },
+  { value: "motivacional", emoji: "🔥", label: "Motivacional", desc: "Emocional, inspirador" },
+];
+
+const SLIDE_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+export default function GeneratorWizard({ open, onClose, onConfirm, isPro, initial, isTwitterMode, onBack }: Props) {
+  const [step, setStep] = useState(0);
+  const [inputMode, setInputMode] = useState<"topic" | "prompt">(initial?.inputMode ?? "topic");
+  const [topic, setTopic] = useState(initial?.topic ?? "");
+  const [customPrompt, setCustomPrompt] = useState(initial?.customPrompt ?? "");
+  const [slideCount, setSlideCount] = useState(initial?.slideCount ?? 7);
+  const [writingStyle, setWritingStyle] = useState<WritingStyle>(initial?.writingStyle ?? "viral");
+  const [imageStyle, setImageStyle]   = useState<ImageStyle>(initial?.imageStyle ?? "gemini");
+  const [imageLayout, setImageLayout] = useState<ImageLayout>(initial?.imageLayout ?? "mixed");
+  const [refImageBase64, setRefImageBase64] = useState<string | null>(initial?.refImageBase64 ?? null);
+  const [refImageMime, setRefImageMime] = useState(initial?.refImageMime ?? "image/jpeg");
+  const [refImagePreview, setRefImagePreview] = useState<string | null>(initial?.refImagePreview ?? null);
+  const [handle, setHandle] = useState(() => initial?.handle ?? (typeof localStorage !== "undefined" ? localStorage.getItem("xpz_handle") ?? "" : ""));
+  const [brandName, setBrandName] = useState(() => initial?.brandName ?? (typeof localStorage !== "undefined" ? localStorage.getItem("xpz_brand") ?? "" : ""));
+  const [carouselTitle, setCarouselTitle] = useState(() => initial?.carouselTitle ?? (typeof localStorage !== "undefined" ? localStorage.getItem("xpz_carousel_title") ?? "" : ""));
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) setStep(0);
+  }, [open]);
+
+  useEffect(() => {
+    if (!initial) return;
+    if (initial.topic !== undefined) setTopic(initial.topic);
+    if (initial.customPrompt !== undefined) setCustomPrompt(initial.customPrompt);
+    if (initial.inputMode !== undefined) setInputMode(initial.inputMode);
+  }, [initial]);
+
+  if (!open) return null;
+
+  const canContinue = step === 0
+    ? (inputMode === "topic" ? topic.trim().length > 0 : customPrompt.trim().length > 0)
+    : true;
+
+  const handlePasteImage = async () => {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find((t) => t.startsWith("image/"));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          const reader = new FileReader();
+          reader.onload = () => {
+            const full = reader.result as string;
+            setRefImageBase64(full.split(",")[1]);
+            setRefImageMime(imageType);
+            setRefImagePreview(full);
+          };
+          reader.readAsDataURL(blob);
+          return;
+        }
+      }
+      alert("Nenhuma imagem na área de transferência.");
+    } catch {
+      alert("Não foi possível acessar a área de transferência.");
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const full = reader.result as string;
+      setRefImageBase64(full.split(",")[1]);
+      setRefImageMime(file.type);
+      setRefImagePreview(full);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleConfirm = () => {
+    try {
+      localStorage.setItem("xpz_handle", handle);
+      localStorage.setItem("xpz_brand", brandName);
+      localStorage.setItem("xpz_carousel_title", carouselTitle);
+    } catch {}
+    onConfirm({
+      topic, inputMode, customPrompt, slideCount, writingStyle,
+      imageStyle: isTwitterMode ? "foto_real" : imageStyle,
+      imageLayout: isTwitterMode ? "top" : imageLayout,
+      refImageBase64, refImageMime, refImagePreview, handle, brandName, carouselTitle,
+    });
+    onClose();
+  };
+
+  const modal = (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
+      style={{ background: "rgba(0,0,0,0.80)", backdropFilter: "blur(6px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="relative w-full sm:max-w-md bg-[var(--bg-2)] sm:border border-t border-[var(--border-2)] rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col" style={{ maxHeight: "95vh" }}>
+
+        {/* Back */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="absolute top-4 left-4 p-1.5 rounded-full bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors z-10"
+            title="Voltar"
+          >
+            <ArrowLeft size={16} />
+          </button>
+        )}
+
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1.5 rounded-full bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors z-10"
+        >
+          <X size={16} />
+        </button>
+
+        {/* Step dots */}
+        <div className="flex items-center justify-center gap-2 pt-6 pb-1 shrink-0">
+          {(isTwitterMode ? [0] : [0, 1]).map((i) => (
+            <div
+              key={i}
+              className="h-1.5 rounded-full transition-all duration-300"
+              style={{
+                width: i === step ? 28 : 10,
+                background: i <= step ? "var(--accent)" : "rgba(255,255,255,0.1)",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+
+          {/* ── Step 0: Conteúdo ── */}
+          {step === 0 && (
+            <div className="flex flex-col gap-5">
+              <div className="text-center">
+                <h2 className="text-xl font-bold">{isTwitterMode ? "Post X / Twitter" : "Configurar IA"}</h2>
+                <p className="text-sm text-[var(--text-3)] mt-1">{isTwitterMode ? "Sobre o que será o post? A IA cria o conteúdo no estilo X." : "Diga sobre o que é o conteúdo e como quer o carrossel"}</p>
+              </div>
+
+              {/* Input mode toggle */}
+              <div className="flex rounded-xl border border-[var(--border-2)] overflow-hidden">
+                <button
+                  onClick={() => setInputMode("topic")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${inputMode === "topic" ? "bg-brand-600 text-white" : "bg-[var(--bg)] text-[var(--text-3)] hover:text-[var(--text-2)]"}`}
+                >
+                  <Search size={12} /> Por Tópico
+                </button>
+                <button
+                  onClick={() => setInputMode("prompt")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${inputMode === "prompt" ? "bg-brand-600 text-white" : "bg-[var(--bg)] text-[var(--text-3)] hover:text-[var(--text-2)]"}`}
+                >
+                  <Terminal size={12} /> Prompt Livre
+                </button>
+              </div>
+
+              {/* Content input */}
+              <div>
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-2">
+                  Sobre o que é o conteúdo?
+                </p>
+                {inputMode === "topic" ? (
+                  <textarea
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="Ex: 5 prompts ultra realistas para foto de perfil com IA..."
+                    rows={4}
+                    autoFocus
+                    className="w-full bg-[var(--bg)] border border-[var(--border-2)] text-[var(--text)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)] resize-none"
+                  />
+                ) : (
+                  <textarea
+                    value={customPrompt}
+                    onChange={(e) => setCustomPrompt(e.target.value)}
+                    placeholder={`Descreva cada slide:\n\nSlide 1: Título impactante\nSlide 2: Problema principal\nSlide 3: Solução...`}
+                    rows={5}
+                    autoFocus
+                    className="w-full bg-[var(--bg)] border border-[var(--border-2)] text-[var(--text)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)] resize-none font-mono text-xs leading-relaxed"
+                  />
+                )}
+              </div>
+
+              {/* Reference images — Pro only */}
+              {isPro && inputMode === "topic" && (
+                <div>
+                  <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-1 flex items-center gap-1.5">
+                    Imagens de Referência
+                    <span className="text-[9px] text-[var(--text-3)]">(opcional)</span>
+                    <span className="text-[9px] text-yellow-400 flex items-center gap-0.5 ml-auto"><Crown size={9} /> Pro</span>
+                  </p>
+                  <p className="text-[11px] text-[var(--text-3)] mb-2">Anexe capturas de carrosséis — a IA analisa e cria conteúdo inspirado.</p>
+
+                  {refImagePreview ? (
+                    <div className="relative rounded-xl overflow-hidden border border-[var(--border-2)]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={refImagePreview} alt="Referência" className="w-full h-28 object-cover" />
+                      <button
+                        onClick={() => { setRefImageBase64(null); setRefImagePreview(null); }}
+                        className="absolute top-2 right-2 p-1 rounded-full bg-black/70 text-white hover:bg-black/90 transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={handlePasteImage}
+                        className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/40 hover:bg-brand-500/5 text-sm text-[var(--text-2)] hover:text-[var(--text)] transition-all"
+                      >
+                        <Clipboard size={13} /> Colar Imagem
+                      </button>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/40 hover:bg-brand-500/5 text-sm text-[var(--text-2)] hover:text-[var(--text)] transition-all"
+                      >
+                        <Upload size={13} /> Upload
+                      </button>
+                      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Branding */}
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold">Sua Marca <span className="normal-case text-[var(--text-3)]">(opcional)</span></p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] text-[var(--text-3)]">@handle</label>
+                    <input
+                      value={handle}
+                      onChange={(e) => setHandle(e.target.value.replace(/^@+/, ""))}
+                      placeholder="seuperfil"
+                      className="bg-[var(--bg)] border border-[var(--border-2)] text-[var(--text)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] text-[var(--text-3)]">Nome da marca</label>
+                    <input
+                      value={brandName}
+                      onChange={(e) => setBrandName(e.target.value)}
+                      placeholder="MyBrand"
+                      className="bg-[var(--bg)] border border-[var(--border-2)] text-[var(--text)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-[var(--text-3)]">Título do carrossel (aparece no topo direito)</label>
+                  <input
+                    value={carouselTitle}
+                    onChange={(e) => setCarouselTitle(e.target.value)}
+                    placeholder="Ex: Carrosséis com IA"
+                    className="bg-[var(--bg)] border border-[var(--border-2)] text-[var(--text)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 placeholder:text-[var(--text-3)]"
+                  />
+                </div>
+              </div>
+
+              {/* Slide count */}
+              <div>
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3">Número de Slides</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {SLIDE_COUNTS.map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setSlideCount(n)}
+                      className={`py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        slideCount === n
+                          ? "bg-brand-600 text-white font-bold"
+                          : "bg-[var(--bg)] border border-[var(--border-2)] text-[var(--text-2)] hover:border-brand-500/40 hover:text-[var(--text)]"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tom de escrita — exibido no step 0 apenas em modo Twitter */}
+              {isTwitterMode && (
+                <div>
+                  <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3">Tom da escrita</p>
+                  <div className="flex flex-wrap gap-2">
+                    {WRITING_STYLES.map((ws) => (
+                      <button
+                        key={ws.value}
+                        onClick={() => setWritingStyle(ws.value)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
+                          writingStyle === ws.value
+                            ? "border-sky-500 bg-sky-500/10 text-[var(--text)]"
+                            : "border-[var(--border-2)] bg-[var(--bg)] text-[var(--text-2)] hover:border-sky-500/30 hover:text-[var(--text)]"
+                        }`}
+                      >
+                        <span>{ws.emoji}</span> {ws.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Step 1: Estilo ── */}
+          {step === 1 && (
+            <div className="flex flex-col gap-5">
+              <div className="text-center">
+                <h2 className="text-xl font-bold">Estilo do Post</h2>
+                <p className="text-sm text-[var(--text-3)] mt-1">Como quer que a IA escreva e ilustre o carrossel?</p>
+              </div>
+
+              {/* Writing style */}
+              <div>
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3">Tom da escrita</p>
+                <div className="flex flex-col gap-2">
+                  {WRITING_STYLES.map((ws) => (
+                    <button
+                      key={ws.value}
+                      onClick={() => setWritingStyle(ws.value)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left ${
+                        writingStyle === ws.value
+                          ? "border-brand-500 bg-brand-500/10"
+                          : "border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/30 hover:bg-[var(--bg-3)]"
+                      }`}
+                    >
+                      <span className="text-lg">{ws.emoji}</span>
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${writingStyle === ws.value ? "text-[var(--text)]" : "text-[var(--text-2)]"}`}>{ws.label}</p>
+                        <p className="text-[11px] text-[var(--text-3)]">{ws.desc}</p>
+                      </div>
+                      {writingStyle === ws.value && (
+                        <div className="w-2 h-2 rounded-full bg-brand-500 shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Image style */}
+              <div>
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3">Modo de imagem</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { value: "gemini",     label: "IA",           desc: "Gera do zero com IA",       icon: "✦", badge: "PRO",  badgeColor: "text-yellow-400 bg-yellow-500/10" },
+                    { value: "foto_real",  label: "Foto Real",    desc: "Ultra-realista · rápido",    icon: "📷", badge: "FREE", badgeColor: "text-green-400  bg-green-500/10"  },
+                    { value: "cinematico", label: "Cinemático",   desc: "Teal-orange · ARRI",         icon: "🎬", badge: "PRO",  badgeColor: "text-yellow-400 bg-yellow-500/10" },
+                    { value: "biblioteca", label: "Biblioteca",   desc: "Reusa imagens salvas",       icon: "🗂", badge: "GRÁTIS", badgeColor: "text-blue-400 bg-blue-500/10"  },
+                  ] as { value: ImageStyle; label: string; desc: string; icon: string; badge: string; badgeColor: string }[]).map((is) => (
+                    <button
+                      key={is.value}
+                      onClick={() => setImageStyle(is.value)}
+                      className={`relative flex flex-col items-start gap-1 px-3 py-3 rounded-xl border transition-all ${
+                        imageStyle === is.value
+                          ? "border-brand-500 bg-brand-500/10"
+                          : "border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/30"
+                      }`}
+                    >
+                      <span className={`absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded ${is.badgeColor}`}>
+                        {is.badge}
+                      </span>
+                      <span className="text-base leading-none mb-0.5">{is.icon}</span>
+                      <p className={`text-xs font-semibold ${imageStyle === is.value ? "text-[var(--text)]" : "text-[var(--text-2)]"}`}>{is.label}</p>
+                      <p className="text-[10px] text-[var(--text-3)] leading-snug">{is.desc}</p>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Aviso modo biblioteca */}
+                {imageStyle === "biblioteca" && (
+                  <div className="mt-2 flex items-start gap-2 bg-blue-500/8 border border-blue-500/20 rounded-xl px-3 py-2 text-[11px] text-blue-300">
+                    <Images size={12} className="shrink-0 mt-0.5" />
+                    Imagens da sua Biblioteca IA serão usadas. Se a biblioteca estiver vazia, a IA gera automaticamente.
+                  </div>
+                )}
+              </div>
+
+              {/* Image layout */}
+              <div>
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold mb-3 flex items-center gap-1.5">
+                  <LayoutTemplate size={11} /> Layout da imagem
+                </p>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  {/* Viral — destaque especial */}
+                  <button
+                    onClick={() => setImageLayout("viral")}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
+                      imageLayout === "viral"
+                        ? "border-orange-500 bg-orange-500/10"
+                        : "border-[var(--border-2)] bg-[var(--bg)] hover:border-orange-500/40"
+                    }`}
+                  >
+                    <div className="w-8 h-10 rounded-md overflow-hidden bg-[#0a0a0a] border border-orange-500/40 relative shrink-0 flex flex-col justify-end">
+                      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg,#ff6b3520 0%,transparent 60%)" }} />
+                      <div className="absolute top-1 left-1 right-1 h-1 rounded bg-orange-500/70" />
+                      <div className="absolute top-3 left-1 right-2 h-1.5 rounded-sm bg-white/80" />
+                      <div className="absolute bottom-1 left-1 w-3 h-0.5 rounded bg-orange-500/60" />
+                    </div>
+                    <div className="flex flex-col items-start gap-0.5">
+                      <span className={`text-[11px] font-bold ${imageLayout === "viral" ? "text-orange-400" : "text-[var(--text-2)]"}`}>
+                        🔥 Viral Aleatório
+                      </span>
+                      <span className="text-[9px] text-[var(--text-3)] leading-tight">6 templates virais</span>
+                    </div>
+                  </button>
+
+                  {/* Choquei / News */}
+                  <button
+                    onClick={() => setImageLayout("choquei")}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
+                      imageLayout === "choquei"
+                        ? "border-white/50 bg-white/5"
+                        : "border-[var(--border-2)] bg-[var(--bg)] hover:border-white/20"
+                    }`}
+                  >
+                    <div className="w-8 h-10 rounded-md overflow-hidden bg-[#111] border border-white/20 relative shrink-0 flex flex-col">
+                      <div className="h-2 bg-white/15 mx-0.5 mt-0.5 rounded-sm" />
+                      <div className="h-px bg-white/10 mx-0 mt-0.5" />
+                      <div className="h-2 bg-white/8 mx-0.5 mt-0.5 rounded-sm" />
+                      <div className="h-px bg-white/10 mx-0 mt-0.5" />
+                      <div className="flex-1 flex gap-px mx-0.5 mb-0.5 mt-0.5">
+                        <div className="flex-1 bg-white/20 rounded-sm" />
+                        <div className="flex-1 bg-white/10 rounded-sm" />
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-start gap-0.5">
+                      <span className={`text-[11px] font-bold ${imageLayout === "choquei" ? "text-white" : "text-[var(--text-2)]"}`}>
+                        📰 Estilo Choquei
+                      </span>
+                      <span className="text-[9px] text-[var(--text-3)] leading-tight">Post notícia c/ imagem e vídeo</span>
+                    </div>
+                  </button>
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {([
+                    { value: "mixed",  label: "Auto",         preview: "mixed"  },
+                    { value: "full",   label: "Fundo total",  preview: "full"   },
+                    { value: "square", label: "Quadrado",     preview: "square" },
+                    { value: "top",    label: "Img. topo",    preview: "top"    },
+                    { value: "base",   label: "Img. base",    preview: "base"   },
+                  ] as { value: ImageLayout; label: string; preview: string }[]).map((lyt) => (
+                    <button
+                      key={lyt.value}
+                      onClick={() => setImageLayout(lyt.value)}
+                      className={`flex flex-col items-center gap-1.5 px-1 py-2 rounded-xl border transition-all ${
+                        imageLayout === lyt.value
+                          ? "border-brand-500 bg-brand-500/10"
+                          : "border-[var(--border-2)] bg-[var(--bg)] hover:border-brand-500/30"
+                      }`}
+                    >
+                      {/* Mini preview */}
+                      <div className="w-8 h-10 rounded-md overflow-hidden bg-[var(--bg-3)] border border-[var(--border-2)] relative flex flex-col">
+                        {lyt.preview === "full"   && <div className="absolute inset-0 bg-brand-500/25 rounded-md" />}
+                        {lyt.preview === "mixed"  && (<><div className="absolute inset-0 bg-brand-500/15 rounded-md" /><div className="absolute bottom-0 inset-x-0 h-1/3 bg-[var(--bg-3)]" /></>)}
+                        {lyt.preview === "square" && (<><div className="absolute inset-x-1 top-1 bottom-3 bg-brand-500/25 rounded-sm" /><div className="absolute bottom-0 inset-x-0 h-2 bg-[var(--bg-3)]" /></>)}
+                        {lyt.preview === "top"    && (<><div className="absolute top-0 inset-x-0 h-1/2 bg-brand-500/25" /><div className="absolute bottom-0 inset-x-0 h-1/2 bg-[var(--bg-3)]" /></>)}
+                        {lyt.preview === "base"   && (<><div className="absolute top-0 inset-x-0 h-2/5 bg-[var(--bg-3)]" /><div className="absolute bottom-0 inset-x-0 h-3/5 bg-brand-500/25" /></>)}
+                      </div>
+                      <span className={`text-[9px] font-medium leading-tight text-center ${imageLayout === lyt.value ? "text-[var(--text)]" : "text-[var(--text-3)]"}`}>
+                        {lyt.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer navigation */}
+        <div className="px-6 py-4 border-t border-[var(--border)] flex items-center gap-3 shrink-0">
+          <button
+            onClick={step > 0 ? () => setStep((s) => s - 1) : onClose}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-[var(--border-2)] text-[var(--text-2)] hover:text-[var(--text)] text-sm transition-colors"
+          >
+            <ChevronLeft size={14} /> {step > 0 ? "Voltar" : "Cancelar"}
+          </button>
+
+          {step === 0 && !isTwitterMode ? (
+            <button
+              onClick={() => setStep(1)}
+              disabled={!canContinue}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[var(--bg-3)] border border-[var(--border-2)] hover:border-brand-500/40 text-[var(--text)] text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              Continuar <ChevronRight size={14} />
+            </button>
+          ) : (
+            <button
+              onClick={handleConfirm}
+              disabled={!canContinue}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors shadow-lg disabled:opacity-30 disabled:cursor-not-allowed ${
+                isTwitterMode
+                  ? "bg-sky-600 hover:bg-sky-700 shadow-sky-500/20"
+                  : "bg-brand-600 hover:bg-brand-700 shadow-brand-500/20"
+              }`}
+            >
+              <Sparkles size={14} /> {isTwitterMode ? "Gerar Post X / Twitter" : "Gerar Carrossel"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (typeof window === "undefined") return null;
+  return createPortal(modal, document.body);
+}

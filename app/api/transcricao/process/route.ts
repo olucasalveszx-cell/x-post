@@ -1,0 +1,302 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase";
+import { redisSet, redisLPush, redisLTrim } from "@/lib/redis";
+import { geminiText } from "@/lib/gemini-text";
+import { randomUUID } from "crypto";
+
+export const maxDuration = 60;
+
+const BUCKET = "schedule-images";
+
+export interface TranscriptionRecord {
+  id: string;
+  email: string;
+  title: string;
+  sourceType: "upload" | "url";
+  filePath?: string;
+  sourceUrl?: string;
+  transcript: string;
+  language: string;
+  duration?: number;
+  wordCount: number;
+  summary: { short: string; medium: string; detailed: string };
+  topics: { main: string; subtopics: string[]; keywords: string[]; insights: string[]; cta: string };
+  createdAt: string;
+  status: "done" | "error";
+  errorMsg?: string;
+}
+
+export function transcriptionKey(id: string) { return `transcription:${id}`; }
+export function transcriptionsListKey(email: string) { return `transcriptions:${email}`; }
+
+// Normaliza MIME types para o que Gemini aceita
+function toGeminiMime(mime: string): string {
+  const map: Record<string, string> = {
+    "audio/x-wav": "audio/wav",
+    "audio/x-m4a": "audio/m4a",
+    "audio/mp3": "audio/mpeg",
+    "video/quicktime": "video/mp4",
+    "video/x-msvideo": "video/mp4",
+  };
+  return map[mime] ?? mime;
+}
+
+// Faz upload do áudio para Gemini Files API e retorna a URI
+async function uploadToGeminiFileApi(buffer: Buffer, mimeType: string, apiKey: string): Promise<string> {
+  const gMime = toGeminiMime(mimeType);
+  const boundary = `gup${Date.now()}`;
+  const meta = `{"file":{"displayName":"audio"}}`;
+  const body = Buffer.concat([
+    Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${gMime}\r\n\r\n`),
+    buffer,
+    Buffer.from(`\r\n--${boundary}--`),
+  ]);
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
+    { method: "POST", headers: { "Content-Type": `multipart/related; boundary=${boundary}`, "X-Goog-Upload-Protocol": "multipart" }, body }
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message ?? "Gemini file upload falhou");
+  const uri: string = data.file?.uri;
+  if (!uri) throw new Error("Gemini não retornou URI do arquivo");
+  // Aguarda arquivo ficar ACTIVE (máx 8s)
+  for (let i = 0; i < 4; i++) {
+    const check = await fetch(`${uri.replace("https://generativelanguage.googleapis.com", `https://generativelanguage.googleapis.com`)}?key=${apiKey}`).then(r => r.json()).catch(() => ({}));
+    if (!check.file || check.file.state === "ACTIVE") break;
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  return uri;
+}
+
+async function transcribeWithWhisper(buffer: Buffer, filename: string, mimeType: string): Promise<{ text: string; language: string; duration: number }> {
+  const ab = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+
+  // Helper: chama Whisper-compatible endpoint
+  async function callWhisperEndpoint(baseUrl: string, apiKey: string, model: string): Promise<{ text: string; language: string; duration: number } | null> {
+    const form = new FormData();
+    form.append("file", new File([ab], filename, { type: mimeType }));
+    form.append("model", model);
+    form.append("response_format", "verbose_json");
+    const res = await fetch(`${baseUrl}/audio/transcriptions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: form,
+    });
+    const data = await res.json();
+    if (res.ok) return { text: data.text ?? "", language: data.language ?? "pt", duration: data.duration ?? 0 };
+    const msg: string = data.error?.message ?? `error ${res.status}`;
+    if (/quota|rate.?limit|exceeded|billing|insufficient/i.test(msg)) return null; // cota esgotada → tenta próximo
+    throw new Error(msg);
+  }
+
+  // 1. OpenAI Whisper
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (openaiKey) {
+    try {
+      const r = await callWhisperEndpoint("https://api.openai.com/v1", openaiKey, "whisper-1");
+      if (r) return r;
+      console.warn("[transcribe] OpenAI cota esgotada → tentando Groq");
+    } catch (e: any) { console.warn("[transcribe] OpenAI erro:", e.message); }
+  }
+
+  // 2. Groq Whisper (gratuito, API idêntica à OpenAI)
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    try {
+      const r = await callWhisperEndpoint("https://api.groq.com/openai/v1", groqKey, "whisper-large-v3-turbo");
+      if (r) { console.log("[transcribe] Groq OK"); return r; }
+      console.warn("[transcribe] Groq cota esgotada → tentando Gemini");
+    } catch (e: any) { console.warn("[transcribe] Groq erro:", e.message); }
+  }
+
+  // 3. Gemini File API + generateContent
+  const geminiKeys = [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean) as string[];
+  if (geminiKeys.length) {
+    for (const key of geminiKeys) {
+      for (const model of ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"]) {
+        try {
+          const fileUri = await uploadToGeminiFileApi(buffer, mimeType, key);
+          const gMime = toGeminiMime(mimeType);
+          const body = {
+            contents: [{ parts: [
+              { fileData: { mimeType: gMime, fileUri } },
+              { text: "Transcreva este áudio na íntegra. Retorne SOMENTE o texto falado, sem timestamps, marcadores ou explicações." },
+            ]}],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
+          };
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+            { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+          );
+          const data = await res.json();
+          if (!res.ok) { console.warn(`[transcribe] Gemini ${model} falhou:`, data.error?.message); continue; }
+          const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+          if (text.trim()) { console.log(`[transcribe] Gemini ${model} OK`); return { text: text.trim(), language: "pt", duration: 0 }; }
+        } catch (e: any) { console.warn(`[transcribe] Gemini ${model} erro:`, e.message); }
+      }
+    }
+  }
+
+  const missing = [!openaiKey && "OPENAI_API_KEY", !groqKey && "GROQ_API_KEY", !geminiKeys.length && "GEMINI_API_KEY"].filter(Boolean).join(", ");
+  throw new Error(
+    groqKey || geminiKeys.length
+      ? "Serviços de transcrição indisponíveis no momento. Tente novamente em alguns minutos."
+      : `Configure ao menos uma chave de API: ${missing}. Recomendado: crie uma conta gratuita em groq.com e adicione GROQ_API_KEY no Vercel.`
+  );
+}
+
+async function analyzeWithAI(transcript: string, title: string): Promise<TranscriptionRecord["summary"] & { topics: TranscriptionRecord["topics"] }> {
+  const prompt = `Você é um especialista em análise de conteúdo para redes sociais.
+
+Analise a seguinte transcrição e gere um JSON estruturado com análise completa.
+
+TÍTULO: ${title}
+TRANSCRIÇÃO:
+${transcript.substring(0, 6000)}
+
+Retorne APENAS este JSON válido, sem markdown:
+{
+  "summary": {
+    "short": "resumo de 1-2 frases impactantes",
+    "medium": "resumo de 1 parágrafo (5-6 frases) explicando os pontos principais",
+    "detailed": "análise completa em 2-3 parágrafos com contexto, argumentos e conclusões"
+  },
+  "topics": {
+    "main": "tema central do conteúdo em até 8 palavras",
+    "subtopics": ["subtema 1", "subtema 2", "subtema 3"],
+    "keywords": ["palavra1", "palavra2", "palavra3", "palavra4", "palavra5"],
+    "insights": [
+      "insight acionável 1 baseado no conteúdo",
+      "insight acionável 2",
+      "insight acionável 3"
+    ],
+    "cta": "chamada para ação sugerida para o carrossel"
+  }
+}`;
+
+  const raw = await geminiText(prompt, { maxTokens: 1500, temperature: 0.5 });
+
+  try {
+    const clean = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const parsed = JSON.parse(clean);
+    return { ...parsed.summary, topics: parsed.topics };
+  } catch {
+    return {
+      short: transcript.substring(0, 200) + "...",
+      medium: transcript.substring(0, 500) + "...",
+      detailed: transcript.substring(0, 1000) + "...",
+      topics: {
+        main: title,
+        subtopics: [],
+        keywords: [],
+        insights: ["Análise automática indisponível"],
+        cta: "Siga para mais conteúdo",
+      },
+    };
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email;
+  if (!email) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  const { path, title, sourceType = "upload", sourceUrl } = await req.json();
+  if (!path && !sourceUrl) return NextResponse.json({ error: "path ou sourceUrl obrigatório" }, { status: 400 });
+
+  const id = randomUUID();
+  let buffer: Buffer;
+  let filename: string;
+  let mimeType: string;
+
+  try {
+    if (sourceUrl && !path) {
+      // Download from URL — with browser-like headers + 2 retries on 429/503
+      const BROWSER_HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "audio/*,video/*,*/*;q=0.9",
+        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+      };
+      let response: Response | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 3000 * attempt));
+        response = await fetch(sourceUrl, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(25000) });
+        if (response.status !== 429 && response.status !== 503) break;
+      }
+      if (!response || !response.ok) {
+        const status = response?.status ?? 0;
+        if (status === 429) throw new Error("O serviço da URL está bloqueando o download (rate limit). Baixe o arquivo manualmente e envie por upload.");
+        if (status === 403) throw new Error("Acesso negado pela URL informada. Use um link público ou envie o arquivo por upload.");
+        if (status === 404) throw new Error("Arquivo não encontrado na URL informada.");
+        throw new Error(`Não foi possível baixar o arquivo: ${response?.statusText ?? "erro de rede"}`);
+      }
+      const contentType = response.headers.get("content-type") ?? "audio/mpeg";
+      mimeType = contentType.split(";")[0].trim();
+      buffer = Buffer.from(await response.arrayBuffer());
+      filename = sourceUrl.split("/").pop()?.split("?")[0] ?? "audio.mp3";
+    } else {
+      // Download from Supabase Storage
+      const { data, error } = await supabaseAdmin.storage.from(BUCKET).download(path);
+      if (error || !data) throw new Error(error?.message ?? "Arquivo não encontrado no storage");
+      buffer = Buffer.from(await data.arrayBuffer());
+      filename = path.split("/").pop() ?? "audio.mp3";
+      const ext = filename.split(".").pop()?.toLowerCase() ?? "mp3";
+      const EXT_MIME: Record<string, string> = {
+        mp3: "audio/mpeg", wav: "audio/wav", m4a: "audio/m4a",
+        ogg: "audio/ogg", mp4: "video/mp4", mov: "video/quicktime",
+        webm: "video/webm", avi: "video/x-msvideo",
+      };
+      mimeType = EXT_MIME[ext] ?? "audio/mpeg";
+    }
+
+    if (buffer.length > 26_214_400) {
+      return NextResponse.json({ error: "Arquivo muito grande. Máximo 25MB para transcrição." }, { status: 400 });
+    }
+
+    // Transcribe
+    const { text, language, duration } = await transcribeWithWhisper(buffer, filename, mimeType);
+    if (!text.trim()) throw new Error("Não foi possível extrair texto do áudio. Verifique se há fala no arquivo.");
+
+    // Analyze
+    const analysis = await analyzeWithAI(text, title ?? filename);
+
+    const record: TranscriptionRecord = {
+      id,
+      email,
+      title: title ?? filename,
+      sourceType,
+      filePath: path ?? undefined,
+      sourceUrl: sourceUrl ?? undefined,
+      transcript: text,
+      language,
+      duration,
+      wordCount: text.split(/\s+/).length,
+      summary: { short: analysis.short, medium: analysis.medium, detailed: analysis.detailed },
+      topics: analysis.topics,
+      createdAt: new Date().toISOString(),
+      status: "done",
+    };
+
+    // Persist
+    await redisSet(transcriptionKey(id), JSON.stringify(record));
+    await redisLPush(transcriptionsListKey(email), id);
+    await redisLTrim(transcriptionsListKey(email), 0, 49); // Keep last 50
+
+    return NextResponse.json({ ok: true, record });
+  } catch (err: any) {
+    console.error("[transcricao/process]", err.message);
+    const failed: Partial<TranscriptionRecord> = {
+      id, email, title: title ?? "Transcrição", sourceType,
+      transcript: "", language: "pt", wordCount: 0,
+      summary: { short: "", medium: "", detailed: "" },
+      topics: { main: "", subtopics: [], keywords: [], insights: [], cta: "" },
+      createdAt: new Date().toISOString(),
+      status: "error",
+      errorMsg: err.message,
+    };
+    await redisSet(transcriptionKey(id), JSON.stringify(failed));
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

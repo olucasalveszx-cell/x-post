@@ -1,0 +1,1407 @@
+"use client";
+
+import { useState, useRef, useCallback, useEffect } from "react";
+import { v4 as uuid } from "uuid";
+import { Download, ArrowLeft, User, LogIn, Sparkles, X, MessageCircle, RotateCcw, Zap, UserCircle, Instagram, Check, Trash2, Loader2, CalendarClock, Mic2 } from "lucide-react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useTheme } from "next-themes";
+
+import { Slide, Project } from "@/types";
+import { renderSlide } from "@/lib/render-slide";
+import SidePanel from "@/components/Generator/SidePanel";
+import AuthButton from "@/components/AuthButton";
+import SlideCanvas from "@/components/Editor/SlideCanvas";
+import Toolbar from "@/components/Editor/Toolbar";
+import HorizontalSlidePanel from "@/components/Editor/HorizontalSlidePanel";
+import OnboardingModal from "@/components/Editor/OnboardingModal";
+import PublishModal from "@/components/Actions/PublishModal";
+import AIAssistant from "@/components/AIAssistant";
+import SubscriptionGate from "@/components/SubscriptionGate";
+import ProfilePickerModal, { UserProfile, getStoredProfile, saveProfile, PROFILE_STORAGE_KEY } from "@/components/Editor/ProfilePickerModal";
+import { autosaveWrite, autosaveRead, autosaveClear } from "@/lib/autosave-db";
+import ProfileModal from "@/components/ProfileModal";
+import StyleSelectorModal from "@/components/Editor/StyleSelectorModal";
+import CarouselFaceModal, { FaceCarouselMode } from "@/components/Editor/CarouselFaceModal";
+import ChoqueiModal from "@/components/Editor/ChoqueiModal";
+import AppLogo from "@/components/AppLogo";
+import LoginAnimation from "@/components/LoginAnimation";
+import TutorialPromptModal, { NEVER_KEY, SESSION_KEY as TUTORIAL_SESSION_KEY } from "@/components/Tutorial/TutorialPromptModal";
+import TutorialOverlay from "@/components/Tutorial/TutorialOverlay";
+
+interface IGAccount { token: string; accountId: string; username: string; picture?: string; expiresAt?: number; }
+
+// Synchronous cleanup — runs at module-load time before ANY React component mounts.
+// Always sanitizes avatarSrc: only keeps short http(s) URLs, strips everything else.
+if (typeof window !== "undefined") {
+  try {
+    const safeUrl = (src: unknown) =>
+      typeof src === "string" && src.startsWith("http") && src.length < 500 ? src : undefined;
+    for (const key of ["xpz_profiles", "xpz_profile"]) {
+      try {
+        const val = localStorage.getItem(key);
+        if (!val) continue;
+        const parsed = JSON.parse(val);
+        const clean =
+          key === "xpz_profiles"
+            ? (Array.isArray(parsed) ? parsed.map((p: any) => ({ ...p, avatarSrc: safeUrl(p.avatarSrc) })) : [])
+            : (parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                ? { ...(parsed as Record<string, unknown>), avatarSrc: safeUrl((parsed as any).avatarSrc) }
+                : parsed);
+        const cleanStr = JSON.stringify(clean);
+        if (cleanStr !== val) {
+          localStorage.removeItem(key);
+          try { localStorage.setItem(key, cleanStr); } catch {}
+        }
+      } catch { try { localStorage.removeItem(key); } catch {} }
+    }
+  } catch {}
+}
+
+const FORMATS = [
+  { label: "1:1",  width: 1080, height: 1080 },
+  { label: "4:5",  width: 1080, height: 1350 },
+  { label: "9:16", width: 1080, height: 1920 },
+  { label: "16:9", width: 1920, height: 1080 },
+] as const;
+type Format = typeof FORMATS[number];
+
+
+export default function EditorPage() {
+  const { data: session } = useSession();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme !== "light";
+  const [format, setFormat] = useState<Format>(FORMATS[1]);
+  const SLIDE_W = format.width;
+  const SLIDE_H = format.height;
+
+  // ── Estado central: projetos ──────────────────────────────────
+  const [{ projects, activeProjectId }, setCore] = useState(() => {
+    const pid = uuid();
+    return {
+      projects: [{
+        id: pid, name: "Projeto 1",
+        slides: [{ id: uuid(), backgroundColor: "#000000", elements: [], width: 1080, height: 1350 }],
+      }] as Project[],
+      activeProjectId: pid,
+    };
+  });
+
+  const setProjects = useCallback((updater: Project[] | ((p: Project[]) => Project[])) => {
+    setCore((prev) => ({
+      ...prev,
+      projects: typeof updater === "function" ? updater(prev.projects) : updater,
+    }));
+  }, []);
+
+  const setActiveProjectId = useCallback((id: string) => {
+    setCore((prev) => ({ ...prev, activeProjectId: id }));
+  }, []);
+
+  // Projeto e slides ativos
+  const activeProject = projects.find((p) => p.id === activeProjectId) ?? projects[0];
+  const slides = activeProject?.slides ?? [];
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const safeIndex = Math.min(currentIndex, Math.max(0, slides.length - 1));
+  const currentSlide = slides[safeIndex] ?? slides[0];
+
+  // ── Refs para callbacks estáveis ──────────────────────────────
+  const activeProjectIdRef = useRef(activeProjectId);
+  useEffect(() => { activeProjectIdRef.current = activeProjectId; }, [activeProjectId]);
+  const slidesRef = useRef<Slide[]>(slides);
+  useEffect(() => { slidesRef.current = slides; }, [slides]);
+
+  // ── UI state ──────────────────────────────────────────────────
+  const [showPublish, setShowPublish] = useState(false);
+  const [showAI, setShowAI] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [igAccount, setIgAccount] = useState<IGAccount | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [credits, setCredits] = useState<{ remaining: number; limit: number; unlimited: boolean } | null>(null);
+  const [mobilePanel, setMobilePanel] = useState<"side" | null>(null);
+  const [mobilePanelTab, setMobilePanelTab] = useState<"generate" | "posts" | "translate" | "notes">("generate");
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+  const [displayScale, setDisplayScale] = useState(560 / 1350);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [showProfilePicker, setShowProfilePicker] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [profileInitialTab, setProfileInitialTab] = useState<"history" | "images" | "instagram" | "tutorial" | undefined>(undefined);
+  const [showStyleSelector, setShowStyleSelector] = useState(false);
+  const [showFaceCarousel, setShowFaceCarousel] = useState(false);
+  const [showChoqueiModal, setShowChoqueiModal] = useState(false);
+  const [tutorialNotif, setTutorialNotif] = useState<{ title: string } | null>(null);
+  const [showTutorialPrompt, setShowTutorialPrompt] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const twitterStyleRef = useRef(false);
+  const pendingTopicRef = useRef<string | null>(null);
+
+  // ── Loading overlay state (driven by GeneratorPanel events) ──
+  const [genLoadingState, setGenLoadingState] = useState<{
+    isLoading: boolean;
+    status: string;
+    imageProgress: number;
+    totalImages: number;
+  }>({ isLoading: false, status: "idle", imageProgress: 0, totalImages: 0 });
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setGenLoadingState(detail);
+    };
+    window.addEventListener("generator-loading", handler);
+    return () => window.removeEventListener("generator-loading", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setShowStyleSelector(true);
+    window.addEventListener("open-style-selector", handler);
+    return () => window.removeEventListener("open-style-selector", handler);
+  }, []);
+
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  // ── Histórico (por projeto) ───────────────────────────────────
+  const historyRef = useRef<Slide[][]>([slides]);
+  const historyIndexRef = useRef(0);
+  const historyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const pushHistory = useCallback((s: Slide[]) => {
+    historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
+    historyRef.current.push(s);
+    if (historyRef.current.length > 50) historyRef.current.shift();
+    historyIndexRef.current = historyRef.current.length - 1;
+    setCanUndo(historyIndexRef.current > 0);
+    setCanRedo(false);
+  }, []);
+
+  const undo = useCallback(() => {
+    if (historyIndexRef.current <= 0) return;
+    historyIndexRef.current--;
+    const restored = historyRef.current[historyIndexRef.current];
+    const pid = activeProjectIdRef.current;
+    setProjects((prev) => prev.map((p) => p.id === pid ? { ...p, slides: restored } : p));
+    setCanUndo(historyIndexRef.current > 0);
+    setCanRedo(true);
+  }, [setProjects]);
+
+  const redo = useCallback(() => {
+    if (historyIndexRef.current >= historyRef.current.length - 1) return;
+    historyIndexRef.current++;
+    const restored = historyRef.current[historyIndexRef.current];
+    const pid = activeProjectIdRef.current;
+    setProjects((prev) => prev.map((p) => p.id === pid ? { ...p, slides: restored } : p));
+    setCanUndo(true);
+    setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
+  }, [setProjects]);
+
+  // Reset histórico ao trocar de projeto
+  const prevActiveIdRef = useRef(activeProjectId);
+  useEffect(() => {
+    if (prevActiveIdRef.current === activeProjectId) return;
+    prevActiveIdRef.current = activeProjectId;
+    historyRef.current = [slides];
+    historyIndexRef.current = 0;
+    setCanUndo(false);
+    setCanRedo(false);
+  }); // sem deps: roda sempre, mas só age quando troca
+
+  // Ctrl+Z / Ctrl+Y
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) { e.preventDefault(); redo(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
+
+
+  // ── Animação de splash (login ou abertura PWA) ────────────────
+  const [showLoginAnim, setShowLoginAnim] = useState(false);
+  const [loginAnimDone, setLoginAnimDone] = useState(false);
+
+  useEffect(() => {
+    const loginFlag = localStorage.getItem("xpost_login_anim");
+    const isPWA = window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as { standalone?: boolean }).standalone === true;
+    const splashShown = sessionStorage.getItem("pwa_splash_shown");
+
+    if (loginFlag) {
+      localStorage.removeItem("xpost_login_anim");
+      setShowLoginAnim(true);
+    } else if (isPWA && !splashShown) {
+      sessionStorage.setItem("pwa_splash_shown", "1");
+      setShowLoginAnim(true);
+    } else {
+      setLoginAnimDone(true);
+    }
+  }, []);
+
+  // ── Carregar slides gerados pelo admin (XPost generator) ─────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("xpost-admin-slides") ?? sessionStorage.getItem("xpost-admin-slides");
+      if (raw) {
+        localStorage.removeItem("xpost-admin-slides");
+        sessionStorage.removeItem("xpost-admin-slides");
+        const adminSlides = JSON.parse(raw);
+        if (Array.isArray(adminSlides) && adminSlides.length > 0) {
+          setProjects((prev) => prev.map((p, i) => i === 0 ? { ...p, slides: adminSlides } : p));
+          setCurrentIndex(0);
+        }
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Profile picker (aguarda animação se houver) ───────────────
+  useEffect(() => {
+    if (!loginAnimDone) return;
+    const stored = getStoredProfile();
+    if (stored) { setUserProfile(stored); }
+    else { setTimeout(() => setShowProfilePicker(true), 800); }
+  }, [loginAnimDone]);
+
+  // ── Tutorial prompt (aparece após onboarding ou para usuários que já viram o onboarding) ──
+  const triggerTutorialPrompt = () => {
+    try {
+      if (localStorage.getItem(NEVER_KEY)) return;
+      if (sessionStorage.getItem(TUTORIAL_SESSION_KEY)) return;
+    } catch {}
+    setShowTutorialPrompt(true);
+  };
+
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    const userKey = `xpz_session_welcomed_${session.user.email}`;
+    try {
+      const onboardingAlreadySeen = sessionStorage.getItem(userKey);
+      if (!onboardingAlreadySeen) return; // onboarding vai aparecer e vai chamar onDone
+      if (localStorage.getItem(NEVER_KEY)) return;
+      if (sessionStorage.getItem(TUTORIAL_SESSION_KEY)) return;
+    } catch { return; }
+    const t = setTimeout(() => setShowTutorialPrompt(true), 1200);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.email]);
+
+  // ── Tutorial notification ─────────────────────────────────────
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch("/api/tutorial")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.hasNew && d.tutorial) setTutorialNotif({ title: d.tutorial.title }); })
+      .catch(() => {});
+  }, [session?.user?.email]);
+
+  // ── Auto-save (IndexedDB — sem limite de tamanho, preserva imagens) ──
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const hasContent = projects.some((p) => p.slides.some((s) => s.elements.length > 0 || s.backgroundImageUrl));
+    if (!hasContent) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      autosaveWrite(projects).catch(() => {});
+    }, 1500);
+  }, [projects]);
+
+  useEffect(() => {
+    autosaveRead().then((saved) => {
+      if (!saved) return;
+      const parsed = saved as Project[];
+      if (parsed.some((p) => p.slides.some((s) => s.elements.length > 0 || s.backgroundImageUrl))) {
+        setShowRestoreBanner(true);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const restoreAutosave = () => {
+    autosaveRead().then((saved) => {
+      if (!saved) return;
+      const parsed = saved as Project[];
+      setProjects(parsed);
+      setActiveProjectId(parsed[0].id);
+      setCurrentIndex(0);
+    }).catch(() => {});
+    setShowRestoreBanner(false);
+  };
+
+  const dismissAutosave = () => {
+    autosaveClear().catch(() => {});
+    setShowRestoreBanner(false);
+  };
+
+  // ── Abrir rascunho via ?draft=<id> ──────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const draftId = params.get("draft");
+    if (!draftId) return;
+    window.history.replaceState({}, "", "/editor");
+    fetch(`/api/drafts/${draftId}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data?.slides?.length) return;
+        const pid = uuid();
+        setCore((prev) => ({
+          projects: [{ id: pid, name: "Rascunho", slides: data.slides }, ...prev.projects],
+          activeProjectId: pid,
+        }));
+        setCurrentIndex(0);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Heartbeat (presença em tempo real) ───────────────────────
+  useEffect(() => {
+    const ping = () => fetch("/api/heartbeat", { method: "POST" }).catch(() => {});
+    ping();
+    const id = setInterval(ping, 45_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // ── Instagram ────────────────────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get("ig_success");
+    const error   = params.get("ig_error");
+    const currentEmail = session?.user?.email ?? null;
+
+    if (success === "1") {
+      const account: IGAccount = {
+        token:     params.get("ig_token")    ?? "",
+        accountId: params.get("ig_account")  ?? "",
+        username:  params.get("ig_username") ?? "",
+        picture:   params.get("ig_picture")  ?? "",
+      };
+      setIgAccount(account);
+      try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
+      // Salva no servidor para sincronizar entre dispositivos
+      fetch("/api/instagram/account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(account),
+      }).catch(() => {});
+      window.history.replaceState({}, "", "/editor");
+    } else if (error) {
+      if (error === "no_business_account") {
+        const pages = params.get("pages") ?? "nenhuma";
+        alert(`Conta Instagram Business não encontrada.\nPáginas do Facebook: ${pages}`);
+      } else {
+        alert(`Erro ao conectar Instagram: ${decodeURIComponent(error)}`);
+      }
+      window.history.replaceState({}, "", "/editor");
+    } else {
+      // Tenta carregar do localStorage primeiro
+      let loaded = false;
+      try {
+        const raw = localStorage.getItem("ig_account");
+        if (raw) {
+          const saved = JSON.parse(raw);
+          if (!saved._owner || saved._owner === currentEmail) {
+            const { _owner, ...account } = saved;
+            setIgAccount(account);
+            loaded = true;
+          } else {
+            localStorage.removeItem("ig_account");
+          }
+        }
+      } catch {}
+      // Se não tinha no localStorage (outro dispositivo), busca do servidor
+      if (!loaded && currentEmail) {
+        fetch("/api/instagram/account")
+          .then(r => r.json())
+          .then(data => {
+            if (data.connected && data.token) {
+              const account: IGAccount = {
+                token: data.token,
+                accountId: data.accountId,
+                username: data.username ?? "",
+                picture: data.picture ?? "",
+              };
+              setIgAccount(account);
+              try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [session?.user?.email]);
+
+  const handleIGLogin = () => {
+    const currentEmail = session?.user?.email ?? null;
+
+    // PWA (standalone): popup abre no Safari externo e o resultado nunca volta
+    // para o PWA. Usa redirect direto — callback envia de volta via URL params.
+    const isPWA = window.matchMedia("(display-mode: standalone)").matches ||
+                  !!(window.navigator as any).standalone;
+    if (isPWA) {
+      window.location.href = "/api/instagram/auth";
+      return;
+    }
+
+    function applyIGAuth(data: Record<string, string>) {
+      if (data.ig_success === "1") {
+        const account: IGAccount = {
+          token:     data.ig_token     ?? "",
+          accountId: data.ig_account   ?? "",
+          username:  data.ig_username  ?? "",
+          picture:   data.ig_picture   ?? "",
+        };
+        setIgAccount(account);
+        try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
+        // Salva no servidor para sincronizar entre dispositivos
+        fetch("/api/instagram/account", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(account),
+        }).catch(() => {});
+      } else if (data.ig_error) {
+        alert(`Erro ao conectar Instagram: ${data.ig_error}`);
+      }
+    }
+
+    const w = 520, h = 640;
+    const left = Math.max(0, (window.screen.width - w) / 2);
+    const top  = Math.max(0, (window.screen.height - h) / 2);
+    const popup = window.open(
+      "/api/instagram/auth?popup=1",
+      "ig_auth",
+      `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`
+    );
+    if (!popup) {
+      window.location.href = "/api/instagram/auth";
+      return;
+    }
+
+    let handled = false;
+    function handle(data: Record<string, string>) {
+      if (handled) return;
+      handled = true;
+      cleanup();
+      applyIGAuth(data);
+    }
+
+    // 1. postMessage (desktop)
+    const onMsg = (e: MessageEvent) => {
+      if (e.data?.type === "ig_auth") handle(e.data);
+    };
+    window.addEventListener("message", onMsg);
+
+    // 2. BroadcastChannel (browsers modernos)
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("ig_auth");
+      bc.onmessage = (e) => { if (e.data?.type === "ig_auth") handle(e.data); };
+    } catch {}
+
+    // 3. localStorage polling — garante funcionamento em PWA iOS
+    localStorage.removeItem("ig_auth_result");
+    const poll = setInterval(() => {
+      const raw = localStorage.getItem("ig_auth_result");
+      if (raw) {
+        localStorage.removeItem("ig_auth_result");
+        try { handle(JSON.parse(raw)); } catch {}
+      }
+      // Para de fazer poll se o popup fechou
+      if (popup.closed && !handled) { cleanup(); }
+    }, 500);
+
+    // Timeout de segurança: 10 min
+    const timeout = setTimeout(() => cleanup(), 10 * 60 * 1000);
+
+    function cleanup() {
+      clearInterval(poll);
+      clearTimeout(timeout);
+      window.removeEventListener("message", onMsg);
+      try { bc?.close(); } catch {}
+    }
+  };
+
+  const handleStyleSelect = useCallback((style: "layouts" | "twitter" | "comrosto" | "biblioteca" | "choquei" | "transcricao") => {
+    setShowStyleSelector(false);
+    if (style === "transcricao") {
+      window.location.href = "/transcricao";
+      return;
+    }
+    if (style === "comrosto") {
+      setShowFaceCarousel(true);
+      return;
+    }
+    if (style === "choquei") {
+      setShowChoqueiModal(true);
+      return;
+    }
+    twitterStyleRef.current = style === "twitter";
+    const topic = pendingTopicRef.current;
+    pendingTopicRef.current = null;
+    const isTwitter = style === "twitter";
+    const imageStyle = style === "biblioteca" ? "biblioteca" : undefined;
+    const dispatch = () => window.dispatchEvent(new CustomEvent("open-generator-wizard", { detail: { topic: topic ?? undefined, isTwitter, imageStyle } }));
+    if (isMobile) {
+      setMobilePanel("side");
+      setTimeout(dispatch, 120);
+    } else {
+      dispatch();
+    }
+  }, [isMobile, setProjects, setCurrentIndex]);
+
+  // ── Operações de slide ────────────────────────────────────────
+  const updateSlide = useCallback((updated: Slide) => {
+    const pid = activeProjectIdRef.current;
+    setProjects((prev) => {
+      const project = prev.find((p) => p.id === pid);
+      const updatedProfile = updated.elements.find((el) => el.type === "profile");
+      const oldProfile = project?.slides.find((s) => s.id === updated.id)?.elements.find((el) => el.type === "profile");
+
+      // Verifica se campos de identidade do perfil mudaram (propaga para todos os slides)
+      const profileChanged = updatedProfile && (
+        updatedProfile.profileName     !== oldProfile?.profileName ||
+        updatedProfile.profileHandle   !== oldProfile?.profileHandle ||
+        updatedProfile.profileVerified !== oldProfile?.profileVerified ||
+        updatedProfile.src             !== oldProfile?.src
+      );
+
+      const next = prev.map((p) =>
+        p.id !== pid ? p : {
+          ...p,
+          slides: p.slides.map((s) => {
+            if (s.id === updated.id) return updated;
+            // Propaga apenas identidade do perfil (nome, handle, avatar) — cores ficam por slide
+            if (profileChanged && updatedProfile) {
+              return {
+                ...s,
+                elements: s.elements.map((el) =>
+                  el.type !== "profile" ? el : {
+                    ...el,
+                    src:             updatedProfile.src,
+                    profileName:     updatedProfile.profileName,
+                    profileHandle:   updatedProfile.profileHandle,
+                    profileVerified: updatedProfile.profileVerified,
+                  }
+                ),
+              };
+            }
+            return s;
+          }),
+        }
+      );
+      slidesRef.current = next.find((p) => p.id === pid)?.slides ?? slidesRef.current;
+      return next;
+    });
+    if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
+    historyTimerRef.current = setTimeout(() => { pushHistory(slidesRef.current); }, 500);
+  }, [setProjects, pushHistory]);
+
+  const addSlide = useCallback(() => {
+    const pid = activeProjectIdRef.current;
+    const newSlide: Slide = { id: uuid(), backgroundColor: "#000000", elements: [], width: SLIDE_W, height: SLIDE_H };
+    setProjects((prev) => {
+      const next = prev.map((p) => p.id !== pid ? p : { ...p, slides: [...p.slides, newSlide] });
+      const newLen = next.find((p) => p.id === pid)?.slides.length ?? 1;
+      setCurrentIndex(newLen - 1);
+      return next;
+    });
+  }, [SLIDE_W, SLIDE_H, setProjects]);
+
+  const deleteSlide = useCallback(() => {
+    const pid = activeProjectIdRef.current;
+    setProjects((prev) => {
+      const project = prev.find((p) => p.id === pid);
+      if (!project || project.slides.length <= 1) return prev;
+      const newSlides = project.slides.filter((_, i) => i !== safeIndex);
+      setCurrentIndex((c) => Math.min(c, newSlides.length - 1));
+      return prev.map((p) => p.id !== pid ? p : { ...p, slides: newSlides });
+    });
+  }, [safeIndex, setProjects]);
+
+  const applyTwitterStyle = useCallback(async (slides: Slide[]): Promise<Slide[]> => {
+    if (slides.length <= 1) return slides;
+    const W = slides[0].width;
+    const H = slides[0].height;
+    const { v4: uuidv4 } = await import("uuid");
+
+    let profileData: { name?: string; handle?: string; avatarSrc?: string; verified?: boolean } | null = null;
+    try {
+      const saved = localStorage.getItem("xpz_profile");
+      if (saved) profileData = JSON.parse(saved);
+    } catch {}
+
+    const PAD  = Math.round(W * 0.055);
+
+    const PROFILE_H = Math.round(H * 0.075);
+    const PROFILE_Y = Math.round(H * 0.03);
+
+    const makeProfile = (): import("@/types").SlideElement => ({
+      id: uuidv4(),
+      type: "profile" as const,
+      x: PAD,
+      y: PROFILE_Y,
+      width: W - PAD * 2,
+      height: PROFILE_H,
+      src: profileData?.avatarSrc || undefined,
+      profileName: profileData?.name ?? "",
+      profileHandle: profileData?.handle ?? "",
+      profileVerified: profileData?.verified ?? false,
+      profileNameColor: "#111111",
+      profileHandleColor: "#666666",
+      zIndex: 10,
+    });
+
+    // ── Slide 1 (capa) ──────────────────────────────────────────────
+    const [coverSlide, ...rest] = slides;
+
+    // Imagem pode estar em backgroundImageUrl OU em elemento com src
+    const coverImgUrl =
+      coverSlide.backgroundImageUrl ??
+      (coverSlide.elements.find((el) => el.type === "image" && (el as any).src) as any)?.src ?? null;
+
+    const IMG_TOP  = PROFILE_Y + PROFILE_H + Math.round(H * 0.025);
+    const IMG_H    = Math.round(H * 0.38);
+    const TEXT_TOP = IMG_TOP + IMG_H + Math.round(H * 0.022);
+    const TEXT_H   = Math.round(H * 0.17);
+    const BODY_TOP = TEXT_TOP + TEXT_H + Math.round(H * 0.012);
+    const BODY_H   = Math.round(H * 0.10);
+
+    const pickTitleBody = (els: import("@/types").SlideElement[]) => {
+      const texts = els.filter(e => e.type === "text");
+      const sorted = [...texts].sort((a, b) => ((b.style as any)?.fontSize ?? 0) - ((a.style as any)?.fontSize ?? 0));
+      const strip = (c: string) => c.replace(/<[^>]+>/g, "").trim();
+      const titleEl = sorted.find(e => strip(e.content ?? "").length > 3 && !/^\d{1,2}$/.test(strip(e.content ?? "")));
+      const bodyEl  = sorted.find(e => e !== titleEl && ((e.style as any)?.fontSize ?? 0) >= 20 && strip(e.content ?? "").length > 3);
+      return [titleEl, bodyEl].filter(Boolean) as import("@/types").SlideElement[];
+    };
+
+    const coverTexts = pickTitleBody(coverSlide.elements)
+      .map((el, i) => ({
+        ...el,
+        x: PAD,
+        y: i === 0 ? TEXT_TOP : BODY_TOP,
+        width: W - PAD * 2,
+        height: i === 0 ? TEXT_H : BODY_H,
+        style: {
+          ...(el.style as any),
+          color: "#111111",
+          fontFamily: "'Inter', sans-serif",
+          fontSize: i === 0 ? Math.round(H * 0.036) : Math.round(H * 0.019),
+          fontWeight: i === 0 ? "bold" : "normal",
+        },
+      }));
+
+    const coverImgEl: import("@/types").SlideElement | null = coverImgUrl
+      ? {
+          id: uuidv4(),
+          type: "image" as const,
+          x: PAD,
+          y: IMG_TOP,
+          width: W - PAD * 2,
+          height: IMG_H,
+          src: coverImgUrl,
+          zIndex: 2,
+          imageObjectPositionY: 30,
+        }
+      : null;
+
+    const coverSlideOut: Slide = {
+      ...coverSlide,
+      backgroundColor: "#ffffff",
+      backgroundGradient: undefined,
+      backgroundPattern: undefined,
+      backgroundImageUrl: undefined,
+      backgroundCrop: undefined,
+      elements: [makeProfile(), ...(coverImgEl ? [coverImgEl] : []), ...coverTexts],
+    };
+
+    // ── Slides 2+ (conteúdo) — texto topo, imagem base ──
+    const C_TITLE_Y = PROFILE_Y + PROFILE_H + Math.round(H * 0.05);
+    const C_TITLE_H = Math.round(H * 0.17);
+    const C_BODY_Y  = C_TITLE_Y + C_TITLE_H + Math.round(H * 0.02);
+    const C_BODY_H  = Math.round(H * 0.10);
+    const C_IMG_TOP = Math.round(H * 0.50);
+    const C_IMG_H   = Math.round(H * 0.44);
+
+    const contentSlides = rest.map((slide) => {
+      const contentImgUrl =
+        slide.backgroundImageUrl ??
+        (slide.elements.find((el) => el.type === "image" && (el as any).src) as any)?.src ?? null;
+
+      const texts = pickTitleBody(slide.elements)
+        .map((el, i) => ({
+          ...el,
+          x: PAD,
+          y: i === 0 ? C_TITLE_Y : C_BODY_Y,
+          width: W - PAD * 2,
+          height: i === 0 ? C_TITLE_H : C_BODY_H,
+          style: {
+            ...(el.style as any),
+            color: "#111111",
+            fontFamily: "'Inter', sans-serif",
+            fontSize: i === 0 ? Math.round(H * 0.042) : Math.round(H * 0.021),
+            fontWeight: i === 0 ? "bold" : "normal",
+            lineHeight: i === 0 ? 1.15 : 1.5,
+          },
+          zIndex: 5,
+        }));
+
+      const contentImgEl: import("@/types").SlideElement | null = contentImgUrl
+        ? {
+            id: uuidv4(),
+            type: "image" as const,
+            x: PAD,
+            y: C_IMG_TOP,
+            width: W - PAD * 2,
+            height: C_IMG_H,
+            src: contentImgUrl,
+            zIndex: 2,
+            imageObjectPositionY: 40,
+          }
+        : null;
+
+      return {
+        ...slide,
+        backgroundColor: "#ffffff",
+        backgroundGradient: undefined,
+        backgroundPattern: undefined,
+        backgroundImageUrl: undefined,
+        backgroundCrop: undefined,
+        backgroundPosition: undefined,
+        backgroundZoom: 100,
+        elements: [makeProfile(), ...texts, ...(contentImgEl ? [contentImgEl] : [])],
+      };
+    });
+
+    return [coverSlideOut, ...contentSlides];
+  }, []);
+
+  const handleGenerate = useCallback(async (generated: Slide[]) => {
+    const pid = activeProjectIdRef.current;
+    const isTwitter = twitterStyleRef.current;
+    // não reseta o ref aqui pois onGenerate é chamado 2x (rawSlides + withImages)
+    // o ref é resetado em handleStyleSelect na próxima geração
+
+    const final = isTwitter ? await applyTwitterStyle(generated) : generated;
+
+    setProjects((prev) => prev.map((p) => p.id !== pid ? p : { ...p, slides: final }));
+    slidesRef.current = final;
+    setCurrentIndex(0);
+    pushHistory(final);
+    if (final[0]) {
+      const matched = FORMATS.find(f => f.width === final[0].width && f.height === final[0].height);
+      if (matched) setFormat(matched);
+    }
+  }, [setProjects, pushHistory, applyTwitterStyle]);
+
+  const handleFaceCarouselGenerate = useCallback(async (slides: Slide[], mode: FaceCarouselMode) => {
+    const pid = activeProjectIdRef.current;
+    const final = mode === "twitter" ? await applyTwitterStyle(slides) : slides;
+    setProjects((prev) => prev.map((p) => p.id !== pid ? p : { ...p, slides: final }));
+    slidesRef.current = final;
+    setCurrentIndex(0);
+    pushHistory(final);
+    if (final[0]) {
+      const matched = FORMATS.find((f) => f.width === final[0].width && f.height === final[0].height);
+      if (matched) setFormat(matched);
+    }
+  }, [applyTwitterStyle, setProjects, pushHistory]);
+
+  const applyThemeToAll = useCallback((bg: string, textColor: string) => {
+    const pid = activeProjectIdRef.current;
+
+    // Determina se o fundo é escuro para adaptar padrão e cores de perfil
+    const hexToLuminance = (hex: string) => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return r * 0.299 + g * 0.587 + b * 0.114;
+    };
+    const isDark = hexToLuminance(bg) < 128;
+    const profileHandleColor = isDark ? "rgba(255,255,255,0.50)" : "rgba(0,0,0,0.45)";
+
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== pid) return p;
+      const newSlides = p.slides.map((s) => ({
+        ...s,
+        backgroundColor: bg,
+        backgroundImageUrl: undefined,
+        backgroundGradient: undefined,
+        // Troca o padrão de grade conforme o brilho do fundo
+        ...(s.backgroundPattern ? { backgroundPattern: (isDark ? "grid-dark" : "grid-light") as "grid-light" | "grid-dark" } : {}),
+        elements: s.elements.map((el) => {
+          if (el.type === "text") return { ...el, style: { ...(el.style as any), color: textColor } };
+          if (el.type === "profile") return { ...el, profileNameColor: textColor, profileHandleColor };
+          return el;
+        }),
+      }));
+      pushHistory(newSlides);
+      return { ...p, slides: newSlides };
+    }));
+  }, [setProjects, pushHistory]);
+
+  const applyThemeToSlide = useCallback((bg: string, textColor: string) => {
+    const pid = activeProjectIdRef.current;
+    const hexToLuminance = (hex: string) => { const r = parseInt(hex.slice(1,3),16),g = parseInt(hex.slice(3,5),16),b = parseInt(hex.slice(5,7),16); return r*0.299+g*0.587+b*0.114; };
+    const isDark = hexToLuminance(bg) < 128;
+    const profileHandleColor = isDark ? "rgba(255,255,255,0.50)" : "rgba(0,0,0,0.45)";
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== pid) return p;
+      const idx = currentIndex;
+      const newSlides = p.slides.map((s, i) => {
+        if (i !== idx) return s;
+        return {
+          ...s, backgroundColor: bg, backgroundImageUrl: undefined, backgroundGradient: undefined,
+          ...(s.backgroundPattern ? { backgroundPattern: (isDark ? "grid-dark" : "grid-light") as "grid-light" | "grid-dark" } : {}),
+          elements: s.elements.map((el) => {
+            if (el.type === "text") return { ...el, style: { ...(el.style as any), color: textColor } };
+            if (el.type === "profile") return { ...el, profileNameColor: textColor, profileHandleColor };
+            return el;
+          }),
+        };
+      });
+      pushHistory(newSlides);
+      return { ...p, slides: newSlides };
+    }));
+  }, [setProjects, pushHistory, currentIndex]);
+
+  const applyProfileColorToAll = useCallback((nameColor: string, handleColor: string) => {
+    const pid = activeProjectIdRef.current;
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== pid) return p;
+      return {
+        ...p,
+        slides: p.slides.map((s) => ({
+          ...s,
+          elements: s.elements.map((el) =>
+            el.type !== "profile" ? el : { ...el, profileNameColor: nameColor, profileHandleColor: handleColor }
+          ),
+        })),
+      };
+    }));
+  }, [setProjects]);
+
+  const handleFormatChange = (f: Format) => {
+    setFormat(f);
+    setProjects((prev) => prev.map((p) => ({
+      ...p, slides: p.slides.map((s) => ({ ...s, width: f.width, height: f.height })),
+    })));
+  };
+
+  const handleSelectSlide = (projectId: string, slideIndex: number) => {
+    setActiveProjectId(projectId);
+    setCurrentIndex(slideIndex);
+    setSelectedElementId(null);
+  };
+
+  // ── Exportar ─────────────────────────────────────────────────
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const canvases: HTMLCanvasElement[] = [];
+      for (let i = 0; i < slides.length; i++) {
+        const canvas = await renderSlide(slides[i]);
+        canvases.push(canvas);
+        const a = document.createElement("a");
+        a.href = canvas.toDataURL("image/jpeg", 0.95);
+        a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
+        a.click();
+        await new Promise((r) => setTimeout(r, 150));
+      }
+
+      // Salva no histórico e biblioteca em background (não bloqueia)
+      saveToProfile(canvases).catch(() => {});
+    } catch { alert("Erro ao exportar."); }
+    finally { setExporting(false); }
+  };
+
+  const saveToProfile = async (canvases: HTMLCanvasElement[]) => {
+    const activeProject = projects.find((p) => p.id === activeProjectId);
+    const title = activeProject?.name ?? "Carrossel";
+
+    // Upload de cada slide para Vercel Blob
+    const uploadSlide = async (canvas: HTMLCanvasElement) => {
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const base64 = dataUrl.split(",")[1];
+      const res = await fetch("/api/blob-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, mimeType: "image/jpeg", filename: `xpost-${Date.now()}.jpg` }),
+      });
+      if (!res.ok) return null;
+      const { url } = await res.json();
+      return url as string;
+    };
+
+    // Upload de todos os slides em paralelo
+    const urls = await Promise.all(canvases.map(uploadSlide));
+    const validUrls = urls.filter(Boolean) as string[];
+    if (!validUrls.length) return;
+
+    // Salva carrossel no histórico (capa = primeiro slide)
+    await fetch("/api/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "history",
+        entry: { id: crypto.randomUUID(), title, coverUrl: validUrls[0], slideCount: canvases.length },
+      }),
+    });
+
+    // Salva cada slide na biblioteca de imagens
+    await Promise.all(validUrls.map((url) =>
+      fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "image", entry: { id: crypto.randomUUID(), url } }),
+      })
+    ));
+  };
+
+  // ── Créditos + responsividade ─────────────────────────────────
+  useEffect(() => {
+    fetch("/api/credits").then((r) => r.ok ? r.json() : null).then((d) => { if (d) setCredits(d); }).catch(() => {});
+    const handler = (e: Event) => { const d = (e as CustomEvent).detail; if (d) setCredits(d); };
+    window.addEventListener("credits-updated", handler);
+    return () => window.removeEventListener("credits-updated", handler);
+  }, []);
+
+  useEffect(() => {
+    const measure = () => {
+      if (!canvasContainerRef.current) return;
+      const mob = window.innerWidth < 768;
+      setIsMobile(mob);
+      const { width, height } = canvasContainerRef.current.getBoundingClientRect();
+      if (width === 0 || height === 0) return;
+      const pad = mob ? 16 : 32;
+      const mobileCap = mob ? (window.innerWidth - 16) / SLIDE_W : Infinity;
+      const s = Math.min((width - pad) / SLIDE_W, (height - pad) / SLIDE_H, 560 / SLIDE_H, mobileCap);
+      setDisplayScale(s);
+    };
+    // rAF garante que o layout está completo antes de medir
+    const update = () => requestAnimationFrame(measure);
+    update();
+    window.addEventListener("resize", update);
+    // ResizeObserver detecta mudanças no container (painéis abrindo, sidebar, etc.)
+    const ro = new ResizeObserver(update);
+    if (canvasContainerRef.current) ro.observe(canvasContainerRef.current);
+    return () => { window.removeEventListener("resize", update); ro.disconnect(); };
+  }, [SLIDE_W, SLIDE_H]);
+
+  const DISPLAY_W = SLIDE_W * displayScale;
+  const DISPLAY_H = SLIDE_H * displayScale;
+  const selectedElement = selectedElementId
+    ? currentSlide?.elements.find((el) => el.id === selectedElementId) ?? null
+    : null;
+  const isEmpty = slides.length === 1 && slides[0].elements.length === 0 && !slides[0].backgroundImageUrl;
+
+  return (
+    <>
+    {showLoginAnim && (
+      <LoginAnimation onComplete={() => { setShowLoginAnim(false); setLoginAnimDone(true); }} />
+    )}
+    <SubscriptionGate>
+    <div className="flex flex-col h-screen overflow-hidden bg-[var(--bg)]">
+
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <header className="flex items-center justify-between px-3 md:px-5 py-2 md:py-3 bg-[var(--bg-2)] border-b border-[var(--border)] z-10 shrink-0">
+        <div className="flex items-center gap-2">
+          <Link href="/" className="p-1.5 rounded-lg hover:bg-[var(--bg-3)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors">
+            <ArrowLeft size={18} />
+          </Link>
+          <AppLogo variant={isDark ? "dark" : "light"} size={28} textClassName="hidden sm:block text-[18px] font-black tracking-tight text-[var(--text)] leading-none" />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {selectedElement && (
+            <button
+              onClick={() => {
+                updateSlide({ ...currentSlide, elements: currentSlide.elements.filter(el => el.id !== selectedElement.id) });
+                setSelectedElementId(null);
+              }}
+              title="Excluir elemento"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}
+            >
+              <Trash2 size={14} />
+              <span className="hidden sm:inline">Excluir</span>
+            </button>
+          )}
+          {credits && (
+            <Link href="/credits"
+              className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-semibold transition-opacity hover:opacity-80"
+              style={{
+                background: (credits as any).total > 10 ? "rgba(76,110,245,0.1)" : (credits as any).total > 0 ? "rgba(251,191,36,0.1)" : "rgba(239,68,68,0.1)",
+                borderColor: (credits as any).total > 10 ? "rgba(76,110,245,0.3)" : (credits as any).total > 0 ? "rgba(251,191,36,0.3)" : "rgba(239,68,68,0.3)",
+                color: (credits as any).total > 10 ? "#818cf8" : (credits as any).total > 0 ? "#fbbf24" : "#f87171",
+              }}>
+              <Zap size={11} />
+              {`${(credits as any).total ?? credits.remaining}/${credits.limit}`}
+            </Link>
+          )}
+          {/* Badge de perfil */}
+          {userProfile && (
+            <button
+              onClick={() => setShowProfilePicker(true)}
+              title="Alterar perfil"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all hover:brightness-110"
+              style={{ background: "rgba(59,91,219,0.15)", border: "1px solid rgba(76,110,245,0.3)", color: "#818cf8" }}>
+              <span style={{ fontSize: 13 }}>
+                {["advocacia","nutricao","odonto","saude","noticias","marketing","fitness","educacao","beleza","gastronomia"].includes(userProfile.key)
+                  ? ["⚖️","🥗","🦷","🏥","📰","📈","💪","📚","💄","🍽️"][["advocacia","nutricao","odonto","saude","noticias","marketing","fitness","educacao","beleza","gastronomia"].indexOf(userProfile.key)]
+                  : "✏️"}
+              </span>
+              {userProfile.label}
+            </button>
+          )}
+          <AuthButton />
+          <button onClick={() => setShowAI(true)}
+            className="flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm transition-all hover:scale-105 active:scale-95"
+            style={{ background: "linear-gradient(135deg,rgba(67,56,202,0.25),rgba(109,40,217,0.2))", border: "1px solid rgba(99,102,241,0.35)", color: "#a78bfa", boxShadow: "0 0 14px rgba(99,102,241,0.15)" }}>
+            {/* Mini orb pulsante */}
+            <span className="relative flex items-center justify-center" style={{ width: 16, height: 16, flexShrink: 0 }}>
+              <span className="absolute inset-0 rounded-full animate-ping" style={{ background: "rgba(99,102,241,0.35)", animationDuration: "2s" }} />
+              <span className="relative w-3 h-3 rounded-full" style={{ background: "linear-gradient(135deg,#818cf8,#a855f7)", boxShadow: "0 0 6px rgba(99,102,241,0.7)" }} />
+            </span>
+            <span className="hidden md:inline font-semibold">Nexa IA</span>
+          </button>
+          <button onClick={handleExport} disabled={exporting}
+            className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text)] text-sm border border-[var(--border)] disabled:opacity-40 transition-colors">
+            <Download size={15} />
+            <span className="hidden md:inline">{exporting ? "Exportando..." : "Exportar"}</span>
+          </button>
+          <button onClick={() => setShowProfile(true)}
+            className="hidden md:flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-[var(--border)] bg-[var(--bg-3)] hover:bg-[var(--bg-4)] transition-colors text-[var(--text-2)]">
+            <UserCircle size={15} />
+            <span className="hidden md:inline">Perfil</span>
+          </button>
+          <div className="hidden md:flex flex-col items-end gap-0.5">
+            {igAccount ? (
+              <button onClick={() => setShowPublish(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium text-white">
+                <User size={14} /> @{igAccount.username}
+              </button>
+            ) : (
+              <button onClick={() => setShowPublish(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium text-white">
+                <Instagram size={14} /> Publicar
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* ── Banner de restauração ──────────────────────────────── */}
+      {showRestoreBanner && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-brand-600/20 border-b border-brand-500/30 text-sm text-brand-300 shrink-0">
+          <div className="flex items-center gap-2">
+            <RotateCcw size={14} className="shrink-0" />
+            <span>Você tem projetos salvos. Deseja restaurar?</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={restoreAutosave} className="px-3 py-1 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium transition-colors">Restaurar</button>
+            <button onClick={dismissAutosave} className="px-3 py-1 rounded-lg bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)] text-xs transition-colors">Descartar</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Notificação tutorial ──────────────────────────────── */}
+      {tutorialNotif && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-purple-500/30 text-sm shrink-0"
+          style={{ background: "rgba(139,92,246,0.12)", color: "#c4b5fd" }}>
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: 15 }}>🎬</span>
+            <span><strong>Novo tutorial disponível:</strong> {tutorialNotif.title} — checar?</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => { setProfileInitialTab("tutorial"); setShowProfile(true); setTutorialNotif(null); }}
+              className="px-3 py-1 rounded-lg text-white text-xs font-semibold transition-colors"
+              style={{ background: "rgba(139,92,246,0.7)" }}
+            >
+              Checar agora
+            </button>
+            <button
+              onClick={() => setTutorialNotif(null)}
+              className="px-3 py-1 rounded-lg bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text-2)] text-xs transition-colors"
+            >
+              Ver depois
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Corpo ─────────────────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden relative">
+
+        {/* Overlay mobile */}
+        {isMobile && mobilePanel && (
+          <div className="fixed inset-0 z-30 bg-black/70 backdrop-blur-sm" onClick={() => setMobilePanel(null)} />
+        )}
+
+        {/* Painel esquerdo — Gerar */}
+        {isMobile ? (
+          mobilePanel === "side" && (
+            <div className="fixed inset-y-0 left-0 z-40 flex flex-col bg-[var(--bg-2)] border-r border-[var(--border)]"
+              style={{ width: "85vw", maxWidth: 360 }}>
+              <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)] shrink-0">
+                <span className="text-sm font-semibold text-[var(--text)] flex items-center gap-2">
+                  <Sparkles size={14} className="text-brand-400" /> Gerar Carrossel
+                </span>
+                <button onClick={() => setMobilePanel(null)} className="p-1.5 rounded-lg bg-[var(--bg-3)] text-[var(--text-2)]"><X size={16} /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <SidePanel onGenerate={(s) => { handleGenerate(s); setMobilePanel(null); }} onLayoutChange={handleGenerate} currentSlides={slides} defaultTab={mobilePanelTab} />
+              </div>
+            </div>
+          )
+        ) : (
+          <div className="flex overflow-hidden shrink-0" style={{ width: 300, background: "var(--bg-2)", borderRight: "1px solid var(--border)" }}>
+            <SidePanel onGenerate={handleGenerate} currentSlides={slides} />
+          </div>
+        )}
+
+        {/* ── Área central ──────────────────────────────────────── */}
+        <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+
+          {/* Toolbar */}
+          {currentSlide && (
+            <Toolbar
+              slide={currentSlide}
+              onUpdate={updateSlide}
+              onAddSlide={addSlide}
+              onDeleteSlide={deleteSlide}
+              onDeleteElement={selectedElement ? () => {
+                updateSlide({ ...currentSlide, elements: currentSlide.elements.filter(el => el.id !== selectedElement.id) });
+                setSelectedElementId(null);
+              } : undefined}
+              slideIndex={safeIndex}
+              totalSlides={slides.length}
+              onPrev={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+              onNext={() => setCurrentIndex((i) => Math.min(slides.length - 1, i + 1))}
+              selectedElement={selectedElement}
+              onUndo={undo}
+              onRedo={redo}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              format={format.label}
+              onFormatChange={(label) => {
+                const f = FORMATS.find((f) => f.label === label);
+                if (f) handleFormatChange(f);
+              }}
+              onApplyThemeToAll={applyThemeToAll}
+              onApplyThemeToSlide={applyThemeToSlide}
+              onApplyProfileColorToAll={applyProfileColorToAll}
+            />
+          )}
+
+
+          {/* Canvas */}
+          <div ref={canvasContainerRef} className="flex-1 overflow-auto flex items-center justify-center bg-[var(--bg)] relative"
+            style={{ padding: isMobile ? "12px" : "16px" }}>
+            {isEmpty && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+                <div className="flex flex-col items-center gap-5 pointer-events-auto px-6 text-center">
+                  <div className="p-5 rounded-3xl bg-brand-500/10 border border-brand-500/20">
+                    <Sparkles size={isMobile ? 28 : 36} className="text-brand-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-bold text-[var(--text)] mb-2">Pronto para criar?</h2>
+                    <p className="text-sm text-gray-500">Gere um carrossel incrível com IA em segundos</p>
+                  </div>
+                  <button
+                    onClick={() => setShowStyleSelector(true)}
+                    className="flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold text-base transition-all shadow-2xl shadow-brand-500/30"
+                    style={{ minWidth: 200, touchAction: "manipulation" }}>
+                    <Sparkles size={20} /> Gerar Ideias
+                  </button>
+                </div>
+              </div>
+            )}
+            <div ref={canvasRef}
+              style={{ width: DISPLAY_W, height: DISPLAY_H, position: "relative", opacity: isEmpty ? 0.1 : 1, transition: "opacity 0.4s" }}
+              className="shadow-2xl rounded overflow-hidden">
+              {slides.map((slide, i) => (
+                <div key={slide.id} id={`slide-render-${slide.id}`} style={{ display: i === safeIndex ? "block" : "none", width: SLIDE_W, height: SLIDE_H }}>
+                  <SlideCanvas slide={slide} onUpdate={updateSlide} scale={displayScale} onSelectElement={(el) => setSelectedElementId(el?.id ?? null)} isActive={i === safeIndex} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Painel horizontal de slides / projetos ─────────── */}
+          <HorizontalSlidePanel
+            projects={projects}
+            activeProjectId={activeProjectId}
+            activeSlideIndex={safeIndex}
+            slideWidth={SLIDE_W}
+            slideHeight={SLIDE_H}
+            onProjectsChange={setProjects}
+            onSelectSlide={handleSelectSlide}
+            compact={isMobile}
+          />
+        </div>
+      </div>
+
+      {/* ── Barra inferior mobile ─────────────────────────────── */}
+      {isMobile && (
+        <div className="shrink-0 bg-[var(--bg-2)] border-t border-[var(--border)]"
+          style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", zIndex: 20 }}>
+          {[
+            {
+              id: "side",
+              icon: <Sparkles size={19} />,
+              label: "Gerar",
+              action: () => { setMobilePanelTab("generate"); setMobilePanel(mobilePanel === "side" ? null : "side"); },
+              active: mobilePanel === "side" && mobilePanelTab === "generate",
+            },
+            {
+              id: "posts",
+              icon: <CalendarClock size={19} />,
+              label: "Posts",
+              action: () => { setMobilePanelTab("posts"); setMobilePanel(mobilePanel === "side" ? null : "side"); },
+              active: mobilePanel === "side" && mobilePanelTab === "posts",
+            },
+            {
+              id: "transcricao",
+              icon: <Mic2 size={19} />,
+              label: "Transcrição",
+              action: () => { window.location.href = "/transcricao"; },
+              active: false,
+            },
+            {
+              id: "pub",
+              icon: (
+                <div className="relative">
+                  <Instagram size={19} />
+                  <div className="absolute -bottom-1 -right-1.5 w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center border border-[var(--bg-2)]">
+                    <Check size={6} strokeWidth={3} className="text-white" />
+                  </div>
+                </div>
+              ),
+              label: "Publicar",
+              action: () => setShowPublish(true),
+              active: false,
+            },
+            {
+              id: "profile",
+              icon: <UserCircle size={19} />,
+              label: "Perfil",
+              action: () => setShowProfile(true),
+              active: false,
+            },
+          ].map((tab) => (
+            <button key={tab.id} onClick={tab.action}
+              className="flex flex-col items-center justify-center gap-1 py-3 transition-colors"
+              style={{ color: tab.active ? "#4c6ef5" : "#6b7280", background: tab.active ? "rgba(76,110,245,0.08)" : "transparent", fontSize: 10, touchAction: "manipulation" }}>
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showPublish && <PublishModal slides={slides} account={igAccount} onClose={() => setShowPublish(false)} onLoginClick={handleIGLogin} />}
+      <AIAssistant open={showAI} onClose={() => setShowAI(false)} onUseInGenerator={() => { setShowAI(false); setMobilePanel("side"); }} />
+      <ProfileModal open={showProfile} initialTab={profileInitialTab} onClose={() => { setShowProfile(false); setProfileInitialTab(undefined); }} onOpenTutorial={() => setShowTutorial(true)} />
+      <StyleSelectorModal
+        open={showStyleSelector}
+        onClose={() => setShowStyleSelector(false)}
+        onSelect={handleStyleSelect}
+      />
+      <CarouselFaceModal
+        open={showFaceCarousel}
+        onClose={() => setShowFaceCarousel(false)}
+        onGenerate={handleFaceCarouselGenerate}
+        onBack={() => { setShowFaceCarousel(false); setTimeout(() => setShowStyleSelector(true), 50); }}
+      />
+      <ChoqueiModal
+        open={showChoqueiModal}
+        onClose={() => setShowChoqueiModal(false)}
+        onCreate={handleGenerate}
+        onBack={() => { setShowChoqueiModal(false); setTimeout(() => setShowStyleSelector(true), 50); }}
+      />
+      <OnboardingModal
+        onConfirm={(topic) => {
+          pendingTopicRef.current = topic;
+          setShowStyleSelector(true);
+        }}
+        onDone={triggerTutorialPrompt}
+      />
+      <TutorialPromptModal
+        open={showTutorialPrompt}
+        onStart={() => { setShowTutorialPrompt(false); setShowTutorial(true); }}
+        onClose={() => setShowTutorialPrompt(false)}
+      />
+      <TutorialOverlay
+        open={showTutorial}
+        onClose={() => setShowTutorial(false)}
+      />
+      <ProfilePickerModal
+        open={showProfilePicker}
+        onClose={(profile) => { setUserProfile(profile); setShowProfilePicker(false); }}
+      />
+
+      {/* ── Loading overlay mobile (ativo mesmo com painel fechado) ─── */}
+      {isMobile && genLoadingState.isLoading && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}>
+          <div className="flex flex-col items-center gap-5 px-8 py-10 rounded-3xl mx-4 w-full max-w-xs"
+            style={{ background: "var(--bg-2)", border: "1px solid var(--border)" }}>
+            <div className="relative">
+              <div className="p-5 rounded-full" style={{ background: "rgba(76,110,245,0.1)", border: "1px solid rgba(76,110,245,0.2)" }}>
+                <Loader2 size={36} className="animate-spin" style={{ color: "#818cf8" }} />
+              </div>
+              <div className="absolute inset-0 rounded-full animate-ping" style={{ background: "rgba(76,110,245,0.05)" }} />
+            </div>
+            <div className="text-center">
+              <p className="text-base font-semibold" style={{ color: "var(--text)" }}>
+                {genLoadingState.status === "searching" && "Pesquisando na web..."}
+                {genLoadingState.status === "generating" && "Gerando com I.A..."}
+                {genLoadingState.status === "images" && "Gerando imagens..."}
+              </p>
+              <p className="text-xs mt-1.5" style={{ color: "var(--text-3)" }}>
+                {genLoadingState.status === "searching" && "Buscando informações atualizadas"}
+                {genLoadingState.status === "generating" && "Criando o conteúdo dos slides"}
+                {genLoadingState.status === "images" && genLoadingState.totalImages > 0
+                  ? `${genLoadingState.imageProgress}/${genLoadingState.totalImages} slides`
+                  : "Aguarde um momento..."}
+              </p>
+            </div>
+            {genLoadingState.status === "images" && genLoadingState.totalImages > 0 && (
+              <div className="w-full flex flex-col gap-1.5">
+                <div className="w-full rounded-full overflow-hidden" style={{ background: "var(--bg-4)", height: 6 }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${(genLoadingState.imageProgress / genLoadingState.totalImages) * 100}%`, background: "#4c6ef5" }}
+                  />
+                </div>
+                <p className="text-right text-[11px]" style={{ color: "var(--text-3)" }}>
+                  {Math.round((genLoadingState.imageProgress / genLoadingState.totalImages) * 100)}%
+                </p>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              {(["searching", "generating", "images"] as const).map((s, i) => (
+                <div key={s} className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full transition-all duration-300" style={{
+                    background: genLoadingState.status === s ? "#4c6ef5"
+                      : (["searching", "generating", "images"] as const).indexOf(genLoadingState.status as any) > i ? "#6b21a8" : "#1f1f1f",
+                    boxShadow: genLoadingState.status === s ? "0 0 8px #4c6ef5" : "none",
+                  }} />
+                  {i < 2 && <div className="w-6 rounded-full" style={{ height: 1, background: "var(--border-2)" }} />}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+    </SubscriptionGate>
+    </>
+  );
+}

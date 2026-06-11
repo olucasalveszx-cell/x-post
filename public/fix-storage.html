@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>Limpando dados...</title>
+<style>
+  body { font-family: monospace; background: #0a0a0a; color: #f0f0f0; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; flex-direction: column; gap: 16px; }
+  .msg { color: #a3e635; font-size: 18px; }
+  .sub { color: #6b7280; font-size: 13px; }
+</style>
+</head>
+<body>
+<script>
+try { localStorage.clear(); } catch(e) {}
+try { sessionStorage.clear(); } catch(e) {}
+window.location.replace('/editor');
+</script>
+<p class="msg">Limpando dados corrompidos...</p>
+<p class="sub">Redirecionando para o editor...</p>
+</body>
+</html>
