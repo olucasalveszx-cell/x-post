@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const result = await refreshAllCategories();
-    return NextResponse.json({ ok: true, ...result });
+    const { ok: refreshed, failed } = await refreshAllCategories();
+    return NextResponse.json({ ok: true, refreshed, failed });
   } catch (err: any) {
     console.error("[api/news/refresh]", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
