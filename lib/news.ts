@@ -1,3 +1,4 @@
+import { v4 as uuid } from "uuid";
 import { supabaseAdmin } from "./supabase";
 
 export type NewsCategory =
@@ -223,8 +224,29 @@ async function fetchFromGNews(category: string): Promise<RawArticle[]> {
     }));
 }
 
-async function storeArticles(articles: RawArticle[]): Promise<void> {
-  if (!articles.length) return;
+// Converte artigo bruto em NewsItem sem passar pelo banco
+function rawToNewsItem(a: RawArticle): NewsItem {
+  const { score, label } = calculateViralScore(a);
+  return {
+    id:           uuid(),
+    title:        a.title,
+    description:  a.description  ?? null,
+    content:      a.content      ?? null,
+    source:       a.source,
+    source_url:   a.source_url,
+    image_url:    a.image_url    ?? null,
+    category:     a.category,
+    keywords:     a.keywords     ?? [],
+    published_at: a.published_at ?? null,
+    created_at:   new Date().toISOString(),
+    viral_score:  score,
+    viral_label:  label,
+  };
+}
+
+// Guarda no cache — best-effort, nunca lança exceção
+async function storeArticles(articles: RawArticle[]): Promise<boolean> {
+  if (!articles.length) return false;
 
   const rows = articles.map((a) => {
     const { score, label } = calculateViralScore(a);
@@ -248,9 +270,10 @@ async function storeArticles(articles: RawArticle[]): Promise<void> {
     .upsert(rows, { onConflict: "title", ignoreDuplicates: true });
 
   if (error) {
-    console.error("[news] Supabase upsert error:", error.message, error.details);
-    throw new Error(`Supabase: ${error.message}`);
+    console.error("[news] Supabase upsert error:", error.message);
+    return false;
   }
+  return true;
 }
 
 export async function getNews(
@@ -261,6 +284,7 @@ export async function getNews(
 ): Promise<NewsItem[]> {
   const offset = (page - 1) * limit;
 
+  // Verifica cache fresco (15 min) antes de chamar a API
   if (!forceRefresh) {
     const freshSince = new Date(Date.now() - 15 * 60 * 1000).toISOString();
     const { count } = await supabaseAdmin
@@ -274,34 +298,69 @@ export async function getNews(
     }
   }
 
-  // Tenta NewsData.io → GNews → cache antigo
-  let fetched = false;
+  // Busca da API externa
+  let raw: RawArticle[] = [];
   try {
-    const articles = await fetchFromNewsData(category);
-    await storeArticles(articles);
-    fetched = true;
+    raw = await fetchFromNewsData(category);
   } catch (e1: any) {
     console.warn("[news] NewsData falhou:", e1.message);
+  }
+
+  if (!raw.length) {
     try {
-      const articles = await fetchFromGNews(category);
-      await storeArticles(articles);
-      fetched = true;
+      raw = await fetchFromGNews(category);
     } catch (e2: any) {
       console.warn("[news] GNews falhou:", e2.message);
     }
   }
 
-  if (!fetched) console.warn("[news] Ambas APIs falharam — retornando cache antigo");
-  return queryCache(category, offset, limit);
+  if (!raw.length) {
+    console.warn("[news] Ambas APIs falharam para", category, "— usando cache antigo");
+    return queryCache(category, offset, limit);
+  }
+
+  // Filtra para artigos das últimas 3 horas se possível
+  const threeHoursAgo = Date.now() - 3 * 60 * 60 * 1000;
+  const recent = raw.filter(
+    (a) => !a.published_at || new Date(a.published_at).getTime() >= threeHoursAgo,
+  );
+  const finalRaw = recent.length >= 3 ? recent : raw;
+
+  // Armazena no Supabase em background (não bloqueia resposta)
+  storeArticles(finalRaw).then((stored) => {
+    if (!stored) console.warn("[news] Cache Supabase indisponível para", category);
+  });
+
+  // Retorna do banco se conseguiu guardar, senão retorna direto da API
+  // Aguarda 200ms para dar chance ao upsert completar
+  await new Promise((r) => setTimeout(r, 200));
+  const cached = await queryCache(category, offset, limit);
+  if (cached.length > 0) return cached;
+
+  // Supabase indisponível — retorna da API diretamente
+  return finalRaw.slice(offset, offset + limit).map(rawToNewsItem);
 }
 
 async function queryCache(category: string, offset: number, limit: number): Promise<NewsItem[]> {
+  // Tenta primeiro com publicações da última hora
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { data: recent } = await supabaseAdmin
+    .from("news_cache")
+    .select("*")
+    .eq("category", category)
+    .gte("published_at", oneHourAgo)
+    .order("published_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (recent && recent.length >= 3) return recent as NewsItem[];
+
+  // Fallback: qualquer notícia da categoria, ordenada por recência e viral score
   const { data } = await supabaseAdmin
     .from("news_cache")
     .select("*")
     .eq("category", category)
-    .order("viral_score", { ascending: false })
     .order("created_at",  { ascending: false })
+    .order("viral_score", { ascending: false })
     .range(offset, offset + limit - 1);
   return (data as NewsItem[]) ?? [];
 }
@@ -413,8 +472,8 @@ export async function refreshAllCategories(): Promise<{ ok: number; failed: numb
   for (const cat of categories) {
     try {
       const articles = await fetchFromNewsData(cat).catch(async () => fetchFromGNews(cat));
-      await storeArticles(articles);
-      ok++;
+      const stored = await storeArticles(articles);
+      if (stored) ok++; else failed++;
     } catch {
       failed++;
     }
