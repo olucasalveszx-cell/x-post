@@ -55,17 +55,20 @@ export const CATEGORY_LABELS: Record<string, string> = {
   desenvolvimento_pessoal: "Dev. Pessoal",
 };
 
+// Categorias que devem filtrar por país BR (conteúdo local)
+const LOCAL_CATEGORIES = new Set(["brasil", "futebol", "esportes", "politica"]);
+
 // Mapeamento de categorias para APIs externas
 const CATEGORY_CONFIG: Record<string, { newsdataCategory?: string; gnewsTopic?: string; query?: string }> = {
   geral:                   { gnewsTopic: "world" },
   tecnologia:              { newsdataCategory: "technology",    gnewsTopic: "technology" },
-  inteligencia_artificial: { newsdataCategory: "technology",    gnewsTopic: "technology", query: "inteligência artificial IA" },
+  inteligencia_artificial: { newsdataCategory: "technology",    gnewsTopic: "technology", query: "inteligência artificial OR \"artificial intelligence\" OR chatgpt OR gemini OR claude OR OpenAI" },
   negocios:                { newsdataCategory: "business",      gnewsTopic: "business" },
   marketing:               { newsdataCategory: "business",      gnewsTopic: "business", query: "marketing digital" },
   vendas:                  { newsdataCategory: "business",      gnewsTopic: "business", query: "vendas" },
   financas:                { newsdataCategory: "business",      gnewsTopic: "business", query: "finanças" },
   investimentos:           { newsdataCategory: "business",      gnewsTopic: "business", query: "investimentos bolsa" },
-  criptomoedas:            { newsdataCategory: "technology",    gnewsTopic: "technology", query: "bitcoin criptomoedas" },
+  criptomoedas:            { newsdataCategory: "technology",    gnewsTopic: "technology", query: "bitcoin OR ethereum OR crypto OR criptomoedas" },
   startups:                { newsdataCategory: "business",      gnewsTopic: "business", query: "startup" },
   esportes:                { newsdataCategory: "sports",        gnewsTopic: "sports" },
   futebol:                 { newsdataCategory: "sports",        gnewsTopic: "sports", query: "futebol" },
@@ -148,9 +151,10 @@ async function fetchFromNewsData(category: string): Promise<RawArticle[]> {
   const params = new URLSearchParams({
     apikey: apiKey,
     language: "pt",
-    country: "br",
     size: "10",
   });
+  // Apenas categorias locais filtram por país
+  if (LOCAL_CATEGORIES.has(category)) params.set("country", "br");
   if (config.newsdataCategory) params.set("category", config.newsdataCategory);
   if (config.query)            params.set("q", config.query);
 
@@ -187,9 +191,10 @@ async function fetchFromGNews(category: string): Promise<RawArticle[]> {
   const params = new URLSearchParams({
     token: apiKey,
     lang:  "pt",
-    country: "br",
     max:   "10",
   });
+  // Apenas categorias locais filtram por país
+  if (LOCAL_CATEGORIES.has(category)) params.set("country", "br");
   if (config.gnewsTopic) params.set("topic", config.gnewsTopic);
   if (config.query)      params.set("q", config.query);
 
@@ -238,9 +243,14 @@ async function storeArticles(articles: RawArticle[]): Promise<void> {
     };
   });
 
-  await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from("news_cache")
     .upsert(rows, { onConflict: "title", ignoreDuplicates: true });
+
+  if (error) {
+    console.error("[news] Supabase upsert error:", error.message, error.details);
+    throw new Error(`Supabase: ${error.message}`);
+  }
 }
 
 export async function getNews(
