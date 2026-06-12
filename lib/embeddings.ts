@@ -1,26 +1,42 @@
-// Gemini text-embedding-004 — 768 dimensions
+// Embedding com fallback entre modelos Gemini disponíveis
+const EMBEDDING_MODELS = [
+  { model: "text-embedding-004",          version: "v1beta" },
+  { model: "gemini-embedding-exp-03-07",  version: "v1beta" },
+  { model: "embedding-001",               version: "v1beta" },
+  { model: "text-embedding-004",          version: "v1"     },
+];
 
 export async function generateEmbedding(text: string): Promise<number[]> {
   const keys = [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean) as string[];
   if (!keys.length) throw new Error("GEMINI_API_KEY não configurada");
 
-  const body = {
-    model: "models/text-embedding-004",
-    content: { parts: [{ text: text.substring(0, 8000) }] },
-  };
+  const truncated = text.substring(0, 8000);
+  let lastError = "Serviço de embedding indisponível";
 
-  for (const key of keys) {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${key}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-    );
-    const data = await res.json();
-    if (res.ok) return data.embedding.values as number[];
-    const msg: string = data.error?.message ?? `Embedding error ${res.status}`;
-    if (!msg.includes("quota") && !msg.includes("429")) throw new Error(msg);
+  for (const { model, version } of EMBEDDING_MODELS) {
+    for (const key of keys) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/${version}/models/${model}:embedContent?key=${key}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: { parts: [{ text: truncated }] } }),
+          }
+        );
+        const data = await res.json();
+        if (res.ok && data.embedding?.values) return data.embedding.values as number[];
+        lastError = data.error?.message ?? `Embedding error ${res.status}`;
+        // Só tenta próximo modelo se for erro de "não encontrado"
+        if (/quota|429|rate/i.test(lastError)) continue;
+        if (/not found|not supported|unsupported/i.test(lastError)) break; // tenta próximo modelo
+      } catch (e: any) {
+        lastError = e.message ?? lastError;
+      }
+    }
   }
 
-  throw new Error("Serviço de embedding indisponível. Verifique a GEMINI_API_KEY.");
+  throw new Error(lastError);
 }
 
 // Split text into overlapping chunks (word-based)
