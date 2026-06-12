@@ -7,6 +7,8 @@ import {
   Video, FileText, Lightbulb, ChevronRight, ArrowLeft, Search,
   AlertCircle, CheckCircle2, Copy, Send,
 } from "lucide-react";
+import { v4 as uuid } from "uuid";
+import type { Slide, SlideElement } from "@/types";
 import type { NewsItem, TrendingTopic } from "@/lib/news";
 import type { NewsAnalysis } from "@/app/api/news/analyze/route";
 import type { GenerationType } from "@/app/api/news/generate/route";
@@ -504,6 +506,133 @@ function GenerationModal({
   );
 }
 
+// ─── Construtor de slides reais com imagem e perfil IG ─────────────────────
+
+function buildNewsSlides(
+  rawSlides: Array<{ title: string; body: string; callToAction?: string }>,
+  newsImageUrl: string | null,
+  igAccount: { username?: string; name?: string; picture?: string } | null,
+): Slide[] {
+  const W = 1080, H = 1350;
+  const displayName = igAccount?.name ?? igAccount?.username ?? "Meu Perfil";
+  const handle = igAccount?.username ? `@${igAccount.username}` : "@meuperfil";
+  const picture = igAccount?.picture ?? "";
+  const total = rawSlides.length;
+
+  return rawSlides.map((raw, i): Slide => {
+    const isFirst = i === 0;
+    const isLast = i === total - 1;
+
+    const elements: SlideElement[] = [];
+
+    // Imagem da notícia (primeiro slide — cobre topo da tela)
+    if (isFirst && newsImageUrl) {
+      elements.push({
+        id: uuid(), type: "image",
+        x: 0, y: 0, width: W, height: Math.round(H * 0.52),
+        src: newsImageUrl,
+        zIndex: 1,
+      });
+      // Gradient sobre a imagem para legibilidade
+      elements.push({
+        id: uuid(), type: "shape",
+        x: 0, y: Math.round(H * 0.3), width: W, height: Math.round(H * 0.25),
+        style: { fill: "rgba(10,10,10,0)", stroke: "none", strokeWidth: 0, borderRadius: 0 },
+        gradient: "linear-gradient(to bottom, rgba(10,10,10,0), rgba(10,10,10,1))",
+        zIndex: 2,
+      });
+    }
+
+    // Perfil IG
+    elements.push({
+      id: uuid(), type: "profile",
+      x: 40, y: isFirst && newsImageUrl ? Math.round(H * 0.52) + 24 : 40,
+      width: 620, height: 72,
+      profileName: displayName,
+      profileHandle: handle,
+      profileVerified: false,
+      profileNameColor: "#ffffff",
+      profileHandleColor: "rgba(255,255,255,0.55)",
+      zIndex: 10,
+      ...(picture ? { src: picture } : {}),
+    });
+
+    // Numeração dos slides (exceto primeiro e último)
+    if (!isFirst && !isLast && total > 2) {
+      elements.push({
+        id: uuid(), type: "text",
+        x: W - 130, y: 44, width: 90, height: 36,
+        content: `${i + 1}/${total}`,
+        style: { fontSize: 22, fontWeight: "normal", fontFamily: "sans-serif", color: "rgba(255,255,255,0.35)", textAlign: "right", lineHeight: 1 },
+        zIndex: 10,
+      });
+    }
+
+    // Título
+    const titleY = isFirst && newsImageUrl
+      ? Math.round(H * 0.52) + 116
+      : (isFirst ? 140 : 160);
+    elements.push({
+      id: uuid(), type: "text",
+      x: 40, y: titleY, width: W - 80, height: 240,
+      content: raw.title,
+      style: {
+        fontSize: isFirst ? 54 : 50,
+        fontWeight: "bold",
+        fontFamily: "sans-serif",
+        color: "#ffffff",
+        textAlign: "left",
+        lineHeight: 1.25,
+      },
+      zIndex: 10,
+    });
+
+    // Corpo / descrição
+    elements.push({
+      id: uuid(), type: "text",
+      x: 40, y: titleY + 260, width: W - 80, height: 260,
+      content: raw.body,
+      style: {
+        fontSize: 30,
+        fontWeight: "normal",
+        fontFamily: "sans-serif",
+        color: "rgba(255,255,255,0.72)",
+        textAlign: "left",
+        lineHeight: 1.5,
+      },
+      zIndex: 10,
+    });
+
+    // CTA no último slide
+    if (isLast && raw.callToAction) {
+      elements.push({
+        id: uuid(), type: "text",
+        x: 40, y: H - 180, width: W - 80, height: 120,
+        content: raw.callToAction,
+        style: {
+          fontSize: 28,
+          fontWeight: "bold",
+          fontFamily: "sans-serif",
+          color: "#a78bfa",
+          textAlign: "center",
+          lineHeight: 1.4,
+        },
+        zIndex: 10,
+      });
+    }
+
+    const slide: Slide = {
+      id: uuid(),
+      backgroundColor: "#0a0a0a",
+      elements,
+      width: W,
+      height: H,
+    };
+
+    return slide;
+  });
+}
+
 // ─── Componente principal ───────────────────────────────────────────────────
 
 export default function NewsPage() {
@@ -613,10 +742,11 @@ export default function NewsPage() {
     }
   }, []);
 
-  // Enviar carrossel para o editor
-  const handleSendToEditor = useCallback((slides: any[]) => {
-    // Salva no localStorage para o editor pegar
-    localStorage.setItem("xpost_news_carousel", JSON.stringify(slides));
+  // Enviar carrossel para o editor — converte slides brutos em Slide[] reais
+  const handleSendToEditor = useCallback((rawSlides: any[], news: NewsItem) => {
+    const igAccount = JSON.parse(localStorage.getItem("ig_account") ?? "null");
+    const properSlides = buildNewsSlides(rawSlides, news.image_url, igAccount);
+    localStorage.setItem("xpost_news_carousel", JSON.stringify(properSlides));
     router.push("/editor?from=news");
   }, [router]);
 
@@ -785,7 +915,7 @@ export default function NewsPage() {
           result={genResult.result}
           newsTitle={genResult.news.title}
           onClose={() => setGenResult(null)}
-          onSendToEditor={handleSendToEditor}
+          onSendToEditor={(slides) => handleSendToEditor(slides, genResult.news)}
         />
       )}
     </div>

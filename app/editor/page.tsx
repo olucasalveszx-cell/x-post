@@ -261,6 +261,22 @@ export default function EditorPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Carregar carrossel vindo da Central de Notícias ───────────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("xpost_news_carousel");
+      if (raw) {
+        localStorage.removeItem("xpost_news_carousel");
+        const newsSlides = JSON.parse(raw);
+        if (Array.isArray(newsSlides) && newsSlides.length > 0) {
+          setProjects((prev) => prev.map((p, i) => i === 0 ? { ...p, slides: newsSlides } : p));
+          setCurrentIndex(0);
+        }
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Profile picker (aguarda animação se houver) ───────────────
   useEffect(() => {
     if (!loginAnimDone) return;
