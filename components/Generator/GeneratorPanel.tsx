@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Sparkles, Search, Loader2, AlertCircle, Crown, Zap, LogIn, CheckCircle2, Clock, X, Lightbulb, TrendingUp, Dumbbell, Briefcase, Star, BookOpen, Brain } from "lucide-react";
+import { Sparkles, Search, Loader2, AlertCircle, Crown, Zap, LogIn, CheckCircle2, Clock, X, Lightbulb, TrendingUp, Dumbbell, Briefcase, Star, BookOpen, Brain, CalendarClock, Newspaper, ChevronRight } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
 import { GeneratedContent, SearchResult, Slide, WritingStyle } from "@/types";
 import { v4 as uuid } from "uuid";
@@ -12,6 +12,7 @@ interface Props {
   onGenerate: (slides: Slide[]) => void;
   onLayoutChange?: (slides: Slide[]) => void;
   currentSlides?: Slide[];
+  onSwitchTab?: (tab: string) => void;
 }
 
 const SLIDE_W = 1080;
@@ -465,7 +466,7 @@ const QUICK_TOPICS: { icon: React.ReactNode; label: string; query: string }[] = 
   { icon: <Lightbulb size={12} />,  label: "Finanças Pessoais", query: "dicas de finanças pessoais e investimentos" },
 ];
 
-export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlides = [] }: Props) {
+export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlides = [], onSwitchTab }: Props) {
   const [status, setStatus] = useState<"idle" | "searching" | "generating" | "images" | "done" | "error">("idle");
   const [error, setError] = useState("");
   const [sources, setSources] = useState<SearchResult[]>([]);
@@ -837,6 +838,63 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
               </div>
             </button>
 
+
+            {/* ── Acesso Rápido ── */}
+            {status !== "done" && (
+              <div className="flex flex-col gap-2 pt-1">
+                <p className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold px-0.5">Ferramentas</p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => onSwitchTab?.("posts")}
+                    className="flex flex-col items-start gap-2 p-3 rounded-xl bg-[var(--bg)] border border-[var(--border)] hover:border-brand-500/40 hover:bg-[var(--bg-3)] transition-all group text-left"
+                  >
+                    <div className="p-1.5 rounded-lg bg-brand-500/15">
+                      <CalendarClock size={14} className="text-brand-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-[var(--text)]">Agendar</p>
+                      <p className="text-[10px] text-[var(--text-3)] leading-tight mt-0.5">Posts & calendário</p>
+                    </div>
+                  </button>
+
+                  <a
+                    href="/treinar"
+                    className="flex flex-col items-start gap-2 p-3 rounded-xl bg-[var(--bg)] border border-[var(--border)] hover:border-violet-500/40 hover:bg-[var(--bg-3)] transition-all group"
+                  >
+                    <div className="p-1.5 rounded-lg bg-violet-500/15">
+                      <Brain size={14} className="text-violet-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-[var(--text)]">Treinar IA</p>
+                      <p className="text-[10px] text-[var(--text-3)] leading-tight mt-0.5">Personalize a IA</p>
+                    </div>
+                  </a>
+                </div>
+
+                <a
+                  href="/noticias"
+                  className="flex items-center gap-3 p-3 rounded-xl border transition-all group"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(249,115,22,0.08) 0%, rgba(251,191,36,0.04) 100%)",
+                    borderColor: "rgba(249,115,22,0.2)",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(249,115,22,0.4)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(249,115,22,0.2)"; }}
+                >
+                  <div className="p-2 rounded-lg shrink-0" style={{ background: "rgba(249,115,22,0.15)" }}>
+                    <Newspaper size={15} className="text-orange-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-orange-300">Notícias em Alta</p>
+                    <p className="text-[10px] leading-tight mt-0.5" style={{ color: "rgba(251,146,60,0.6)" }}>
+                      Tendências para criar conteúdo viral
+                    </p>
+                  </div>
+                  <ChevronRight size={14} className="text-orange-400/40 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              </div>
+            )}
 
             {status === "done" && lastSettings && (
               <>

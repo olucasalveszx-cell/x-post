@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Sparkles, Languages, CalendarClock, StickyNote, Loader2, Plus, Trash2, ChevronDown, ChevronRight, Check, Brain, Newspaper } from "lucide-react";
+import { Sparkles, Languages, StickyNote, Loader2, Plus, Trash2, ChevronDown, ChevronRight, Check } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import GeneratorPanel from "./GeneratorPanel";
@@ -312,32 +312,6 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
   return (
     <div className="w-80 bg-[var(--bg-2)] border-r border-[var(--border)] flex flex-col overflow-hidden">
 
-      {/* Quick-access top buttons */}
-      <div className="flex border-b border-[var(--border)] shrink-0">
-        <button
-          onClick={() => setTab("posts")}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
-            tab === "posts"
-              ? "bg-brand-600/20 text-brand-400"
-              : "bg-[var(--bg-3)] text-[var(--text-2)] hover:text-brand-400 hover:bg-brand-600/10"
-          }`}
-        >
-          <CalendarClock size={13} /> Agendar & Posts
-        </button>
-        <a
-          href="/treinar"
-          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors text-[var(--text-2)] hover:text-violet-400 hover:bg-violet-600/10 border-l border-[var(--border)]"
-        >
-          <Brain size={13} /> Treinar IA
-        </a>
-        <a
-          href="/noticias"
-          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors text-[var(--text-2)] hover:text-orange-400 hover:bg-orange-600/10 border-l border-[var(--border)]"
-        >
-          <Newspaper size={13} /> Notícias
-        </a>
-      </div>
-
       {/* Abas secundárias */}
       <div className="flex border-b border-[var(--border)] shrink-0">
         {([
@@ -363,7 +337,7 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
       {/* Conteúdo */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
         {tab === "generate" && (
-          <GeneratorPanel onGenerate={onGenerate} onLayoutChange={onLayoutChange} currentSlides={currentSlides} />
+          <GeneratorPanel onGenerate={onGenerate} onLayoutChange={onLayoutChange} currentSlides={currentSlides} onSwitchTab={(t) => setTab(t as Tab)} />
         )}
         {tab === "posts"     && <PostsPanel currentSlides={currentSlides} onLoad={onGenerate} />}
         {tab === "translate" && <TranslatePanel onGenerate={onGenerate} />}
