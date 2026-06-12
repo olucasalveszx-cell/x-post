@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Sparkles, Languages, CalendarClock, StickyNote, Loader2, Plus, Trash2, ChevronDown, ChevronRight, Check, Brain } from "lucide-react";
+import { Sparkles, Languages, CalendarClock, StickyNote, Loader2, Plus, Trash2, ChevronDown, ChevronRight, Check, Brain, Newspaper } from "lucide-react";
 import { Slide, SlideElement } from "@/types";
 import { v4 as uuid } from "uuid";
 import GeneratorPanel from "./GeneratorPanel";
@@ -329,6 +329,12 @@ export default function SidePanel({ onGenerate, onLayoutChange, currentSlides = 
           className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors text-[var(--text-2)] hover:text-violet-400 hover:bg-violet-600/10 border-l border-[var(--border)]"
         >
           <Brain size={13} /> Treinar IA
+        </a>
+        <a
+          href="/noticias"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors text-[var(--text-2)] hover:text-orange-400 hover:bg-orange-600/10 border-l border-[var(--border)]"
+        >
+          <Newspaper size={13} /> Notícias
         </a>
       </div>
 
