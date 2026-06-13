@@ -489,15 +489,43 @@ function GenerationModal({
                   </div>
                   <p className="text-xs text-indigo-300 italic">{idea.angle}</p>
                   <p className="text-xs text-white/50">Hook: <span className="text-white/70">{idea.hook}</span></p>
-                  <div className="flex flex-wrap gap-1 pt-1 border-t border-white/10">
+                  <div className="flex flex-wrap gap-1 pt-2 border-t border-white/10">
                     {idea.slides?.map((s: string, j: number) => (
                       <span key={j} className="text-[10px] px-2 py-0.5 bg-white/5 text-white/50 rounded-md">{s}</span>
                     ))}
                   </div>
+                  {/* Botão para converter ideia em carrossel */}
+                  <button
+                    onClick={() => {
+                      const rawSlides = [
+                        { title: idea.title, body: idea.angle ?? idea.hook ?? "", callToAction: "" },
+                        ...(idea.slides ?? []).slice(0, 8).map((s: string) => ({
+                          title: s, body: "", callToAction: "",
+                        })),
+                      ];
+                      onSendToEditor?.(rawSlides);
+                    }}
+                    disabled={sendingToEditor}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendingToEditor
+                      ? <><Loader2 size={13} className="animate-spin" /> Buscando imagens...</>
+                      : <><LayoutGrid size={13} /> Usar essa ideia</>}
+                  </button>
                 </div>
               ))}
             </div>
           )}
+        </div>
+
+        {/* Footer com botão de fechar */}
+        <div className="sticky bottom-0 px-5 py-3 border-t border-white/10 bg-[#0d0d0d] flex justify-end">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all"
+          >
+            <ArrowLeft size={14} /> Voltar às notícias
+          </button>
         </div>
       </div>
     </div>
