@@ -208,6 +208,60 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
     }
   };
 
+  // Agendado com música: agenda o post E abre o Instagram para o usuário finalizar com música
+  const handleScheduleWithMusic = async () => {
+    if (!account || !scheduledAt) return;
+    setShowMusicConfirm(false);
+    setStatus("exporting"); setMessage(""); setProgress(0);
+    try {
+      const dataUrls = await exportSlides();
+      setProgress(35);
+      setStatus("uploading");
+      const blobUrls = await uploadToBlob(dataUrls);
+      setProgress(60); setStatus("scheduling");
+      const scheduledAtISO = new Date(scheduledAt).toISOString();
+      const res = await fetch("/api/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caption, imageUrls: blobUrls, scheduledAt: scheduledAtISO,
+          igAccountId: account.accountId, igToken: account.token,
+          mediaType: postType === "stories" ? "story" : "carousel",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setProgress(80);
+
+      // Copia legenda e abre Instagram para adicionar música
+      if (caption) navigator.clipboard.writeText(caption).catch(() => {});
+      const files: File[] = dataUrls.map((url, i) => {
+        const arr = url.split(",");
+        const mime = arr[0].match(/:(.*?);/)?.[1] ?? "image/jpeg";
+        const bstr = atob(arr[1]);
+        const u8 = new Uint8Array(bstr.length);
+        for (let j = 0; j < bstr.length; j++) u8[j] = bstr.charCodeAt(j);
+        return new File([u8], `slide-${String(i + 1).padStart(2, "0")}.jpg`, { type: mime });
+      });
+      const canShare = typeof navigator.share === "function" && navigator.canShare?.({ files });
+      if (canShare) {
+        await navigator.share({ files, text: caption, title: "XPost" });
+      } else {
+        for (let i = 0; i < dataUrls.length; i++) {
+          const a = document.createElement("a");
+          a.href = dataUrls[i]; a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
+          a.click();
+          await new Promise((r) => setTimeout(r, 200));
+        }
+      }
+      setProgress(100); setStatus("success");
+      setMessage(`Agendado para ${new Date(scheduledAt).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} — adicione a música no Instagram!`);
+    } catch (err: any) {
+      if ((err as any)?.name === "AbortError") { setStatus("idle"); return; }
+      handleError(err, "Erro ao agendar com música");
+    }
+  };
+
   // "Sim" no pop-up de música: abre Instagram com as imagens para o usuário adicionar música nativamente
   const handleShareWithMusic = async () => {
     setShowMusicConfirm(false);
@@ -272,7 +326,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 </button>
                 {scheduledAt ? (
                   <button
-                    onClick={async () => { setShowMusicConfirm(false); await handleSchedule(); }}
+                    onClick={handleScheduleWithMusic}
                     className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
                     style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)" }}
                   >
