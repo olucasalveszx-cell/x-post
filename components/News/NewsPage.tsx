@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Newspaper, TrendingUp, Flame, Bookmark, BookmarkCheck,
   ExternalLink, RefreshCw, Loader2, X, Sparkles, LayoutGrid,
-  Video, FileText, Lightbulb, ArrowLeft,
+  Video, FileText, Lightbulb, ArrowLeft, Search,
   AlertCircle, CheckCircle2, Copy, Send,
 } from "lucide-react";
 import { v4 as uuid } from "uuid";
@@ -83,71 +83,66 @@ function NewsCard({
   onGenerate: (type: GenerationType) => void;
 }) {
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-white/20 transition-all group flex flex-col">
+    <div className="bg-white/5 border border-white/8 rounded-2xl overflow-hidden hover:border-white/18 active:scale-[0.99] transition-all group flex flex-col">
       {/* Imagem */}
       <div
-        className="relative h-40 bg-gradient-to-br from-indigo-900/40 to-purple-900/40 cursor-pointer overflow-hidden"
+        className="relative bg-gradient-to-br from-indigo-900/30 to-purple-900/30 cursor-pointer overflow-hidden"
+        style={{ aspectRatio: "16/9" }}
         onClick={onSelect}
       >
         {news.image_url ? (
           <img
             src={news.image_url}
             alt={news.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Newspaper size={32} className="text-white/20" />
+            <Newspaper size={28} className="text-white/15" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="absolute bottom-2 left-2">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute top-2 left-2">
           <ViralBadge label={news.viral_label} />
+        </div>
+        <div className="absolute top-2 right-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onSave(); }}
+            className={`p-1.5 rounded-full backdrop-blur-sm transition-all ${saved ? "bg-indigo-500 text-white" : "bg-black/40 text-white/60 hover:text-white"}`}
+          >
+            {saved ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
+          </button>
+        </div>
+        <div className="absolute bottom-2 left-2 right-2">
+          <div className="flex items-center gap-1.5 text-[10px] text-white/60">
+            <span className="font-medium truncate">{news.source}</span>
+            <span>·</span>
+            <span className="shrink-0">{timeAgo(news.published_at || news.created_at)}</span>
+          </div>
         </div>
       </div>
 
       {/* Conteúdo */}
-      <div className="flex flex-col flex-1 p-3 gap-2">
+      <div className="flex flex-col flex-1 p-3 gap-2.5">
         <h3
-          className="text-sm font-semibold text-white line-clamp-2 cursor-pointer hover:text-indigo-300 transition-colors leading-snug"
+          className="text-sm font-semibold text-white line-clamp-3 cursor-pointer hover:text-indigo-300 active:text-indigo-300 transition-colors leading-snug"
           onClick={onSelect}
         >
           {news.title}
         </h3>
 
-        {news.description && (
-          <p className="text-xs text-white/50 line-clamp-2 leading-relaxed">{news.description}</p>
-        )}
-
-        <div className="flex items-center gap-2 text-[10px] text-white/40 mt-auto pt-1">
-          <span className="truncate max-w-[100px]">{news.source}</span>
-          <span>•</span>
-          <span>{timeAgo(news.published_at || news.created_at)}</span>
-        </div>
-
-        {/* Botões de geração */}
-        <div className="flex flex-wrap gap-1 pt-1 border-t border-white/10">
+        {/* Botões de geração — touch-friendly */}
+        <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-white/8">
           {GEN_ACTIONS.map((a) => (
             <button
               key={a.type}
               onClick={() => onGenerate(a.type)}
-              className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all"
+              className="flex items-center justify-center gap-1.5 text-xs py-2 px-2 rounded-xl bg-white/6 hover:bg-white/12 active:bg-white/18 text-white/65 hover:text-white transition-all"
             >
               {a.icon} {a.label}
             </button>
           ))}
-          <button
-            onClick={onSave}
-            className={`ml-auto flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-all ${
-              saved
-                ? "bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/10"
-                : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
-            }`}
-          >
-            {saved ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
-            {saved ? "Salvo" : "Salvar"}
-          </button>
         </div>
       </div>
     </div>
@@ -667,7 +662,10 @@ export default function NewsPage() {
   const [loadingSaved, setLoadingSaved]     = useState(false);
   const [sendingToEditor, setSendingToEditor] = useState(false);
   const [lastHour, setLastHour]               = useState(false);
+  const [searchQuery, setSearchQuery]         = useState("");
+  const [showSearch, setShowSearch]           = useState(false);
   const trendingRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Busca notícias
   const fetchNews = useCallback(async (category: string, force = false, hours?: number) => {
@@ -709,14 +707,14 @@ export default function NewsPage() {
   }, []);
 
   useEffect(() => {
-    fetchNews(activeCategory);
+    // fetchNews é controlado pelo segundo effect (evita dupla chamada no mount)
     fetchTrending();
     fetchSaved();
   }, []);
 
   useEffect(() => {
     fetchNews(activeCategory, false, lastHour ? 1 : undefined);
-  }, [activeCategory, lastHour]);
+  }, [activeCategory, lastHour]); // dispara no mount com valores iniciais
 
   // Salvar / remover notícia
   const toggleSave = useCallback(async (news: NewsItem) => {
@@ -818,76 +816,139 @@ export default function NewsPage() {
     setRefreshing(false);
   };
 
-  const displayNews = activeView === "saved" ? savedNews : news;
+  const baseNews    = activeView === "saved" ? savedNews : news;
+  const displayNews = searchQuery.trim()
+    ? baseNews.filter((n) =>
+        n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (n.description ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        n.source.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : baseNews;
 
   return (
-    <div className="min-h-screen bg-[#080808] text-white">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#080808]/95 backdrop-blur border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/editor")}
-              className="p-1.5 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-all"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div className="flex items-center gap-2">
-              <Newspaper size={20} className="text-indigo-400" />
-              <h1 className="text-base font-bold text-white">Notícias em Alta</h1>
-            </div>
+    <div className="min-h-screen bg-[#080808] text-white flex flex-col">
+
+      {/* ── Header sticky ── */}
+      <div className="sticky top-0 z-20 bg-[#080808]/95 backdrop-blur-md border-b border-white/8">
+        <div className="flex items-center gap-2 px-3 py-2.5 max-w-5xl mx-auto">
+          <button
+            onClick={() => router.push("/editor")}
+            className="p-2 rounded-xl hover:bg-white/10 text-white/50 hover:text-white transition-all shrink-0"
+          >
+            <ArrowLeft size={18} />
+          </button>
+
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Newspaper size={18} className="text-indigo-400 shrink-0" />
+            <h1 className="text-sm font-bold text-white truncate">Notícias em Alta</h1>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Search toggle */}
             <button
-              onClick={() => { setActiveView("feed");  }}
-              className={`text-xs px-3 py-1.5 rounded-lg transition-all ${activeView === "feed"  ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "text-white/50 hover:text-white"}`}
+              onClick={() => {
+                setShowSearch((v) => {
+                  if (!v) setTimeout(() => searchInputRef.current?.focus(), 80);
+                  else setSearchQuery("");
+                  return !v;
+                });
+              }}
+              className={`p-2 rounded-xl transition-all ${showSearch ? "bg-indigo-500/20 text-indigo-300" : "hover:bg-white/10 text-white/50 hover:text-white"}`}
             >
-              Feed
+              <Search size={16} />
             </button>
-            <button
-              onClick={() => { setActiveView("saved"); fetchSaved(); }}
-              className={`text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${activeView === "saved" ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "text-white/50 hover:text-white"}`}
-            >
-              <Bookmark size={12} /> Salvas {savedIds.size > 0 && `(${savedIds.size})`}
-            </button>
+
+            {/* Última 1h */}
             <button
               onClick={() => setLastHour((v) => !v)}
-              title="Filtrar últimas 1 hora"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border ${lastHour ? "bg-orange-500/20 text-orange-300 border-orange-500/40" : "text-white/50 hover:text-white border-transparent hover:bg-white/10"}`}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${lastHour ? "bg-orange-500/20 text-orange-300 border border-orange-500/30" : "hover:bg-white/10 text-white/50 hover:text-white"}`}
             >
-              <Flame size={13} />
-              Última 1h
+              <Flame size={12} />
+              <span className="hidden sm:inline">1h</span>
+              <span className="sm:hidden">1h</span>
             </button>
+
+            {/* Salvas */}
+            <button
+              onClick={() => { setActiveView(activeView === "saved" ? "feed" : "saved"); if (activeView !== "saved") fetchSaved(); }}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeView === "saved" ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "hover:bg-white/10 text-white/50 hover:text-white"}`}
+            >
+              <Bookmark size={12} />
+              {savedIds.size > 0 && <span>{savedIds.size}</span>}
+            </button>
+
+            {/* Refresh */}
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="p-1.5 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-all disabled:opacity-50"
+              className="p-2 rounded-xl hover:bg-white/10 text-white/50 hover:text-white transition-all disabled:opacity-40"
             >
-              <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+              <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
             </button>
           </div>
         </div>
+
+        {/* Search bar */}
+        {showSearch && (
+          <div className="px-3 pb-2.5 max-w-5xl mx-auto">
+            <div className="flex items-center gap-2 bg-white/8 border border-white/12 rounded-xl px-3 py-2">
+              <Search size={14} className="text-white/40 shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Pesquisar notícias..."
+                className="flex-1 bg-transparent text-sm text-white placeholder:text-white/30 outline-none"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="text-white/40 hover:text-white transition-colors">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-4 space-y-5">
-        {/* Tendências do Dia */}
-        {trending.length > 0 && activeView === "feed" && (
+      {/* ── Categorias (só no feed) ── */}
+      {activeView === "feed" && !searchQuery && (
+        <div className="border-b border-white/8 bg-[#080808]">
+          <div className="flex gap-1.5 overflow-x-auto px-3 py-2 scrollbar-none max-w-5xl mx-auto">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id)}
+                className={`shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
+                  activeCategory === cat.id
+                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
+                    : "bg-white/6 text-white/55 hover:bg-white/12 hover:text-white border border-white/8"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 max-w-5xl mx-auto w-full px-3 py-3 space-y-4">
+
+        {/* Tendências */}
+        {trending.length > 0 && activeView === "feed" && !searchQuery && (
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp size={14} className="text-orange-400" />
-              <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">Tendências do Dia</span>
+            <div className="flex items-center gap-1.5 mb-2">
+              <TrendingUp size={13} className="text-orange-400" />
+              <span className="text-[11px] font-bold text-white/50 uppercase tracking-widest">Em alta agora</span>
             </div>
             <div ref={trendingRef} className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
               {trending.map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => { setActiveCategory(t.category); fetchNews(t.category); }}
-                  className="shrink-0 flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-full text-xs text-white/70 hover:text-white transition-all"
+                  onClick={() => { setActiveView("feed"); setActiveCategory(t.category); setSearchQuery(""); }}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-orange-500/30 rounded-full text-xs text-white/70 hover:text-white transition-all"
                 >
-                  <span className="flex items-center gap-1 text-orange-400 font-semibold text-[10px]">
-                    <Flame size={10} /> {t.growth_score}
-                  </span>
+                  <Flame size={10} className="text-orange-400" />
                   {t.title}
                 </button>
               ))}
@@ -895,60 +956,54 @@ export default function NewsPage() {
           </div>
         )}
 
-        {/* Filtro de categorias */}
-        {activeView === "feed" && (
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`shrink-0 text-xs px-3 py-1.5 rounded-full transition-all ${
-                  activeCategory === cat.id
-                    ? "bg-indigo-500/30 text-indigo-300 border border-indigo-500/40"
-                    : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white border border-white/10"
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
+        {/* Label de contexto */}
+        {(searchQuery || activeView === "saved" || lastHour) && (
+          <div className="flex items-center gap-2 text-xs text-white/40">
+            {searchQuery   && <span>Resultados para "<span className="text-white/70">{searchQuery}</span>"</span>}
+            {!searchQuery && activeView === "saved" && <span>Notícias salvas</span>}
+            {!searchQuery && lastHour && activeView !== "saved" && <span className="flex items-center gap-1"><Flame size={11} className="text-orange-400" /> Última hora</span>}
+            <span className="ml-auto">{displayNews.length} notícias</span>
           </div>
         )}
 
-        {/* Grid de notícias */}
+        {/* Grid */}
         {loadingNews || (activeView === "saved" && loadingSaved) ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white/5 rounded-xl overflow-hidden animate-pulse">
-                <div className="h-40 bg-white/5" />
+              <div key={i} className="bg-white/5 rounded-2xl overflow-hidden animate-pulse">
+                <div className="h-44 bg-white/5" />
                 <div className="p-3 space-y-2">
-                  <div className="h-3 bg-white/5 rounded w-3/4" />
-                  <div className="h-3 bg-white/5 rounded w-1/2" />
-                  <div className="h-3 bg-white/5 rounded w-5/6" />
+                  <div className="h-3 bg-white/5 rounded-full w-3/4" />
+                  <div className="h-3 bg-white/5 rounded-full w-1/2" />
+                  <div className="h-8 bg-white/5 rounded-xl mt-3" />
                 </div>
               </div>
             ))}
           </div>
         ) : displayNews.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-white/30">
-            <Newspaper size={40} className="mb-3" />
-            <p className="text-sm">
-              {activeView === "saved"
+          <div className="flex flex-col items-center justify-center py-24 text-white/30">
+            <Newspaper size={44} className="mb-4 opacity-30" />
+            <p className="text-sm font-medium">
+              {searchQuery
+                ? `Nenhum resultado para "${searchQuery}"`
+                : activeView === "saved"
                 ? "Nenhuma notícia salva ainda"
-                : "Nenhuma notícia encontrada. Tente atualizar."}
+                : "Nenhuma notícia encontrada"}
             </p>
-            {activeView === "feed" && (
-              <button onClick={handleRefresh} className="mt-3 text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
-                <RefreshCw size={12} /> Atualizar
+            {activeView === "feed" && !searchQuery && (
+              <button onClick={handleRefresh} className="mt-4 flex items-center gap-2 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-4 py-2 rounded-xl transition-all">
+                <RefreshCw size={13} /> Atualizar
               </button>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {displayNews.map((n) => (
               <div key={n.id} className="relative">
                 {generatingFor?.startsWith(n.id) && (
-                  <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-xl">
-                    <Loader2 size={24} className="text-indigo-400 animate-spin" />
+                  <div className="absolute inset-0 bg-black/70 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-2xl gap-2">
+                    <Loader2 size={22} className="text-indigo-400 animate-spin" />
+                    <span className="text-xs text-white/60">Gerando...</span>
                   </div>
                 )}
                 <NewsCard
