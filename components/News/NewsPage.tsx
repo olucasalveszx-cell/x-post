@@ -666,13 +666,17 @@ export default function NewsPage() {
   const [savedNews, setSavedNews]           = useState<NewsItem[]>([]);
   const [loadingSaved, setLoadingSaved]     = useState(false);
   const [sendingToEditor, setSendingToEditor] = useState(false);
+  const [lastHour, setLastHour]               = useState(false);
   const trendingRef = useRef<HTMLDivElement>(null);
 
   // Busca notícias
-  const fetchNews = useCallback(async (category: string, force = false) => {
+  const fetchNews = useCallback(async (category: string, force = false, hours?: number) => {
     setLoadingNews(true);
     try {
-      const res = await fetch(`/api/news?category=${category}${force ? "&refresh=true" : ""}`);
+      const params = new URLSearchParams({ category });
+      if (force) params.set("refresh", "true");
+      if (hours) params.set("hours", String(hours));
+      const res = await fetch(`/api/news?${params}`);
       const data = await res.json();
       setNews(data.news ?? []);
     } catch {
@@ -711,8 +715,8 @@ export default function NewsPage() {
   }, []);
 
   useEffect(() => {
-    fetchNews(activeCategory);
-  }, [activeCategory]);
+    fetchNews(activeCategory, false, lastHour ? 1 : undefined);
+  }, [activeCategory, lastHour]);
 
   // Salvar / remover notícia
   const toggleSave = useCallback(async (news: NewsItem) => {
@@ -810,7 +814,7 @@ export default function NewsPage() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchNews(activeCategory, true);
+    await fetchNews(activeCategory, true, lastHour ? 1 : undefined);
     setRefreshing(false);
   };
 
@@ -846,6 +850,14 @@ export default function NewsPage() {
               className={`text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${activeView === "saved" ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "text-white/50 hover:text-white"}`}
             >
               <Bookmark size={12} /> Salvas {savedIds.size > 0 && `(${savedIds.size})`}
+            </button>
+            <button
+              onClick={() => setLastHour((v) => !v)}
+              title="Filtrar últimas 1 hora"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border ${lastHour ? "bg-orange-500/20 text-orange-300 border-orange-500/40" : "text-white/50 hover:text-white border-transparent hover:bg-white/10"}`}
+            >
+              <Flame size={13} />
+              Última 1h
             </button>
             <button
               onClick={handleRefresh}

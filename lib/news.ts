@@ -167,7 +167,7 @@ interface RawArticle {
   published_at?: string | null;
 }
 
-async function fetchFromNewsData(category: string): Promise<RawArticle[]> {
+async function fetchFromNewsData(category: string, hours?: number): Promise<RawArticle[]> {
   const apiKey = process.env.NEWSDATA_API_KEY;
   if (!apiKey) throw new Error("NEWSDATA_API_KEY não configurada");
 
@@ -180,6 +180,7 @@ async function fetchFromNewsData(category: string): Promise<RawArticle[]> {
   if (LOCAL_CATEGORIES.has(category)) params.set("country", "br");
   if (config.newsdataCategory)         params.set("category", config.newsdataCategory);
   if (config.query)                    params.set("q", config.query);
+  if (hours)                           params.set("timeframe", String(Math.max(1, Math.min(48, hours))));
 
   const res = await fetch(`https://newsdata.io/api/1/latest?${params}`, {
     signal: AbortSignal.timeout(12000),
@@ -207,7 +208,7 @@ async function fetchFromNewsData(category: string): Promise<RawArticle[]> {
     }));
 }
 
-async function fetchFromGNews(category: string): Promise<RawArticle[]> {
+async function fetchFromGNews(category: string, hours?: number): Promise<RawArticle[]> {
   const apiKey = process.env.GNEWS_API_KEY;
   if (!apiKey) throw new Error("GNEWS_API_KEY não configurada");
 
@@ -222,6 +223,10 @@ async function fetchFromGNews(category: string): Promise<RawArticle[]> {
   if (LOCAL_CATEGORIES.has(category)) params.set("country", "br");
   if (config.gnewsTopic) params.set("topic", config.gnewsTopic);
   if (query)             params.set("q", query);
+  if (hours) {
+    const fromDate = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    params.set("from", fromDate);
+  }
 
   const endpoint = query
     ? `https://gnews.io/api/v4/search?${params}`
@@ -252,10 +257,10 @@ async function fetchFromGNews(category: string): Promise<RawArticle[]> {
 }
 
 // Busca das duas APIs em paralelo e mescla, priorizando artigos mais recentes
-async function fetchFromAllSources(category: string): Promise<RawArticle[]> {
+async function fetchFromAllSources(category: string, hours?: number): Promise<RawArticle[]> {
   const [ndResult, gnResult] = await Promise.allSettled([
-    fetchFromNewsData(category),
-    fetchFromGNews(category),
+    fetchFromNewsData(category, hours),
+    fetchFromGNews(category, hours),
   ]);
 
   const ndArticles  = ndResult.status  === "fulfilled" ? ndResult.value  : [];
@@ -339,8 +344,22 @@ export async function getNews(
   page: number = 1,
   limit: number = 20,
   forceRefresh = false,
+  hours?: number,
 ): Promise<NewsItem[]> {
   const offset = (page - 1) * limit;
+
+  // Filtro de hora específica: sempre busca das APIs em tempo real
+  if (hours) {
+    const raw = await fetchFromAllSources(category, hours);
+    const cutoff = Date.now() - hours * 60 * 60 * 1000;
+    const filtered = raw.filter(a =>
+      a.published_at && new Date(a.published_at).getTime() >= cutoff,
+    );
+    // Armazena para enriquecer o cache geral
+    if (filtered.length > 0) storeArticles(filtered).catch(() => {});
+    const result = filtered.length > 0 ? filtered : raw;
+    return result.slice(offset, offset + limit).map(rawToNewsItem);
+  }
 
   // Cache fresco = artigos inseridos nos últimos 20 minutos
   if (!forceRefresh) {
