@@ -34,56 +34,76 @@ export interface TrendingTopic {
 }
 
 export const CATEGORY_LABELS: Record<string, string> = {
-  geral: "Geral",
-  tecnologia: "Tecnologia",
+  geral:                   "Geral",
+  tecnologia:              "Tecnologia",
   inteligencia_artificial: "Inteligência Artificial",
-  negocios: "Negócios",
-  marketing: "Marketing",
-  vendas: "Vendas",
-  financas: "Finanças",
-  investimentos: "Investimentos",
-  criptomoedas: "Criptomoedas",
-  startups: "Startups",
-  esportes: "Esportes",
-  futebol: "Futebol",
-  musica: "Música",
-  entretenimento: "Entretenimento",
-  saude: "Saúde",
-  politica: "Política",
-  mundo: "Mundo",
-  brasil: "Brasil",
-  educacao: "Educação",
+  negocios:                "Negócios",
+  marketing:               "Marketing",
+  vendas:                  "Vendas",
+  financas:                "Finanças",
+  investimentos:           "Investimentos",
+  criptomoedas:            "Criptomoedas",
+  startups:                "Startups",
+  esportes:                "Esportes",
+  futebol:                 "Futebol",
+  musica:                  "Música",
+  entretenimento:          "Entretenimento",
+  saude:                   "Saúde",
+  politica:                "Política",
+  mundo:                   "Mundo",
+  brasil:                  "Brasil",
+  educacao:                "Educação",
   desenvolvimento_pessoal: "Dev. Pessoal",
 };
 
-// Categorias que devem filtrar por país BR (conteúdo local)
+// Categorias que filtram por país BR
 const LOCAL_CATEGORIES = new Set(["brasil", "futebol", "esportes", "politica"]);
 
-// Mapeamento de categorias para APIs externas
-const CATEGORY_CONFIG: Record<string, { newsdataCategory?: string; gnewsTopic?: string; query?: string }> = {
-  geral:                   { gnewsTopic: "world" },
+// Configuração por categoria — queries mais ricas para maior cobertura
+const CATEGORY_CONFIG: Record<string, {
+  newsdataCategory?: string;
+  gnewsTopic?: string;
+  query?: string;
+  gnewsQuery?: string; // query alternativa para o GNews
+}> = {
+  geral:                   { newsdataCategory: "top",           gnewsTopic: "breaking-news" },
   tecnologia:              { newsdataCategory: "technology",    gnewsTopic: "technology" },
-  inteligencia_artificial: { newsdataCategory: "technology",    gnewsTopic: "technology", query: "inteligência artificial OR \"artificial intelligence\" OR chatgpt OR gemini OR claude OR OpenAI" },
+  inteligencia_artificial: { newsdataCategory: "technology",    gnewsTopic: "technology",
+                             query: "inteligência artificial OR \"artificial intelligence\" OR chatgpt OR gemini OR claude OR OpenAI OR copilot OR llm OR machine learning",
+                             gnewsQuery: "inteligência artificial OR chatgpt OR OpenAI OR machine learning" },
   negocios:                { newsdataCategory: "business",      gnewsTopic: "business" },
-  marketing:               { newsdataCategory: "business",      gnewsTopic: "business", query: "marketing digital" },
-  vendas:                  { newsdataCategory: "business",      gnewsTopic: "business", query: "vendas" },
-  financas:                { newsdataCategory: "business",      gnewsTopic: "business", query: "finanças" },
-  investimentos:           { newsdataCategory: "business",      gnewsTopic: "business", query: "investimentos bolsa" },
-  criptomoedas:            { newsdataCategory: "technology",    gnewsTopic: "technology", query: "bitcoin OR ethereum OR crypto OR criptomoedas" },
-  startups:                { newsdataCategory: "business",      gnewsTopic: "business", query: "startup" },
+  marketing:               { newsdataCategory: "business",      gnewsTopic: "business",
+                             query: "marketing digital OR social media OR tráfego pago OR conteúdo OR influencer OR branding" },
+  vendas:                  { newsdataCategory: "business",      gnewsTopic: "business",
+                             query: "vendas OR e-commerce OR varejo OR consumidor OR loja virtual" },
+  financas:                { newsdataCategory: "business",      gnewsTopic: "business",
+                             query: "finanças pessoais OR economia OR inflação OR taxa de juros OR Selic OR Banco Central" },
+  investimentos:           { newsdataCategory: "business",      gnewsTopic: "business",
+                             query: "investimentos OR bolsa de valores OR Ibovespa OR ações OR fundos OR tesouro direto OR renda fixa" },
+  criptomoedas:            { newsdataCategory: "technology",    gnewsTopic: "technology",
+                             query: "bitcoin OR ethereum OR criptomoedas OR crypto OR blockchain OR altcoin OR DeFi OR NFT",
+                             gnewsQuery: "bitcoin OR ethereum OR criptomoedas OR crypto" },
+  startups:                { newsdataCategory: "business",      gnewsTopic: "business",
+                             query: "startup OR unicórnio OR venture capital OR funding OR aceleração OR empreendedorismo OR inovação" },
   esportes:                { newsdataCategory: "sports",        gnewsTopic: "sports" },
-  futebol:                 { newsdataCategory: "sports",        gnewsTopic: "sports", query: "futebol" },
-  musica:                  { newsdataCategory: "entertainment", gnewsTopic: "entertainment", query: "música" },
+  futebol:                 { newsdataCategory: "sports",        gnewsTopic: "sports",
+                             query: "futebol OR Brasileirão OR Copa do Brasil OR Libertadores OR Seleção Brasileira OR FIFA" },
+  musica:                  { newsdataCategory: "entertainment", gnewsTopic: "entertainment",
+                             query: "música OR artista OR álbum OR show OR festival OR lançamento musical OR Billboard" },
   entretenimento:          { newsdataCategory: "entertainment", gnewsTopic: "entertainment" },
-  saude:                   { newsdataCategory: "health",        gnewsTopic: "health" },
-  politica:                { newsdataCategory: "politics",      gnewsTopic: "nation" },
+  saude:                   { newsdataCategory: "health",        gnewsTopic: "health",
+                             query: "saúde OR medicina OR tratamento OR vacina OR pesquisa médica OR bem-estar OR nutrição" },
+  politica:                { newsdataCategory: "politics",      gnewsTopic: "nation",
+                             query: "política OR governo OR congresso OR STF OR ministério OR eleições" },
   mundo:                   { newsdataCategory: "world",         gnewsTopic: "world" },
-  brasil:                  { gnewsTopic: "nation", query: "Brasil" },
-  educacao:                { newsdataCategory: "science",       gnewsTopic: "science", query: "educação" },
-  desenvolvimento_pessoal: { gnewsTopic: "world", query: "desenvolvimento pessoal produtividade" },
+  brasil:                  { newsdataCategory: "top",           gnewsTopic: "nation",
+                             query: "Brasil OR brasileiro OR Rio de Janeiro OR São Paulo OR Brasília" },
+  educacao:                { newsdataCategory: "education",     gnewsTopic: "science",
+                             query: "educação OR escola OR universidade OR ENEM OR vestibular OR pesquisa OR ciência" },
+  desenvolvimento_pessoal: { newsdataCategory: "lifestyle",     gnewsTopic: "health",
+                             query: "desenvolvimento pessoal OR produtividade OR mindset OR liderança OR hábitos OR autoconhecimento OR carreira" },
 };
 
-// Categorias "quentes" recebem pontuação base maior
 const HOT_CATEGORIES: Record<string, number> = {
   inteligencia_artificial: 25,
   criptomoedas: 25,
@@ -94,6 +114,8 @@ const HOT_CATEGORIES: Record<string, number> = {
   negocios: 15,
   financas: 15,
   investimentos: 15,
+  entretenimento: 15,
+  brasil: 15,
 };
 
 export function calculateViralScore(article: {
@@ -109,11 +131,12 @@ export function calculateViralScore(article: {
   // Frescor (0-40 pts)
   const publishedAt = article.published_at ? new Date(article.published_at) : null;
   const hoursAgo = publishedAt ? (Date.now() - publishedAt.getTime()) / (1000 * 60 * 60) : 24;
-  if (hoursAgo < 2)       score += 40;
-  else if (hoursAgo < 6)  score += 30;
-  else if (hoursAgo < 12) score += 20;
+  if      (hoursAgo < 1)  score += 40;
+  else if (hoursAgo < 3)  score += 35;
+  else if (hoursAgo < 6)  score += 28;
+  else if (hoursAgo < 12) score += 18;
   else if (hoursAgo < 24) score += 10;
-  else                    score += 5;
+  else                    score += 4;
 
   // Calor da categoria (0-25 pts)
   score += HOT_CATEGORIES[article.category] ?? 10;
@@ -123,7 +146,7 @@ export function calculateViralScore(article: {
 
   // Riqueza de conteúdo (0-20 pts)
   const len = (article.content?.length ?? 0) + (article.description?.length ?? 0);
-  if (len > 500)      score += 20;
+  if      (len > 500) score += 20;
   else if (len > 200) score += 10;
   else if (len > 50)  score += 5;
 
@@ -150,17 +173,17 @@ async function fetchFromNewsData(category: string): Promise<RawArticle[]> {
 
   const config = CATEGORY_CONFIG[category] ?? {};
   const params = new URLSearchParams({
-    apikey: apiKey,
+    apikey:   apiKey,
     language: "pt",
-    size: "10",
+    size:     "20",
   });
-  // Apenas categorias locais filtram por país
   if (LOCAL_CATEGORIES.has(category)) params.set("country", "br");
-  if (config.newsdataCategory) params.set("category", config.newsdataCategory);
-  if (config.query)            params.set("q", config.query);
+  if (config.newsdataCategory)         params.set("category", config.newsdataCategory);
+  if (config.query)                    params.set("q", config.query);
 
   const res = await fetch(`https://newsdata.io/api/1/latest?${params}`, {
-    next: { revalidate: 0 },
+    signal: AbortSignal.timeout(12000),
+    next:   { revalidate: 0 },
   });
   if (!res.ok) throw new Error(`NewsData HTTP ${res.status}`);
 
@@ -170,7 +193,7 @@ async function fetchFromNewsData(category: string): Promise<RawArticle[]> {
   }
 
   return data.results
-    .filter((r: any) => r.title?.length > 10)
+    .filter((r: any) => (r.title?.length ?? 0) > 10)
     .map((r: any): RawArticle => ({
       title:        r.title,
       description:  r.description  || null,
@@ -189,28 +212,32 @@ async function fetchFromGNews(category: string): Promise<RawArticle[]> {
   if (!apiKey) throw new Error("GNEWS_API_KEY não configurada");
 
   const config = CATEGORY_CONFIG[category] ?? {};
+  const query = config.gnewsQuery ?? config.query;
+
   const params = new URLSearchParams({
     token: apiKey,
     lang:  "pt",
     max:   "10",
   });
-  // Apenas categorias locais filtram por país
   if (LOCAL_CATEGORIES.has(category)) params.set("country", "br");
   if (config.gnewsTopic) params.set("topic", config.gnewsTopic);
-  if (config.query)      params.set("q", config.query);
+  if (query)             params.set("q", query);
 
-  const endpoint = config.query
+  const endpoint = query
     ? `https://gnews.io/api/v4/search?${params}`
     : `https://gnews.io/api/v4/top-headlines?${params}`;
 
-  const res = await fetch(endpoint, { next: { revalidate: 0 } });
+  const res = await fetch(endpoint, {
+    signal: AbortSignal.timeout(10000),
+    next:   { revalidate: 0 },
+  });
   if (!res.ok) throw new Error(`GNews HTTP ${res.status}`);
 
   const data = await res.json();
   if (!Array.isArray(data.articles)) throw new Error("GNews resposta inválida");
 
   return data.articles
-    .filter((a: any) => a.title?.length > 10)
+    .filter((a: any) => (a.title?.length ?? 0) > 10)
     .map((a: any): RawArticle => ({
       title:        a.title,
       description:  a.description || null,
@@ -224,7 +251,39 @@ async function fetchFromGNews(category: string): Promise<RawArticle[]> {
     }));
 }
 
-// Converte artigo bruto em NewsItem sem passar pelo banco
+// Busca das duas APIs em paralelo e mescla, priorizando artigos mais recentes
+async function fetchFromAllSources(category: string): Promise<RawArticle[]> {
+  const [ndResult, gnResult] = await Promise.allSettled([
+    fetchFromNewsData(category),
+    fetchFromGNews(category),
+  ]);
+
+  const ndArticles  = ndResult.status  === "fulfilled" ? ndResult.value  : [];
+  const gnArticles  = gnResult.status  === "fulfilled" ? gnResult.value  : [];
+
+  if (ndResult.status === "rejected") console.warn("[news] NewsData falhou:", (ndResult.reason as any)?.message);
+  if (gnResult.status === "rejected") console.warn("[news] GNews falhou:",    (gnResult.reason as any)?.message);
+
+  // Mescla e deduplica por título (normalizado)
+  const seen = new Set<string>();
+  const merged: RawArticle[] = [];
+  for (const article of [...ndArticles, ...gnArticles]) {
+    const key = article.title.toLowerCase().replace(/\s+/g, " ").trim().slice(0, 80);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(article);
+  }
+
+  // Ordena por recência (mais novo primeiro)
+  merged.sort((a, b) => {
+    const ta = a.published_at ? new Date(a.published_at).getTime() : 0;
+    const tb = b.published_at ? new Date(b.published_at).getTime() : 0;
+    return tb - ta;
+  });
+
+  return merged;
+}
+
 function rawToNewsItem(a: RawArticle): NewsItem {
   const { score, label } = calculateViralScore(a);
   return {
@@ -244,7 +303,6 @@ function rawToNewsItem(a: RawArticle): NewsItem {
   };
 }
 
-// Guarda no cache — best-effort, nunca lança exceção
 async function storeArticles(articles: RawArticle[]): Promise<boolean> {
   if (!articles.length) return false;
 
@@ -284,107 +342,89 @@ export async function getNews(
 ): Promise<NewsItem[]> {
   const offset = (page - 1) * limit;
 
-  // Verifica cache fresco (15 min) antes de chamar a API
+  // Cache fresco = artigos inseridos nos últimos 20 minutos
   if (!forceRefresh) {
-    const freshSince = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const freshSince = new Date(Date.now() - 20 * 60 * 1000).toISOString();
     const { count } = await supabaseAdmin
       .from("news_cache")
       .select("id", { count: "exact", head: true })
       .eq("category", category)
       .gte("created_at", freshSince);
 
-    if (count && count > 0) {
+    if (count && count >= 5) {
       return queryCache(category, offset, limit);
     }
   }
 
-  // Busca da API externa
-  let raw: RawArticle[] = [];
-  try {
-    raw = await fetchFromNewsData(category);
-  } catch (e1: any) {
-    console.warn("[news] NewsData falhou:", e1.message);
-  }
+  // Busca ambas as fontes em paralelo
+  const raw = await fetchFromAllSources(category);
 
   if (!raw.length) {
-    try {
-      raw = await fetchFromGNews(category);
-    } catch (e2: any) {
-      console.warn("[news] GNews falhou:", e2.message);
-    }
-  }
-
-  if (!raw.length) {
-    console.warn("[news] Ambas APIs falharam para", category, "— usando cache antigo");
+    console.warn("[news] Todas as APIs falharam para", category, "— usando cache");
     return queryCache(category, offset, limit);
   }
 
-  // Filtra para artigos das últimas 3 horas se possível
-  const threeHoursAgo = Date.now() - 3 * 60 * 60 * 1000;
-  const recent = raw.filter(
-    (a) => !a.published_at || new Date(a.published_at).getTime() >= threeHoursAgo,
-  );
-  const finalRaw = recent.length >= 3 ? recent : raw;
+  // Filtra para as mais recentes possíveis:
+  // tenta 6h → 12h → 24h → tudo, usando o primeiro que tiver >= 3 artigos
+  const now = Date.now();
+  const windows = [6, 12, 24];
+  let finalRaw = raw;
+  for (const h of windows) {
+    const cutoff = now - h * 60 * 60 * 1000;
+    const recent = raw.filter(a => !a.published_at || new Date(a.published_at).getTime() >= cutoff);
+    if (recent.length >= 3) { finalRaw = recent; break; }
+  }
 
-  // Armazena no Supabase em background (não bloqueia resposta)
-  storeArticles(finalRaw).then((stored) => {
-    if (!stored) console.warn("[news] Cache Supabase indisponível para", category);
-  });
+  // Armazena no Supabase e em seguida consulta o cache para retornar com IDs estáveis
+  const stored = await storeArticles(finalRaw);
+  if (stored) {
+    const cached = await queryCache(category, offset, limit);
+    if (cached.length > 0) return cached;
+  }
 
-  // Retorna do banco se conseguiu guardar, senão retorna direto da API
-  // Aguarda 200ms para dar chance ao upsert completar
-  await new Promise((r) => setTimeout(r, 200));
-  const cached = await queryCache(category, offset, limit);
-  if (cached.length > 0) return cached;
-
-  // Supabase indisponível — retorna da API diretamente
+  // Supabase indisponível — retorna direto da API
   return finalRaw.slice(offset, offset + limit).map(rawToNewsItem);
 }
 
 async function queryCache(category: string, offset: number, limit: number): Promise<NewsItem[]> {
-  // Tenta primeiro com publicações da última hora
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  // Tenta publicações das últimas 6 horas primeiro
+  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
   const { data: recent } = await supabaseAdmin
     .from("news_cache")
     .select("*")
     .eq("category", category)
-    .gte("published_at", oneHourAgo)
+    .gte("published_at", sixHoursAgo)
     .order("published_at", { ascending: false })
+    .order("viral_score",  { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (recent && recent.length >= 3) return recent as NewsItem[];
 
-  // Fallback: qualquer notícia da categoria, ordenada por recência e viral score
+  // Fallback: todos os artigos da categoria, mais recentes e mais virais primeiro
   const { data } = await supabaseAdmin
     .from("news_cache")
     .select("*")
     .eq("category", category)
-    .order("created_at",  { ascending: false })
-    .order("viral_score", { ascending: false })
+    .order("published_at", { ascending: false })
+    .order("viral_score",  { ascending: false })
     .range(offset, offset + limit - 1);
+
   return (data as NewsItem[]) ?? [];
 }
 
 export async function getNewsByIds(ids: string[]): Promise<NewsItem[]> {
   if (!ids.length) return [];
-  const { data } = await supabaseAdmin
-    .from("news_cache")
-    .select("*")
-    .in("id", ids);
+  const { data } = await supabaseAdmin.from("news_cache").select("*").in("id", ids);
   return (data as NewsItem[]) ?? [];
 }
 
 export async function getNewsById(id: string): Promise<NewsItem | null> {
-  const { data } = await supabaseAdmin
-    .from("news_cache")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data } = await supabaseAdmin.from("news_cache").select("*").eq("id", id).single();
   return data as NewsItem | null;
 }
 
 export async function getTrending(): Promise<TrendingTopic[]> {
-  const freshSince = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const freshSince = new Date(Date.now() - 20 * 60 * 1000).toISOString();
   const { count } = await supabaseAdmin
     .from("trending_topics")
     .select("id", { count: "exact", head: true })
@@ -403,13 +443,13 @@ export async function getTrending(): Promise<TrendingTopic[]> {
 }
 
 async function generateTrending(): Promise<TrendingTopic[]> {
-  // Busca as notícias mais virais das últimas 6 horas
+  // Busca as notícias mais virais das últimas 12 horas
   const { data: recentNews } = await supabaseAdmin
     .from("news_cache")
     .select("title, category, viral_score")
-    .gte("created_at", new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString())
+    .gte("created_at", new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString())
     .order("viral_score", { ascending: false })
-    .limit(30);
+    .limit(40);
 
   if (!recentNews?.length) return defaultTrending();
 
@@ -418,8 +458,8 @@ async function generateTrending(): Promise<TrendingTopic[]> {
     const titles = recentNews.map((n: any) => n.title).join("\n");
 
     const raw = await geminiText(
-      `Analise estas manchetes e extraia os 10 principais tópicos em tendência no Brasil agora:\n\n${titles}\n\nRetorne APENAS um array JSON:\n[{"title":"Nome do Tópico","category":"categoria","growth_score":85,"engagement_score":90},...]\n\nCategorias: geral, tecnologia, inteligencia_artificial, negocios, politica, esportes, futebol, entretenimento, saude, financas, criptomoedas, startups\n\ngrowth_score e engagement_score: 0-100. Apenas o JSON, sem comentários.`,
-      { maxTokens: 600, temperature: 0.6 },
+      `Analise estas manchetes e extraia os 10 principais tópicos em tendência no Brasil agora:\n\n${titles}\n\nRetorne APENAS um array JSON:\n[{"title":"Nome do Tópico","category":"categoria","growth_score":85,"engagement_score":90},...]\n\nCategorias: geral, tecnologia, inteligencia_artificial, negocios, politica, esportes, futebol, entretenimento, saude, financas, criptomoedas, startups, musica, brasil, mundo\n\ngrowth_score e engagement_score: 0-100. Apenas o JSON, sem comentários.`,
+      { maxTokens: 800, temperature: 0.5 },
     );
 
     const match = raw.match(/\[[\s\S]*\]/);
@@ -435,7 +475,6 @@ async function generateTrending(): Promise<TrendingTopic[]> {
       engagement_score: Math.min(100, Math.max(0, t.engagement_score || 50)),
     }));
 
-    // Remove tendências antigas e insere novas
     await supabaseAdmin
       .from("trending_topics")
       .delete()
@@ -456,12 +495,14 @@ async function generateTrending(): Promise<TrendingTopic[]> {
 function defaultTrending(): TrendingTopic[] {
   const now = new Date().toISOString();
   return [
-    { id: "1", title: "Inteligência Artificial",   category: "inteligencia_artificial", source: "default", growth_score: 95, engagement_score: 92, created_at: now },
-    { id: "2", title: "Futebol Brasileiro",         category: "futebol",                source: "default", growth_score: 88, engagement_score: 85, created_at: now },
-    { id: "3", title: "Bitcoin e Criptomoedas",     category: "criptomoedas",           source: "default", growth_score: 82, engagement_score: 79, created_at: now },
-    { id: "4", title: "Mercado Financeiro",         category: "financas",               source: "default", growth_score: 75, engagement_score: 72, created_at: now },
-    { id: "5", title: "Startups e Inovação",        category: "startups",               source: "default", growth_score: 70, engagement_score: 68, created_at: now },
-    { id: "6", title: "Marketing Digital",          category: "marketing",              source: "default", growth_score: 65, engagement_score: 63, created_at: now },
+    { id: "1", title: "Inteligência Artificial",    category: "inteligencia_artificial", source: "default", growth_score: 95, engagement_score: 92, created_at: now },
+    { id: "2", title: "Futebol Brasileiro",          category: "futebol",                source: "default", growth_score: 88, engagement_score: 85, created_at: now },
+    { id: "3", title: "Bitcoin e Criptomoedas",      category: "criptomoedas",           source: "default", growth_score: 82, engagement_score: 79, created_at: now },
+    { id: "4", title: "Mercado Financeiro",          category: "financas",               source: "default", growth_score: 75, engagement_score: 72, created_at: now },
+    { id: "5", title: "Startups e Inovação",         category: "startups",               source: "default", growth_score: 70, engagement_score: 68, created_at: now },
+    { id: "6", title: "Marketing Digital",           category: "marketing",              source: "default", growth_score: 65, engagement_score: 63, created_at: now },
+    { id: "7", title: "Política Brasileira",         category: "politica",               source: "default", growth_score: 60, engagement_score: 58, created_at: now },
+    { id: "8", title: "Saúde e Bem-Estar",           category: "saude",                  source: "default", growth_score: 55, engagement_score: 53, created_at: now },
   ];
 }
 
@@ -471,13 +512,13 @@ export async function refreshAllCategories(): Promise<{ ok: number; failed: numb
 
   for (const cat of categories) {
     try {
-      const articles = await fetchFromNewsData(cat).catch(async () => fetchFromGNews(cat));
+      const articles = await fetchFromAllSources(cat);
       const stored = await storeArticles(articles);
       if (stored) ok++; else failed++;
     } catch {
       failed++;
     }
-    await new Promise(r => setTimeout(r, 300)); // evita rate limit
+    await new Promise(r => setTimeout(r, 200));
   }
 
   return { ok, failed };
