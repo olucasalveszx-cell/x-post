@@ -531,6 +531,8 @@ function buildNewsSlides(
     const slideImg = isFirst ? newsImageUrl : (slideImages[i - 1] ?? null);
 
     const elements: SlideElement[] = [];
+    let bgImageUrl: string | undefined;
+    let bgGradient: string | undefined;
 
     if (isFirst && slideImg) {
       // Slide 1: imagem cobre o topo (52% da altura)
@@ -549,19 +551,9 @@ function buildNewsSlides(
         zIndex: 2,
       });
     } else if (!isFirst && slideImg) {
-      // Demais slides: imagem diferente por assunto como fundo com overlay suave
-      elements.push({
-        id: uuid(), type: "image",
-        x: 0, y: 0, width: W, height: H,
-        src: slideImg,
-        zIndex: 1,
-      });
-      elements.push({
-        id: uuid(), type: "shape",
-        x: 0, y: 0, width: W, height: H,
-        style: { fill: "rgba(10,10,10,0.48)", stroke: "none", strokeWidth: 0, borderRadius: 0 },
-        zIndex: 2,
-      });
+      // Demais slides: imagem como backgroundImageUrl com gradiente leve (sem camada separada)
+      bgImageUrl = slideImg;
+      bgGradient = "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.45) 35%, rgba(0,0,0,0.12) 65%, rgba(0,0,0,0) 100%)";
     }
 
     // Perfil IG
@@ -645,6 +637,8 @@ function buildNewsSlides(
     const slide: Slide = {
       id: uuid(),
       backgroundColor: "#0a0a0a",
+      ...(bgImageUrl ? { backgroundImageUrl: bgImageUrl } : {}),
+      ...(bgGradient ? { backgroundGradient: bgGradient } : {}),
       elements,
       width: W,
       height: H,

@@ -143,7 +143,7 @@ export async function renderSlide(slide: Slide): Promise<HTMLCanvasElement> {
       ctx.globalAlpha = 1;
     } catch {}
     const gradCss = slide.backgroundGradient
-      ?? "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.75) 35%, rgba(0,0,0,0.35) 65%, rgba(0,0,0,0.15) 100%)";
+      ?? "linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 40%, rgba(0,0,0,0.08) 70%, rgba(0,0,0,0) 100%)";
     applyGradientOverlay(ctx, gradCss, W, H);
   }
 
