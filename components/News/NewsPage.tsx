@@ -366,13 +366,14 @@ function NewsModal({
 // ─── Modal de Resultado de Geração ─────────────────────────────────────────
 
 function GenerationModal({
-  type, result, newsTitle, onClose, onSendToEditor,
+  type, result, newsTitle, onClose, onSendToEditor, sendingToEditor,
 }: {
   type: GenerationType;
   result: any;
   newsTitle: string;
   onClose: () => void;
   onSendToEditor?: (slides: any[]) => void;
+  sendingToEditor?: boolean;
 }) {
   const [copied, setCopied] = useState("");
 
@@ -407,9 +408,11 @@ function GenerationModal({
               <div className="flex gap-2 mb-2">
                 <button
                   onClick={() => onSendToEditor?.(result.slides)}
-                  className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 transition-all"
+                  disabled={sendingToEditor}
+                  className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Send size={12} /> Abrir no Editor
+                  {sendingToEditor ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                  {sendingToEditor ? "Buscando imagens..." : "Abrir no Editor"}
                 </button>
               </div>
               {result.slides.map((slide: any, i: number) => (
@@ -512,6 +515,7 @@ function buildNewsSlides(
   rawSlides: Array<{ title: string; body: string; callToAction?: string }>,
   newsImageUrl: string | null,
   igAccount: { username?: string; name?: string; picture?: string } | null,
+  slideImages: (string | null)[] = [],
 ): Slide[] {
   const W = 1080, H = 1350;
   const displayName = igAccount?.name ?? igAccount?.username ?? "Meu Perfil";
@@ -523,41 +527,41 @@ function buildNewsSlides(
   return rawSlides.map((raw, i): Slide => {
     const isFirst = i === 0;
     const isLast = i === total - 1;
+    // Slide 1 usa a foto da notícia; demais usam imagem buscada por assunto
+    const slideImg = isFirst ? newsImageUrl : (slideImages[i - 1] ?? null);
 
     const elements: SlideElement[] = [];
 
-    if (newsImageUrl) {
-      if (isFirst) {
-        // Slide 1: imagem cobre o topo (52% da altura)
-        elements.push({
-          id: uuid(), type: "image",
-          x: 0, y: 0, width: W, height: Math.round(H * 0.52),
-          src: newsImageUrl,
-          zIndex: 1,
-        });
-        // Gradient de fade para o fundo escuro
-        elements.push({
-          id: uuid(), type: "shape",
-          x: 0, y: Math.round(H * 0.3), width: W, height: Math.round(H * 0.25),
-          style: { fill: "rgba(10,10,10,0)", stroke: "none", strokeWidth: 0, borderRadius: 0 },
-          gradient: "linear-gradient(to bottom, rgba(10,10,10,0), rgba(10,10,10,1))",
-          zIndex: 2,
-        });
-      } else {
-        // Demais slides: imagem como fundo em tela cheia com overlay escuro
-        elements.push({
-          id: uuid(), type: "image",
-          x: 0, y: 0, width: W, height: H,
-          src: newsImageUrl,
-          zIndex: 1,
-        });
-        elements.push({
-          id: uuid(), type: "shape",
-          x: 0, y: 0, width: W, height: H,
-          style: { fill: "rgba(10,10,10,0.78)", stroke: "none", strokeWidth: 0, borderRadius: 0 },
-          zIndex: 2,
-        });
-      }
+    if (isFirst && slideImg) {
+      // Slide 1: imagem cobre o topo (52% da altura)
+      elements.push({
+        id: uuid(), type: "image",
+        x: 0, y: 0, width: W, height: Math.round(H * 0.52),
+        src: slideImg,
+        zIndex: 1,
+      });
+      // Gradient de fade para o fundo escuro
+      elements.push({
+        id: uuid(), type: "shape",
+        x: 0, y: Math.round(H * 0.3), width: W, height: Math.round(H * 0.25),
+        style: { fill: "rgba(10,10,10,0)", stroke: "none", strokeWidth: 0, borderRadius: 0 },
+        gradient: "linear-gradient(to bottom, rgba(10,10,10,0), rgba(10,10,10,1))",
+        zIndex: 2,
+      });
+    } else if (!isFirst && slideImg) {
+      // Demais slides: imagem diferente por assunto como fundo com overlay escuro
+      elements.push({
+        id: uuid(), type: "image",
+        x: 0, y: 0, width: W, height: H,
+        src: slideImg,
+        zIndex: 1,
+      });
+      elements.push({
+        id: uuid(), type: "shape",
+        x: 0, y: 0, width: W, height: H,
+        style: { fill: "rgba(10,10,10,0.78)", stroke: "none", strokeWidth: 0, borderRadius: 0 },
+        zIndex: 2,
+      });
     }
 
     // Perfil IG
@@ -666,6 +670,7 @@ export default function NewsPage() {
   const [activeView, setActiveView]         = useState<"feed" | "saved">("feed");
   const [savedNews, setSavedNews]           = useState<NewsItem[]>([]);
   const [loadingSaved, setLoadingSaved]     = useState(false);
+  const [sendingToEditor, setSendingToEditor] = useState(false);
   const trendingRef = useRef<HTMLDivElement>(null);
 
   // Busca notícias
@@ -759,12 +764,36 @@ export default function NewsPage() {
     }
   }, []);
 
-  // Enviar carrossel para o editor — converte slides brutos em Slide[] reais
-  const handleSendToEditor = useCallback((rawSlides: any[], news: NewsItem) => {
-    const igAccount = JSON.parse(localStorage.getItem("ig_account") ?? "null");
-    const properSlides = buildNewsSlides(rawSlides, news.image_url, igAccount);
-    localStorage.setItem("xpost_news_carousel", JSON.stringify(properSlides));
-    router.push("/editor?from=news");
+  // Enviar carrossel para o editor — busca imagens por assunto para cada slide
+  const handleSendToEditor = useCallback(async (rawSlides: any[], news: NewsItem) => {
+    setSendingToEditor(true);
+    try {
+      const igAccount = JSON.parse(localStorage.getItem("ig_account") ?? "null");
+
+      // Busca imagens únicas para os slides 2+ baseado no título de cada slide
+      const extraImages: (string | null)[] = await Promise.all(
+        rawSlides.slice(1).map(async (slide: any) => {
+          try {
+            const query = `${slide.title} ${news.keywords?.[0] ?? ""}`.trim();
+            const res = await fetch("/api/image-search", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ query }),
+            });
+            const data = await res.json();
+            return (data.images?.[0]?.url as string) ?? null;
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const properSlides = buildNewsSlides(rawSlides, news.image_url, igAccount, extraImages);
+      localStorage.setItem("xpost_news_carousel", JSON.stringify(properSlides));
+      router.push("/editor?from=news");
+    } finally {
+      setSendingToEditor(false);
+    }
   }, [router]);
 
   const handleRefresh = async () => {
@@ -933,6 +962,7 @@ export default function NewsPage() {
           newsTitle={genResult.news.title}
           onClose={() => setGenResult(null)}
           onSendToEditor={(slides) => handleSendToEditor(slides, genResult.news)}
+          sendingToEditor={sendingToEditor}
         />
       )}
     </div>
