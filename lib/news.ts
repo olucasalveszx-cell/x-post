@@ -175,7 +175,7 @@ async function fetchFromNewsData(category: string, hours?: number): Promise<RawA
   const params = new URLSearchParams({
     apikey:   apiKey,
     language: "pt",
-    size:     "20",
+    size:     hours ? "50" : "20", // mais artigos no modo por horas
   });
   if (LOCAL_CATEGORIES.has(category)) params.set("country", "br");
   if (config.newsdataCategory)         params.set("category", config.newsdataCategory);
@@ -444,6 +444,44 @@ async function storeArticles(articles: RawArticle[]): Promise<boolean> {
     return false;
   }
   return true;
+}
+
+// Categorias prioritárias para o modo "todas as recentes"
+const HOT_CATS = [
+  "geral", "brasil", "politica", "tecnologia", "inteligencia_artificial",
+  "esportes", "futebol", "entretenimento", "financas", "musica", "saude", "mundo",
+];
+
+// Busca as notícias mais recentes de TODAS as categorias em paralelo
+export async function getHotRecentNews(fetchHours: number, limit: number): Promise<NewsItem[]> {
+  const results = await Promise.allSettled(
+    HOT_CATS.map((cat) => fetchFromAllSources(cat, fetchHours)),
+  );
+
+  const seen   = new Set<string>();
+  const merged: RawArticle[] = [];
+
+  for (const r of results) {
+    if (r.status !== "fulfilled") continue;
+    for (const a of r.value) {
+      const key = a.title.toLowerCase().replace(/\s+/g, " ").trim().slice(0, 80);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(a);
+    }
+  }
+
+  // Ordena por mais recente
+  merged.sort((a, b) => {
+    const ta = a.published_at ? new Date(a.published_at).getTime() : 0;
+    const tb = b.published_at ? new Date(b.published_at).getTime() : 0;
+    return tb - ta;
+  });
+
+  // Armazena no cache de forma assíncrona
+  storeArticles(merged).catch(() => {});
+
+  return merged.slice(0, limit).map(rawToNewsItem);
 }
 
 export async function getNews(

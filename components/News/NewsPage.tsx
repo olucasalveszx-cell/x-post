@@ -667,14 +667,27 @@ export default function NewsPage() {
   const trendingRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Busca notícias
-  const fetchNews = useCallback(async (category: string, force = false, hours?: number) => {
+  // Busca notícias por categoria
+  const fetchNews = useCallback(async (category: string, force = false) => {
     setLoadingNews(true);
     try {
       const params = new URLSearchParams({ category });
       if (force) params.set("refresh", "true");
-      if (hours) params.set("hours", String(hours));
       const res = await fetch(`/api/news?${params}`);
+      const data = await res.json();
+      setNews(data.news ?? []);
+    } catch {
+      setNews([]);
+    } finally {
+      setLoadingNews(false);
+    }
+  }, []);
+
+  // Modo grandão: todas as categorias em paralelo, últimas 3h, até 50 artigos
+  const fetchRecentAll = useCallback(async () => {
+    setLoadingNews(true);
+    try {
+      const res = await fetch("/api/news?hours=3&all=true&limit=50");
       const data = await res.json();
       setNews(data.news ?? []);
     } catch {
@@ -713,7 +726,8 @@ export default function NewsPage() {
   }, []);
 
   useEffect(() => {
-    fetchNews(activeCategory, false, lastHour ? 1 : undefined);
+    if (lastHour) fetchRecentAll();
+    else fetchNews(activeCategory);
   }, [activeCategory, lastHour]); // dispara no mount com valores iniciais
 
   // Salvar / remover notícia
@@ -812,7 +826,8 @@ export default function NewsPage() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchNews(activeCategory, true, lastHour ? 1 : undefined);
+    if (lastHour) await fetchRecentAll();
+    else await fetchNews(activeCategory, true);
     setRefreshing(false);
   };
 
@@ -945,7 +960,7 @@ export default function NewsPage() {
               {trending.map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => { setActiveView("feed"); setActiveCategory(t.category); setSearchQuery(""); }}
+                  onClick={() => { setActiveView("feed"); setActiveCategory(t.category); setLastHour(false); setSearchQuery(""); }}
                   className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-orange-500/30 rounded-full text-xs text-white/70 hover:text-white transition-all"
                 >
                   <Flame size={10} className="text-orange-400" />

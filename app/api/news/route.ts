@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getNews } from "@/lib/news";
+import { getNews, getHotRecentNews } from "@/lib/news";
 
-export const maxDuration = 30;
+export const maxDuration = 45;
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,6 +12,13 @@ export async function GET(req: NextRequest) {
     const forceRefresh = searchParams.get("refresh")        === "true";
     const hoursParam   = searchParams.get("hours");
     const hours        = hoursParam ? parseInt(hoursParam, 10) : undefined;
+    const allCats      = searchParams.get("all")            === "true";
+
+    // Modo "grandão": todas as categorias em paralelo
+    if (hours && allCats) {
+      const news = await getHotRecentNews(hours, Math.min(limit, 60));
+      return NextResponse.json({ news, page: 1, category: "all" });
+    }
 
     const news = await getNews(category, page, Math.min(limit, 50), forceRefresh, hours);
     return NextResponse.json({ news, page, category });
