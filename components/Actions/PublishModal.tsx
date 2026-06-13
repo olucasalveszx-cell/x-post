@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Instagram, Loader2, CheckCircle, AlertCircle, LogIn, User, ExternalLink, Upload, Pencil, LayoutGrid, BookImage, Calendar, Clock, Music, ChevronRight, ChevronLeft } from "lucide-react";
+import { X, Instagram, Loader2, CheckCircle, AlertCircle, User, ExternalLink, Upload, Pencil, LayoutGrid, BookImage, Calendar, Clock, Music, ChevronRight, ChevronLeft } from "lucide-react";
 import { renderSlide } from "@/lib/render-slide";
 
 interface IGAccount {
@@ -405,10 +405,13 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                 ) : (
                   <div className="flex flex-col gap-2">
                     <p className="text-sm text-[var(--text-2)]">Conecte sua conta Instagram:</p>
-                    <button onClick={onLoginClick}
-                      className="flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm">
-                      <LogIn size={16} />Login com Instagram
-                    </button>
+                    <a
+                      href="/api/instagram/auth"
+                      className="flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-white transition-all hover:opacity-90 active:scale-95"
+                      style={{ background: "linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" }}
+                    >
+                      <Instagram size={16} />Conectar com Instagram
+                    </a>
                   </div>
                 )
               )}

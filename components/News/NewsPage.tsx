@@ -515,7 +515,8 @@ function buildNewsSlides(
 ): Slide[] {
   const W = 1080, H = 1350;
   const displayName = igAccount?.name ?? igAccount?.username ?? "Meu Perfil";
-  const handle = igAccount?.username ? `@${igAccount.username}` : "@meuperfil";
+  // profileHandle é armazenado SEM @; a renderização já adiciona o @
+  const handle = igAccount?.username ?? "meuperfil";
   const picture = igAccount?.picture ?? "";
   const total = rawSlides.length;
 
@@ -525,22 +526,38 @@ function buildNewsSlides(
 
     const elements: SlideElement[] = [];
 
-    // Imagem da notícia (primeiro slide — cobre topo da tela)
-    if (isFirst && newsImageUrl) {
-      elements.push({
-        id: uuid(), type: "image",
-        x: 0, y: 0, width: W, height: Math.round(H * 0.52),
-        src: newsImageUrl,
-        zIndex: 1,
-      });
-      // Gradient sobre a imagem para legibilidade
-      elements.push({
-        id: uuid(), type: "shape",
-        x: 0, y: Math.round(H * 0.3), width: W, height: Math.round(H * 0.25),
-        style: { fill: "rgba(10,10,10,0)", stroke: "none", strokeWidth: 0, borderRadius: 0 },
-        gradient: "linear-gradient(to bottom, rgba(10,10,10,0), rgba(10,10,10,1))",
-        zIndex: 2,
-      });
+    if (newsImageUrl) {
+      if (isFirst) {
+        // Slide 1: imagem cobre o topo (52% da altura)
+        elements.push({
+          id: uuid(), type: "image",
+          x: 0, y: 0, width: W, height: Math.round(H * 0.52),
+          src: newsImageUrl,
+          zIndex: 1,
+        });
+        // Gradient de fade para o fundo escuro
+        elements.push({
+          id: uuid(), type: "shape",
+          x: 0, y: Math.round(H * 0.3), width: W, height: Math.round(H * 0.25),
+          style: { fill: "rgba(10,10,10,0)", stroke: "none", strokeWidth: 0, borderRadius: 0 },
+          gradient: "linear-gradient(to bottom, rgba(10,10,10,0), rgba(10,10,10,1))",
+          zIndex: 2,
+        });
+      } else {
+        // Demais slides: imagem como fundo em tela cheia com overlay escuro
+        elements.push({
+          id: uuid(), type: "image",
+          x: 0, y: 0, width: W, height: H,
+          src: newsImageUrl,
+          zIndex: 1,
+        });
+        elements.push({
+          id: uuid(), type: "shape",
+          x: 0, y: 0, width: W, height: H,
+          style: { fill: "rgba(10,10,10,0.78)", stroke: "none", strokeWidth: 0, borderRadius: 0 },
+          zIndex: 2,
+        });
+      }
     }
 
     // Perfil IG
