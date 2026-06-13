@@ -42,7 +42,7 @@ function ContentEditableDiv({
 }
 import { createPortal } from "react-dom";
 import { Slide, SlideElement } from "@/types";
-import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square, MoreVertical, LayoutTemplate, Video as VideoIcon, Upload, Search, Unlink } from "lucide-react";
+import { Trash2, Layers, ArrowUp, ArrowDown, Image as ImageIcon, Scissors, Blend, Maximize2, X, RefreshCw, Wand2, Square, MoreVertical, LayoutTemplate, Video as VideoIcon, Upload, Search, Unlink, Loader2 } from "lucide-react";
 import ImageSearchModal from "@/components/ImageSearchModal";
 import { v4 as uuid } from "uuid";
 
@@ -100,6 +100,10 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const [framePanId, setFramePanId] = useState<string | null>(null);
   const [showLayoutPicker, setShowLayoutPicker] = useState(false);
   const [showBgImageSearch, setShowBgImageSearch] = useState(false);
+  const [bgInlineQuery, setBgInlineQuery]   = useState("");
+  const [bgInlineResults, setBgInlineResults] = useState<Array<{ url: string; thumb: string; title: string }>>([]);
+  const [bgInlineLoading, setBgInlineLoading] = useState(false);
+  const [bgInlineOpen, setBgInlineOpen]     = useState(false);
 
   // Limpa seleção ao sair do slide ativo — evita wasSelected=true ao voltar
   useEffect(() => {
@@ -447,7 +451,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   };
 
   const closeCtx = () => setCtxMenu(null);
-  const closeBgCtx = () => setBgCtxMenu(null);
+  const closeBgCtx = () => { setBgCtxMenu(null); setBgInlineOpen(false); setBgInlineResults([]); setBgInlineQuery(""); };
 
   // ── Arrastar menus de contexto ─────────────────────────────
   const startMenuDrag = (
@@ -565,6 +569,47 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     .map((e) => (e.content ?? "").replace(/<[^>]+>/g, "").trim())
     .filter(Boolean)
     .join(". ");
+
+  // Extrai só o texto principal (maior fontSize) para usar como query de busca
+  const slideMainQuery = (() => {
+    const textEls = slide.elements
+      .filter((e) => e.type === "text" && (e.content ?? "").trim())
+      .sort((a, b) => ((b.style as any)?.fontSize ?? 0) - ((a.style as any)?.fontSize ?? 0));
+    if (!textEls.length) return "";
+    const main = (textEls[0].content ?? "").replace(/<[^>]+>/g, "").trim();
+    return main.split(/[,.:;!?\n]/)[0].trim().slice(0, 50);
+  })();
+
+  const runBgInlineSearch = async (q: string) => {
+    if (!q.trim()) return;
+    setBgInlineLoading(true);
+    setBgInlineResults([]);
+    try {
+      const res  = await fetch("/api/image-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q.trim() }),
+      });
+      const data = await res.json();
+      setBgInlineResults((data.images ?? []).slice(0, 9));
+    } catch {}
+    finally { setBgInlineLoading(false); }
+  };
+
+  const selectBgInlineImage = async (img: { url: string; thumb: string }) => {
+    try {
+      const res  = await fetch("/api/image-proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: img.url, thumbUrl: img.thumb }),
+      });
+      const data = await res.json();
+      if (data.base64) {
+        onUpdate({ ...slide, backgroundImageUrl: `data:${data.mimeType};base64,${data.base64}` });
+        closeBgCtx();
+      }
+    } catch {}
+  };
 
   const runGenerateBg = async (prompt: string) => {
     setGeneratingBg(true);
@@ -1373,11 +1418,73 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             <Wand2 size={15} /> {slide.backgroundImageUrl ? "Gerar nova imagem IA" : "Gerar imagem de fundo com IA"}
           </button>
 
-          {/* Buscar imagem na web */}
-          <button onClick={() => { closeBgCtx(); setShowBgImageSearch(true); }}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors border-b border-[var(--border)]">
-            <Search size={15} className="text-cyan-400" /> Buscar imagem na web
-          </button>
+          {/* Buscar imagem na web — seção inline */}
+          <div className="border-b border-[var(--border)]">
+            <button
+              onClick={() => {
+                const next = !bgInlineOpen;
+                setBgInlineOpen(next);
+                if (next && !bgInlineQuery) {
+                  setBgInlineQuery(slideMainQuery);
+                  if (slideMainQuery) runBgInlineSearch(slideMainQuery);
+                }
+              }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--bg-3)] transition-colors"
+            >
+              <Search size={15} className="text-cyan-400" />
+              <span className="flex-1 text-left">Buscar imagem na web</span>
+              <span className="text-[10px] text-[var(--text-3)]">{bgInlineOpen ? "▲" : "▼"}</span>
+            </button>
+
+            {bgInlineOpen && (
+              <div className="px-3 pb-3 flex flex-col gap-2">
+                <div className="flex gap-1.5">
+                  <input
+                    value={bgInlineQuery}
+                    onChange={(e) => setBgInlineQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && runBgInlineSearch(bgInlineQuery)}
+                    placeholder="Ex: pôr do sol, cidade..."
+                    className="flex-1 bg-[var(--bg-4)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--text)] placeholder:text-[var(--text-3)] outline-none focus:border-brand-500"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => runBgInlineSearch(bgInlineQuery)}
+                    disabled={bgInlineLoading || !bgInlineQuery.trim()}
+                    className="px-2.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs disabled:opacity-40 transition-colors"
+                  >
+                    {bgInlineLoading ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
+                  </button>
+                </div>
+
+                {bgInlineLoading && (
+                  <div className="flex justify-center py-3">
+                    <Loader2 size={16} className="animate-spin text-brand-400" />
+                  </div>
+                )}
+
+                {!bgInlineLoading && bgInlineResults.length > 0 && (
+                  <div className="grid grid-cols-3 gap-1">
+                    {bgInlineResults.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => selectBgInlineImage(img)}
+                        className="relative aspect-square rounded overflow-hidden border border-[var(--border)] hover:border-brand-500 transition-colors group"
+                        title={img.title}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.thumb}
+                          alt={img.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Desprender imagem (converte background em elemento) */}
           {slide.backgroundImageUrl && (
@@ -1690,7 +1797,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         onUpdate({ ...slide, backgroundImageUrl: `data:${mimeType};base64,${base64}` });
         setShowBgImageSearch(false);
       }}
-      defaultQuery={slideTexts.slice(0, 60)}
+      defaultQuery={slideMainQuery}
     />
     </>
   );

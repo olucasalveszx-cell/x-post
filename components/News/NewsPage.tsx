@@ -549,7 +549,7 @@ function buildNewsSlides(
         zIndex: 2,
       });
     } else if (!isFirst && slideImg) {
-      // Demais slides: imagem diferente por assunto como fundo com overlay escuro
+      // Demais slides: imagem diferente por assunto como fundo com overlay suave
       elements.push({
         id: uuid(), type: "image",
         x: 0, y: 0, width: W, height: H,
@@ -559,7 +559,7 @@ function buildNewsSlides(
       elements.push({
         id: uuid(), type: "shape",
         x: 0, y: 0, width: W, height: H,
-        style: { fill: "rgba(10,10,10,0.78)", stroke: "none", strokeWidth: 0, borderRadius: 0 },
+        style: { fill: "rgba(10,10,10,0.48)", stroke: "none", strokeWidth: 0, borderRadius: 0 },
         zIndex: 2,
       });
     }
