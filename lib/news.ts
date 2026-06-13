@@ -256,23 +256,130 @@ async function fetchFromGNews(category: string, hours?: number): Promise<RawArti
     }));
 }
 
+// ── RSS feeds de portais brasileiros ─────────────────────────────────────────
+
+// Extrai texto de uma tag XML, suportando CDATA
+function xmlTag(xml: string, tag: string): string {
+  const re = new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>|([\\s\\S]*?))<\\/${tag}>`, "i");
+  const m = xml.match(re);
+  return (m?.[1] ?? m?.[2] ?? "").trim();
+}
+
+// Tenta extrair URL de imagem de campos comuns do RSS
+function extractRssImage(item: string): string | null {
+  // <media:content url="..."/>
+  const media = item.match(/media:content[^>]+url=["']([^"']+)["']/i);
+  if (media) return media[1];
+  // <enclosure url="..." type="image/..."/>
+  const enc = item.match(/enclosure[^>]+type=["']image[^"']*["'][^>]+url=["']([^"']+)["']/i)
+            ?? item.match(/enclosure[^>]+url=["']([^"']+)["'][^>]+type=["']image[^"']*["']/i);
+  if (enc) return enc[1];
+  // <media:thumbnail url="..."/>
+  const thumb = item.match(/media:thumbnail[^>]+url=["']([^"']+)["']/i);
+  if (thumb) return thumb[1];
+  // imagem embutida no description <img src="...">
+  const img = item.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (img) return img[1];
+  return null;
+}
+
+interface RssFeed {
+  url: string;
+  source: string;
+  categories: string[]; // quais categorias esse feed alimenta
+}
+
+const RSS_FEEDS: RssFeed[] = [
+  { url: "https://g1.globo.com/rss/g1/",                              source: "G1",           categories: ["geral", "brasil"] },
+  { url: "https://g1.globo.com/rss/g1/politica/",                    source: "G1 Política",  categories: ["politica", "brasil"] },
+  { url: "https://g1.globo.com/rss/g1/economia/",                    source: "G1 Economia",  categories: ["financas", "negocios", "investimentos"] },
+  { url: "https://g1.globo.com/rss/g1/tecnologia/",                  source: "G1 Tech",      categories: ["tecnologia", "inteligencia_artificial"] },
+  { url: "https://g1.globo.com/rss/g1/esportes/",                    source: "G1 Esportes",  categories: ["esportes", "futebol"] },
+  { url: "https://g1.globo.com/rss/g1/bem-estar-e-saude/",           source: "G1 Saúde",     categories: ["saude", "desenvolvimento_pessoal"] },
+  { url: "https://g1.globo.com/rss/g1/pop-arte/",                    source: "G1 Cultura",   categories: ["entretenimento", "musica"] },
+  { url: "https://www.cnnbrasil.com.br/feed/",                        source: "CNN Brasil",   categories: ["geral", "politica", "brasil"] },
+  { url: "https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml", source: "Agência Brasil", categories: ["brasil", "politica", "geral"] },
+  { url: "https://feeds.folha.uol.com.br/emcimadahora/rss091.xml",   source: "Folha",        categories: ["geral", "brasil", "politica"] },
+  { url: "https://rss.uol.com.br/feed/noticias.xml",                 source: "UOL",          categories: ["geral", "brasil"] },
+  { url: "https://rss.uol.com.br/feed/esportes.xml",                 source: "UOL Esportes", categories: ["esportes", "futebol"] },
+  { url: "https://rss.uol.com.br/feed/economia.xml",                 source: "UOL Economia", categories: ["financas", "negocios"] },
+  { url: "https://rss.uol.com.br/feed/tecnologia.xml",               source: "UOL Tech",     categories: ["tecnologia"] },
+  { url: "https://rss.uol.com.br/feed/entretenimento.xml",           source: "UOL Entret.",  categories: ["entretenimento", "musica"] },
+];
+
+async function fetchFromRSS(category: string, hours?: number): Promise<RawArticle[]> {
+  const feeds = RSS_FEEDS.filter((f) => f.categories.includes(category));
+  if (!feeds.length) return [];
+
+  const cutoff = hours ? Date.now() - hours * 60 * 60 * 1000 : 0;
+
+  const results = await Promise.allSettled(
+    feeds.map(async (feed): Promise<RawArticle[]> => {
+      const res = await fetch(feed.url, {
+        signal: AbortSignal.timeout(8000),
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; XPostBot/1.0)" },
+        next: { revalidate: 0 },
+      });
+      if (!res.ok) return [];
+      const xml = await res.text();
+
+      const itemMatches = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) ?? [];
+      const articles: RawArticle[] = [];
+
+      for (const item of itemMatches) {
+        const title       = xmlTag(item, "title").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+        const link        = xmlTag(item, "link") || xmlTag(item, "guid");
+        const description = xmlTag(item, "description").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").trim();
+        const pubDateStr  = xmlTag(item, "pubDate") || xmlTag(item, "dc:date");
+        const published_at = pubDateStr ? new Date(pubDateStr).toISOString() : null;
+        const image_url   = extractRssImage(item);
+
+        if (!title || title.length < 10) continue;
+        if (cutoff && published_at && new Date(published_at).getTime() < cutoff) continue;
+
+        articles.push({
+          title,
+          description: description || null,
+          content:     description || null,
+          source:      feed.source,
+          source_url:  link,
+          image_url,
+          category,
+          keywords:    [],
+          published_at,
+        });
+      }
+      return articles;
+    }),
+  );
+
+  const all: RawArticle[] = [];
+  for (const r of results) {
+    if (r.status === "fulfilled") all.push(...r.value);
+  }
+  return all;
+}
+
 // Busca das duas APIs em paralelo e mescla, priorizando artigos mais recentes
 async function fetchFromAllSources(category: string, hours?: number): Promise<RawArticle[]> {
-  const [ndResult, gnResult] = await Promise.allSettled([
+  const [ndResult, gnResult, rssResult] = await Promise.allSettled([
     fetchFromNewsData(category, hours),
     fetchFromGNews(category, hours),
+    fetchFromRSS(category, hours),
   ]);
 
   const ndArticles  = ndResult.status  === "fulfilled" ? ndResult.value  : [];
   const gnArticles  = gnResult.status  === "fulfilled" ? gnResult.value  : [];
+  const rssArticles = rssResult.status === "fulfilled" ? rssResult.value : [];
 
-  if (ndResult.status === "rejected") console.warn("[news] NewsData falhou:", (ndResult.reason as any)?.message);
-  if (gnResult.status === "rejected") console.warn("[news] GNews falhou:",    (gnResult.reason as any)?.message);
+  if (ndResult.status  === "rejected") console.warn("[news] NewsData falhou:", (ndResult.reason  as any)?.message);
+  if (gnResult.status  === "rejected") console.warn("[news] GNews falhou:",    (gnResult.reason  as any)?.message);
+  if (rssResult.status === "rejected") console.warn("[news] RSS falhou:",      (rssResult.reason as any)?.message);
 
-  // Mescla e deduplica por título (normalizado)
+  // Mescla e deduplica por título (normalizado) — RSS por último para dar preferência às APIs
   const seen = new Set<string>();
   const merged: RawArticle[] = [];
-  for (const article of [...ndArticles, ...gnArticles]) {
+  for (const article of [...ndArticles, ...gnArticles, ...rssArticles]) {
     const key = article.title.toLowerCase().replace(/\s+/g, " ").trim().slice(0, 80);
     if (seen.has(key)) continue;
     seen.add(key);

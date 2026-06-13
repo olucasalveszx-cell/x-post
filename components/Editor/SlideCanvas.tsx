@@ -310,12 +310,14 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   // ── Touch: arrastar + pinch-to-zoom ───────────────────────
   const handleTouchStart = (e: React.TouchEvent, el: SlideElement) => {
     if (cropId === el.id) return;
+    if (el.locked) return;
     e.stopPropagation();
 
+    const wasSelected = selectedId === el.id;
     setSelectedId(el.id);
     onSelectElement?.(el);
 
-    // Dois dedos → escalar (pinch-to-zoom)
+    // Dois dedos → escalar (pinch-to-zoom) — sempre permitido
     if (e.touches.length === 2) {
       e.preventDefault();
       const t1 = e.touches[0];
@@ -350,6 +352,10 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       return;
     }
 
+    // Primeiro toque: apenas seleciona, não arrasta
+    if (!wasSelected) return;
+
+    // Já estava selecionado: permite arrastar
     const touch = e.touches[0];
     const startX = touch.clientX;
     const startY = touch.clientY;
