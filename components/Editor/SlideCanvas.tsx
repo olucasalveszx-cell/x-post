@@ -579,8 +579,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       .filter((e) => e.type === "text" && (e.content ?? "").trim())
       .sort((a, b) => ((b.style as any)?.fontSize ?? 0) - ((a.style as any)?.fontSize ?? 0));
     if (!textEls.length) return "";
-    const main = (textEls[0].content ?? "").replace(/<[^>]+>/g, "").trim();
-    return main.split(/[,.:;!?\n]/)[0].trim().slice(0, 50);
+    return (textEls[0].content ?? "").replace(/<[^>]+>/g, "").trim();
   })();
 
   const runBgInlineSearch = async (q: string) => {
