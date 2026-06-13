@@ -206,7 +206,9 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
 
   const deleteSelected = useCallback(() => {
     if (!selectedId) return;
-    onUpdate({ ...slide, elements: slide.elements.filter((el) => el.id !== selectedId) });
+    const el = slide.elements.find((e) => e.id === selectedId);
+    if (el?.locked) return;
+    onUpdate({ ...slide, elements: slide.elements.filter((e) => e.id !== selectedId) });
     setSelectedId(null);
     onSelectElement?.(null);
   }, [selectedId, slide, onUpdate, onSelectElement]);
@@ -225,6 +227,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   // ── Arrastar ───────────────────────────────────────────────
   const handleMouseDown = (e: React.MouseEvent, el: SlideElement) => {
     if (cropId === el.id) return;
+    if (el.locked) return;
     e.stopPropagation();
 
     const wasSelected = selectedId === el.id;
@@ -861,7 +864,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       )}
 
       {/* Botão deletar elemento */}
-      {selectedId && !ctxMenu && (
+      {selectedId && !ctxMenu && !slide.elements.find((e) => e.id === selectedId)?.locked && (
         <div className="absolute top-3 right-3 z-50 flex gap-2">
           {cropId === selectedId && (
             <button onClick={() => { const el = slide.elements.find(e => e.id === cropId); if (el) resetCrop(el); }}

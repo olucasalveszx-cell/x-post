@@ -28,6 +28,7 @@ export interface SlideElement {
   gradient?: string | null;
   clipInset?: { top: number; right: number; bottom: number; left: number };
   zIndex?: number;
+  locked?: boolean;
   flipX?: boolean;
   flipY?: boolean;
   // Perfil

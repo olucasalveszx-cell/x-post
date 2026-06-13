@@ -556,7 +556,7 @@ function buildNewsSlides(
       bgGradient = "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.45) 35%, rgba(0,0,0,0.12) 65%, rgba(0,0,0,0) 100%)";
     }
 
-    // Perfil IG
+    // Perfil IG — locked para não ser deletado acidentalmente
     elements.push({
       id: uuid(), type: "profile",
       x: 40, y: isFirst && newsImageUrl ? Math.round(H * 0.52) + 24 : 40,
@@ -567,6 +567,7 @@ function buildNewsSlides(
       profileNameColor: "#ffffff",
       profileHandleColor: "rgba(255,255,255,0.55)",
       zIndex: 10,
+      locked: true,
       ...(picture ? { src: picture } : {}),
     });
 
