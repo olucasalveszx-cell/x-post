@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Newspaper, TrendingUp, Flame, Zap, Bookmark, BookmarkCheck,
+  Newspaper, TrendingUp, Flame, Bookmark, BookmarkCheck,
   ExternalLink, RefreshCw, Loader2, X, Sparkles, LayoutGrid,
-  Video, FileText, Lightbulb, ChevronRight, ArrowLeft, Search,
+  Video, FileText, Lightbulb, ArrowLeft,
   AlertCircle, CheckCircle2, Copy, Send,
 } from "lucide-react";
 import { v4 as uuid } from "uuid";
@@ -764,25 +764,42 @@ export default function NewsPage() {
     try {
       const igAccount = JSON.parse(localStorage.getItem("ig_account") ?? "null");
 
-      // Busca imagens únicas para os slides 2+ baseado no título de cada slide
-      const extraImages: (string | null)[] = await Promise.all(
-        rawSlides.slice(1).map(async (slide: any) => {
-          try {
-            const query = `${slide.title} ${news.keywords?.[0] ?? ""}`.trim();
-            const res = await fetch("/api/image-search", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ query }),
-            });
-            const data = await res.json();
-            return (data.images?.[0]?.url as string) ?? null;
-          } catch {
-            return null;
-          }
-        })
-      );
+      // Busca e proxia imagens para todos os slides em paralelo (base64 evita CORS no canvas)
+      const toDataUrl = (d: { base64: string; mimeType: string } | null) =>
+        d ? `data:${d.mimeType};base64,${d.base64}` : null;
 
-      const properSlides = buildNewsSlides(rawSlides, news.image_url, igAccount, extraImages);
+      const proxyUrl = async (url: string | null): Promise<string | null> => {
+        if (!url) return null;
+        try {
+          const r = await fetch("/api/image-proxy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          });
+          if (!r.ok) return null;
+          return toDataUrl(await r.json());
+        } catch { return null; }
+      };
+
+      const [extraImages, proxiedNewsImage] = await Promise.all([
+        Promise.all(
+          rawSlides.slice(1).map(async (slide: any) => {
+            try {
+              const query = `${slide.title} ${news.keywords?.[0] ?? ""}`.trim();
+              const res = await fetch("/api/image-search", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query }),
+              });
+              const data = await res.json();
+              return proxyUrl((data.images?.[0]?.url as string) ?? null);
+            } catch { return null; }
+          })
+        ),
+        proxyUrl(news.image_url),
+      ]);
+
+      const properSlides = buildNewsSlides(rawSlides, proxiedNewsImage ?? news.image_url, igAccount, extraImages);
       localStorage.setItem("xpost_news_carousel", JSON.stringify(properSlides));
       router.push("/editor?from=news");
     } finally {
