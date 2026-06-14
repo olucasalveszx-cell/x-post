@@ -446,6 +446,22 @@ async function storeArticles(articles: RawArticle[]): Promise<boolean> {
   return true;
 }
 
+// Armazena artigos e retorna do banco com IDs reais (evita UUIDs temporários que quebram getNewsById)
+async function storeAndFetch(articles: RawArticle[], limit: number): Promise<NewsItem[]> {
+  if (!articles.length) return [];
+  await storeArticles(articles);
+  const titles = [...new Set(articles.slice(0, limit + 20).map(a => a.title))];
+  const { data } = await supabaseAdmin
+    .from("news_cache")
+    .select("*")
+    .in("title", titles)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+  if (data?.length) return data as NewsItem[];
+  // Fallback se o banco falhar: IDs temporários (gerar não funcionará, mas exibe as notícias)
+  return articles.slice(0, limit).map(rawToNewsItem);
+}
+
 // Categorias prioritárias para o modo "todas as recentes"
 const HOT_CATS = [
   "geral", "brasil", "politica", "tecnologia", "inteligencia_artificial",
@@ -478,10 +494,8 @@ export async function getHotRecentNews(fetchHours: number, limit: number): Promi
     return tb - ta;
   });
 
-  // Armazena no cache de forma assíncrona
-  storeArticles(merged).catch(() => {});
-
-  return merged.slice(0, limit).map(rawToNewsItem);
+  // Armazena e busca do banco para garantir IDs reais (sem IDs temporários que quebram getNewsById)
+  return storeAndFetch(merged, limit);
 }
 
 export async function getNews(
@@ -500,10 +514,9 @@ export async function getNews(
     const filtered = raw.filter(a =>
       a.published_at && new Date(a.published_at).getTime() >= cutoff,
     );
-    // Armazena para enriquecer o cache geral
-    if (filtered.length > 0) storeArticles(filtered).catch(() => {});
+    // Armazena e busca do banco para garantir IDs reais (sem IDs temporários que quebram getNewsById)
     const result = filtered.length > 0 ? filtered : raw;
-    return result.slice(offset, offset + limit).map(rawToNewsItem);
+    return storeAndFetch(result.slice(offset), limit);
   }
 
   // Cache fresco = artigos inseridos nos últimos 20 minutos

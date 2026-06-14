@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { X, Instagram, Loader2, CheckCircle, AlertCircle, User, ExternalLink, Upload, Pencil, LayoutGrid, BookImage, Calendar, Clock, Music, ChevronRight, ChevronLeft } from "lucide-react";
 import { renderSlide } from "@/lib/render-slide";
 
@@ -42,6 +42,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [showMusicConfirm, setShowMusicConfirm] = useState(false);
+  const [pendingShareFiles, setPendingShareFiles] = useState<File[] | null>(null);
 
   const isLoading = ["exporting", "uploading", "publishing", "scheduling"].includes(status);
 
@@ -233,7 +234,7 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       if (!res.ok) throw new Error(data.error);
       setProgress(80);
 
-      // Copia legenda e abre Instagram para adicionar música
+      // Prepara os arquivos para compartilhar — salva no estado para o botão acionar o share via gesto do usuário
       if (caption) navigator.clipboard.writeText(caption).catch(() => {});
       const files: File[] = dataUrls.map((url, i) => {
         const arr = url.split(",");
@@ -243,19 +244,9 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
         for (let j = 0; j < bstr.length; j++) u8[j] = bstr.charCodeAt(j);
         return new File([u8], `slide-${String(i + 1).padStart(2, "0")}.jpg`, { type: mime });
       });
-      const canShare = typeof navigator.share === "function" && navigator.canShare?.({ files });
-      if (canShare) {
-        await navigator.share({ files, text: caption, title: "XPost" });
-      } else {
-        for (let i = 0; i < dataUrls.length; i++) {
-          const a = document.createElement("a");
-          a.href = dataUrls[i]; a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
-          a.click();
-          await new Promise((r) => setTimeout(r, 200));
-        }
-      }
+      setPendingShareFiles(files);
       setProgress(100); setStatus("success");
-      setMessage(`Agendado para ${new Date(scheduledAt).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} — adicione a música no Instagram!`);
+      setMessage(`Agendado para ${new Date(scheduledAt).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} — toque no botão abaixo para enviar ao Instagram!`);
     } catch (err: any) {
       if ((err as any)?.name === "AbortError") { setStatus("idle"); return; }
       handleError(err, "Erro ao agendar com música");
@@ -280,19 +271,10 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
       // Copia legenda para área de transferência
       if (caption) navigator.clipboard.writeText(caption).catch(() => {});
       setProgress(90);
-      const canShare = typeof navigator.share === "function" && navigator.canShare?.({ files });
-      if (canShare) {
-        await navigator.share({ files, text: caption, title: "XPost" });
-      } else {
-        // Fallback: baixa as imagens
-        for (let i = 0; i < dataUrls.length; i++) {
-          const a = document.createElement("a");
-          a.href = dataUrls[i]; a.download = `slide-${String(i + 1).padStart(2, "0")}.jpg`;
-          a.click();
-          await new Promise((r) => setTimeout(r, 200));
-        }
-      }
-      onClose(); // Volta para o editor
+      // Salva os files no estado — o botão de compartilhar aciona o share via gesto do usuário
+      setPendingShareFiles(files);
+      setProgress(100); setStatus("success");
+      setMessage("Toque no botão abaixo para enviar as imagens ao Instagram e adicionar música!");
     } catch (err: any) {
       if ((err as any)?.name === "AbortError") { setStatus("idle"); setShowMusicConfirm(false); return; }
       setStatus("error"); setMessage(err.message ?? "Erro ao abrir Instagram");
@@ -520,6 +502,28 @@ export default function PublishModal({ slides, account, onClose, onLoginClick }:
                       className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold text-sm">
                       <Instagram size={15} /><ExternalLink size={13} />Ver post no Instagram
                     </a>
+                  )}
+                  {pendingShareFiles && pendingShareFiles.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const files = pendingShareFiles;
+                        const canShare = typeof navigator.share === "function" && navigator.canShare?.({ files });
+                        if (canShare) {
+                          navigator.share({ files, text: caption, title: "XPost" }).catch(() => {});
+                        } else {
+                          files.forEach((f, i) => {
+                            const url = URL.createObjectURL(f);
+                            const a = document.createElement("a");
+                            a.href = url; a.download = f.name; a.click();
+                            setTimeout(() => URL.revokeObjectURL(url), 1000);
+                          });
+                        }
+                      }}
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl font-semibold text-sm text-white"
+                      style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)" }}
+                    >
+                      <Instagram size={15} /> Compartilhar no Instagram
+                    </button>
                   )}
                 </div>
               )}

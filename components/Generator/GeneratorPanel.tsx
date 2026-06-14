@@ -570,6 +570,16 @@ export default function GeneratorPanel({ onGenerate, onLayoutChange, currentSlid
     }));
   }, [isLoading, status, imageProgress, totalImages]);
 
+  // On mobile the panel is unmounted before setStatus("done") can fire (onGenerate closes the panel).
+  // Clear the overlay so it doesn't stay stuck on screen.
+  useEffect(() => {
+    return () => {
+      window.dispatchEvent(new CustomEvent("generator-loading", {
+        detail: { isLoading: false, status: "idle", imageProgress: 0, totalImages: 0 },
+      }));
+    };
+  }, []);
+
   const KIRVANO_URLS: Record<string, string> = {
     basic:    "https://pay.kirvano.com/d3f6da72-a6be-4d54-8268-20c725e4ab5b",
     pro:      "https://pay.kirvano.com/e5bdb60b-3d05-4338-bbb7-59e17b1b636f",

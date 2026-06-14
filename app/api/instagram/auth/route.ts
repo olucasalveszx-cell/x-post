@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     "instagram_basic",
     "instagram_content_publish",
     "pages_show_list",
+    "pages_read_engagement",
   ].join(",");
 
   const oauthUrl =

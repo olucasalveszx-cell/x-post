@@ -97,6 +97,10 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   const [loadingFrames, setLoadingFrames] = useState<Set<string>>(new Set());
   const [framePrompt, setFramePrompt] = useState<string>("");
   const [framePendingId, setFramePendingId] = useState<string | null>(null);
+  const [frameInlineOpen, setFrameInlineOpen]       = useState(false);
+  const [frameInlineQuery, setFrameInlineQuery]     = useState("");
+  const [frameInlineResults, setFrameInlineResults] = useState<Array<{ url: string; thumb: string; title: string }>>([]);
+  const [frameInlineLoading, setFrameInlineLoading] = useState(false);
   const [framePanId, setFramePanId] = useState<string | null>(null);
   const [showLayoutPicker, setShowLayoutPicker] = useState(false);
   const [showBgImageSearch, setShowBgImageSearch] = useState(false);
@@ -108,12 +112,16 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
   // Limpa seleção ao sair do slide ativo — evita wasSelected=true ao voltar
   useEffect(() => {
     if (!isActive) {
+      selectedIdRef.current = null;
       setSelectedId(null);
       setEditingId(null);
       setCropId(null);
       setFramePanId(null);
     }
   }, [isActive]);
+
+  // Ref síncrono: garante wasSelected correto mesmo em toques rápidos (antes do setState flush)
+  const selectedIdRef = useRef<string | null>(null);
 
   const dragRef = useRef<DragState>(null);
   const vGuideRef = useRef<HTMLDivElement>(null);
@@ -230,7 +238,8 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     if (el.locked) return;
     e.stopPropagation();
 
-    const wasSelected = selectedId === el.id;
+    const wasSelected = selectedIdRef.current === el.id;
+    selectedIdRef.current = el.id;
     setSelectedId(el.id);
     onSelectElement?.(el);
 
@@ -313,7 +322,9 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     if (el.locked) return;
     e.stopPropagation();
 
-    const wasSelected = selectedId === el.id;
+    // Usa ref para leitura imediata — evita race condition com toques rápidos
+    const wasSelected = selectedIdRef.current === el.id;
+    selectedIdRef.current = el.id;
     setSelectedId(el.id);
     onSelectElement?.(el);
 
@@ -351,6 +362,10 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
       window.addEventListener("touchend", onEnd);
       return;
     }
+
+    // Impede eventos de mouse sintéticos (mousedown/mouseup/click) após toque único,
+    // evitando que handleMouseDown interfira com a lógica de toque.
+    e.preventDefault();
 
     // Primeiro toque: apenas seleciona, não arrasta
     if (!wasSelected) return;
@@ -619,6 +634,37 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     } catch {}
   };
 
+  const runFrameInlineSearch = async (q: string) => {
+    if (!q.trim()) return;
+    setFrameInlineLoading(true);
+    setFrameInlineResults([]);
+    try {
+      const res  = await fetch("/api/image-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q.trim() }),
+      });
+      const data = await res.json();
+      setFrameInlineResults((data.images ?? []).slice(0, 9));
+    } catch {}
+    finally { setFrameInlineLoading(false); }
+  };
+
+  const selectFrameInlineImage = async (img: { url: string; thumb: string }, elId: string) => {
+    try {
+      const res  = await fetch("/api/image-proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: img.url, thumbUrl: img.thumb }),
+      });
+      const data = await res.json();
+      if (data.base64) {
+        updateElement(elId, { frameImageUrl: `data:${data.mimeType};base64,${data.base64}`, frameMediaType: "image" });
+        closeFrameCtx();
+      }
+    } catch {}
+  };
+
   const runGenerateBg = async (prompt: string) => {
     setGeneratingBg(true);
     setShowThemeInput(false);
@@ -687,7 +733,12 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     setFrameCtxMenu({ x: e.clientX, y: e.clientY, el, mobile: false });
   };
 
-  const closeFrameCtx = () => setFrameCtxMenu(null);
+  const closeFrameCtx = () => {
+    setFrameCtxMenu(null);
+    setFrameInlineOpen(false);
+    setFrameInlineQuery("");
+    setFrameInlineResults([]);
+  };
 
   const handleBgFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -760,6 +811,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
     if (frameCtxMenu) { closeFrameCtx(); return; }
     if (framePanId) { setFramePanId(null); return; }
     if (isCroppingBg) return; // não deseleciona enquanto está cortando o fundo
+    selectedIdRef.current = null;
     setSelectedId(null);
     setEditingId(null);
     setCropId(null);
@@ -783,6 +835,7 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
         transformOrigin: "top left",
       }}
       onMouseDown={handleCanvasClick}
+      onTouchEnd={(e) => { if (e.target === e.currentTarget) handleCanvasClick(); }}
       onContextMenu={handleBgContextMenu}
     >
       {/* Fundo gerado por IA */}
@@ -1662,6 +1715,74 @@ export default function SlideCanvas({ slide, onUpdate, scale = 1, onSelectElemen
             className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors border-b border-[var(--border)]">
             <Upload size={15} className="text-blue-400" /> Fazer upload foto/vídeo
           </button>
+
+          {/* Buscar imagem na web */}
+          <div className="border-b border-[var(--border)]">
+            <button
+              onClick={() => {
+                const next = !frameInlineOpen;
+                setFrameInlineOpen(next);
+                if (next && !frameInlineQuery) {
+                  const q = slideMainQuery;
+                  setFrameInlineQuery(q);
+                  if (q) runFrameInlineSearch(q);
+                }
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors"
+            >
+              <Search size={15} className="text-cyan-400" />
+              <span className="flex-1 text-left">Buscar imagem na web</span>
+              <span className="text-[10px] text-[var(--text-3)]">{frameInlineOpen ? "▲" : "▼"}</span>
+            </button>
+
+            {frameInlineOpen && (
+              <div className="px-3 pb-3 flex flex-col gap-2">
+                <div className="flex gap-1.5">
+                  <input
+                    value={frameInlineQuery}
+                    onChange={(e) => setFrameInlineQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && runFrameInlineSearch(frameInlineQuery)}
+                    placeholder="Ex: paisagem, cidade..."
+                    className="flex-1 bg-[var(--bg-4)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--text)] placeholder:text-[var(--text-3)] outline-none focus:border-cyan-500"
+                  />
+                  <button
+                    onClick={() => runFrameInlineSearch(frameInlineQuery)}
+                    disabled={frameInlineLoading || !frameInlineQuery.trim()}
+                    className="px-2.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-xs disabled:opacity-40 transition-colors"
+                  >
+                    {frameInlineLoading ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
+                  </button>
+                </div>
+
+                {frameInlineLoading && (
+                  <div className="flex justify-center py-3">
+                    <Loader2 size={16} className="animate-spin text-cyan-400" />
+                  </div>
+                )}
+
+                {!frameInlineLoading && frameInlineResults.length > 0 && (
+                  <div className="grid grid-cols-3 gap-1">
+                    {frameInlineResults.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => selectFrameInlineImage(img, frameCtxMenu.el.id)}
+                        className="relative aspect-square rounded overflow-hidden border border-[var(--border)] hover:border-cyan-500 transition-colors group"
+                        title={img.title}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={img.thumb} alt={img.title} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {!frameInlineLoading && frameInlineResults.length === 0 && frameInlineQuery.trim() && (
+                  <p className="text-[10px] text-[var(--text-3)] text-center py-1">Nenhuma imagem encontrada</p>
+                )}
+              </div>
+            )}
+          </div>
 
           {slide.backgroundImageUrl && (
             <button onClick={() => { updateElement(frameCtxMenu.el.id, { frameImageUrl: slide.backgroundImageUrl, frameImageOffset: { x: 50, y: 50 }, frameImageZoom: 100 }); closeFrameCtx(); }}
