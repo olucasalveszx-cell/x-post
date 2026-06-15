@@ -54,13 +54,16 @@ export async function GET(req: NextRequest) {
     console.log("[ig/callback] short-lived token obtido para user_id:", shortData.user_id);
 
     // 2. Troca por token de longa duração (60 dias)
-    const longRes = await fetch(
-      `https://graph.instagram.com/access_token` +
-        `?grant_type=ig_exchange_token` +
-        `&client_id=${appId}` +
-        `&client_secret=${appSecret}` +
-        `&access_token=${shortData.access_token}`
-    );
+    const longRes = await fetch("https://graph.instagram.com/access_token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "ig_exchange_token",
+        client_id: appId,
+        client_secret: appSecret,
+        access_token: shortData.access_token,
+      }),
+    });
     const longData = await longRes.json();
     if (!longData.access_token) throw new Error("Falha ao obter token de longa duração: " + JSON.stringify(longData));
     const longToken = longData.access_token;
