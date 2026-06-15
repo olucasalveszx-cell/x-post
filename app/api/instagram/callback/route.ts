@@ -53,28 +53,37 @@ export async function GET(req: NextRequest) {
     if (!shortData.access_token) throw new Error("Token inválido: " + JSON.stringify(shortData));
     console.log("[ig/callback] short-lived token obtido para user_id:", shortData.user_id);
 
-    // 2. Tenta trocar por token de longa duração (60 dias)
-    // Para Instagram Business Login, tenta GET no graph.instagram.com
+    // 2. Troca por token de longa duração (60 dias)
     let longToken = shortData.access_token;
-    let longExpiresIn = 3600; // fallback: 1 hora (short-lived)
-    try {
-      const longParams = new URLSearchParams({
-        grant_type: "ig_exchange_token",
-        client_id: appId,
-        client_secret: appSecret,
-        access_token: shortData.access_token,
-      });
-      const longRes = await fetch(`https://graph.instagram.com/access_token?${longParams}`);
-      const longData = await longRes.json();
-      if (longData.access_token) {
-        longToken = longData.access_token;
-        longExpiresIn = longData.expires_in ?? 5184000;
-        console.log("[ig/callback] long-lived token obtido, expires_in:", longExpiresIn);
-      } else {
-        console.warn("[ig/callback] long-lived exchange falhou, usando short-lived:", JSON.stringify(longData));
+    let longExpiresIn = 3600;
+    const exchangeAttempts = [
+      `https://graph.instagram.com/v22.0/access_token`,
+      `https://graph.instagram.com/access_token`,
+      `https://graph.facebook.com/v22.0/oauth/access_token`,
+    ];
+    const longParams = new URLSearchParams({
+      grant_type: "ig_exchange_token",
+      client_id: appId,
+      client_secret: appSecret,
+      access_token: shortData.access_token,
+    });
+    for (const url of exchangeAttempts) {
+      try {
+        const res = await fetch(`${url}?${longParams}`);
+        const data = await res.json();
+        console.log(`[ig/callback] long-lived attempt ${url}:`, JSON.stringify(data));
+        if (data.access_token) {
+          longToken = data.access_token;
+          longExpiresIn = data.expires_in ?? 5184000;
+          console.log("[ig/callback] long-lived token obtido via", url);
+          break;
+        }
+      } catch (e: any) {
+        console.warn(`[ig/callback] ${url} erro:`, e.message);
       }
-    } catch (e: any) {
-      console.warn("[ig/callback] long-lived exchange erro:", e.message);
+    }
+    if (longToken === shortData.access_token) {
+      console.warn("[ig/callback] todos os exchanges falharam, usando short-lived (1h)");
     }
 
     // 3. Busca informações da conta Instagram
