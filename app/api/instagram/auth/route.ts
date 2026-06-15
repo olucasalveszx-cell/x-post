@@ -10,20 +10,18 @@ export async function GET(req: NextRequest) {
 
   const popup = req.nextUrl.searchParams.get("popup") === "1";
   const redirectUri = `${baseUrl}/api/instagram/callback`;
-  const scope = [
-    "instagram_business_basic",
-    "instagram_business_content_publish",
-  ].join(",");
+  const scope = "instagram_business_basic,instagram_business_content_publish";
 
-  const oauthUrl =
-    `https://www.instagram.com/oauth/authorize` +
-    `?client_id=${appId}` +
-    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&scope=${encodeURIComponent(scope)}` +
-    `&response_type=code` +
-    `&state=${popup ? "popup" : "redirect"}` +
-    `&enable_fb_login=0` +
-    `&force_authentication=1`;
+  const params = new URLSearchParams({
+    client_id: appId,
+    redirect_uri: redirectUri,
+    scope,
+    response_type: "code",
+    state: popup ? "popup" : "redirect",
+    force_reauth: "true",
+  });
+
+  const oauthUrl = `https://www.instagram.com/oauth/authorize?${params}`;
 
   return NextResponse.redirect(oauthUrl);
 }
