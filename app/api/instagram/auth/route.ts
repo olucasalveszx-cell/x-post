@@ -19,9 +19,11 @@ export async function GET(req: NextRequest) {
     `https://www.instagram.com/oauth/authorize` +
     `?client_id=${appId}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&scope=${scope}` +
+    `&scope=${encodeURIComponent(scope)}` +
     `&response_type=code` +
-    `&state=${popup ? "popup" : "redirect"}`;
+    `&state=${popup ? "popup" : "redirect"}` +
+    `&enable_fb_login=0` +
+    `&force_authentication=1`;
 
   return NextResponse.redirect(oauthUrl);
 }
