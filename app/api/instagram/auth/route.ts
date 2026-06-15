@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
-  const appId = process.env.INSTAGRAM_APP_ID;
+  const appId = (process.env.INSTAGRAM_APP_ID ?? "").replace(/^﻿/, "").trim() || undefined;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3001";
 
   if (!appId) {

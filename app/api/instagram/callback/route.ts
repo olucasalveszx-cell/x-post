@@ -30,9 +30,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${editorUrl}?ig_error=cancelled`);
   }
 
-  const appId = process.env.INSTAGRAM_APP_ID!;
-  const appSecret = process.env.INSTAGRAM_APP_SECRET!;
+  const appId = (process.env.INSTAGRAM_APP_ID ?? "").replace(/^﻿/, "").trim();
+  const appSecret = (process.env.INSTAGRAM_APP_SECRET ?? "").replace(/^﻿/, "").trim();
   const redirectUri = `${baseUrl}/api/instagram/callback`;
+
+  console.log("[ig/callback] appId:", JSON.stringify(appId), "redirectUri:", redirectUri);
 
   try {
     // 1. Troca code por token de curta duração (Instagram Business Login)
