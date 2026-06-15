@@ -79,13 +79,13 @@ export async function GET(req: NextRequest) {
 
     // 3. Busca informações da conta Instagram
     const userRes = await fetch(
-      `https://graph.instagram.com/me?fields=user_id,username,profile_picture_url,account_type&access_token=${longToken}`
+      `https://graph.instagram.com/me?fields=id,user_id,username,name,profile_picture_url,account_type&access_token=${longToken}`
     );
     const userData = await userRes.json();
     console.log("[ig/callback] user data:", JSON.stringify(userData));
 
-    const igAccountId: string = userData.user_id ?? String(shortData.user_id ?? "");
-    const igUsername: string = userData.username ?? "";
+    const igAccountId: string = userData.user_id ?? userData.id ?? String(shortData.user_id ?? "");
+    const igUsername: string = userData.username ?? userData.name ?? "";
     const igPicture: string = userData.profile_picture_url ?? "";
 
     if (!igAccountId) throw new Error("Não foi possível obter ID da conta Instagram");
