@@ -8,8 +8,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const res = await fetch(
-      `https://graph.instagram.com/me?fields=user_id,username&access_token=${token}`,
-      { signal: AbortSignal.timeout(8000) }
+      "https://graph.instagram.com/v22.0/me?fields=id,username,account_type",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(8000),
+      }
     );
     const data = await res.json();
     if (data.error) {
@@ -18,8 +21,10 @@ export async function POST(req: NextRequest) {
       if (code === 190 || code === 102 || code === 2500) {
         return NextResponse.json({ valid: false, code });
       }
+      // code 100 = Unsupported (conta pessoal ou sem permissão) — token em si é válido
+      return NextResponse.json({ valid: true, warn: data.error.message });
     }
-    return NextResponse.json({ valid: true });
+    return NextResponse.json({ valid: true, username: data.username, accountType: data.account_type });
   } catch {
     return NextResponse.json({ valid: true });
   }
