@@ -87,15 +87,21 @@ export async function GET(req: NextRequest) {
     }
 
     // 3. Busca informações da conta Instagram
-    const userRes = await fetch(
-      `https://graph.instagram.com/me?fields=id,user_id,username,name,profile_picture_url,account_type&access_token=${longToken}`
-    );
-    const userData = await userRes.json();
-    console.log("[ig/callback] user data:", JSON.stringify(userData));
-
-    const igAccountId: string = userData.user_id ?? userData.id ?? String(shortData.user_id ?? "");
-    const igUsername: string = userData.username ?? userData.name ?? "";
-    const igPicture: string = userData.profile_picture_url ?? "";
+    // user_id do shortData é sempre confiável — vem direto do token exchange
+    const igAccountId: string = String(shortData.user_id ?? "");
+    let igUsername = "";
+    let igPicture = "";
+    try {
+      const userRes = await fetch(
+        `https://graph.instagram.com/v22.0/${igAccountId}?fields=username,name,profile_picture_url&access_token=${longToken}`
+      );
+      const userData = await userRes.json();
+      console.log("[ig/callback] user data:", JSON.stringify(userData));
+      igUsername = userData.username ?? userData.name ?? "";
+      igPicture = userData.profile_picture_url ?? "";
+    } catch (e: any) {
+      console.warn("[ig/callback] erro ao buscar perfil:", e.message);
+    }
 
     if (!igAccountId) throw new Error("Não foi possível obter ID da conta Instagram");
 

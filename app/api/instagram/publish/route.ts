@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 120;
 
-const GRAPH = "https://graph.facebook.com/v20.0";
+const GRAPH = "https://graph.instagram.com/v22.0";
 
 async function uploadCarouselItem(igAccountId: string, imageUrl: string, token: string): Promise<string> {
   const res = await fetch(`${GRAPH}/${igAccountId}/media`, {
