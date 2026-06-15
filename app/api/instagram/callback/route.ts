@@ -93,7 +93,8 @@ export async function GET(req: NextRequest) {
     let igPicture = "";
     try {
       const userRes = await fetch(
-        `https://graph.instagram.com/v22.0/${igAccountId}?fields=username,name,profile_picture_url&access_token=${longToken}`
+        `https://graph.instagram.com/v22.0/${igAccountId}?fields=username,name,profile_picture_url`,
+        { headers: { Authorization: `Bearer ${longToken}` } }
       );
       const userData = await userRes.json();
       console.log("[ig/callback] user data:", JSON.stringify(userData));
