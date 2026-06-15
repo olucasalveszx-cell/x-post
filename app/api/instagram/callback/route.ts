@@ -30,107 +30,57 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${editorUrl}?ig_error=cancelled`);
   }
 
-  const appId = process.env.META_APP_ID!;
-  const appSecret = process.env.META_APP_SECRET!;
+  const appId = process.env.INSTAGRAM_APP_ID!;
+  const appSecret = process.env.INSTAGRAM_APP_SECRET!;
   const redirectUri = `${baseUrl}/api/instagram/callback`;
 
   try {
-    // 1. Troca code por token de curta duração
-    const shortRes = await fetch(
-      `https://graph.facebook.com/v20.0/oauth/access_token` +
-        `?client_id=${appId}` +
-        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        `&client_secret=${appSecret}` +
-        `&code=${code}`
-    );
+    // 1. Troca code por token de curta duração (Instagram Business Login)
+    const shortRes = await fetch("https://api.instagram.com/oauth/access_token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: appId,
+        client_secret: appSecret,
+        grant_type: "authorization_code",
+        redirect_uri: redirectUri,
+        code,
+      }),
+    });
     const shortData = await shortRes.json();
     if (!shortData.access_token) throw new Error("Token inválido: " + JSON.stringify(shortData));
+    console.log("[ig/callback] short-lived token obtido para user_id:", shortData.user_id);
 
     // 2. Troca por token de longa duração (60 dias)
     const longRes = await fetch(
-      `https://graph.facebook.com/v20.0/oauth/access_token` +
-        `?grant_type=fb_exchange_token` +
+      `https://graph.instagram.com/access_token` +
+        `?grant_type=ig_exchange_token` +
         `&client_id=${appId}` +
         `&client_secret=${appSecret}` +
-        `&fb_exchange_token=${shortData.access_token}`
+        `&access_token=${shortData.access_token}`
     );
     const longData = await longRes.json();
-    // NÃO usar fallback para token curto — page tokens só são permanentes se
-    // gerados a partir de um long-lived user token
     if (!longData.access_token) throw new Error("Falha ao obter token de longa duração: " + JSON.stringify(longData));
     const longToken = longData.access_token;
     console.log("[ig/callback] long-lived token obtido, expires_in:", longData.expires_in);
 
-    // 3. Lista páginas do Facebook do usuário
-    const pagesRes = await fetch(
-      `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${longToken}`
+    // 3. Busca informações da conta Instagram
+    const userRes = await fetch(
+      `https://graph.instagram.com/me?fields=user_id,username,profile_picture_url,account_type&access_token=${longToken}`
     );
-    const pagesData = await pagesRes.json();
-    const pages: any[] = pagesData.data ?? [];
-    console.log("[ig/callback] Páginas:", JSON.stringify(pagesData));
+    const userData = await userRes.json();
+    console.log("[ig/callback] user data:", JSON.stringify(userData));
 
-    // 4. Encontra conta Instagram Business conectada a alguma página
-    let igAccountId: string | null = null;
-    let igToken: string = longToken;
-    let igUsername: string = "";
-    let igPicture:  string = "";
+    const igAccountId: string = userData.user_id ?? String(shortData.user_id ?? "");
+    const igUsername: string = userData.username ?? "";
+    const igPicture: string = userData.profile_picture_url ?? "";
 
-    for (const page of pages) {
-      const igRes = await fetch(
-        `https://graph.facebook.com/v20.0/${page.id}` +
-          `?fields=instagram_business_account` +
-          `&access_token=${page.access_token}`
-      );
-      const igData = await igRes.json();
-      console.log(`[ig/callback] Página "${page.name}" → IG:`, JSON.stringify(igData));
+    if (!igAccountId) throw new Error("Não foi possível obter ID da conta Instagram");
 
-      if (igData.instagram_business_account?.id) {
-        igAccountId = igData.instagram_business_account.id;
-        igToken = page.access_token;
-
-        const userRes = await fetch(
-          `https://graph.facebook.com/v20.0/${igAccountId}` +
-            `?fields=username,profile_picture_url` +
-            `&access_token=${igToken}`
-        );
-        const userData = await userRes.json();
-        igUsername = userData.username ?? "";
-        igPicture  = userData.profile_picture_url ?? "";
-        break;
-      }
-    }
-
-    // Fallback: tenta buscar Instagram direto no perfil do usuário
-    if (!igAccountId) {
-      const meRes = await fetch(
-        `https://graph.facebook.com/v20.0/me?fields=instagram_business_account&access_token=${longToken}`
-      );
-      const meData = await meRes.json();
-      console.log("[ig/callback] Fallback me→IG:", JSON.stringify(meData));
-
-      if (meData.instagram_business_account?.id) {
-        igAccountId = meData.instagram_business_account.id;
-        const userRes = await fetch(
-          `https://graph.facebook.com/v20.0/${igAccountId}?fields=username,profile_picture_url&access_token=${longToken}`
-        );
-        const userData = await userRes.json();
-        igUsername = userData.username ?? "";
-        igPicture  = userData.profile_picture_url ?? "";
-      }
-    }
-
-    if (!igAccountId) {
-      const pageNames = pages.map((p: any) => p.name).join(", ") || "nenhuma";
-      console.log("[ig/callback] Sem IG Business. Páginas:", pageNames);
-      return NextResponse.redirect(
-        `${editorUrl}?ig_error=no_business_account&pages=${encodeURIComponent(pageNames)}`
-      );
-    }
-
-    // 5. Retorna dados ao editor (popup ou redirect)
+    // 4. Retorna dados ao editor (popup ou redirect)
     const expiresAt = Date.now() + (longData.expires_in ?? 5184000) * 1000;
     const payload = {
-      ig_token: igToken,
+      ig_token: longToken,
       ig_account: igAccountId,
       ig_username: igUsername,
       ig_picture: igPicture,
