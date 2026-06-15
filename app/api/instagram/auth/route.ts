@@ -23,5 +23,10 @@ export async function GET(req: NextRequest) {
 
   const oauthUrl = `https://www.instagram.com/oauth/authorize?${params}`;
 
+  // debug: ?debug=1 retorna a URL em vez de redirecionar
+  if (req.nextUrl.searchParams.get("debug") === "1") {
+    return NextResponse.json({ oauthUrl, appId, redirectUri });
+  }
+
   return NextResponse.redirect(oauthUrl);
 }
