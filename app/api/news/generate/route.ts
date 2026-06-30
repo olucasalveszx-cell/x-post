@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { consumeCredits } from "@/lib/credits";
 import { getNewsById } from "@/lib/news";
 import { geminiText } from "@/lib/gemini-text";
+import { getPerformanceSummary } from "@/lib/performance-loop";
 
 export const maxDuration = 60;
 
@@ -30,7 +31,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const news = await getNewsById(newsId);
+    const [news, performanceSummary] = await Promise.all([
+      getNewsById(newsId),
+      getPerformanceSummary(session.user.email),
+    ]);
     if (!news) return NextResponse.json({ error: "Notícia não encontrada" }, { status: 404 });
 
     const fullText = [news.title, news.description, news.content]
@@ -40,13 +44,13 @@ export async function POST(req: NextRequest) {
 
     let prompt = "";
     if (type === "carousel") {
-      prompt = buildCarouselPrompt(news.title, news.category, fullText);
+      prompt = buildCarouselPrompt(news.title, news.category, fullText, performanceSummary);
     } else if (type === "reels") {
-      prompt = buildReelsPrompt(news.title, news.category, fullText);
+      prompt = buildReelsPrompt(news.title, news.category, fullText, performanceSummary);
     } else if (type === "post") {
-      prompt = buildPostPrompt(news.title, news.category, fullText);
+      prompt = buildPostPrompt(news.title, news.category, fullText, performanceSummary);
     } else if (type === "ideas") {
-      prompt = buildIdeasPrompt(news.title, news.category, fullText);
+      prompt = buildIdeasPrompt(news.title, news.category, fullText, performanceSummary);
     }
 
     const raw = await geminiText(prompt, { maxTokens: 2000, temperature: 0.85 });
@@ -65,8 +69,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function buildCarouselPrompt(title: string, category: string, content: string): string {
+function buildCarouselPrompt(title: string, category: string, content: string, performance: string | null): string {
   return `Você cria carrosséis virais para Instagram baseados em notícias reais.
+${performance ? `\n${performance}\n` : ""}
 
 NOTÍCIA:
 Título: ${title}
@@ -99,8 +104,9 @@ Retorne APENAS este JSON:
 Regras: títulos em MAIÚSCULAS (max 6 palavras), 1 palavra entre [colchetes], sem numeração, sem emojis.`;
 }
 
-function buildReelsPrompt(title: string, category: string, content: string): string {
+function buildReelsPrompt(title: string, category: string, content: string, performance: string | null): string {
   return `Você cria roteiros de Reels virais baseados em notícias reais.
+${performance ? `\n${performance}\n` : ""}
 
 NOTÍCIA:
 Título: ${title}
@@ -125,8 +131,9 @@ Retorne APENAS este JSON:
 }`;
 }
 
-function buildPostPrompt(title: string, category: string, content: string): string {
+function buildPostPrompt(title: string, category: string, content: string, performance: string | null): string {
   return `Você cria posts otimizados para diferentes redes sociais.
+${performance ? `\n${performance}\n` : ""}
 
 NOTÍCIA:
 Título: ${title}
@@ -145,8 +152,9 @@ Retorne APENAS este JSON:
 }`;
 }
 
-function buildIdeasPrompt(title: string, category: string, content: string): string {
+function buildIdeasPrompt(title: string, category: string, content: string, performance: string | null): string {
   return `Você é um estrategista de conteúdo especialista em criação viral.
+${performance ? `\n${performance}\n` : ""}
 
 NOTÍCIA:
 Título: ${title}

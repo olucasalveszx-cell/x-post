@@ -17,7 +17,7 @@ async function searchGoogle(query: string, page: number): Promise<ImageResult[]>
   const res = await fetch("https://google.serper.dev/images", {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ q: query, num: 30, page, gl: "br", hl: "pt" }),
+    body: JSON.stringify({ q: query, num: 50, page, gl: "br", hl: "pt" }),
     signal: AbortSignal.timeout(12000),
   });
   if (!res.ok) return [];
@@ -36,17 +36,16 @@ async function searchGoogle(query: string, page: number): Promise<ImageResult[]>
       const w = img.imageWidth ?? 0;
       const h = img.imageHeight ?? 0;
       return {
-        url: useDirectUrl ? rawUrl : img.thumbnailUrl,
+        url: useDirectUrl ? rawUrl : null,
         thumb: img.thumbnailUrl,
         width: w,
         height: h,
         title: img.title ?? "",
         source: img.source ?? (rawUrl ? (() => { try { return new URL(rawUrl).hostname; } catch { return "Web"; } })() : "Web"),
-        // score: prioriza imagens de alta resolução
-        _score: (useDirectUrl ? 2 : 0) + (w >= 1920 ? 3 : w >= 1000 ? 2 : w >= 600 ? 1 : 0),
+        _score: (w >= 1920 ? 3 : w >= 1000 ? 2 : w >= 600 ? 1 : 0),
       };
     })
-    .filter((img) => img.url)
+    .filter((img) => img.url && !(img.width > 0 && img.width < 500))
     .sort((a, b) => b._score - a._score)
     .slice(0, 20)
     .map(({ _score, ...img }) => img);

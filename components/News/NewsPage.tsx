@@ -5,13 +5,14 @@ import {
   Newspaper, TrendingUp, Flame, Bookmark, BookmarkCheck,
   ExternalLink, RefreshCw, Loader2, X, Sparkles, LayoutGrid,
   Video, FileText, Lightbulb, ArrowLeft, Search,
-  AlertCircle, CheckCircle2, Copy, Send,
+  AlertCircle, CheckCircle2, Copy, Send, Radar, Zap, BarChart2,
 } from "lucide-react";
 import { v4 as uuid } from "uuid";
 import type { Slide, SlideElement } from "@/types";
 import type { NewsItem, TrendingTopic } from "@/lib/news";
 import type { NewsAnalysis } from "@/app/api/news/analyze/route";
 import type { GenerationType } from "@/app/api/news/generate/route";
+import type { TrendPrediction } from "@/lib/trend-radar";
 import { useRouter } from "next/navigation";
 
 // ─── Constantes ────────────────────────────────────────────────────────────
@@ -68,6 +69,107 @@ function ViralBadge({ label }: { label: string }) {
     <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.className}`}>
       {cfg.icon} {cfg.label}
     </span>
+  );
+}
+
+// ─── Trend Radar ────────────────────────────────────────────────────────────
+
+function ConfidenceBar({ value }: { value: number }) {
+  const color = value >= 80 ? "bg-orange-500" : value >= 60 ? "bg-yellow-500" : "bg-sky-500";
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      <div className="flex-1 h-1 bg-white/8 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${value}%` }} />
+      </div>
+      <span className="text-[10px] text-white/35 shrink-0 w-7 text-right">{value}%</span>
+    </div>
+  );
+}
+
+function TrendRadarPanel({
+  predictions, loading, onRefresh, onSelectCategory,
+}: {
+  predictions: TrendPrediction[];
+  loading: boolean;
+  onRefresh: () => void;
+  onSelectCategory: (cat: string) => void;
+}) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  return (
+    <div className="bg-gradient-to-br from-indigo-950/60 to-purple-950/40 border border-indigo-500/20 rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Radar size={14} className="text-indigo-400" />
+          <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">Trend Radar</span>
+          <span className="text-[10px] text-white/25 font-normal normal-case tracking-normal">· próximas 24-48h</span>
+        </div>
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          className="p-1.5 rounded-lg hover:bg-white/10 text-white/30 hover:text-indigo-300 transition-all disabled:opacity-40"
+          title="Atualizar previsões"
+        >
+          <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+        </button>
+      </div>
+
+      {loading && !predictions.length && (
+        <div className="flex items-center gap-2 py-4 justify-center text-white/30">
+          <Loader2 size={14} className="animate-spin text-indigo-400" />
+          <span className="text-xs">Analisando sinais de tendência...</span>
+        </div>
+      )}
+
+      {!loading && !predictions.length && (
+        <p className="text-xs text-white/30 text-center py-3">Nenhuma previsão disponível. Atualize as notícias primeiro.</p>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {predictions.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => {
+              setExpanded(expanded === p.id ? null : p.id);
+            }}
+            className="text-left group"
+          >
+            <div className="bg-white/4 hover:bg-white/8 border border-white/6 hover:border-indigo-500/30 rounded-xl p-3 transition-all">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-white truncate">{p.topic}</p>
+                  <p className="text-[10px] text-indigo-300/60 mt-0.5">
+                    {p.predicted_for_hours === 12 ? "Nas próximas 12h" : p.predicted_for_hours === 48 ? "Nas próximas 48h" : "Nas próximas 24h"}
+                  </p>
+                </div>
+                <span
+                  onClick={(e) => { e.stopPropagation(); onSelectCategory(p.category); }}
+                  className="shrink-0 text-[9px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-300 rounded-full border border-indigo-500/20 hover:bg-indigo-500/40 transition-colors"
+                >
+                  ver notícias
+                </span>
+              </div>
+              <ConfidenceBar value={p.confidence} />
+              {expanded === p.id && (
+                <div className="mt-2 pt-2 border-t border-white/6">
+                  <p className="text-[11px] text-white/60 leading-relaxed">{p.reasoning}</p>
+                  {p.signals?.length > 0 && (
+                    <div className="mt-1.5 space-y-1">
+                      {p.signals.slice(0, 2).map((s, i) => (
+                        <p key={i} className="text-[10px] text-white/30 flex items-start gap-1">
+                          <Zap size={9} className="text-indigo-400 shrink-0 mt-0.5" />
+                          {s}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -332,14 +434,16 @@ function NewsModal({
 
           {/* Footer */}
           <div className="flex gap-2 pt-2 border-t border-white/10">
-            <a
-              href={news.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all border border-white/10"
-            >
-              <ExternalLink size={12} /> Ver notícia original
-            </a>
+            {news.source_url?.startsWith("http") && (
+              <a
+                href={news.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all border border-white/10"
+              >
+                <ExternalLink size={12} /> Ver notícia original
+              </a>
+            )}
             <button
               onClick={onSave}
               className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg transition-all border ${
@@ -688,11 +792,15 @@ export default function NewsPage() {
   const [activeView, setActiveView]         = useState<"feed" | "saved">("feed");
   const [savedNews, setSavedNews]           = useState<NewsItem[]>([]);
   const [loadingSaved, setLoadingSaved]     = useState(false);
-  const [sendingToEditor, setSendingToEditor] = useState(false);
-  const [lastHour, setLastHour]               = useState(false);
-  const [searchQuery, setSearchQuery]         = useState("");
-  const [showSearch, setShowSearch]           = useState(false);
-  const trendingRef = useRef<HTMLDivElement>(null);
+  const [sendingToEditor, setSendingToEditor]       = useState(false);
+  const [lastHour, setLastHour]                     = useState(false);
+  const [searchQuery, setSearchQuery]               = useState("");
+  const [showSearch, setShowSearch]                 = useState(false);
+  const [predictions, setPredictions]               = useState<TrendPrediction[]>([]);
+  const [loadingPredictions, setLoadingPredictions] = useState(false);
+  const [hasPerformanceData, setHasPerformanceData] = useState(false);
+  const [showRadar, setShowRadar]                   = useState(false);
+  const trendingRef    = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Busca notícias por categoria
@@ -747,10 +855,32 @@ export default function NewsPage() {
     }
   }, []);
 
+  const fetchPredictions = useCallback(async (refresh = false) => {
+    setLoadingPredictions(true);
+    try {
+      const res = await fetch(`/api/news/trend-radar${refresh ? "?refresh=true" : ""}`);
+      const data = await res.json();
+      setPredictions(data.predictions ?? []);
+    } catch {} finally {
+      setLoadingPredictions(false);
+    }
+  }, []);
+
+  const syncPerformance = useCallback(async () => {
+    try {
+      const res = await fetch("/api/instagram/sync-performance");
+      if (!res.ok) return;
+      const data = await res.json();
+      setHasPerformanceData((data.topPerformers ?? []).length > 0);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     // fetchNews é controlado pelo segundo effect (evita dupla chamada no mount)
     fetchTrending();
     fetchSaved();
+    fetchPredictions();
+    syncPerformance();
   }, []);
 
   useEffect(() => {
@@ -901,6 +1031,16 @@ export default function NewsPage() {
               <Search size={16} />
             </button>
 
+            {/* Trend Radar toggle */}
+            <button
+              onClick={() => setShowRadar((v) => !v)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${showRadar ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "hover:bg-white/10 text-white/50 hover:text-white"}`}
+              title="Trend Radar — previsões para as próximas 24-48h"
+            >
+              <Radar size={12} />
+              <span className="hidden sm:inline">Radar</span>
+            </button>
+
             {/* Última 1h */}
             <button
               onClick={() => setLastHour((v) => !v)}
@@ -996,6 +1136,24 @@ export default function NewsPage() {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Trend Radar */}
+        {showRadar && activeView === "feed" && !searchQuery && (
+          <TrendRadarPanel
+            predictions={predictions}
+            loading={loadingPredictions}
+            onRefresh={() => fetchPredictions(true)}
+            onSelectCategory={(cat) => { setActiveCategory(cat); setLastHour(false); }}
+          />
+        )}
+
+        {/* Badge de Performance Loop */}
+        {hasPerformanceData && !searchQuery && activeView === "feed" && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-emerald-950/40 border border-emerald-500/20 rounded-xl text-xs text-emerald-300/80">
+            <BarChart2 size={12} className="text-emerald-400 shrink-0" />
+            <span>Geração personalizada ativa — IA aprende com seus melhores posts</span>
           </div>
         )}
 

@@ -194,12 +194,12 @@ async function fetchFromNewsData(category: string, hours?: number): Promise<RawA
   }
 
   return data.results
-    .filter((r: any) => (r.title?.length ?? 0) > 10)
+    .filter((r: any) => (r.title?.length ?? 0) > 10 && r.link?.startsWith("http"))
     .map((r: any): RawArticle => ({
       title:        r.title,
       description:  r.description  || null,
       content:      r.content      || r.description || null,
-      source:       r.source_id    || r.source_name || "NewsData",
+      source:       r.source_name  || r.source_id   || "NewsData",
       source_url:   r.link         || r.source_url  || "",
       image_url:    r.image_url    || null,
       category,
@@ -242,7 +242,7 @@ async function fetchFromGNews(category: string, hours?: number): Promise<RawArti
   if (!Array.isArray(data.articles)) throw new Error("GNews resposta inválida");
 
   return data.articles
-    .filter((a: any) => (a.title?.length ?? 0) > 10)
+    .filter((a: any) => (a.title?.length ?? 0) > 10 && a.url?.startsWith("http"))
     .map((a: any): RawArticle => ({
       title:        a.title,
       description:  a.description || null,
@@ -335,6 +335,7 @@ async function fetchFromRSS(category: string, hours?: number): Promise<RawArticl
         const image_url   = extractRssImage(item);
 
         if (!title || title.length < 10) continue;
+        if (!link?.startsWith("http")) continue;
         if (cutoff && published_at && new Date(published_at).getTime() < cutoff) continue;
 
         articles.push({

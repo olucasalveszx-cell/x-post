@@ -186,7 +186,7 @@ async function fetchFromUnsplash(
     const results: any[] = data.results ?? [];
 
     for (const img of results) {
-      const url = img.urls?.regular ?? img.urls?.full;
+      const url = img.urls?.full ?? img.urls?.regular;
       if (!url || usedUrls.has(url)) continue;
 
       return {
