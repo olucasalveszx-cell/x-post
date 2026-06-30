@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     const [news, performanceSummary] = await Promise.all([
       getNewsById(newsId),
-      getPerformanceSummary(session.user.email),
+      getPerformanceSummary(session.user.email).catch(() => null),
     ]);
     if (!news) return NextResponse.json({ error: "Notícia não encontrada" }, { status: 404 });
 
