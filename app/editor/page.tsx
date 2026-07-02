@@ -16,6 +16,7 @@ import Toolbar from "@/components/Editor/Toolbar";
 import HorizontalSlidePanel from "@/components/Editor/HorizontalSlidePanel";
 import OnboardingModal from "@/components/Editor/OnboardingModal";
 import PublishModal from "@/components/Actions/PublishModal";
+import ExportModal from "@/components/Editor/ExportModal";
 import AIAssistant from "@/components/AIAssistant";
 import SubscriptionGate from "@/components/SubscriptionGate";
 import ProfilePickerModal, { UserProfile, getStoredProfile, saveProfile, PROFILE_STORAGE_KEY } from "@/components/Editor/ProfilePickerModal";
@@ -29,7 +30,7 @@ import LoginAnimation from "@/components/LoginAnimation";
 import TutorialPromptModal, { NEVER_KEY, SESSION_KEY as TUTORIAL_SESSION_KEY } from "@/components/Tutorial/TutorialPromptModal";
 import TutorialOverlay from "@/components/Tutorial/TutorialOverlay";
 
-interface IGAccount { token: string; accountId: string; username: string; picture?: string; expiresAt?: number; }
+interface IGAccount { connected: boolean; username?: string; accountType?: string; profilePicture?: string; }
 
 // Synchronous cleanup — runs at module-load time before ANY React component mounts.
 // Always sanitizes avatarSrc: only keeps short http(s) URLs, strips everything else.
@@ -115,6 +116,7 @@ export default function EditorPage() {
   // ── UI state ──────────────────────────────────────────────────
   const [showPublish, setShowPublish] = useState(false);
   const [showAI, setShowAI] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [igAccount, setIgAccount] = useState<IGAccount | null>(null);
@@ -385,160 +387,28 @@ export default function EditorPage() {
 
   // ── Instagram ────────────────────────────────────────────────
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const success = params.get("ig_success");
-    const error   = params.get("ig_error");
-    const currentEmail = session?.user?.email ?? null;
-
-    if (success === "1") {
-      const account: IGAccount = {
-        token:     params.get("ig_token")    ?? "",
-        accountId: params.get("ig_account")  ?? "",
-        username:  params.get("ig_username") ?? "",
-        picture:   params.get("ig_picture")  ?? "",
-      };
-      setIgAccount(account);
-      try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
-      // Salva no servidor para sincronizar entre dispositivos
-      fetch("/api/instagram/account", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(account),
-      }).catch(() => {});
+    // Detecta retorno do callback OAuth
+    const params    = new URLSearchParams(window.location.search);
+    const connected = params.get("ig_connected");
+    const error     = params.get("ig_error");
+    if (connected === "1" || error) {
       window.history.replaceState({}, "", "/editor");
-    } else if (error) {
-      if (error === "no_business_account") {
-        const pages = params.get("pages") ?? "nenhuma";
-        alert(`Conta Instagram Business não encontrada.\nPáginas do Facebook: ${pages}`);
-      } else {
+      if (error) {
         alert(`Erro ao conectar Instagram: ${decodeURIComponent(error)}`);
       }
-      window.history.replaceState({}, "", "/editor");
-    } else {
-      // Tenta carregar do localStorage primeiro
-      let loaded = false;
-      try {
-        const raw = localStorage.getItem("ig_account");
-        if (raw) {
-          const saved = JSON.parse(raw);
-          if (!saved._owner || saved._owner === currentEmail) {
-            const { _owner, ...account } = saved;
-            setIgAccount(account);
-            loaded = true;
-          } else {
-            localStorage.removeItem("ig_account");
-          }
-        }
-      } catch {}
-      // Se não tinha no localStorage (outro dispositivo), busca do servidor
-      if (!loaded && currentEmail) {
-        fetch("/api/instagram/account")
-          .then(r => r.json())
-          .then(data => {
-            if (data.connected && data.token) {
-              const account: IGAccount = {
-                token: data.token,
-                accountId: data.accountId,
-                username: data.username ?? "",
-                picture: data.picture ?? "",
-              };
-              setIgAccount(account);
-              try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
-            }
-          })
-          .catch(() => {});
-      }
+    }
+    // Carrega status da conta do servidor
+    if (session?.user?.email) {
+      fetch("/api/instagram/status")
+        .then(r => r.json())
+        .then((data) => { if (data.connected) setIgAccount(data as IGAccount); })
+        .catch(() => {});
     }
   }, [session?.user?.email]);
 
   const handleIGLogin = () => {
-    const currentEmail = session?.user?.email ?? null;
-
-    // PWA (standalone): popup abre no Safari externo e o resultado nunca volta
-    // para o PWA. Usa redirect direto — callback envia de volta via URL params.
-    const isPWA = window.matchMedia("(display-mode: standalone)").matches ||
-                  !!(window.navigator as any).standalone;
-    if (isPWA) {
-      window.location.href = "/api/instagram/auth";
-      return;
-    }
-
-    function applyIGAuth(data: Record<string, string>) {
-      if (data.ig_success === "1") {
-        const account: IGAccount = {
-          token:     data.ig_token     ?? "",
-          accountId: data.ig_account   ?? "",
-          username:  data.ig_username  ?? "",
-          picture:   data.ig_picture   ?? "",
-        };
-        setIgAccount(account);
-        try { localStorage.setItem("ig_account", JSON.stringify({ ...account, _owner: currentEmail })); } catch {}
-        // Salva no servidor para sincronizar entre dispositivos
-        fetch("/api/instagram/account", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(account),
-        }).catch(() => {});
-      } else if (data.ig_error) {
-        alert(`Erro ao conectar Instagram: ${data.ig_error}`);
-      }
-    }
-
-    const w = 520, h = 640;
-    const left = Math.max(0, (window.screen.width - w) / 2);
-    const top  = Math.max(0, (window.screen.height - h) / 2);
-    const popup = window.open(
-      "/api/instagram/auth?popup=1",
-      "ig_auth",
-      `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`
-    );
-    if (!popup) {
-      window.location.href = "/api/instagram/auth";
-      return;
-    }
-
-    let handled = false;
-    function handle(data: Record<string, string>) {
-      if (handled) return;
-      handled = true;
-      cleanup();
-      applyIGAuth(data);
-    }
-
-    // 1. postMessage (desktop)
-    const onMsg = (e: MessageEvent) => {
-      if (e.data?.type === "ig_auth") handle(e.data);
-    };
-    window.addEventListener("message", onMsg);
-
-    // 2. BroadcastChannel (browsers modernos)
-    let bc: BroadcastChannel | null = null;
-    try {
-      bc = new BroadcastChannel("ig_auth");
-      bc.onmessage = (e) => { if (e.data?.type === "ig_auth") handle(e.data); };
-    } catch {}
-
-    // 3. localStorage polling — garante funcionamento em PWA iOS
-    localStorage.removeItem("ig_auth_result");
-    const poll = setInterval(() => {
-      const raw = localStorage.getItem("ig_auth_result");
-      if (raw) {
-        localStorage.removeItem("ig_auth_result");
-        try { handle(JSON.parse(raw)); } catch {}
-      }
-      // Para de fazer poll se o popup fechou
-      if (popup.closed && !handled) { cleanup(); }
-    }, 500);
-
-    // Timeout de segurança: 10 min
-    const timeout = setTimeout(() => cleanup(), 10 * 60 * 1000);
-
-    function cleanup() {
-      clearInterval(poll);
-      clearTimeout(timeout);
-      window.removeEventListener("message", onMsg);
-      try { bc?.close(); } catch {}
-    }
+    setProfileInitialTab("instagram");
+    setShowProfile(true);
   };
 
   const handleStyleSelect = useCallback((style: "layouts" | "twitter" | "comrosto" | "biblioteca" | "choquei" | "transcricao") => {
@@ -1085,10 +955,10 @@ export default function EditorPage() {
             </span>
             <span className="hidden md:inline font-semibold">Nexa IA</span>
           </button>
-          <button onClick={handleExport} disabled={exporting}
-            className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text)] text-sm border border-[var(--border)] disabled:opacity-40 transition-colors">
+          <button onClick={() => setShowExport(true)}
+            className="flex items-center gap-1.5 px-2 md:px-4 py-2 rounded-lg bg-[var(--bg-3)] hover:bg-[var(--bg-4)] text-[var(--text)] text-sm border border-[var(--border)] transition-colors">
             <Download size={15} />
-            <span className="hidden md:inline">{exporting ? "Exportando..." : "Exportar"}</span>
+            <span className="hidden md:inline">Exportar</span>
           </button>
           <button onClick={() => setShowProfile(true)}
             className="hidden md:flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-sm border border-[var(--border)] bg-[var(--bg-3)] hover:bg-[var(--bg-4)] transition-colors text-[var(--text-2)]">
@@ -1099,7 +969,7 @@ export default function EditorPage() {
             {igAccount ? (
               <button onClick={() => setShowPublish(true)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm font-medium text-white">
-                <User size={14} /> @{igAccount.username}
+                <User size={14} /> @{igAccount?.username ?? "Instagram"}
               </button>
             ) : (
               <button onClick={() => setShowPublish(true)}
@@ -1322,6 +1192,7 @@ export default function EditorPage() {
       )}
 
       {showPublish && <PublishModal slides={slides} account={igAccount} onClose={() => setShowPublish(false)} onLoginClick={handleIGLogin} />}
+      {showExport && <ExportModal slides={slides} onClose={() => setShowExport(false)} onSave={(canvases) => saveToProfile(canvases).catch(() => {})} />}
       <AIAssistant open={showAI} onClose={() => setShowAI(false)} onUseInGenerator={() => { setShowAI(false); setMobilePanel("side"); }} />
       <ProfileModal open={showProfile} initialTab={profileInitialTab} onClose={() => { setShowProfile(false); setProfileInitialTab(undefined); }} onOpenTutorial={() => setShowTutorial(true)} />
       <StyleSelectorModal
